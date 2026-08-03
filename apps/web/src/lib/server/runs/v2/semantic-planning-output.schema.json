@@ -1,8 +1,98 @@
 {
   "type": "object",
-  "required": ["response"],
   "properties": {
-    "response": { "type": "string" }
+    "rationale": { "type": "string", "minLength": 1 },
+    "root": { "$ref": "#/$defs/work" },
+    "seams": { "type": "array", "items": { "$ref": "#/$defs/seam" } },
+    "uncertainties": { "type": "array", "items": { "type": "string" } }
   },
-  "additionalProperties": false
+  "required": ["rationale", "root", "seams", "uncertainties"],
+  "additionalProperties": false,
+  "$defs": {
+    "work": {
+      "anyOf": [
+        { "$ref": "#/$defs/leaf" },
+        { "$ref": "#/$defs/composite" }
+      ]
+    },
+    "leaf": {
+      "type": "object",
+      "properties": {
+        "kind": { "type": "string", "enum": ["leaf"] },
+        "handle": { "type": "string" },
+        "title": { "type": "string" },
+        "objective": { "type": "string" },
+        "surface": { "$ref": "#/$defs/surface" },
+        "outcomes": { "type": "array", "items": { "$ref": "#/$defs/outcome" }, "minItems": 1 }
+      },
+      "required": ["kind", "handle", "title", "objective", "surface", "outcomes"],
+      "additionalProperties": false
+    },
+    "composite": {
+      "type": "object",
+      "properties": {
+        "kind": { "type": "string", "enum": ["composite"] },
+        "handle": { "type": "string" },
+        "title": { "type": "string" },
+        "objective": { "type": "string" },
+        "children": { "type": "array", "items": { "$ref": "#/$defs/work" }, "minItems": 1 }
+      },
+      "required": ["kind", "handle", "title", "objective", "children"],
+      "additionalProperties": false
+    },
+    "surface": {
+      "type": "object",
+      "properties": {
+        "existingPaths": { "type": "array", "items": { "type": "string" } },
+        "plannedPaths": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["existingPaths", "plannedPaths"],
+      "additionalProperties": false
+    },
+    "outcome": {
+      "type": "object",
+      "properties": {
+        "statement": { "type": "string" },
+        "covers": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "verification": { "$ref": "#/$defs/verification" }
+      },
+      "required": ["statement", "covers", "verification"],
+      "additionalProperties": false
+    },
+    "verification": {
+      "type": "object",
+      "properties": {
+        "kind": { "type": "string", "enum": ["repository_capability"] },
+        "capability": { "type": "string" },
+        "references": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+      },
+      "required": ["kind", "capability", "references"],
+      "additionalProperties": false
+    },
+    "seam": {
+      "type": "object",
+      "properties": {
+        "handle": { "type": "string" },
+        "producer": { "type": "string" },
+        "consumers": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "interface": { "$ref": "#/$defs/interface" },
+        "evidencePaths": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["handle", "producer", "consumers", "interface", "evidencePaths"],
+      "additionalProperties": false
+    },
+    "interface": {
+      "type": "object",
+      "properties": {
+        "kind": { "type": "string", "enum": ["api", "type", "event", "data", "ui", "command"] },
+        "specification": { "type": "string" },
+        "compatibility": { "type": "string", "enum": ["exact", "backward_compatible"] },
+        "materialization": { "type": "string", "enum": ["logical", "files", "manifest", "commit"] },
+        "artifactPaths": { "type": "array", "items": { "type": "string" } },
+        "verification": { "type": "string" }
+      },
+      "required": ["kind", "specification", "compatibility", "materialization", "artifactPaths", "verification"],
+      "additionalProperties": false
+    }
+  }
 }

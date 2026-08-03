@@ -161,7 +161,7 @@ async function invokeSelectedPlanningCli(
     : `\n\nThe previous attempt was invalid. Repair every issue below and return the complete JSON again:\n- ${request.repairIssues.join("\n- ")}`;
   const isCodex = stage.executorId === "codex-cli";
   if (!isCodex && stage.executorId !== "claude-code-cli") throw new Error(`Planning V2 does not support executor ${stage.executorId}.`);
-  const prompt = `${request.system}\n\n${request.user}${repair}${isCodex ? "\n\nThe CLI response schema requires one object with a single string field named response. Put the complete semantic plan JSON, escaped as a JSON string, in response; do not put prose there." : ""}`;
+  const prompt = `${request.system}\n\n${request.user}${repair}${isCodex ? "\n\nThe CLI response schema describes the semantic plan directly. Return that plan object directly; do not wrap it in response, markdown, or another string." : ""}`;
   const binary = resolveCliBinaryPath(isCodex ? (process.env.MANYHANDS_CODEX_BIN ?? "codex") : (process.env.MANYHANDS_CLAUDE_BIN ?? "claude"));
   const args = isCodex
     ? buildCodexPlanningArgs(stage, resolveSemanticPlanningOutputSchemaPath())
