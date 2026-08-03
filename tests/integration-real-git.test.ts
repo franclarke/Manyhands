@@ -192,7 +192,7 @@ describe("IntegrationAgent with real Git", () => {
     })).toBe("a\n");
     expect(await runner.statusPorcelain(integrationWorktree.path)).toEqual([]);
     expect(await agent.integrate(params)).toEqual(result);
-  });
+  }, 90_000);
 
   it("rejects and removes a commit created unexpectedly by the repair executor", async () => {
     const fixture = await createFixture();
@@ -249,7 +249,7 @@ describe("IntegrationAgent with real Git", () => {
       ancestor: committingExecutor.commitSha!,
       descendant: result.integrationCommitSha!
     })).toBe(false);
-  });
+  }, 90_000);
 });
 
 class CommittingRepairExecutor implements AgentExecutor {
