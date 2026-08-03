@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "series": "SP1f",
+  "frozenAt": "2026-08-03",
+  "protocol": "docs/tesis/evidence/semantic-planning/protocol.md",
+  "manyHandsCommit": "3758a533a283d5e38fef0ac6ac31ca6f11f165ae",
+  "baseSha": "5da60192cc788032c59c7e7be27696ca0e0a30d7",
+  "taskId": "T1",
+  "design": "1 task x 1 semantic-product condition x 2 independent repetitions",
+  "budgetUsd": { "perCell": 8, "series": 16 },
+  "executor": { "executorId": "codex-cli", "model": "gpt-5.4-mini", "effort": "medium" },
+  "execution": { "maxPlanningAttempts": 1, "automaticRetryBudget": 0, "maxParallel": 2, "wallClockLimitMs": 1800000 },
+  "artifacts": {
+    "cell01": { "path": ".scratch/semantic-planning-redesign/sp1f-01.json", "sha256": "4ef4caa8e5e5e73c7a8176d24cfa51cca360f1618c00d47c4bc2d9d4b8b91f48" },
+    "cell02": { "path": ".scratch/semantic-planning-redesign/sp1f-02.json", "sha256": "a3555f9a84157498c037a08797b3e921569fd40b72f6e985782f0b0b951354f2" },
+    "criteria": { "path": "docs/tesis/evidence/semantic-planning/criteria.json", "sha256": "908c59ac762236ec27b69d0b1a3e8f90be02872f87dcf0a2afebad40f96ca852" },
+    "externalEvaluator": { "path": "docs/tesis/evidence/scripts/run-g6-evaluator.mjs", "sha256": "ebe729bfd25aa9a50c577c181a843babaf6e7d68b983a1b60196f03a291f2738" }
+  },
+  "preflight": {
+    "runId": "30d7976a-5176-4dff-a0d7-6631d0f49e09",
+    "outcome": "measurement_only_planning",
+    "lifecycle": "needs_approval",
+    "countsTowardSeries": false,
+    "structuralIntegrationRequirements": 6,
+    "includesNewProbePaths": ["src/probe/g6-probe.ts", "src/probe/g6-probe.test.ts"]
+  },
+  "observations": {
+    "cell01": {
+      "runId": "210dfcc1-50ca-4622-8a95-e8a18b8593fc",
+      "lifecycle": "failed",
+      "phase": "planning",
+      "reason": "codex-cli exited 1 after no proposal; stderr reported models cache schema field supports_reasoning_summaries missing",
+      "countsTowardSeries": false
+    }
+  }
+}

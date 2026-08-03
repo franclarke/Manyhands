@@ -93,6 +93,44 @@ El resultado no afirma significancia estadística. La afirmación defendible, si
 se obtiene PASS, es que ManyHands funciona para esta tarea y que la política
 semántica produce una granularidad ejecutable y verificable bajo el protocolo.
 
+## Enmienda de recongelación SP1d
+
+SP1c se conserva sin modificar como evidencia adversa: su primera ejecución
+alcanzó un error de ruta larga en el journal de integración y una receta de
+validación que ejecutaba `pnpm test` con selectores incompatibles. Esos
+defectos se corrigieron en `be85b03`. El preflight `da3c9e6a-2939-4d2f-a74b-acbb5084b409`
+demostró además que el planificador podía omitir el nuevo `g6` y reutilizar
+`wc3`; el guard de scripts nuevos se corrigió en `cbc98bb`.
+
+La serie comparable se recongela como **SP1d** sobre `cbc98bb`, manteniendo la
+tarea, executor, criterios, presupuesto, clones base y regla de no reintento.
+El preflight final `986ceaee-748c-42d0-98da-c8a3acab5576` alcanzó
+`needs_approval` y su plan incluye `src/probe/g6.ts` y
+`src/probe/g6.test.ts`. Sus dos celdas son `sp1d-01` y `sp1d-02`; el freeze
+durable está en `freeze-sp1d.json`.
+
+## Corrección de integración y sucesor SP1f
+
+La primera celda real de SP1d (`ab5fc73f-16c9-471c-a2c9-e95a370b005e`)
+reveló un defecto adicional del compilador semántico: el composite
+`Durability` podía ser seleccionado antes de que su hoja `Journal Analytics`
+produjera su artefacto. El integrador aceptó el baseline como candidato vacío;
+la corrida quedó en `waiting_for_input` por presupuesto no medible y no se
+cuenta como éxito.
+
+El commit `3758a53` corrige esto compilando un requisito de integración
+`node-result` para cada relación hijo-padre. La regresión focal y los gates del
+driver pasan 34/34. El preflight sucesor `30d7976a-5176-4dff-a0d7-6631d0f49e09`
+verificó seis requisitos estructurales y la inclusión de
+`src/probe/g6-probe.ts` y su test; no cuenta como ejecución.
+
+SP1f conserva el mismo estímulo, baseline, executor, presupuesto y regla de
+un solo intento. Su primera celda (`210dfcc1-50ca-4622-8a95-e8a18b8593fc`)
+falló durante planning sin propuesta: el CLI reportó un error de caché de
+modelos (`supports_reasoning_summaries` ausente). Se preserva como fallo
+ambiental no atribuible al producto y no se reintenta automáticamente. El
+freeze está en `freeze-sp1f.json`.
+
 ## Artefactos
 
 Por cada celda se preservan la configuración, journal, snapshot, métricas de
