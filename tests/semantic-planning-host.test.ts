@@ -18,9 +18,7 @@ describe("semantic planning productive host", () => {
   it("publishes a compiled graph without CandidatePlan or WorkBreakdown events", async () => {
     const events = new JsonlRunEventStore({ directory });
     const snapshots = new RunSnapshotStore({ directory, events });
-    const propose = vi.fn(async ({ slot }: { slot: number }) => slot === 0
-      ? bookingDraft()
-      : bookingDraft(["src/domain/missing.ts"]));
+    const propose = vi.fn(async () => bookingDraft());
 
     const state = await runSemanticPlanningV2({
       runId: "semantic-run-1",
@@ -41,13 +39,12 @@ describe("semantic planning productive host", () => {
     });
 
     expect(state.lifecycle).toBe("needs_approval");
-    expect(propose).toHaveBeenCalledTimes(2);
+    expect(propose).toHaveBeenCalledTimes(1);
     const persisted = await events.load("semantic-run-1");
     expect(persisted.map((event) => event.type)).toEqual([
       "run.created",
       "repository.inspected",
       "planning.semantic_attempt_started",
-      "planning.semantic_proposal_recorded",
       "planning.semantic_proposal_recorded",
       "planning.semantic_terminal_committed",
       "graph.compiled",
@@ -62,7 +59,7 @@ describe("semantic planning productive host", () => {
     const terminal = persisted.find((event) => event.type === "planning.semantic_terminal_committed");
     expect(terminal?.type === "planning.semantic_terminal_committed"
       ? JSON.parse(terminal.payload.recordJson)
-      : undefined).toMatchObject({ kind: "ready", comparison: { status: "degraded" } });
+      : undefined).toMatchObject({ kind: "ready", comparison: { status: "complete" } });
     expect(JSON.stringify(persisted)).not.toContain("CandidatePlan");
     expect(JSON.stringify(persisted)).not.toContain("WorkBreakdown");
   });

@@ -111,6 +111,7 @@ export const RunRecordSchema = z.object({
    * the policy that shaped its plan.
    */
   granularityCondition: StoredGranularityConditionSchema.optional(),
+  planningAcceptanceCriteria: z.array(z.string().trim().min(1)).max(100).optional(),
   experimentalCandidate: ExperimentalPlanningCandidateSchema.optional(),
   targetContext: RunTargetContextSchema,
   projection: RunProjectionCacheSchema,
@@ -142,6 +143,7 @@ export const RunCreateRequestSchema = z.object({
   executionSelection: StageSelectionSchema.optional(),
   repairSelection: StageSelectionSchema.optional(),
   granularityCondition: GranularityConditionSchema.optional(),
+  planningAcceptanceCriteria: z.array(z.string().trim().min(1)).max(100).optional(),
   experimentalCandidate: ExperimentalPlanningCandidateSchema.optional(),
   executionConfig: ExecutionConfigSchema.partial().omit({ routing: true }).strict().optional()
 }).strict();

@@ -144,6 +144,8 @@ export interface RunCreateRequest {
   planningSelection?: StageSelection;
   executionSelection?: StageSelection;
   repairSelection?: StageSelection;
+  granularityCondition?: "A" | "B" | "C";
+  planningAcceptanceCriteria?: string[];
   executionConfig?: {
     maxParallel?: number;
     maxPlanningAttempts?: number;

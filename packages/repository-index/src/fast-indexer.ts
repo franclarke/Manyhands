@@ -36,9 +36,12 @@ const FAST_INDEX_CACHE_SCHEMA_VERSION = 2 as const;
 // byteSize/lineCount. Historical payloads remain schema-readable, but current
 // snapshots must not silently reuse entries without the size measurements the
 // granularity policy reads.
-const INDEXER_PROFILE = "exports-only-v2-size-metrics" as const;
+const INDEXER_PROFILE = "exports-only-v3-config-surfaces" as const;
 const INDEXER_NAME = "ripgrep-native-v2";
-const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js"]);
+// Planning needs the committed configuration surface as well as executable
+// sources. In particular, package.json is both a capability manifest and a
+// valid existing path in a task contract.
+const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".json"]);
 const RG_FILE_ARGS = ["--files", "--hidden", "--glob", "!.git", "--null"] as const;
 const DEFAULT_RG_PATH = resolveNativeRipgrepPath();
 const DEFAULT_LIMITS: RepositoryIndexLimits = {

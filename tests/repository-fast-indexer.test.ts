@@ -104,6 +104,19 @@ describe("FastRepositoryIndexer", () => {
     expect(result.files.map((file) => file.path)).toEqual(["src/visible.ts"]);
   });
 
+  it("includes committed JSON manifests in the repository surface", async () => {
+    const root = await createRepository();
+    await mkdir(path.join(root, "src"), { recursive: true });
+    await writeFile(path.join(root, "package.json"), JSON.stringify({ scripts: { test: "node --test" } }), "utf8");
+    await writeFile(path.join(root, "src", "visible.ts"), "export const visible = true;\n", "utf8");
+    const headSha = await commitAll(root, "manifest fixture");
+
+    const result = await new FastRepositoryIndexer().index({ rootPath: root, baseCommit: headSha });
+
+    expect(result.files.map((file) => file.path)).toContain("package.json");
+    expect(result.files.find((file) => file.path === "package.json")?.kind).toBe("config");
+  });
+
   it("reuses the HEAD-addressed cache without invoking rg again", async () => {
     const root = await createRepository();
     await mkdir(path.join(root, "src"), { recursive: true });

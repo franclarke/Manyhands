@@ -1,4 +1,6 @@
 import type { ChildProcess } from "node:child_process";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { buildAgentEnvironment } from "@manyhands/execution-core";
 import { buildSemanticPlanningPrompt, NonRetryablePlanningError, parseSemanticPlanningModelOutput, PlanningCapacityError, PlanningTimeoutError } from "@manyhands/decomposer";
 import { foldRun } from "@manyhands/run-coordinator";
@@ -71,7 +73,7 @@ export async function runPlanningV2Pipeline(runId: string): Promise<void> {
       const state = await runSemanticPlanningV2({
         runId,
         goal: run.userPrompt,
-        acceptanceCriteria: run.experimentalCandidate?.acceptanceCriteria ?? [],
+        acceptanceCriteria: run.planningAcceptanceCriteria ?? run.experimentalCandidate?.acceptanceCriteria ?? [],
         constraints: [],
         repoPath,
         targetFingerprint: run.targetContext.fingerprint,
@@ -98,7 +100,12 @@ export async function runPlanningV2Pipeline(runId: string): Promise<void> {
               repairIssues: []
             }
           );
-          return parseSemanticPlanningModelOutput(output);
+          try {
+            return parseSemanticPlanningModelOutput(output);
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            throw new NonRetryablePlanningError(`${message}; raw planning output tail: ${output.replace(/\s+/gu, " ").slice(-4000)}`);
+          }
         },
         now: () => new Date().toISOString()
       });
@@ -152,12 +159,12 @@ async function invokeSelectedPlanningCli(
   const repair = request.repairIssues.length === 0
     ? ""
     : `\n\nThe previous attempt was invalid. Repair every issue below and return the complete JSON again:\n- ${request.repairIssues.join("\n- ")}`;
-  const prompt = `${request.system}\n\n${request.user}${repair}`;
   const isCodex = stage.executorId === "codex-cli";
   if (!isCodex && stage.executorId !== "claude-code-cli") throw new Error(`Planning V2 does not support executor ${stage.executorId}.`);
+  const prompt = `${request.system}\n\n${request.user}${repair}${isCodex ? "\n\nThe CLI response schema requires one object with a single string field named response. Put the complete semantic plan JSON, escaped as a JSON string, in response; do not put prose there." : ""}`;
   const binary = resolveCliBinaryPath(isCodex ? (process.env.MANYHANDS_CODEX_BIN ?? "codex") : (process.env.MANYHANDS_CLAUDE_BIN ?? "claude"));
   const args = isCodex
-    ? buildCodexPlanningArgs(stage)
+    ? buildCodexPlanningArgs(stage, resolveSemanticPlanningOutputSchemaPath())
     : ["-p", "-", "--model", stage.model, "--output-format", "stream-json", "--include-partial-messages", "--verbose", "--permission-mode", "plan", "--disallowed-tools", CLAUDE_PLANNING_DISALLOWED_TOOLS];
   const invocation = resolveCliProcessInvocation(binary, args);
   const spawn = supervisedSpawnFn(
@@ -272,7 +279,7 @@ export function resolvePlanningStepTimeoutMs(raw: string | undefined): number {
   return Number.isFinite(configured) && configured > 0 ? configured : fallback;
 }
 
-export function buildCodexPlanningArgs(stage: { model: string; effort?: string }): string[] {
+export function buildCodexPlanningArgs(stage: { model: string; effort?: string }, outputSchemaPath?: string): string[] {
   return [
     "exec",
     "--model",
@@ -283,8 +290,20 @@ export function buildCodexPlanningArgs(stage: { model: string; effort?: string }
     "--ignore-user-config",
     "--skip-git-repo-check",
     ...(stage.effort !== undefined ? ["-c", `model_reasoning_effort=\"${stage.effort}\"`] : []),
+    ...(outputSchemaPath === undefined ? [] : ["--output-schema", outputSchemaPath, "--color", "never"]),
     "-"
   ];
+}
+
+function resolveSemanticPlanningOutputSchemaPath(): string {
+  const relativePath = "src/lib/server/runs/v2/semantic-planning-output.schema.json";
+  const candidates = [
+    path.resolve(process.cwd(), relativePath),
+    path.resolve(process.cwd(), "apps/web", relativePath)
+  ];
+  const found = candidates.find((candidate) => existsSync(candidate));
+  if (found === undefined) throw new Error(`Semantic planning output schema is missing from ${candidates.join(" or ")}.`);
+  return found;
 }
 
 function resolvedPlanningAnswers(state: ReturnType<typeof foldRun> | undefined): Record<string, string> {

@@ -28,10 +28,20 @@ export function buildSemanticPlanningPrompt(input: SemanticPlanningPromptInput):
       "Describe semantic ownership, repository surfaces, observable outcomes, and cross-module seams.",
       "Do not author persistent IDs, hashes, snapshot IDs, revisions, event IDs, shell commands, package commands, budgets, scores, or execution status.",
       "Use short local handles only for references inside this one proposal.",
-      "Every required criterion must be covered by at least one leaf outcome.",
+      "Every required criterion must be covered by exactly one leaf outcome; never repeat a criterion ID on another leaf.",
+      "Every leaf must have at least one outcome and every outcome must cover at least one criterion; assign the supplied criteria across leaves rather than leaving covers empty.",
+      "Every leaf surface must include both existingPaths and plannedPaths arrays; use [] when one side is empty.",
+      "Keep each leaf surface concise: declare at most 6 total paths across existingPaths and plannedPaths; group additional evidence through verification references instead of widening the leaf surface.",
+      "Every composite must include at least one child; do not emit empty conceptual grouping nodes.",
+      "The top-level object has root, seams, and uncertainties as siblings; seams and uncertainties must never be nested inside root.",
+      "root is only the composite tree with kind, handle, title, objective, and children; do not put seams, uncertainties, or rationale inside root.",
       "Every existingPath and verification reference must appear in the supplied repository files.",
       "Use only supplied script names as repository_capability values.",
-      "A seam must name one producer and one or more consumers and keep specification, compatibility, materialization, verification, and evidence together."
+      "A seam must name one producer and one or more consumers and keep specification, compatibility, materialization, verification, and evidence together.",
+      "Every seam producer and consumer must be a handle of a leaf module in the plan; do not attach seams to composites or invent conceptual participants.",
+      "For a files or manifest seam, every artifactPath must belong to the producer's existingPaths or plannedPaths; use a logical seam when no producer-owned artifact is materialized.",
+      "The seam's evidencePaths is a sibling of interface, never a field inside interface.",
+      "Do not add fields outside the output shape; in particular, do not add notes to seam interfaces."
     ].join("\n"),
     user: JSON.stringify({
       task: {
@@ -105,10 +115,49 @@ export function parseSemanticPlanningModelOutput(output: string): unknown {
   const parsed = parseJsonObjectCandidates(output);
   if (!parsed.ok) throw new InvalidSemanticProposalError(parsed.message);
   const documents = parsed.candidates
-    .map((candidate) => candidate.value)
+    .flatMap((candidate) => unwrapCliResponse(candidate.value))
     .filter((candidate) => !isProgressEnvelope(candidate));
   if (documents.length === 0) throw new InvalidSemanticProposalError("Model emitted no SemanticPlanDraft JSON object.");
   return documents[0];
+}
+
+function unwrapCliResponse(candidate: unknown): unknown[] {
+  if (typeof candidate === "string") {
+    const variants = [candidate];
+    let normalized = candidate;
+    for (let pass = 0; pass < 3; pass += 1) {
+      normalized = normalized.split('\\"').join('"');
+      variants.push(normalized);
+    }
+    try {
+      const decoded = JSON.parse(candidate);
+      if (typeof decoded === "string") variants.unshift(decoded);
+    } catch {
+      // Fall through to the escaped-object recovery below.
+    }
+    const values = variants.flatMap((variant) => {
+      const nested = parseJsonObjectCandidates(variant);
+      return nested.ok ? nested.candidates.map((item) => item.value) : [];
+    });
+    const semantic = values.find((value) => isRecord(value) && "root" in value && "seams" in value);
+    return semantic === undefined ? values : [semantic];
+  }
+  if (isRecord(candidate)) {
+    const response = typeof candidate.response === "string" ? candidate.response : undefined;
+    if (response !== undefined) {
+      const nested = unwrapCliResponse(response);
+      if (nested.length > 0) return nested;
+    }
+    const embedded = Object.values(candidate)
+      .filter((value): value is string => typeof value === "string" && value.includes("{"))
+      .flatMap((value) => unwrapCliResponse(value));
+    if (embedded.length > 0) return embedded;
+  }
+  return [candidate];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function isProgressEnvelope(candidate: unknown): boolean {

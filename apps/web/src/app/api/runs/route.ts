@@ -87,6 +87,9 @@ export async function POST(request: Request): Promise<NextResponse> {
         ...(parsed.data.granularityCondition !== undefined
           ? { granularityCondition: parsed.data.granularityCondition }
           : {}),
+        ...(parsed.data.planningAcceptanceCriteria !== undefined
+          ? { planningAcceptanceCriteria: parsed.data.planningAcceptanceCriteria }
+          : {}),
         ...(parsed.data.experimentalCandidate !== undefined
           ? { experimentalCandidate: parsed.data.experimentalCandidate }
           : {}),

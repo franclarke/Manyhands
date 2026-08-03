@@ -50,5 +50,8 @@ describe("V2 run-record schema", () => {
       expect(RunCreateRequestSchema.safeParse({ ...canonical, granularityCondition }).success).toBe(false);
       expect(RunRecordSchema.safeParse({ ...makeRunRecordV2(), granularityCondition }).success).toBe(true);
     }
+    const withPlanningCriteria = { ...canonical, planningAcceptanceCriteria: ["Domain behavior is preserved."] };
+    expect(RunCreateRequestSchema.safeParse(withPlanningCriteria).success).toBe(true);
+    expect(RunRecordSchema.safeParse({ ...makeRunRecordV2(), planningAcceptanceCriteria: ["Domain behavior is preserved."] }).success).toBe(true);
   });
 });

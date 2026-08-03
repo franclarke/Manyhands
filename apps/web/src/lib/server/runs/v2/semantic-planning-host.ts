@@ -281,7 +281,10 @@ function protocolFor(kind: SemanticPlanningV2Input["protocol"]): PlanningProtoco
     : {
         id: "product-semantic-planning",
         revision: "1",
-        proposalTarget: 2,
+        // Product runs need one safe, compiler-valid plan. Alternative
+        // proposals remain an explicit experiment-mode cost, not a hidden
+        // second remote call on every ordinary run.
+        proposalTarget: 1,
         minSafeCandidates: 1,
         minComparableCandidates: 0,
         allowDegradedComparison: true

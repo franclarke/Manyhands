@@ -92,6 +92,9 @@ if (runId === undefined) {
     ...(config.granularityCondition !== undefined
       ? { granularityCondition: config.granularityCondition }
       : {}),
+    ...(config.acceptanceCriteria !== undefined
+      ? { planningAcceptanceCriteria: config.acceptanceCriteria }
+      : {}),
     executionConfig
   });
   runId = run.runId ?? run.run?.runId ?? run.id;
