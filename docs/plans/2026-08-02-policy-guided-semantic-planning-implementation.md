@@ -4,7 +4,7 @@
 
 **Goal:** Make the adaptive policy constrain semantic planning before generation and choose only among compiler-valid candidate plans.
 
-**Architecture:** Add a deterministic `PlanningEnvelope` and bounded candidate generation ahead of the existing selector. Preserve one canonical `WorkBreakdown`, derive acceptance ownership without propagating IDs, reject semantic gate failures, compile each selected candidate, and rank only viable results.
+**Architecture:** Add a deterministic `PlanningEnvelope` and bounded candidate generation ahead of the existing selector. Preserve one canonical `WorkBreakdown`, derive acceptance ownership without propagating IDs, reject semantic gate failures, compile each candidate's selected frontier independently, and rank only viable results.
 
 **Tech Stack:** TypeScript, Zod, Vitest, pnpm monorepo, V2 append-only run events.
 

@@ -40,8 +40,9 @@ Planning becomes a bounded four-step decision:
    reject missing or ambiguous acceptance ownership and a seam that claims its
    consumers require producer files without a materialized artifact for every
    consumer. The existing strategy selector then chooses a frontier, and the
-   real Graph Compiler validates that selected frontier. Compiler failure makes
-   the candidate ineligible; it is not averaged into a utility score.
+   real Graph Compiler validates each candidate's selected frontier. Compiler
+   failure makes that candidate ineligible; it is not averaged into a utility
+   score.
 4. The candidate selector ranks only eligible compilations. It uses the
    existing strategy assessments and leaves the G6 formula and
    `minimumAdvantage` unchanged. Selection and rejection evidence are persisted

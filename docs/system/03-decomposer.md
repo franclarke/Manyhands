@@ -43,8 +43,14 @@ los criterios de aceptación. Un pedido de aclaración detiene el planning; no s
 responde automáticamente. Los candidatos se canonizan por hash, se evalúan con
 la estrategia determinista de granularidad y se compilan de forma independiente.
 Los fallos de estructura, estrategia o compiler dejan evidencia diagnóstica y
-excluyen sólo ese candidato. Sólo la frontera del candidato seleccionado llega
-al `Graph Compiler` y se persisten las evaluaciones de todos los candidatos.
+excluyen sólo ese candidato. Cada frontera candidata se valida de forma
+independiente en el `Graph Compiler`; sólo el graph compilado del candidato
+seleccionado se emite como `GraphRevision` y llega a las etapas posteriores.
+Se persisten las evaluaciones de todos los candidatos.
+La ownership explícita asigna cada intent una sola vez y la unidad propietaria
+debe declarar ese intent. Un ownership de tipo seam referencia un seam existente
+y su lowest common ancestor; si una frontera colapsa ese seam, se elimina
+también su specification huérfana y se conserva el criterio normalizado.
 
 Resume objetivo, constraints del usuario, repository model, baseline, riesgos y
 preguntas ya respondidas. Es la entrada común para el planner y los critics.

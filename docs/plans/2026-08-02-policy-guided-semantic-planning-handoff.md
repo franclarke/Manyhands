@@ -2,16 +2,16 @@
 
 ## Status
 
-Implementation paused on 2026-08-02 because the user requested a low-credit
-checkpoint. No experimental run was started and no G6 input, preregistration,
-oracle, result, or evidence was changed.
+Implementation completed on 2026-08-02 in the preserved worktree. No
+experimental run was started and no G6 input, preregistration, oracle, result,
+or evidence was changed.
 
 Continue in the preserved worktree:
 
 - worktree: `C:\Users\franc\.codex\tmp\manyhands-policy-guided-planning`
 - branch: `codex/policy-guided-planning`
-- current green implementation commit: `5dadc9e`
-- current checkpoint commit: `e55e6d8`
+- current source implementation commits: `ae9c495`, `9573a25`
+- historical red checkpoint: `e55e6d8`
 - original checkout is currently on `codex/system-reliability-redesign`; do not
   switch, reset, clean, delete, or reuse that checkout for this work
 
@@ -30,12 +30,11 @@ git log --oneline --decorate -8
 Get-Content docs/plans/2026-08-02-policy-guided-semantic-planning-handoff.md
 ```
 
-The expected initial status is clean. The branch is deliberately stopped at a
-red TDD checkpoint: first make the test in
-`tests/planning-v2-adaptive.test.ts` pass, then continue in the numbered order
-below. Do not launch a ManyHands run while this handoff is incomplete. Do not
-answer planner clarification questions automatically. Preserve all adverse
-compiler, planner, and run evidence.
+Tracked source status is clean after the implementation commits; disposable
+dependency stores created for isolated verification may remain untracked. Do
+not launch a ManyHands run from this handoff. Do not answer planner
+clarification questions automatically. Preserve all adverse compiler, planner,
+and run evidence.
 
 Before changing source, read the repository `AGENTS.md` and the applicable
 planning docs. Before each test command after a source change, run
@@ -44,13 +43,16 @@ updated if the order or blocker changes.
 
 ## Completed
 
-The branch contains these ordered commits:
+The historical branch commits before closure were superseded by the following
+current implementation commits:
 
-1. `cb8b25e docs(planning): design policy-guided candidates`
-2. `d3bd0b1 fix(planning): preserve acceptance ownership`
-3. `abd83d2 feat: add validated planning envelope candidates`
-4. `8d3e8de feat(planning): guide semantic candidates`
-5. `5dadc9e feat(planning): enforce canonical candidate gates`
+1. `d798300 feat(planning): activate semantic candidate selection`
+2. `0bdcef6 fix(planning): preserve explicit acceptance ownership`
+3. `67e2c70 feat(planning): persist candidate evaluation evidence`
+4. `eece61b docs(planning): reconcile envelope and G6 boundary`
+5. `ffea620 fix(planning): persist strategy before compiler review`
+6. `ae9c495 fix(planning): enforce canonical ownership gates`
+7. `9573a25 fix(planning): preserve candidate evaluation evidence`
 
 Implemented behavior:
 
@@ -74,37 +76,43 @@ The obsolete parallel `GranularityPlanningBrief` implementation and its test
 were removed in `5dadc9e`; `PlanningEnvelope` is the single pre-planning policy
 contract.
 
-## Verification already performed
+## Verification performed
 
 From the preserved worktree:
 
 ```text
 pnpm build
-PASS (exit 0, 65.1 s on the last conclusive run)
+PASS (exit 0, Node 22 isolated runtime)
 
-pnpm exec vitest run tests/planning-envelope.test.ts tests/decomposer-work-breakdown.test.ts
-PASS: 2 files, 41 tests
+pnpm -r --filter "./packages/*" typecheck
+PASS: 12 packages
 ```
 
-The next vertical regression is intentionally red:
+Final focal suite:
 
-```text
-pnpm exec vitest run tests/planning-v2-adaptive.test.ts
-FAIL: 1 failed, 2 passed
-```
+`PASS: 6 files, 80 tests`
 
-Expected failure:
+Full `pnpm test`:
 
-```text
-expected 'single-candidate planning should not run when planCandidates is available' to be undefined
-```
+`PARTIAL: 1566 passed, 2 skipped, 13 failures/errors`
 
-This proves the productive host still calls `plan()` and ignores the new
-`planCandidates` capability. The failing test is
-`tests/planning-v2-adaptive.test.ts` and should be committed with this handoff as
-a deliberate red checkpoint.
+The remaining failures are environmental or frozen adverse evidence: missing
+web `next/server` dependencies in the isolated store, a hardcoded missing
+`esbuild@0.21.5` path in a multiprocess test, safe.directory ownership in an
+asset test, and the frozen wide-graph/G6 hash mismatch. No G6 oracle or evidence
+was changed to make them green.
 
-## Remaining implementation, in required order
+## Implemented checklist
+
+The numbered implementation steps below are complete: bounded candidate
+generation, deterministic strategy and compiler eligibility, explicit ownership
+and seam gates, candidate evaluation persistence across selected, failed, and
+clarification outcomes, product adapter wiring, and canonical documentation.
+The `experimentalCandidate` path remains frozen historical/G6 replay.
+
+<!-- Historical implementation steps retained below for traceability. -->
+
+## Historical implementation steps
 
 ### 1. Make the vertical regression green
 

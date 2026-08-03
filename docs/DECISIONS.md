@@ -272,8 +272,9 @@ de paths, duplicación de validación e incertidumbre.
 La política nunca fabrica unidades partiendo rutas. Si una hoja es inviable y
 el Planner no ofreció al menos dos hijos coherentes, el resultado correcto es
 un replan semántico explícito. La selección, configuración efectiva y evidencia
-se persisten como hechos del planning; sólo la frontera elegida llega al Graph
-Compiler. Véase [ADR 0012](adr/0012-utility-based-granularity-selection.md).
+se persisten como hechos del planning; cada frontera candidata se valida de
+forma independiente en el Graph Compiler y sólo el graph compilado de la
+frontera elegida se emite al resto del pipeline. Véase [ADR 0012](adr/0012-utility-based-granularity-selection.md).
 
 ### Contrato productivo de candidatos
 
@@ -288,7 +289,11 @@ evalúan con la estrategia determinista antes de compilarse de forma
 independiente. Una aclaración pendiente detiene el planning; los fallos de un
 candidato conservan findings y excluyen sólo ese candidato. Las evaluaciones de
 candidatos, la configuración efectiva y la frontera seleccionada se persisten;
-sólo la frontera elegida llega al Graph Compiler.
+cada frontera candidata se valida de forma independiente y sólo el graph
+compilado de la frontera elegida se emite al resto del pipeline.
+La ownership explícita es la fuente canónica para compilar cada intent una sola
+vez: el owner debe declarar el intent y un ownership de tipo seam debe apuntar
+a un seam existente cuyo owner sea su lowest common ancestor.
 
 Esta decisión es el sucesor productivo de G6 y no modifica G6, sus fórmulas,
 oráculos, estímulos, preregistro ni evidencia histórica.
