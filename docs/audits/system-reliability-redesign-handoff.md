@@ -417,5 +417,23 @@ instalación aislada; se restauró con `pnpm install --frozen-lockfile --force`
 contra el store aislado, sin cambiar manifests ni el checkout activo.
 
 Los commits quedan registrados en el log local de
-`codex/system-reliability-redesign`. No se hizo push. El siguiente paso seguro
-es integrar localmente en `main` y repetir los gates sobre el merge exacto.
+`codex/system-reliability-redesign`. No se hizo push.
+
+## 10. Integración local verificada
+
+La rama se integró en `main` mediante el merge commit `682fa73` después de
+resolver cuatro conflictos con la versión verificada y estrictamente más
+completa del contrato tipado. Los blobs resueltos se compararon byte a byte con
+`0731959` antes de finalizar el merge.
+
+Los tests Git reales expusieron bajo carga global que dos casos todavía usaban
+el timeout general de 30 segundos, mientras el primero ya declaraba 90 segundos.
+El commit post-merge `d8cee4b` alinea los tres casos en 90 segundos sin cambiar
+assertions. La regresión original luego pasó completa: 228 archivos, 1601 tests
+passed y 2 skipped. Sobre el mismo SHA también pasaron `pnpm build`, los 8
+archivos/73 tests focalizados, 12 typechecks de packages, el typecheck web y
+`pnpm web:build`.
+
+`main` conserva la rama como ancestro, el árbol de producto está limpio y no se
+hizo push. No se modificaron evidencia, freezes, resultados, fórmulas, umbrales
+u oráculos G6/Warehouse.
