@@ -26,7 +26,7 @@ describe("semantic planning prompt", () => {
     expect(prompt.system).toContain("seams and uncertainties must never be nested inside root");
     expect(prompt.system).toContain("at most 6 total paths");
     expect(prompt.system).toContain("Do not report an uncertainty for an implementation choice already resolved by the goal");
-    expect(prompt.system).toContain("When the goal explicitly names a new file or script");
+    expect(prompt.system).toContain("a missing study:<name> script requires a new planned implementation path");
   });
 
   it("unwraps the strict Codex CLI response envelope", () => {

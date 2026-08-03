@@ -107,6 +107,28 @@ describe("PlanningModule", () => {
     expect(outcome.kind).toBe("ready");
   });
 
+  it("rejects a plan that maps a new study script to existing paths only", async () => {
+    const draft = bookingDraft();
+    const context = standardContext();
+    context.goal.statement = "Implement booking creation and add study:g6-probe.";
+    const records = new InMemoryPlanningRecordPort();
+    const module = createPlanningModule({
+      contexts: { load: async () => context },
+      protocols: { load: async () => ({ ...productProtocol(), proposalTarget: 1 }) },
+      proposals: { propose: async () => draft },
+      records,
+      now: () => "2026-08-03T12:00:00.000Z"
+    });
+
+    const outcome = await module.start({
+      lease: { runId: "run-missing-script-path-1", holderId: "coordinator-1", fenceToken: "fence-missing-script" },
+      protocol: { id: "product-default", revision: "1" }
+    });
+
+    expect(outcome.kind).toBe("not_ready");
+    expect(outcome.rejections[0]?.issues).toContainEqual(expect.objectContaining({ code: "unplanned_goal_script" }));
+  });
+
   it("commits a complete experiment comparison for two safe distinct plans", async () => {
     const alternative = bookingDraft();
     if (alternative.root.kind !== "composite" || alternative.root.children[0]?.kind !== "leaf") {

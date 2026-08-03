@@ -163,6 +163,20 @@ function semanticIssues(draft: SemanticPlanDraft, context: PlanningContext): Pla
   const criterionIds = new Set(context.goal.requiredCriteria.map((criterion) => criterion.id));
   const coveredCriteria = new Set<string>();
   const criterionOwners = new Map<string, string>();
+  const plannedPaths = modules
+    .filter((module): module is Extract<SemanticWorkDraft, { kind: "leaf" }> => module.kind === "leaf")
+    .flatMap((module) => module.surface.plannedPaths.map(normalizePath));
+
+  for (const script of missingStudyScripts(context.goal.statement, context.repositorySnapshot.capabilities.scripts)) {
+    const implementationToken = script.slice("study:".length).split("-")[0] ?? script;
+    if (!plannedPaths.some((path) => path.toLowerCase().includes(implementationToken.toLowerCase()))) {
+      issues.push({
+        code: "unplanned_goal_script",
+        message: `Goal script ${script} is absent from the repository and has no planned implementation path.`,
+        path: script
+      });
+    }
+  }
 
   for (const module of modules) {
     if (handles.has(module.handle)) {
@@ -241,6 +255,13 @@ function semanticIssues(draft: SemanticPlanDraft, context: PlanningContext): Pla
     issues.push({ code: "unresolved_uncertainty", message: `The proposal leaves an unresolved semantic uncertainty: ${uncertainty}` });
   }
   return issues;
+}
+
+function missingStudyScripts(goal: string, scripts: Record<string, string>): string[] {
+  const repositoryScripts = new Set(Object.keys(scripts));
+  return [...goal.matchAll(/\bstudy:[a-z0-9][a-z0-9-]*/giu)]
+    .map((match) => match[0]!)
+    .filter((script, index, all) => !repositoryScripts.has(script) && all.indexOf(script) === index);
 }
 
 function normalizeDraft(draft: SemanticPlanDraft): SemanticPlanDraft {

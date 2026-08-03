@@ -36,7 +36,7 @@ export function buildSemanticPlanningPrompt(input: SemanticPlanningPromptInput):
       "The top-level object has root, seams, and uncertainties as siblings; seams and uncertainties must never be nested inside root.",
       "root is only the composite tree with kind, handle, title, objective, and children; do not put seams, uncertainties, or rationale inside root.",
       "Every existingPath and every verification reference for an existing artifact must appear in the supplied repository files; a verification reference may instead be one of the owning leaf's plannedPaths when the goal creates that artifact.",
-      "When the goal explicitly names a new file or script, include that planned path in the owning leaf's verification references; do not substitute an existing analogous file or script.",
+      "When the goal explicitly names a new file or script, include that planned path in the owning leaf's surface and verification references; a missing study:<name> script requires a new planned implementation path containing its name, not an existing analogous script.",
       "Use only supplied script names as repository_capability values.",
       "A seam must name one producer and one or more consumers and keep specification, compatibility, materialization, verification, and evidence together.",
       "Every seam producer and consumer must be a handle of a leaf module in the plan; do not attach seams to composites or invent conceptual participants.",
