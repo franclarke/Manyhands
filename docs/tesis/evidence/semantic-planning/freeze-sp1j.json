@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "series": "SP1j",
+  "frozenAt": "2026-08-03",
+  "protocol": "docs/tesis/evidence/semantic-planning/protocol.md",
+  "manyHandsCommit": "273b498633e485831dfdf2abb84137e3e06d435b",
+  "baseSha": "5da60192cc788032c59c7e7be27696ca0e0a30d7",
+  "taskId": "T1",
+  "design": "1 task x 1 semantic-product condition x 2 independent repetitions",
+  "reasonForSuccessor": "SP1i-01 reached execution but artifact materialization incorrectly rejected a source commit already present in the pooled worktree as artifact_empty. The materializer now treats an already-ancestral commit as idempotently materialized, with a focused regression test.",
+  "budgetUsd": { "perCell": 8, "series": 16 },
+  "executor": { "executorId": "codex-cli", "model": "gpt-5.4-mini", "effort": "medium", "cliVersion": "0.146.0" },
+  "runtime": { "planningStepTimeoutMs": 1800000, "runsDir": "C:\\Users\\franc\\Documents\\Proyectos\\manyhands-semantic-preflight-runtime-20260803\\runs" },
+  "execution": { "maxPlanningAttempts": 1, "automaticRetryBudget": 0, "maxParallel": 2, "wallClockLimitMs": 1800000 },
+  "artifacts": {
+    "cell01": { "path": ".scratch/semantic-planning-redesign/sp1j-01.json", "sha256": "18de134bd5e611416cd45f6ca2a2116fb603d349d5933a91b9de40063dc644a4" },
+    "cell02": { "path": ".scratch/semantic-planning-redesign/sp1j-02.json", "sha256": "4660b96aee23466d897d79a9c165238e81297fdfbb9271808363e85be4a17900" },
+    "criteria": { "path": "docs/tesis/evidence/semantic-planning/criteria.json", "sha256": "908c59ac762236ec27b69d0b1a3e8f90be02872f87dcf0a2afebad40f96ca852" },
+    "externalEvaluator": { "path": "docs/tesis/evidence/scripts/run-g6-evaluator.mjs", "sha256": "ebe729bfd25aa9a50c577c181a843babaf6e7d68b983a1b60196f03a291f2738" }
+  },
+  "predecessors": [
+    { "series": "SP1f", "runId": "210dfcc1-50ca-4622-8a95-e8a18b8593fc", "lifecycle": "failed", "phase": "planning", "countsTowardSeries": false, "reason": "Codex CLI 0.144.4 could not parse the models cache produced for 0.146.0." },
+    { "series": "SP1g", "runId": "a55c7f94-8b4f-4b05-8621-a6439522a2c6", "lifecycle": "failed", "phase": "planning", "countsTowardSeries": false, "reason": "The server's default 600000 ms planning timeout terminated the 0.146.0 planning process before a proposal was received." },
+    { "series": "SP1h", "runId": "6fe77431-867c-4a72-8884-3c19319d9ce7", "lifecycle": "failed", "phase": "planning", "countsTowardSeries": false, "reason": "The proposal was safely rejected as no_safe_candidate due to ungrounded existing path and unavailable capability references." },
+    { "series": "SP1i", "runId": "014d4b39-1326-4f28-b387-6b85b54c4df4", "lifecycle": "waiting_for_input", "phase": "execution", "countsTowardSeries": false, "reason": "Artifact materialization rejected an already-ancestral source commit as artifact_empty; corrected in this successor." }
+  ]
+}
