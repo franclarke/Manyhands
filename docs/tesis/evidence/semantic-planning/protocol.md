@@ -32,6 +32,18 @@ estadística ni prueba de superioridad frente a otra política.
 El preflight de planificación queda registrado aparte y no cuenta como una de
 las dos repeticiones.
 
+## Enmienda de recongelación SP1b
+
+La corrida `de75e45c-fb3e-46e3-9e52-8ffc250fbd71` se ejecutó antes de detectar
+un defecto de transición del compilador: produjo un plan válido, pero el host
+no había compilado bundles V2 para los nodos de integración. Terminó antes de
+crear un intento de ejecución y se conserva como evidencia del defecto de la
+implementación anterior; no cuenta como repetición de SP1.
+
+La serie comparable se recongela como **SP1b** después de corregir ese defecto
+en `5570773`. Mantiene tarea, objetivo, executor, criterios, presupuesto,
+clones base y regla de no reintento. Sus dos celdas son `sp1b-01` y `sp1b-02`.
+
 ## Criterios internos de la política
 
 El plan solo es válido si cumple simultáneamente:
