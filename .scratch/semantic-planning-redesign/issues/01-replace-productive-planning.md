@@ -20,7 +20,8 @@ productive V2 host from model-authored `CandidatePlan` to deterministic
 - [x] Productive Graph Compiler consumes the canonical semantic plan and cut.
 - [x] Productive host no longer emits or consumes new `CandidatePlan` payloads.
 - [x] Historical G6/G7 evidence remains byte-for-byte unchanged.
-- [ ] Focused, affected and broad gates pass in the isolated worktree.
+- [x] Focused semantic planning, repository-index and CLI-boundary tests pass in the isolated worktree.
+- [ ] Live semantic preflight produces a compiler-safe model plan.
 - [x] Standards and Spec reviews pass before integration.
 
 ## Verification evidence
