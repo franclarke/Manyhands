@@ -39,6 +39,11 @@ export * from "./granularity/planning-brief.js";
 export * from "./context-compressor.js";
 export * from "./llm/architect-pass.js";
 export * from "./compiler/graph-compiler-v3.js";
+export * from "./semantic-planning/model.js";
+export * from "./semantic-planning/canonicalize.js";
+export * from "./semantic-planning/compiler.js";
+export * from "./semantic-planning/planning-module.js";
+export * from "./semantic-planning/prompt.js";
 
 export const FeatureRequestSchema = z.object({
   id: EntityIdSchema,

@@ -5,12 +5,13 @@
 ```text
 Goal + RunTargetContext
   -> Repository Inspector
-  -> Planning Brief
-  -> Planner
-  -> WorkBreakdown
+  -> Planning protocol + frozen context
+  -> SemanticPlanDraft receipts
+  -> canonical SemanticPlan
+  -> bounded-cohesion ExecutionCut
   -> Graph Compiler
   -> GraphRevision
-  -> Critics
+  -> durable terminal commit
   -> Approval candidate
 ```
 
@@ -28,25 +29,32 @@ Lee el commit objetivo sin modificarlo. Produce:
 Los datos desconocidos se marcan como unknown. No se fabrican paths o comandos
 para completar el schema.
 
-## Planning Brief
+## PlanningModule
 
-Resume objetivo, constraints del usuario, repository model, baseline, riesgos y
-preguntas ya respondidas. Es la entrada común para el planner y los critics.
+`start/resume/replay` es la interfaz externa. El módulo carga el objetivo,
+criterios, constraints, decisiones resueltas, snapshot y protocolo congelados.
+Solicita receipts por slot mediante `SemanticProposalPort` y los confirma con
+`PlanningRecordPort` bajo la lease del run.
 
-## Planner
+El modelo devuelve `SemanticPlanDraft`: boundaries con handles locales,
+superficies del repositorio, outcomes con owner y verificación, y seams que
+mantienen participantes, compatibilidad, materialización y prueba en una sola
+estructura. El draft no contiene identidad persistente ni comandos.
 
-Produce `WorkBreakdown` con boundaries, objetivos parciales, outputs, relaciones
-candidatas, evidencia de grounding y preguntas. Debe justificar los cortes por
-cohesión, integración, riesgo o verificabilidad.
+ManyHands normaliza paths y orden, rechaza ambigüedad sin inventar decisiones y
+deriva snapshot/digests/IDs/hashes. Una incertidumbre no resuelta vuelve insegura
+esa propuesta. Replay usa receipts persistidos y no llama un modelo vivo.
 
 Una pregunta se eleva solo si la respuesta cambia comportamiento, arquitectura,
 scope, riesgo o aceptación. Preferencias locales reversibles se dejan al agente.
 
 ## Graph Compiler
 
-Asigna identidad estable, compila relaciones tipadas, contratos, scopes,
-validation obligations y revisions. La compilación debe ser determinista en las
-partes mecánicas y rechazar ambigüedad no resuelta.
+Consume exclusivamente `SemanticPlan + ExecutionCut + RepositorySnapshot` en la
+ruta productiva. Proyecta composites cohesivos seleccionados como hojas
+ejecutables, retargetea seams sin modificar el plan canónico y compila
+`SeamBinding`, `ArtifactRequirement`, conflicts, contract bundles, scopes y
+validation obligations. La compilación es determinista.
 
 ## Critics
 
@@ -67,8 +75,8 @@ impacto; no se esconden en logs.
 ## Fallos
 
 - Error/timeout del modelo: falla accionable o retry transitorio según causa.
-- Output inválido: un repair de schema puede solicitar corrección al mismo
-  modelo sin inventar contenido.
+- Output inválido: rechaza sólo ese receipt; producto puede continuar con otra
+  propuesta segura y experimento aplica su quorum estricto.
 - Repo no inspeccionable: decisión de entorno o fail; nunca plan sin grounding
   presentado como confiable.
 - Graph no ejecutable: vuelve al compiler/planner con findings.
@@ -77,3 +85,9 @@ impacto; no se esconden en logs.
 
 La aprobación refiere una revisión exacta. Editar goal, node boundaries,
 contratos o criterios crea una nueva revisión e invalida la aprobación anterior.
+
+## Compatibilidad histórica
+
+Los eventos con `PlanningEnvelope`, `CandidatePlan` o `WorkBreakdown` siguen
+siendo legibles e inmutables. Ningún evento productivo nuevo ni input del
+compiler semántico puede contener esos formatos.

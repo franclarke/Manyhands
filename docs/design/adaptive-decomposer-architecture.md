@@ -1,5 +1,9 @@
 # ARQUITECTURA DEL MOTOR DE DESCOMPOSICIÓN ADAPTATIVA DE GRANULARIDAD (DECOMPOSER V3)
 
+> **Documento histórico.** La arquitectura productiva vigente desde 2026-08-03
+> usa `SemanticPlan`, la política `bounded-cohesion-v1` y `ExecutionCut`; véase
+> [`../system/03-decomposer.md`](../system/03-decomposer.md).
+
 Este documento especifica la arquitectura detallada para el nuevo motor de descomposición de **ManyHands**, diseñado en `packages/decomposer`. Su objetivo principal es resolver dinámicamente el nivel de **granularidad óptima** para cualquier tarea de ingeniería de software, respondiendo a la hipótesis central de investigación del sistema.
 
 ---

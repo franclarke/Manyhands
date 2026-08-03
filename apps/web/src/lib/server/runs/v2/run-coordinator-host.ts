@@ -1,7 +1,6 @@
-import { createHash } from "node:crypto";
 import type { ChildProcess } from "node:child_process";
 import { buildAgentEnvironment } from "@manyhands/execution-core";
-import { NonRetryablePlanningError, PlanningCapacityError, WorkBreakdownPlanner, compileGraphRevision, parseWorkBreakdownProgressLine, type WorkBreakdownModelRequest } from "@manyhands/decomposer";
+import { buildSemanticPlanningPrompt, NonRetryablePlanningError, parseSemanticPlanningModelOutput, PlanningCapacityError, parseWorkBreakdownProgressLine, type WorkBreakdownModelRequest } from "@manyhands/decomposer";
 import { foldRun } from "@manyhands/run-coordinator";
 import { buildFastRepositorySnapshot } from "@manyhands/repository-index";
 import { EventStoreCompactor, JsonlRunEventStore, RunSnapshotStore, verifyAndRecoverRunStore } from "@manyhands/run-store";
@@ -15,8 +14,8 @@ import { resolveRunsDirectory } from "../runs-directory";
 import { resolveRunTargetPath } from "../target-context";
 import { claimRunOperation, releaseRunOperationWithRetry, updateRunForOperation } from "../run-operation-lease";
 import { projectV2RunRecordCache } from "./run-record-cache";
-import { runPlanningV2 } from "./planning-host";
 import { approvePlanningV2 } from "./planning-host";
+import { runSemanticPlanningV2 } from "./semantic-planning-host";
 import { DEFAULT_STALE_MS } from "../interrupted";
 import { startHeartbeat } from "../runner-heartbeat";
 
@@ -69,42 +68,39 @@ export async function runPlanningV2Pipeline(runId: string): Promise<void> {
       const existingEvents = await events.load(runId);
       const questionAnswers = resolvedPlanningAnswers(existingEvents.length === 0 ? undefined : foldRun(existingEvents));
       const stage = planningSelection(run);
-      const planner = new WorkBreakdownPlanner({
-        model: {
-          generate: (request) => invokeSelectedPlanningCli(
+      const state = await runSemanticPlanningV2({
+        runId,
+        goal: run.userPrompt,
+        acceptanceCriteria: run.experimentalCandidate?.acceptanceCriteria ?? [],
+        constraints: [],
+        repoPath,
+        targetFingerprint: run.targetContext.fingerprint,
+        baseCommit: run.targetContext.sourceBaseCommit,
+        authority,
+        protocol: run.granularityCondition !== undefined || run.experimentalCandidate !== undefined ? "experiment" : "product",
+        resolvedDecisions: Object.entries(questionAnswers).map(([source, answer]) => ({ source, answer }))
+      }, {
+        events,
+        snapshots,
+        inspect: (input) => buildFastRepositorySnapshot({ rootPath: input.repoPath, targetFingerprint: input.targetFingerprint, baseCommit: input.baseCommit }),
+        propose: async (request) => {
+          const prompt = buildSemanticPlanningPrompt(request);
+          const output = await invokeSelectedPlanningCli(
             runId,
             repoPath,
             stage,
             lease.operationId,
             planningSignal,
-            request
-          )
+            {
+              system: prompt.system,
+              user: prompt.user,
+              attempt: request.slot + 1,
+              repairIssues: [],
+              onProgress: async () => undefined
+            }
+          );
+          return parseSemanticPlanningModelOutput(output);
         },
-        ...(run.executionConfig.maxPlanningAttempts !== undefined
-          ? { maxAttempts: run.executionConfig.maxPlanningAttempts }
-          : { maxAttempts: 3 })
-      });
-      const state = await runPlanningV2({
-        runId,
-        goal: run.userPrompt,
-        repoPath,
-        targetFingerprint: run.targetContext.fingerprint,
-        baseCommit: run.targetContext.sourceBaseCommit,
-        authority,
-        ...(Object.keys(questionAnswers).length > 0 ? { questionAnswers } : {}),
-        ...(run.granularityCondition !== undefined ? { granularityCondition: run.granularityCondition } : {}),
-        ...(run.experimentalCandidate !== undefined ? {
-          acceptanceCriteria: run.experimentalCandidate.acceptanceCriteria,
-          experimentalCandidate: run.experimentalCandidate
-        } : {})
-      }, {
-        events,
-        snapshots,
-        inspect: (input) => buildFastRepositorySnapshot({ rootPath: input.repoPath, targetFingerprint: input.targetFingerprint, baseCommit: input.baseCommit }),
-        plan: (input, observer) => planner.plan(input, observer),
-        planCandidates: (input, envelope, count, observer) => planner.planCandidates(input, envelope, count, observer),
-        compile: (input) => compileGraphRevision(input, { idFor: stableId, now: () => new Date().toISOString() }),
-        nodeIdFor: (key) => stableId("node", key),
         now: () => new Date().toISOString()
       });
       const persistedEvents = await events.load(runId);
@@ -144,11 +140,6 @@ export async function approvePlanningV2Pipeline(runId: string, revision: number)
   } finally {
     await releaseRunOperationWithRetry(runId, lease);
   }
-}
-
-function stableId(kind: string, key: string): string {
-  const readable = key.replace(/[^A-Za-z0-9._:-]/gu, "-").slice(0, 48);
-  return `${kind}-${readable}-${createHash("sha256").update(`${kind}:${key}`).digest("hex").slice(0, 10)}`;
 }
 
 async function invokeSelectedPlanningCli(

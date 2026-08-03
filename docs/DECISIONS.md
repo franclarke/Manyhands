@@ -41,12 +41,18 @@ número fijo de hijos. Una hoja puede atravesar UI, API y tests si ese corte
 produce una unidad vertical más coherente. La forma del grafo debe seguir al
 repositorio y a las fronteras de integración, no a una plantilla de demo.
 
-## A4. Planning y compilación del grafo son responsabilidades distintas
+## A4. Planning es una transacción durable con semántica canónica
 
-El Planner interpreta el objetivo, inspecciona el repositorio y propone una
-descomposición semántica. El Graph Compiler convierte esa propuesta en un plan
-ejecutable: nodos, relaciones, contratos, scopes, validaciones y requisitos de
-artefactos.
+El adaptador de modelo sólo propone un `SemanticPlanDraft` compacto y no
+confiable. No puede elegir IDs persistentes, hashes, snapshot, revisiones,
+comandos ni estado. `PlanningModule.start/resume/replay` posee la transacción:
+congela contexto y protocolo, persiste cada receipt, canoniza una única
+`SemanticPlan`, selecciona un `ExecutionCut`, compila el grafo y confirma el
+outcome terminal bajo el fencing token antes de devolver `ready`.
+
+El Graph Compiler proyecta el plan y el corte a nodos, relaciones, contratos,
+scopes, validaciones y requisitos de artefactos. El Run Coordinator adquiere la
+lease y continúa ejecución; no orquesta candidatos ni reimplementa quorum.
 
 Antes de aprobación se ejecutan críticos de completitud, atomicidad,
 compatibilidad de contratos, validez del DAG, aislamiento, riesgo y cobertura de
@@ -261,23 +267,21 @@ monótona, se sanea y verifica antes de entregarse, y entra en quarantine ante
 cualquier resultado ambiguo. Un commit candidato se ancla antes del reset. Véase
 [ADR 0011](adr/0011-exact-repository-index-and-fenced-worktree-pool.md).
 
-## A21. La granularidad se selecciona entre cortes semánticos por utilidad esperada
+## A21. La granularidad es un corte conservador del plan semántico
 
-El Planner propone alternativas semánticas; no decide por sí solo qué frontera
-se ejecuta. En el flujo tipado, cada `CandidatePlan` es una frontera completa
-con scope, ownership, seams y validación inmutables, y la política compara esas
-fronteras. El flujo histórico de candidato único comparaba ejecutar un composite
-como hoja con expandir sus hijos. Ambos usan señales disponibles antes de ejecutar:
-alivio de contexto, paralelismo, aislamiento de fallos, coordinación, overlap
-de paths, duplicación de validación e incertidumbre.
+La política `bounded-cohesion-v1` no reescribe semántica ni compara árboles
+masivos redactados por el modelo. Mantiene la raíz como boundary de integración,
+ejecuta hojas declaradas y sólo colapsa un composite no raíz cuando todos sus
+descendientes forman un componente conectado por seams u overlap y el conjunto
+entra en límites duros de hojas, paths y outcomes. Cada assessment persiste
+decisión, razones y métricas.
 
-La política nunca fabrica unidades partiendo rutas. Si una hoja es inviable y
-el Planner no ofreció al menos dos hijos coherentes, el resultado correcto es
-un replan semántico explícito. La selección, configuración efectiva y evidencia
-se persisten como hechos del planning; sólo el `CandidatePlan` elegido llega al
-Graph Compiler. Una assessment interna no puede podar después los contratos del
-candidato seleccionado. Véanse [ADR 0012](adr/0012-utility-based-granularity-selection.md)
-y [ADR 0013](adr/0013-policy-guided-candidate-planning.md).
+Una hoja que excede los hard limits rechaza sólo su propuesta antes del quorum.
+En producto se solicitan dos propuestas pero una opción segura basta y registra
+comparación degradada. Un protocolo experimental exige dos propuestas seguras,
+semánticamente distintas y comparables. Diferencias de rationale no crean una
+alternativa. El `ExecutionCut` es una proyección reproducible de la misma
+`SemanticPlan`; nunca cambia ownership, criterios ni interfaces.
 
 ## Decisiones retiradas
 
@@ -295,3 +299,5 @@ Quedan retiradas como arquitectura vigente:
 - vistas principales separadas para tareas, planificación, integración e
   interfaces;
 - recentrado automático del canvas ante actividad.
+- `PlanningEnvelope`, `CandidatePlan` y `WorkBreakdown` como formatos de
+  escritura productiva; permanecen sólo para leer y probar historiales previos.

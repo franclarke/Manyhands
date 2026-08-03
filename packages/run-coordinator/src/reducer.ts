@@ -192,6 +192,9 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
     case "planning.attempt_started":
     case "planning.node_discovered":
     case "planning.attempt_failed":
+    case "planning.semantic_attempt_started":
+    case "planning.semantic_proposal_recorded":
+    case "planning.semantic_terminal_committed":
     case "planning.completed":
     case "graph.compiled":
     case "planning.critic_recorded":

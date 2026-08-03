@@ -159,9 +159,11 @@ no un fallo.
 Familias implementadas:
 
 - intake/migration: `run.created`, `legacy.run_imported`;
-- inspection/planning: `repository.inspected`, `planning.attempt_started`,
-  `planning.node_discovered`, `planning.attempt_failed`, `planning.completed`,
-  `planning.critic_recorded`, `planning.failed`, `graph.compiled`;
+- inspection/planning: `repository.inspected`,
+  `planning.semantic_attempt_started`, `planning.semantic_proposal_recorded`,
+  `planning.semantic_terminal_committed`, `planning.failed`, `graph.compiled`;
+  los eventos `planning.attempt_*`, `planning.completed`, envelope y candidates
+  se conservan para replay de historiales anteriores;
 - graph/decisions: `graph.revision.proposed`, `graph.revision.approved`,
   `graph.amendment.proposed`, `decision.raised`, `decision.resolved`;
 - scheduling/execution: `readiness.observed`, `wave.selected`,

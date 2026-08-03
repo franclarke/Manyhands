@@ -1,5 +1,9 @@
 # Planner, Graph Compiler e Integrator
 
+> **Documento histórico.** `WorkBreakdown` ya no es una salida productiva. El
+> contrato vigente es `SemanticPlanDraft -> SemanticPlan -> ExecutionCut`; véase
+> [`../system/03-decomposer.md`](../system/03-decomposer.md).
+
 ## Por qué se separan
 
 “Descomponer” mezclaba tres problemas distintos: comprender la intención, elegir

@@ -2,8 +2,8 @@
 
 ## Estado
 
-Aceptado para implementación piloto. La configuración numérica se congela sólo
-después del caso piloto y antes de producir evidencia final.
+Reemplazado el 2026-08-03 por A21 en `docs/DECISIONS.md`. Se conserva como
+antecedente del piloto; sus fórmulas y umbrales no gobiernan la ruta productiva.
 
 ## Contexto
 

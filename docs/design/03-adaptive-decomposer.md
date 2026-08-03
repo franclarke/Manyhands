@@ -1,5 +1,11 @@
 # 03 — MOTOR DE DESCOMPOSICIÓN ADAPTATIVA DE GRANULARIDAD
 
+> **Histórico desde 2026-08-03:** C1/C2/C y `CandidatePlan` ya no gobiernan la
+> ruta productiva. El contrato vigente es `SemanticPlan -> ExecutionCut` en
+> [`../system/03-decomposer.md`](../system/03-decomposer.md) y A21 de
+> [`../DECISIONS.md`](../DECISIONS.md). Este documento se conserva como
+> antecedente experimental.
+
 > **Estado de transición (2026-07-24):** la política productiva vigente al
 > iniciar el programa Warehouse es C1 (`c-task/1.0.0`). El target aceptado es C2
 > (`adaptive-utility/2.0.0`), definido en

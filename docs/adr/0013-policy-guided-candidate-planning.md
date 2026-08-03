@@ -1,5 +1,10 @@
 # ADR 0013 — Planning guiado por política y selección de candidatos válidos
 
+## Estado
+
+Reemplazado el 2026-08-03 por A4/A21 en `docs/DECISIONS.md`. `CandidatePlan` y
+`PlanningEnvelope` permanecen sólo para compatibilidad histórica.
+
 ## Contexto
 
 El flujo histórico pedía un único `WorkBreakdown` al planner y recién después
