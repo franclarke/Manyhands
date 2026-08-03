@@ -41,6 +41,7 @@ export function buildSemanticPlanningPrompt(input: SemanticPlanningPromptInput):
       "Every seam producer and consumer must be a handle of a leaf module in the plan; do not attach seams to composites or invent conceptual participants.",
       "For a files or manifest seam, every artifactPath must belong to the producer's existingPaths or plannedPaths; use a logical seam when no producer-owned artifact is materialized.",
       "The seam's evidencePaths is a sibling of interface, never a field inside interface.",
+      "Do not report an uncertainty for an implementation choice already resolved by the goal, even when the repository does not have that file or script yet; plan the required addition instead.",
       "Do not add fields outside the output shape; in particular, do not add notes to seam interfaces."
     ].join("\n"),
     user: JSON.stringify({

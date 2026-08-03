@@ -25,6 +25,7 @@ describe("semantic planning prompt", () => {
     expect(prompt.system).toContain("evidencePaths is a sibling of interface");
     expect(prompt.system).toContain("seams and uncertainties must never be nested inside root");
     expect(prompt.system).toContain("at most 6 total paths");
+    expect(prompt.system).toContain("Do not report an uncertainty for an implementation choice already resolved by the goal");
   });
 
   it("unwraps the strict Codex CLI response envelope", () => {
