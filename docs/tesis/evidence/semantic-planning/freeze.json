@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "series": "SP1b",
+  "series": "SP1c",
   "frozenAt": "2026-08-03",
   "protocol": "docs/tesis/evidence/semantic-planning/protocol.md",
-  "manyHandsCommit": "5570773",
+  "manyHandsCommit": "43251af",
   "baseSha": "5da60192cc788032c59c7e7be27696ca0e0a30d7",
   "taskId": "T1",
   "design": "1 task x 1 semantic-product condition x 2 independent repetitions",
@@ -11,8 +11,8 @@
   "executor": { "executorId": "codex-cli", "model": "gpt-5.4-mini", "effort": "medium" },
   "execution": { "maxPlanningAttempts": 1, "automaticRetryBudget": 0, "maxParallel": 2, "wallClockLimitMs": 1800000 },
   "artifacts": {
-    "cell01": { "path": ".scratch/semantic-planning-redesign/sp1-01.json", "sha256": "c6a55c50d36296ed618eab51c8f3cc62d073d7e4ef8d0707772726a096233c65" },
-    "cell02": { "path": ".scratch/semantic-planning-redesign/sp1-02.json", "sha256": "dc8dbfad8ce5a9b8e78476efc1e01cc22326d74edc1366bdd75145ded2e5849b" },
+    "cell01": { "path": ".scratch/semantic-planning-redesign/sp1-01.json", "sha256": "f7fd0a2ca51ab147c1c69614fb6b6d63d6971dfba903c2af289efffae8d0f778" },
+    "cell02": { "path": ".scratch/semantic-planning-redesign/sp1-02.json", "sha256": "47697d72b29e0c2306a934c941ef9ff49fdb79deae6c67e478118f46c31e0b6a" },
     "criteria": { "path": "docs/tesis/evidence/semantic-planning/criteria.json", "sha256": "908c59ac762236ec27b69d0b1a3e8f90be02872f87dcf0a2afebad40f96ca852" },
     "externalEvaluator": { "path": "docs/tesis/evidence/scripts/run-g6-evaluator.mjs", "sha256": "ebe729bfd25aa9a50c577c181a843babaf6e7d68b983a1b60196f03a291f2738" }
   },
@@ -21,6 +21,7 @@
     "outcome": "measurement_only_planning",
     "lifecycle": "needs_approval",
     "countsTowardSeries": false,
-    "preSeriesTransitionFailure": "de75e45c-fb3e-46e3-9e52-8ffc250fbd71"
+    "preSeriesTransitionFailure": "de75e45c-fb3e-46e3-9e52-8ffc250fbd71",
+    "preSeriesProposalFailure": "ab6d1163-a89f-4735-929c-2632b6d6d069"
   }
 }

@@ -44,6 +44,13 @@ La serie comparable se recongela como **SP1b** después de corregir ese defecto
 en `5570773`. Mantiene tarea, objetivo, executor, criterios, presupuesto,
 clones base y regla de no reintento. Sus dos celdas son `sp1b-01` y `sp1b-02`.
 
+La corrida `ab6d1163-a89f-4735-929c-2632b6d6d069` de SP1b alcanzó el modelo,
+pero fue rechazada por marcar como incertidumbre bloqueante una decisión que el
+objetivo ya resolvía explícitamente: agregar el script `study:g6-probe`. Se
+conserva como fallo de la validación de propuesta. SP1c se recongela en
+`43251af`, con la misma hipótesis, límites y criterios, y usa `sp1c-01` y
+`sp1c-02` como las dos celdas comparables.
+
 ## Criterios internos de la política
 
 El plan solo es válido si cumple simultáneamente:
