@@ -741,14 +741,25 @@ function buildV2CodeRepairInstructions(
   input: Pick<V2PhysicalNodeExecutionInput, "node" | "contract">,
   failedMatrix: V2ExecutionEvidenceMatrix
 ): string {
+  const failedCriteria = failedMatrix.criteria.filter((criterion) => criterion.status === "failed");
+  const failedCriterionIds = new Set(failedCriteria.map((criterion) => criterion.criterionId));
+  const failedObservations = failedMatrix.observations.filter((observation) =>
+    observation.passed === false && observation.criterionIds.some((criterionId) => failedCriterionIds.has(criterionId))
+  );
   return [
     `Repair the failed candidate for ${input.node.title}.`,
     "",
     `Objective: ${input.contract.task.goal}`,
     "The exact candidate was rejected by these validation obligations:",
-    ...failedMatrix.criteria
-      .filter((criterion) => criterion.status === "failed")
-      .map((criterion) => `- ${criterion.criterionId}: ${criterion.justification}`),
+    ...failedCriteria.map((criterion) => `- ${criterion.criterionId}: ${criterion.justification}`),
+    ...(failedObservations.length === 0
+      ? []
+      : [
+          "Failed evidence observations (use these exact command/reference identities when reproducing the failure):",
+          ...failedObservations.map((observation) =>
+            `- ${observation.evidenceId}: kind=${observation.kind}; attempt=${observation.attempt}; commandDigest=${observation.commandDigest}; outputDigest=${observation.outputDigest}; references=${observation.references.join(", ")}`
+          )
+        ]),
     "",
     "Preserve the declared scope and shared contracts. Change only what is required to satisfy the failed evidence.",
     "Re-check every quoted identifier, enum literal, field name, and return shape from the objective before editing; preserve them verbatim and do not replace them with a semantically similar name or alias.",

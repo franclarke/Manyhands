@@ -240,7 +240,19 @@ describe("V2NodeExecutor", () => {
                   ...criterion,
                   status: "failed" as const,
                   justification: "The API response violates the declared seam."
-                }))
+                })),
+                observations: [{
+                  evidenceId: "evidence-failed-api",
+                  kind: "test_result",
+                  commandDigest: "a".repeat(64),
+                  durationMs: 12,
+                  passed: false,
+                  attempt: 1,
+                  outputDigest: "b".repeat(64),
+                  criterionIds: evidence.criteria.map((criterion) => criterion.criterionId),
+                  obligationIds: evidence.criteria.map((criterion) => criterion.obligationId),
+                  references: ["src/api/server.test.ts"]
+                }]
               }
             : evidence;
         }
@@ -282,6 +294,9 @@ describe("V2NodeExecutor", () => {
     expect(agent.calls).toHaveLength(2);
     expect(prepared).toEqual([repairedCommit]);
     expect(prompts[1]).toContain("The API response violates the declared seam.");
+    expect(prompts[1]).toContain("evidence-failed-api");
+    expect(prompts[1]).toContain("commandDigest");
+    expect(prompts[1]).toContain("src/api/server.test.ts");
     expect(git.calls.filter((call) => call.op === "commit")).toHaveLength(2);
   });
 
