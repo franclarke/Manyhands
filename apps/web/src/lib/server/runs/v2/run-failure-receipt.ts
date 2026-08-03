@@ -1,10 +1,10 @@
 import { createHash, randomUUID } from "node:crypto";
-import { readFile, readdir } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { atomicWriteJson } from "@manyhands/run-store";
 import { z } from "zod";
 
-const ExecutionFailureReceiptSchema = z.object({
+const RunFailureReceiptSchema = z.object({
   schemaVersion: z.literal(1),
   receiptId: z.string().min(1),
   runId: z.string().min(1),
@@ -18,19 +18,19 @@ const ExecutionFailureReceiptSchema = z.object({
   reconciledAt: z.string().datetime().optional()
 }).strict();
 
-export type ExecutionFailureReceipt = z.infer<typeof ExecutionFailureReceiptSchema>;
+export type RunFailureReceipt = z.infer<typeof RunFailureReceiptSchema>;
 
-export class ExecutionFailureReceiptPersistenceError extends Error {
+export class RunFailureReceiptPersistenceError extends Error {
   constructor(
-    readonly receipt: ExecutionFailureReceipt,
+    readonly receipt: RunFailureReceipt,
     readonly recordingFailure: unknown
   ) {
-    super(`Execution failed and its terminal event could not be recorded: ${messageOf(recordingFailure)}`);
-    this.name = "ExecutionFailureReceiptPersistenceError";
+    super(`Run failed and its terminal event could not be recorded: ${messageOf(recordingFailure)}`);
+    this.name = "RunFailureReceiptPersistenceError";
   }
 }
 
-export interface ExecutionFailureReceiptStoreOptions {
+export interface RunFailureReceiptStoreOptions {
   directory: string;
   clock?: () => string;
 }
@@ -40,12 +40,14 @@ export interface ExecutionFailureReceiptStoreOptions {
  * canonical event write itself fails. It is not a substitute for the journal:
  * a later lease must reconcile it into `run.failed` before executing again.
  */
-export class ExecutionFailureReceiptStore {
+export class RunFailureReceiptStore {
   private readonly directory: string;
+  private readonly legacyDirectory: string;
   private readonly clock: () => string;
 
-  constructor(options: ExecutionFailureReceiptStoreOptions) {
-    this.directory = path.join(options.directory, "execution-failure-receipts");
+  constructor(options: RunFailureReceiptStoreOptions) {
+    this.directory = path.join(options.directory, "run-failure-receipts");
+    this.legacyDirectory = path.join(options.directory, "execution-failure-receipts");
     this.clock = options.clock ?? (() => new Date().toISOString());
   }
 
@@ -53,13 +55,13 @@ export class ExecutionFailureReceiptStore {
     runId: string;
     operationId: string;
     fencingToken: number;
-    area: ExecutionFailureReceipt["area"];
+    area: RunFailureReceipt["area"];
     error: unknown;
-  }): Promise<ExecutionFailureReceipt> {
+  }): Promise<RunFailureReceipt> {
     const receiptId = createHash("sha256")
       .update(`${input.runId}\u0000${input.operationId}\u0000${input.fencingToken}\u0000${randomUUID()}`)
       .digest("hex");
-    const receipt = ExecutionFailureReceiptSchema.parse({
+    const receipt = RunFailureReceiptSchema.parse({
       schemaVersion: 1,
       receiptId,
       runId: input.runId,
@@ -74,73 +76,93 @@ export class ExecutionFailureReceiptStore {
     return receipt;
   }
 
-  async listPending(runId: string, area?: ExecutionFailureReceipt["area"]): Promise<ExecutionFailureReceipt[]> {
-    const files = await readdir(this.directory, { withFileTypes: true }).catch((error: unknown) => {
-      if (isNotFound(error)) return [];
-      throw error;
-    });
-    const receipts = await Promise.all(files
-      .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
-      .map(async (entry) => ExecutionFailureReceiptSchema.parse(JSON.parse(await readFile(path.join(this.directory, entry.name), "utf8")))));
-    return receipts
+  async listPending(runId: string, area?: RunFailureReceipt["area"]): Promise<RunFailureReceipt[]> {
+    const receipts = await Promise.all([
+      this.readReceipts(this.legacyDirectory),
+      this.readReceipts(this.directory)
+    ]);
+    const uniqueReceipts = new Map(receipts.flat().map((receipt) => [receipt.receiptId, receipt]));
+    return [...uniqueReceipts.values()]
       .filter((receipt) => receipt.runId === runId && receipt.status === "pending" && (area === undefined || receipt.area === area))
       .sort((left, right) => left.failedAt.localeCompare(right.failedAt) || left.receiptId.localeCompare(right.receiptId));
   }
 
-  async recordRecordingFailure(receipt: ExecutionFailureReceipt, error: unknown): Promise<ExecutionFailureReceipt> {
-    const next = ExecutionFailureReceiptSchema.parse({ ...receipt, recordingFailure: messageOf(error), status: "pending" });
+  async recordRecordingFailure(receipt: RunFailureReceipt, error: unknown): Promise<RunFailureReceipt> {
+    const next = RunFailureReceiptSchema.parse({ ...receipt, recordingFailure: messageOf(error), status: "pending" });
     await atomicWriteJson(this.filePath(next), next);
+    await this.updateLegacyReceiptIfPresent(next);
     return next;
   }
 
-  async markReconciled(receipt: ExecutionFailureReceipt): Promise<ExecutionFailureReceipt> {
-    const next = ExecutionFailureReceiptSchema.parse({ ...receipt, status: "reconciled", reconciledAt: this.clock() });
+  async markReconciled(receipt: RunFailureReceipt): Promise<RunFailureReceipt> {
+    const next = RunFailureReceiptSchema.parse({ ...receipt, status: "reconciled", reconciledAt: this.clock() });
     await atomicWriteJson(this.filePath(next), next);
+    await this.updateLegacyReceiptIfPresent(next);
     return next;
   }
 
-  private filePath(receipt: Pick<ExecutionFailureReceipt, "runId" | "receiptId">): string {
-    return path.join(this.directory, `${safeName(receipt.runId)}--${receipt.receiptId}.json`);
+  private async readReceipts(directory: string): Promise<RunFailureReceipt[]> {
+    const files = await readdir(directory, { withFileTypes: true }).catch((error: unknown) => {
+      if (isNotFound(error)) return [];
+      throw error;
+    });
+    return Promise.all(files
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+      .map(async (entry) => RunFailureReceiptSchema.parse(JSON.parse(await readFile(path.join(directory, entry.name), "utf8")))));
+  }
+
+  private async updateLegacyReceiptIfPresent(receipt: RunFailureReceipt): Promise<void> {
+    const legacyPath = this.filePath(receipt, this.legacyDirectory);
+    if (await fileExists(legacyPath)) {
+      await atomicWriteJson(legacyPath, receipt);
+    }
+  }
+
+  private filePath(
+    receipt: Pick<RunFailureReceipt, "runId" | "receiptId">,
+    directory = this.directory
+  ): string {
+    return path.join(directory, `${safeName(receipt.runId)}--${receipt.receiptId}.json`);
   }
 }
 
 export interface TerminalFailureRecorder {
-  (receipt: ExecutionFailureReceipt): Promise<void>;
+  (receipt: RunFailureReceipt): Promise<void>;
 }
 
 export async function persistExecutionFailure(input: {
-  store: ExecutionFailureReceiptStore;
+  store: RunFailureReceiptStore;
   runId: string;
   operationId: string;
   fencingToken: number;
   error: unknown;
   recordTerminalFailure: TerminalFailureRecorder;
-}): Promise<ExecutionFailureReceipt> {
+}): Promise<RunFailureReceipt> {
   return persistRunFailure({ ...input, area: "execution" });
 }
 
 export async function persistRunFailure(input: {
-  store: ExecutionFailureReceiptStore;
-  area: ExecutionFailureReceipt["area"];
+  store: RunFailureReceiptStore;
+  area: RunFailureReceipt["area"];
   runId: string;
   operationId: string;
   fencingToken: number;
   error: unknown;
   recordTerminalFailure: TerminalFailureRecorder;
-}): Promise<ExecutionFailureReceipt> {
+}): Promise<RunFailureReceipt> {
   const receipt = await input.store.create(input);
   try {
     await input.recordTerminalFailure(receipt);
   } catch (recordingFailure) {
     await input.store.recordRecordingFailure(receipt, recordingFailure);
-    throw new ExecutionFailureReceiptPersistenceError(receipt, recordingFailure);
+    throw new RunFailureReceiptPersistenceError(receipt, recordingFailure);
   }
   await input.store.markReconciled(receipt).catch(() => undefined);
   return receipt;
 }
 
 export async function reconcilePendingExecutionFailures(input: {
-  store: ExecutionFailureReceiptStore;
+  store: RunFailureReceiptStore;
   runId: string;
   recordTerminalFailure: TerminalFailureRecorder;
 }): Promise<{ reconciledReceiptIds: string[] }> {
@@ -148,8 +170,8 @@ export async function reconcilePendingExecutionFailures(input: {
 }
 
 export async function reconcilePendingRunFailures(input: {
-  store: ExecutionFailureReceiptStore;
-  area: ExecutionFailureReceipt["area"];
+  store: RunFailureReceiptStore;
+  area: RunFailureReceipt["area"];
   runId: string;
   recordTerminalFailure: TerminalFailureRecorder;
 }): Promise<{ reconciledReceiptIds: string[] }> {
@@ -160,7 +182,7 @@ export async function reconcilePendingRunFailures(input: {
       await input.recordTerminalFailure(receipt);
     } catch (recordingFailure) {
       await input.store.recordRecordingFailure(receipt, recordingFailure);
-      throw new ExecutionFailureReceiptPersistenceError(receipt, recordingFailure);
+      throw new RunFailureReceiptPersistenceError(receipt, recordingFailure);
     }
     await input.store.markReconciled(receipt);
     reconciledReceiptIds.push(receipt.receiptId);
@@ -178,4 +200,11 @@ function messageOf(error: unknown): string {
 
 function isNotFound(error: unknown): error is NodeJS.ErrnoException {
   return error instanceof Error && "code" in error && error.code === "ENOENT";
+}
+
+async function fileExists(filePath: string): Promise<boolean> {
+  return access(filePath).then(() => true, (error: unknown) => {
+    if (isNotFound(error)) return false;
+    throw error;
+  });
 }

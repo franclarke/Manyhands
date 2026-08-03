@@ -140,11 +140,13 @@ productivo.
 
 ### 2.5 Receipts de fallas terminales
 
-Se implementó `apps/web/src/lib/server/runs/v2/execution-failure-receipt.ts`.
+Se implementó `apps/web/src/lib/server/runs/v2/run-failure-receipt.ts`.
 El receipt se escribe de forma durable bajo el directorio de runs, con escritura
 atómica y estados `pending`/`reconciled`. Conserva `receiptId`, `runId`,
 `operationId`, fencing token, timestamp, área (`planning` o `execution`), causa
-original y error de persistencia.
+original y error de persistencia. Las escrituras nuevas usan
+`run-failure-receipts`; el store todavía lee y reconcilia el directorio legado
+`execution-failure-receipts` para no perder fallas pendientes.
 
 `execution-pipeline.ts` reconcilia receipts pendientes antes de ejecutar y
 preserva el error original junto con un eventual error del recorder. El mismo
@@ -179,7 +181,7 @@ Todos son commits locales de esta rama. No se hizo push.
 
 ### 4.1 Regresiones rojas que guiaron los fixes
 
-1. `tests/execution-failure-receipt.test.ts` comenzó roja porque faltaba el
+1. `tests/run-failure-receipt.test.ts` comenzó roja porque faltaba el
    módulo de receipt. Después de implementar almacenamiento, reconciliación e
    idempotencia, quedó verde.
 2. `tests/planning-v2-pipeline.test.ts` comenzó roja porque el host no pasaba el
@@ -192,7 +194,7 @@ Las pruebas focalizadas se ejecutaron después de `pnpm build`:
 
 ```text
 pnpm build
-pnpm exec vitest run tests/execution-failure-receipt.test.ts tests/planning-v2-pipeline.test.ts
+pnpm exec vitest run tests/run-failure-receipt.test.ts tests/planning-v2-pipeline.test.ts
 => 2 archivos, 9 tests passing
 ```
 

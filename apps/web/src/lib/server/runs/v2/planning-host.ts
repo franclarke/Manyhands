@@ -6,10 +6,10 @@ import { PLAN_CRITIC_KINDS, PILOT_UTILITY_POLICY, buildGranularityPlanningBrief,
 import { foldRun, supersededDecisionIds, type RunEventInput, type RunProjection } from "@manyhands/run-coordinator";
 import type { FencingAuthority, JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
 import {
-  ExecutionFailureReceiptStore,
+  RunFailureReceiptStore,
   persistRunFailure,
   reconcilePendingRunFailures
-} from "./execution-failure-receipt";
+} from "./run-failure-receipt";
 
 export interface PlanningV2Input {
   runId: string;
@@ -58,7 +58,7 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
   if (state.planningCandidates?.selection.kind === "replan_required") return state;
   let reconciledState: RunProjection | undefined;
   const reconciliation = await reconcilePendingRunFailures({
-    store: new ExecutionFailureReceiptStore({ directory: dependencies.events.directory }),
+    store: new RunFailureReceiptStore({ directory: dependencies.events.directory }),
     area: "planning",
     runId: input.runId,
     recordTerminalFailure: async (receipt) => {
@@ -218,7 +218,7 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
     let recordedState: RunProjection | undefined;
     try {
       await persistRunFailure({
-        store: new ExecutionFailureReceiptStore({ directory: dependencies.events.directory }),
+        store: new RunFailureReceiptStore({ directory: dependencies.events.directory }),
         area: "planning",
         runId: input.runId,
         operationId: input.authority.operationId,

@@ -170,7 +170,7 @@ cerrada por el estado de migración de continuación registrado más abajo.
   reconciliación verificable.
 
 Estado de migración (2026-08-02): mitigado por
-`execution-failure-receipt.ts`. Antes de registrar `run.failed` se preserva un
+`run-failure-receipt.ts`. Antes de registrar `run.failed` se preserva un
 receipt fsync/rename; si el journal o la proyección fallan, el receipt queda
 pendiente con la causa original. Un lease posterior lo reconcilia de modo
 idempotente antes de ejecutar. Si incluso el receipt no puede persistirse, el

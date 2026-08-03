@@ -54,10 +54,10 @@ import type { RunOperationLease, RunRecord } from "../schema";
 import { resolveRunTargetPath } from "../target-context";
 import { projectV2RunRecordCache } from "./run-record-cache";
 import {
-  ExecutionFailureReceiptStore,
+  RunFailureReceiptStore,
   persistExecutionFailure,
   reconcilePendingExecutionFailures
-} from "./execution-failure-receipt";
+} from "./run-failure-receipt";
 
 export interface ApprovedExecutionPlanV2 {
   graph: GraphRevision;
@@ -146,7 +146,7 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
     const integrationJournal = new JsonIntegrationOperationJournal(join(directory, "integration-operations"));
     const events = new JsonlRunEventStore({ directory });
     const snapshots = new RunSnapshotStore({ directory, events });
-    const failureReceipts = new ExecutionFailureReceiptStore({ directory });
+    const failureReceipts = new RunFailureReceiptStore({ directory });
     const authority = { operationId: lease.operationId, fencingToken: lease.fencingToken };
     const reconciliation = await reconcilePendingExecutionFailures({
       store: failureReceipts,
@@ -283,7 +283,7 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
   } catch (error) {
     try {
       await persistExecutionFailure({
-        store: new ExecutionFailureReceiptStore({ directory: resolveRunsDirectory() }),
+        store: new RunFailureReceiptStore({ directory: resolveRunsDirectory() }),
         runId,
         operationId: lease.operationId,
         fencingToken: lease.fencingToken,
