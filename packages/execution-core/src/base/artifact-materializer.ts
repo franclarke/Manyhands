@@ -38,6 +38,7 @@ export class ArtifactMaterializer {
     // evidence strong enough to accept that case without masking a real clash.
     const currentHead = await this.git.head(worktreePath);
     if (await this.git.isAncestor({ cwd: worktreePath, ancestor: artifact.location, descendant: currentHead })) return;
+    if (await this.artifactTreeMatchesCurrent(worktreePath, artifact.location, currentHead)) return;
 
     const outcome = await this.git.cherryPick({ cwd: worktreePath, commitSha: artifact.location });
     if (outcome.ok) return;
@@ -49,5 +50,28 @@ export class ArtifactMaterializer {
       conflictFiles: outcome.conflictFiles,
       output: outcome.output
     });
+  }
+
+  private async artifactTreeMatchesCurrent(worktreePath: string, artifactCommit: string, currentHead: string): Promise<boolean> {
+    try {
+      const changedPaths = await this.git.diffRangeNameOnly({
+        cwd: worktreePath,
+        from: `${artifactCommit}^`,
+        to: artifactCommit
+      });
+      if (changedPaths.length === 0) return false;
+      const comparisons = await Promise.all(changedPaths.map(async (filePath) => {
+        const [artifactContents, currentContents] = await Promise.all([
+          this.git.showFile({ cwd: worktreePath, ref: artifactCommit, path: filePath }),
+          this.git.showFile({ cwd: worktreePath, ref: currentHead, path: filePath })
+        ]);
+        return artifactContents === currentContents;
+      }));
+      return comparisons.every(Boolean);
+    } catch {
+      // A missing parent or unreadable path is not evidence of idempotence;
+      // let cherry-pick produce the structured conflict/empty result instead.
+      return false;
+    }
   }
 }
