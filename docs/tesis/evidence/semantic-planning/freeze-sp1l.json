@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "series": "SP1l",
+  "frozenAt": "2026-08-04",
+  "protocol": "docs/tesis/evidence/semantic-planning/protocol.md",
+  "manyHandsCommit": "ce00694d0df5d5f94f7d4d83cfcf86c20fa68bac",
+  "baseSha": "5da60192cc788032c59c7e7be27696ca0e0a30d7",
+  "taskId": "T1",
+  "design": "1 task x 1 semantic-product condition x 2 independent repetitions",
+  "reasonForSuccessor": "SP1k-01 showed that the new G6 implementation was correct in isolation, but candidate validation failed because package.json was passed as a node --test selector. The validation recipe now separates manifest evidence references from executable test selectors.",
+  "budgetUsd": { "perCell": 8, "series": 16 },
+  "executor": { "executorId": "codex-cli", "model": "gpt-5.4-mini", "effort": "medium", "cliVersion": "0.146.0" },
+  "runtime": { "planningStepTimeoutMs": 1800000, "runsDir": "C:\\Users\\franc\\Documents\\Proyectos\\manyhands-semantic-preflight-runtime-20260803\\runs" },
+  "execution": { "maxPlanningAttempts": 1, "automaticRetryBudget": 0, "maxParallel": 2, "wallClockLimitMs": 1800000 },
+  "artifacts": {
+    "cell01": { "path": ".scratch/semantic-planning-redesign/sp1l-01.json", "sha256": "a4aafcd1da914c3a134e18338c65c9ca22484eaa889d8096b6aa28fee3e7681e" },
+    "cell02": { "path": ".scratch/semantic-planning-redesign/sp1l-02.json", "sha256": "098fd7dba7ad79601b1255e4ff58e5a3060916caf33e6ccf5acb615805da5410" },
+    "criteria": { "path": "docs/tesis/evidence/semantic-planning/criteria.json", "sha256": "908c59ac762236ec27b69d0b1a3e8f90be02872f87dcf0a2afebad40f96ca852" },
+    "externalEvaluator": { "path": "docs/tesis/evidence/scripts/run-g6-evaluator.mjs", "sha256": "ebe729bfd25aa9a50c577c181a843babaf6e7d68b983a1b60196f03a291f2738" }
+  },
+  "predecessors": [
+    { "series": "SP1k", "runId": "ced6591d-ef25-429e-84b0-1945f0476bc1", "lifecycle": "in_progress", "phase": "execution", "countsTowardSeries": false, "reason": "The candidate was tested before the focused-selector fix and failed because package.json was included in node --test arguments; the exact candidate passed when run without that manifest selector." },
+    { "series": "SP1j", "runId": "a5331ccf-0123-4eae-93ea-6f72b4bcae0f", "lifecycle": "timeout", "phase": "execution", "countsTowardSeries": false, "reason": "A failed G6 probe validation produced an empty-diff repair; the run reached the wall-clock limit while later leaves were still executing." }
+  ]
+}
