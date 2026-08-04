@@ -5,7 +5,7 @@
 > sólo por un id, con un único archivo de test compartido. Ese estímulo fue
 > retirado por degenerado. Este PASS es evidencia de **mecánica**, no de que la
 > arquitectura sirva para desarrollar software. Ver
-> [`protocol/wide-graph-scaling.md`](../../../protocol/wide-graph-scaling.md).
+> [`protocol/wide-graph-scaling.md`](../../../../protocol/wide-graph-scaling.md).
 >
 > **Contrato de oráculo histórico.** Los recibos
 > `oracle-result.json` y `oracle-result-instrumentation-failure.json` usan

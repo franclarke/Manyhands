@@ -148,7 +148,7 @@ no de múltiples `useState` de negocio.
   posiciones sin React Flow;
 - [`buildRelationViews`](../../apps/web/src/lib/run-model/presentation.ts)
   agrupa y filtra relaciones sin mutar `GraphRevision`;
-- [`minimal-run-graph.tsx`](../../apps/web/src/components/run-model/minimal-run-graph.tsx)
+- [`cockpit-run-graph.tsx`](../../apps/web/src/app/runs/[runId]/_components/cockpit-run-graph.tsx)
   convierte esas vistas a `Node[]` y `Edge[]`.
 
 `useReactFlow()` se utiliza para acciones de viewport controladas:

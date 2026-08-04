@@ -20,7 +20,7 @@ Muchos componentes del sistema existen para dar soporte a la arquitectura, pero 
 
 | Subsistema | Especificación Técnica | Descripción |
 |---|---|---|
-| 📐 **TaskGraph & Contratos** | 📄 **[01-task-graph-and-contracts.md](system/01-task-graph-and-contracts.md)** | Grafo jerárquico V3, relaciones canónicas tipadas, reductor Compare-and-Swap e inmutabilidad profunda (`deepFreeze`). |
+| 📐 **TaskGraph & Contratos** | 📄 **[01-task-graph.md](system/01-task-graph.md)** | Grafo jerárquico V3, relaciones canónicas tipadas, reductor Compare-and-Swap e inmutabilidad profunda (`deepFreeze`). |
 | 💾 **Persistencia y Durabilidad** | 📄 **[02-persistence-and-durability.md](system/02-persistence-and-durability.md)** | Escrituras atómicas con `fsync`, log $O(1)$, compactación por generaciones, SQLite WAL mode y recuperador de fallos de energía. |
 | 🚀 **Indexación Monorepo** | 📄 **[03-monorepo-grounding.md](system/03-monorepo-grounding.md)** | Indexación nativa con `ripgrep` (`rg --files`), caché incremental por Git HEAD SHA y extractor de firmas de exportación. |
 | 🖥️ **Cockpit UI & Interacción** | 📄 **[04-cockpit-ui-and-interaction.md](system/04-cockpit-ui-and-interaction.md)** | Modelo visual del Cockpit (`apps/web`), medallas de ciclo de vida de nodos, cola de decisiones non-blocking y prohibición de `fitView`. |
@@ -30,8 +30,8 @@ Muchos componentes del sistema existen para dar soporte a la arquitectura, pero 
 ## 📜 REGISTRO DE DECISIONES Y PLANIFICACIÓN
 
 - **Decisiones de Arquitectura**: `docs/DECISIONS.md` y carpeta `docs/adr/`.
-- **Auditoría de Producción y Backlog**: `docs/audits/production-readiness/planning/remediation-backlog.json`.
-- **Prompts Autónomos de Ejecución**: `docs/prompts/`.
+- **Diseño vigente de planificación semántica**: `docs/plans/2026-08-02-policy-guided-semantic-planning-design.md`.
+- **Próximo run documentado, aún no ejecutado**: [`tesis/evidence/semantic-planning/next-run.md`](tesis/evidence/semantic-planning/next-run.md).
 
 ---
 

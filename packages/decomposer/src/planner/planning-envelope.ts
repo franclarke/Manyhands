@@ -209,6 +209,7 @@ export interface CandidatePlanDiagnostic {
     | "local_owner_must_be_leaf"
     | "missing_seam_specification"
     | "orphan_seam_specification"
+    | "executable_seam_requires_materialization"
     | "contract_obligation_incomplete"
     | "semantic_dependency_without_seam"
     | "leaf_without_local_acceptance";
@@ -510,6 +511,14 @@ function validateCandidate(envelope: PlanningEnvelope, candidate: CandidatePlan)
     if (specification.producerUnitKey !== seam.producerUnitKey ||
         specification.consumerUnitKeys.join("\u0000") !== seam.consumerUnitKeys.join("\u0000")) {
       diagnostics.push(issue(candidate, "missing_seam_specification", `Seam ${seam.id} specification participants do not match the semantic seam.`, [seam.id]));
+    }
+    if ((seam.kind === "api" || seam.kind === "type" || seam.kind === "command") && specification.materialization === "logical") {
+      diagnostics.push(issue(
+        candidate,
+        "executable_seam_requires_materialization",
+        `Executable seam ${seam.id} cannot use logical materialization; consumers need the producer implementation as files, a manifest, or a commit.`,
+        [seam.id, specification.producerUnitKey, ...specification.consumerUnitKeys]
+      ));
     }
   }
   for (const seamId of specifications.keys()) if (!seams.has(seamId)) diagnostics.push(issue(candidate, "orphan_seam_specification", `Seam specification ${seamId} has no candidate seam.`, [seamId]));

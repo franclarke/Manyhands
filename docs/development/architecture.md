@@ -380,5 +380,5 @@ journal: la distinción es presentación, no autoridad.
 
 La evidencia automatizada principal está en los tests enlazados desde cada
 componente y estrategia. La auditoría manual más reciente está en
-[`../audits/v2-productive-run-audit-2026-07-18.md`](../audits/v2-productive-run-audit-2026-07-18.md);
+[`../audits/system-reliability-redesign.md`](../audits/system-reliability-redesign.md);
 el sufijo del archivo identifica la campaña auditada, no el enfoque de esta guía.

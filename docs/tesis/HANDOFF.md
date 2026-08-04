@@ -1624,7 +1624,7 @@ objetivo completo a las hojas. No se cambió término, fórmula ni umbral.
 ## Cierre del programa — 2026-07-30
 
 Los 26 tickets locales están `closed`. El informe final exigido por
-`AUTONOMOUS_CLOSURE_PLAN.md` §9 vive en `docs/tesis/CLOSURE-REPORT.md`.
+`AUTONOMOUS_CLOSURE_PLAN.md` §9 vive en `docs/tesis/evidence/g6/FINAL-REPORT.md`.
 
 - **Gate final PASS** sobre `a430a57` con Node `22.23.1` / pnpm `7.29.3`:
   `pnpm test` 220 archivos, **1534 passed, 2 skipped, 0 failed**; ambos
