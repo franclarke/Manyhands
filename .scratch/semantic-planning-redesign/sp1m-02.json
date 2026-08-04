@@ -1,0 +1,31 @@
+{
+  "cellId": "sp1m-02-semantic-product",
+  "position": 2,
+  "taskId": "T1",
+  "taskLabel": "multi-layer feature across six layers",
+  "condition": "semantic-product",
+  "repetition": 2,
+  "seriesKind": "execution",
+  "workspaceName": "semantic-sp1m-02",
+  "baseUrl": "http://127.0.0.1:3141",
+  "targetRepo": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-semantic-sp1-08-20260803",
+  "baseSha": "5da60192cc788032c59c7e7be27696ca0e0a30d7",
+  "acceptanceCriteria": [
+    "The domain accepts optional standard or express priority, rejects invalid priority, records positive backorder shortages, keeps the order cancellable, and lists backorders.",
+    "The application service exposes the new operations and emits a warehouse event for each recorded backorder.",
+    "Fulfillment lists express orders before standard orders within one wave without changing its existing signature.",
+    "History analytics derives a backorders count from the event journal.",
+    "The API exposes the backorders of the current warehouse state.",
+    "The rendered SVG distinguishes express orders from standard ones.",
+    "The g6 probe returns one deterministic JSON object and its package script preserves byte-identical output across repeated invocations."
+  ],
+  "goal": "Add order priority and backorders to this warehouse codebase, across every layer that already exists.\n\nDomain - src/domain/orders.ts: export OrderPriority standard|express; make priority optional at call sites with standard as the default; reject invalid priorities with OrderError; export Backorder with orderId, skuId, positive integer missing; add backorders to WarehouseState; reserveOrder records shortages instead of throwing and leaves orders cancellable; export listBackorders. Application - expose the new operations and emit a warehouse event for each recorded backorder. Fulfillment - order express before standard within one wave without changing the existing signature. Durability - derive a backorders count from the event journal. API - expose current-state backorders. Presentation - distinguish express and standard orders in rendered SVG. Probe - add study:g6-probe that emits one deterministic JSON object with no extra stdout. Preserve existing behavior and tests; add focused tests beside the covered code.",
+  "planningSelection": { "executorId": "codex-cli", "model": "gpt-5.4-mini", "effort": "medium" },
+  "executionSelection": { "executorId": "codex-cli", "model": "gpt-5.4-mini", "effort": "medium" },
+  "repairSelection": { "executorId": "codex-cli", "model": "gpt-5.4-mini", "effort": "medium" },
+  "executionConfig": { "maxParallel": 2, "scopePolicy": "strict", "leafTimeoutMs": 1800000, "integrationTimeoutMs": 1800000, "maxPlanningAttempts": 1, "automaticRetryBudget": 0, "maxCostUsd": 8, "unexpectedCommitPolicy": "reject" },
+  "runsDir": "C:\\Users\\franc\\Documents\\Proyectos\\manyhands-semantic-preflight-runtime-20260803\\runs",
+  "pollIntervalMs": 5000,
+  "wallClockLimitMs": 1800000,
+  "ownerHeartbeatStaleMs": 120000
+}
