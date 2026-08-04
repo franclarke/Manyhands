@@ -63,9 +63,11 @@ export class ArtifactMaterializer {
       const comparisons = await Promise.all(changedPaths.map(async (filePath) => {
         const [artifactContents, currentContents] = await Promise.all([
           this.git.showFile({ cwd: worktreePath, ref: artifactCommit, path: filePath }),
-          this.git.showFile({ cwd: worktreePath, ref: currentHead, path: filePath })
+          this.git.readWorktreeFile === undefined
+            ? this.git.showFile({ cwd: worktreePath, ref: currentHead, path: filePath })
+            : this.git.readWorktreeFile(worktreePath, filePath)
         ]);
-        return artifactContents === currentContents;
+        return normalizeText(artifactContents) === normalizeText(currentContents);
       }));
       return comparisons.every(Boolean);
     } catch {
@@ -74,4 +76,8 @@ export class ArtifactMaterializer {
       return false;
     }
   }
+}
+
+function normalizeText(contents: string | null): string | null {
+  return contents === null ? null : contents.replaceAll("\r\n", "\n");
 }

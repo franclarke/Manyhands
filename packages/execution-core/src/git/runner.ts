@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
-import { resolve } from "node:path";
+import { readFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { simpleGit, type SimpleGit } from "simple-git";
 
@@ -100,6 +101,8 @@ export interface GitRunner {
     params: { cwd: string; ref: string; path: string },
     options?: GitShowOptions
   ): Promise<string | null>;
+  /** Contents of a path in the physical worktree, including staged/unstaged changes. */
+  readWorktreeFile?(cwd: string, path: string, options?: GitShowOptions): Promise<string | null>;
 }
 
 /** GitRunner backed by simple-git. Each operation runs against the given cwd. */
@@ -315,6 +318,22 @@ export class SimpleGitRunner implements GitRunner {
       return stdout.toString("utf8");
     } catch (error) {
       if (isMissingGitObjectOrPath(error)) return null;
+      throw error;
+    }
+  }
+
+  async readWorktreeFile(cwd: string, path: string, options?: GitShowOptions): Promise<string | null> {
+    options?.signal?.throwIfAborted();
+    try {
+      const content = await readFile(join(cwd, path), "utf8");
+      if (options?.maxBytes !== undefined && Buffer.byteLength(content, "utf8") > options.maxBytes) {
+        throw Object.assign(new RangeError("worktree file exceeds byte budget"), {
+          code: "ERR_CHILD_PROCESS_STDIO_MAXBUFFER"
+        });
+      }
+      return content;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
       throw error;
     }
   }

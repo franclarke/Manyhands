@@ -97,6 +97,35 @@ describe("ExecutionBaseBuilder", () => {
     ]);
   });
 
+  it("treats an artifact already present in the dirty worktree as materialized", async () => {
+    const git = Object.assign(new FakeGitRunner({
+      diffRangeNameOnly: ["src/shared.ts"],
+      showFileByRef: {
+        [ARTIFACT_A_COMMIT]: { "src/shared.ts": "export const shared = true;" },
+        [BASE]: { "src/shared.ts": "export const shared = false;" }
+      },
+      cherryPickOutcomes: [{ ok: false, kind: "empty", conflictFiles: [], output: "the patch is already present" }]
+    }), {
+      readWorktreeFile: async (_cwd: string, path: string) => path === "src/shared.ts" ? "export const shared = true;" : null
+    });
+    const manager = new WorktreeManager({ git, repoRoot: "C:/repo" });
+    const builder = new ExecutionBaseBuilder({ git, worktreeManager: manager });
+
+    const built = await builder.build({
+      runId: "run-dirty-equivalent-artifact",
+      nodeId: "consumer",
+      baseCommit: BASE,
+      contractBaseline: { id: "consumer-contract", revision: "rev-1" },
+      artifacts: [artifact("artifact-a", ARTIFACT_A_COMMIT, "digest-a")],
+      inputFingerprint: FINGERPRINT
+    });
+
+    expect(git.calls.filter((call) => call.op === "cherryPick")).toHaveLength(0);
+    expect(built.manifest.materializedArtifacts).toEqual([
+      expect.objectContaining({ artifactId: "artifact-a", beforeCommit: BASE, resultingCommit: BASE })
+    ]);
+  });
+
   it("fails with structured evidence and cleans the worktree before an executor can be invoked", async () => {
     const git = new FakeGitRunner({
       cherryPickOutcomes: [{ ok: false, kind: "conflict", conflictFiles: ["src/shared.ts"], output: "CONFLICT" }]
