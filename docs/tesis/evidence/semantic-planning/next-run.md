@@ -1,6 +1,6 @@
-# Próximo run de validación semántica
+# Próximo run de validación semántica (SP1p histórico)
 
-> **Estado:** diseño documentado; no ejecutado.
+> **Estado:** reemplazado para ejecución futura por SP2; no ejecutar este protocolo.
 > **Fecha:** 2026-08-04.
 > **Regla:** este documento no constituye evidencia experimental ni cambia los
 > freezes, resultados u oráculos históricos de SP1/G6.
@@ -76,3 +76,9 @@ el defecto que se quiere cerrar.
 - No ampliar scopes manualmente durante la ejecución.
 - No convertir una seam problemática en `logical` para hacer avanzar el run.
 - No modificar el protocolo histórico ni borrar la evidencia adversa de SP1.
+
+## Reemplazo
+
+SP1p queda como diagnóstico y antecedente. El próximo experimento operativo es
+[`sp2-protocol.md`](sp2-protocol.md): usa un target pequeño, versionado y nuevo,
+en vez de intentar reconstruir Warehouse WC3 o el commit histórico `5da60192`.

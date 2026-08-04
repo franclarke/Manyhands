@@ -1,47 +1,33 @@
-# Claude — experimento de validación semántica
+# Claude — experimento SP2 de planificación semántica
 
-Trabajá en este repositorio para ejecutar el próximo experimento de validación
-de ManyHands. Usá el modelo Claude **de menor costo disponible** en el entorno
-(preferentemente una variante Haiku si está habilitada). No uses un modelo más
-caro salvo que el modelo económico no esté disponible; si ocurre, detenete e
-informalo antes de ejecutar.
+Ejecutá exclusivamente el protocolo SP2 definido en
+`docs/tesis/evidence/semantic-planning/sp2-protocol.md`.
 
-Primero leé:
+Usá el modelo Claude **de menor costo disponible** en el entorno
+(preferentemente una variante Haiku). Si no está disponible, detenete e
+informalo antes de usar un modelo más caro.
 
-- `PRODUCT.md`
-- `AGENTS.md`
-- `docs/tesis/evidence/semantic-planning/next-run.md`
-- `docs/tesis/evidence/g6/FINAL-REPORT.md`
-- `docs/tesis/HANDOFF.md`
+Primero leé `PRODUCT.md`, `AGENTS.md`, el protocolo SP2 y
+`docs/tesis/HANDOFF.md`.
 
-Objetivo: validar el rediseño de planning con un vertical slice de cuatro
-unidades: Domain, Application, API e Integration composite. La seam ejecutable
-debe estar materializada como `files`, `manifest` o `commit`; nunca como
-`logical`.
+El target base es el template versionado
+`docs/tesis/evidence/semantic-planning/sp2-target-template/`. Creá dos copias
+limpias e independientes desde ese template y registrá el SHA inicial de cada
+una. No uses Warehouse WC3, el SHA `5da60192…`, snapshots históricos ni el
+fixture `tests/fixtures/warehouse-probe`.
 
-Protocolo:
+Reglas:
 
-1. Crear dos targets limpios e independientes desde el mismo commit base.
-2. Congelar y registrar SHA, prompt, modelo, esfuerzo, presupuesto y criterios.
-3. Generar el plan y revisar su salida durable antes de ejecutar. Si una seam
-   ejecutable es `logical`, declarar la celda inválida y no continuarla.
-4. Ejecutar exactamente dos repeticiones independientes, sin retries
-   automáticos ni cambios de prompt, umbral, política u oráculo entre celdas.
-5. Permitir como máximo una reparación dentro del scope declarado de cada
-   celda. No ampliar scopes para corregir un plan defectuoso.
-6. Evaluar cada commit candidato exacto con el evaluador externo correspondiente.
+- No modifiques ManyHands, el protocolo, el template o la evidencia histórica.
+- Toda seam `api`, `type` o `command` debe materializarse como `files`,
+  `manifest` o `commit`; `logical` invalida la celda antes de ejecutar.
+- Ejecutá exactamente dos celdas independientes, sin retries automáticos y con
+  una sola reparación dentro del scope declarado por celda.
+- Corré el evaluador externo sobre el commit candidato exacto de cada celda.
+- Conservá todos los logs, runs y resultados adversos.
+- Emití `PASS` sólo con 2/2 celdas completas y todos los criterios externos
+  satisfechos; de lo contrario emití `PARTIAL` o `FAIL` con causa observable.
 
-Reglas de evidencia:
-
-- Preservá todos los runs, logs y resultados adversos; no borres ni reescribas
-  evidencia histórica.
-- No declares `PASS` por un timeout, una salida parcial, un fixture o un test
-  focal aislado.
-- Reportá `PASS` sólo con 2/2 celdas completas y todos los criterios externos
-  satisfechos. En cualquier otro caso, reportá `PARTIAL` o `FAIL` con la causa.
-- No cambies código, documentos de arquitectura ni el protocolo mientras
-  ejecutás el experimento. Si encontrás un defecto, detenete y documentalo.
-
-Al finalizar, escribí un reporte breve con: configuración congelada, rutas de
-evidencia, SHA de cada celda, resultado por criterio, costos/uso disponibles y
-veredicto `PASS`/`PARTIAL`/`FAIL`.
+Al finalizar, escribí el reporte indicado por el protocolo: configuración,
+SHA, rutas de evidencia, uso/costo disponible, resultados por criterio y
+veredicto final.
