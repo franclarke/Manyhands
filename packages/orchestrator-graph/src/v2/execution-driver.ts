@@ -620,15 +620,22 @@ function suspendedByRecovery(state: RunProjection): Set<string> {
   );
 }
 
-function budgetAvailableFor(input: PreparedExecutionRunInput, state: RunProjection): boolean {
+export function budgetAvailableFor(
+  input: { effectiveConfig: Pick<PreparedExecutionRunInput["effectiveConfig"], "maxTokensTotal" | "maxCostUsd"> },
+  state: Pick<RunProjection, "attempts">
+): boolean {
   const budgetConfigured = input.effectiveConfig.maxTokensTotal !== undefined || input.effectiveConfig.maxCostUsd !== undefined;
-  if (budgetConfigured && Object.values(state.attempts).some((attempt) => {
+  // Integrations can consume an executor without currently emitting a leaf
+  // usage record. They must not make a measured leaf budget look exhausted;
+  // when an integration does report usage, it remains part of the total.
+  const budgetedAttempts = Object.values(state.attempts).filter((attempt) => attempt.kind === "execution" || attempt.usage !== undefined);
+  if (budgetConfigured && budgetedAttempts.some((attempt) => {
     const usage = attempt.usage;
     return usage === undefined || usage.source === "unavailable" ||
       (input.effectiveConfig.maxTokensTotal !== undefined && usage.tokensTotal === undefined) ||
       (input.effectiveConfig.maxCostUsd !== undefined && usage.costUsd === undefined);
   })) return false;
-  const usage = Object.values(state.attempts).reduce((total, attempt) => ({
+  const usage = budgetedAttempts.reduce((total, attempt) => ({
     tokensTotal: total.tokensTotal + (attempt.usage?.tokensTotal ?? 0),
     costUsd: total.costUsd + (attempt.usage?.costUsd ?? 0)
   }), { tokensTotal: 0, costUsd: 0 });

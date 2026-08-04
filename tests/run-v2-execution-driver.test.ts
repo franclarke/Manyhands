@@ -8,6 +8,7 @@ import {
 } from "@manyhands/run-coordinator";
 import {
   V2ExecutionDriver,
+  budgetAvailableFor,
   orderArtifactRequirementsForMaterialization,
   type V2NodeExecutionInput,
   type V2NodeExecutionOutcome
@@ -22,6 +23,27 @@ import {
 const at = "2026-07-17T12:00:00.000Z";
 
 describe("V2ExecutionDriver", () => {
+  it("does not treat an unmetered integration attempt as exhausted budget", () => {
+    const integrationOnly = {
+      attempts: {
+        integration: {
+          kind: "integration",
+          status: "adopted"
+        }
+      }
+    } as Parameters<typeof budgetAvailableFor>[1];
+
+    expect(budgetAvailableFor({ effectiveConfig: { maxCostUsd: 8 } }, integrationOnly)).toBe(true);
+    expect(budgetAvailableFor({ effectiveConfig: { maxCostUsd: 8 } }, {
+      attempts: {
+        execution: {
+          kind: "execution",
+          status: "adopted"
+        }
+      }
+    } as Parameters<typeof budgetAvailableFor>[1])).toBe(false);
+  });
+
   it("materializes upstream artifact dependencies before descendant artifacts", () => {
     type Requirement = GraphRevision["artifactRequirements"][number];
     const requirements: Requirement[] = [
