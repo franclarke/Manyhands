@@ -91,6 +91,20 @@ intención congelada.
 invocar al LLM. Esta capacidad es replay determinista, no evidencia nueva ni
 una afirmación de superioridad experimental.
 
+## Reemplazo 2026-08-04
+
+Esta ADR queda reemplazada para la ruta productiva por `PlanningModule` y
+`SemanticPlan`. La experiencia con `CandidatePlan` confirmÃ³ que preservar un
+`WorkBreakdown` junto con scopes, ownership, seam specifications, obligations y
+validations en listas paralelas obligaba al host y al compiler a reconciliar
+decisiones duplicadas. El `SemanticPlan` conserva cada decisiÃ³n una vez: los
+outcomes cubren criterios y los seams contienen participants, compatibility,
+materialization, verification y evidence. El compiler deriva el resto.
+
+Los `CandidatePlan` y `PlanningEnvelope` existentes permanecen exclusivamente
+como formatos histÃ³ricos y una proyecciÃ³n interna temporal del compiler; no son
+la interfaz del planner productivo.
+
 ## Riesgos y seguimiento
 
 Los fallos terminales de planning y ejecución usan receipts durables separados

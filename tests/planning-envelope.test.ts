@@ -270,6 +270,22 @@ describe("planning envelope and candidate plans", () => {
       expect.objectContaining({ code: "semantic_dependency_without_seam", candidateId: candidate.candidateId })
     ]));
   });
+
+  it("rejects a logical API seam that requires producer implementation files", () => {
+    const breakdown = bookingBreakdown();
+    const seam = breakdown.candidateSeams[0]!;
+    seam.kind = "api";
+    const envelope = createPlanningEnvelope({ policyVersion: "reliability/1.0.0", goal: breakdown.objective, repositorySnapshot: bookingSnapshot() });
+    const candidate = candidateFor(envelope, breakdown, "candidate-logical-api-seam");
+    candidate.seamSpecifications[0]!.materialization = "logical";
+
+    const validation = validateCandidatePlanSet({ envelope, candidates: [candidate] });
+
+    expect(validation.validCandidates).toEqual([]);
+    expect(validation.diagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "executable_seam_requires_materialization", candidateId: candidate.candidateId })
+    ]));
+  });
 });
 
 function candidateFor(

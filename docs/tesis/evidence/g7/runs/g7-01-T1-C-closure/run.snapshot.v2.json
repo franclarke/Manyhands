@@ -1,0 +1,1909 @@
+{
+  "schemaVersion": 2,
+  "runId": "4fdc41da-c6c1-4206-b5f0-2c84a53430df",
+  "eventSequence": 18,
+  "lastEventId": "planning:4fdc41da-c6c1-4206-b5f0-2c84a53430df:candidates:sha256:2e5e9a5f6c17c032ad67d9736a86b81208e274593918f8135e377ea247a93282:sha256:6c5d7824b7b4694ed43b3ce0e2be65f41ede92555879f0f22bd96fe69c63bfed",
+  "operationId": "c2eb5346-ce22-4113-8f7a-b80444eff2e9",
+  "fencingToken": 2,
+  "projection": {
+    "runId": "4fdc41da-c6c1-4206-b5f0-2c84a53430df",
+    "goal": "Add order priority and backorders to this warehouse codebase across every layer that already exists. In src/domain/orders.ts export OrderPriority = standard | express; make Order.priority default to standard; reject invalid priorities with OrderError; add Backorder with orderId, skuId and positive missing; add backorders to WarehouseState; make reserveOrder record backorders instead of throwing when stock is insufficient; export listBackorders. Expose the operation and event in src/application/warehouse-service.ts, order express before standard in src/fulfillment/planner.ts, count backorders in src/durability/journal.ts, expose backorders in src/api/server.ts, distinguish express orders in src/presentation/tower.ts, and add study:g6-probe in src/probe/g6.ts with one deterministic JSON object. Preserve all existing behavior and tests, adding tests next to each changed module.",
+    "lifecycle": "planning",
+    "sequence": 18,
+    "appliedEventIds": [
+      "run:4fdc41da-c6c1-4206-b5f0-2c84a53430df:created",
+      "repository:sha256:2a67b0110615b73edc0a5ef3cb76a0756491962f28ad44ad7f56a378cc05680c:inspection:2",
+      "planning:4fdc41da-c6c1-4206-b5f0-2c84a53430df:envelope:3",
+      "planning:4fdc41da-c6c1-4206-b5f0-2c84a53430df:attempt:1:started",
+      "planning:4fdc41da-c6c1-4206-b5f0-2c84a53430df:attempt:1:node:warehouse-order-priority-backorders",
+      "planning:4fdc41da-c6c1-4206-b5f0-2c84a53430df:attempt:1:node:leaf-domain-orders",
+      "planning:4fdc41da-c6c1-4206-b5f0-2c84a53430df:attempt:1:node:leaf-application-warehouse-service",
+      "planning:4fdc41da-c6c1-4206-b5f0-2c84a53430df:attempt:1:node:leaf-fulfillment-planner",
+      "planning:4fdc41da-c6c1-4206-b5f0-2c84a53430df:attempt:1:node:leaf-durability-journal",
+      "planning:4fdc41da-c6c1-4206-b5f0-2c84a53430df:attempt:1:node:leaf-api-server",
+      "planning:4fdc41da-c6c1-4206-b5f0-2c84a53430df:attempt:1:node:leaf-presentation-tower",
+      "planning:4fdc41da-c6c1-4206-b5f0-2c84a53430df:attempt:1:node:leaf-probe-g6",
+      "planning:4fdc41da-c6c1-4206-b5f0-2c84a53430df:attempt:2:started",
+      "planning:4fdc41da-c6c1-4206-b5f0-2c84a53430df:attempt:2:node:root-order-priority-backorders",
+      "planning:4fdc41da-c6c1-4206-b5f0-2c84a53430df:attempt:2:node:leaf-order-domain-service",
+      "planning:4fdc41da-c6c1-4206-b5f0-2c84a53430df:attempt:2:node:leaf-surfaces-observability",
+      "planning:4fdc41da-c6c1-4206-b5f0-2c84a53430df:attempt:2:node:leaf-g6-probe",
+      "planning:4fdc41da-c6c1-4206-b5f0-2c84a53430df:candidates:sha256:2e5e9a5f6c17c032ad67d9736a86b81208e274593918f8135e377ea247a93282:sha256:6c5d7824b7b4694ed43b3ce0e2be65f41ede92555879f0f22bd96fe69c63bfed"
+    ],
+    "decisions": {},
+    "stoppedNodeIds": [],
+    "readiness": {
+      "readyNodeIds": [],
+      "pendingDecisionIds": []
+    },
+    "selectedWaves": [],
+    "attempts": {},
+    "adoptedArtifacts": {},
+    "nodeEvidenceMatrixIds": {},
+    "integrations": {},
+    "recoveryHistory": [],
+    "evidenceMatrices": [],
+    "outcomes": {
+      "execution": "pending",
+      "artifact": "missing",
+      "delivery": "not_started"
+    },
+    "evidenceMatrixSummaries": {},
+    "planningEnvelope": {
+      "schemaVersion": 1,
+      "policyVersion": "adaptive-utility/3.1.0-pilot",
+      "repositorySnapshotId": "sha256:2a67b0110615b73edc0a5ef3cb76a0756491962f28ad44ad7f56a378cc05680c",
+      "goalDigest": "sha256:8a1159aecffd2ee837795c2ed730803d361b6c9fb9f0a7034a9cb73c83047e12",
+      "candidateBudget": {
+        "minimum": 2,
+        "maximum": 2
+      },
+      "executionBudget": {
+        "maxLeafContextTokens": 24000,
+        "maxLeafScopePaths": 40,
+        "maxParallelism": 4
+      },
+      "requirements": {
+        "requireExplicitAcceptanceOwnership": true,
+        "requireCompleteSeamSpecifications": true,
+        "requireObservableLeafValidation": true
+      }
+    },
+    "planningCandidates": {
+      "schemaVersion": 1,
+      "envelope": {
+        "schemaVersion": 1,
+        "policyVersion": "adaptive-utility/3.1.0-pilot",
+        "repositorySnapshotId": "sha256:2a67b0110615b73edc0a5ef3cb76a0756491962f28ad44ad7f56a378cc05680c",
+        "goalDigest": "sha256:8a1159aecffd2ee837795c2ed730803d361b6c9fb9f0a7034a9cb73c83047e12",
+        "candidateBudget": {
+          "minimum": 2,
+          "maximum": 2
+        },
+        "executionBudget": {
+          "maxLeafContextTokens": 24000,
+          "maxLeafScopePaths": 40,
+          "maxParallelism": 4
+        },
+        "requirements": {
+          "requireExplicitAcceptanceOwnership": true,
+          "requireCompleteSeamSpecifications": true,
+          "requireObservableLeafValidation": true
+        }
+      },
+      "policy": {
+        "version": "adaptive-utility/3.1.0-pilot",
+        "condition": "C",
+        "scoreBasis": "root_split_advantage"
+      },
+      "candidates": [
+        {
+          "candidateId": "warehouse-order-priority-backorders-c1",
+          "candidateHash": "sha256:6c5d7824b7b4694ed43b3ce0e2be65f41ede92555879f0f22bd96fe69c63bfed",
+          "candidate": {
+            "candidateId": "warehouse-order-priority-backorders-c1",
+            "breakdown": {
+              "schemaVersion": 2,
+              "breakdownId": "warehouse-order-priority-backorders",
+              "objective": "Add order priority and backorder handling end-to-end across the warehouse stack without regressing current behavior or tests.",
+              "repositorySnapshotId": "sha256:2a67b0110615b73edc0a5ef3cb76a0756491962f28ad44adf56a378cc05680c",
+              "acceptanceIntents": [
+                {
+                  "id": "intent-order-contract",
+                  "description": "Order priority defaults to standard; invalid priorities raise OrderError; backorders are materialized on WarehouseState and listBackorders returns them.",
+                  "required": true
+                },
+                {
+                  "id": "intent-reserve-backorders",
+                  "description": "reserveOrder records backorders instead of throwing when stock is insufficient, while preserving atomic state updates for valid lines.",
+                  "required": true
+                },
+                {
+                  "id": "intent-express-first-planning",
+                  "description": "Fulfillment planning orders express orders before standard orders without breaking deterministic batching or existing invalid-status handling.",
+                  "required": true
+                },
+                {
+                  "id": "intent-backorder-analytics",
+                  "description": "Journal analytics count backorders from the event timeline and keep the existing history projection behavior intact.",
+                  "required": true
+                },
+                {
+                  "id": "intent-api-backorders",
+                  "description": "The HTTP API exposes backorders in the state surface and keeps the order flow endpoints working.",
+                  "required": true
+                },
+                {
+                  "id": "intent-express-ui",
+                  "description": "The tower rendering distinguishes express orders without removing the current heatmap and accessibility details.",
+                  "required": true
+                },
+                {
+                  "id": "intent-g6-probe",
+                  "description": "study:g6-probe runs src/probe/g6.ts and emits exactly one deterministic JSON object.",
+                  "required": true
+                },
+                {
+                  "id": "intent-global-regression",
+                  "description": "Existing behavior, build, typecheck, and repository tests remain green after the feature lands.",
+                  "required": true
+                }
+              ],
+              "root": {
+                "key": "warehouse-order-priority-backorders",
+                "title": "Backorders and order priority across the warehouse stack",
+                "objective": "Deliver order priority, backorders, and probe support across the existing layered architecture with explicit compatibility boundaries.",
+                "concerns": [
+                  "order model invariants",
+                  "reservation flow",
+                  "fulfillment sequencing",
+                  "durability analytics",
+                  "HTTP exposure",
+                  "presentation rendering",
+                  "probe output",
+                  "regression safety"
+                ],
+                "expectedOutcomes": [
+                  "Domain order records carry priority and backorder state",
+                  "Service reserve paths record shortages instead of throwing",
+                  "Fulfillment prefers express orders",
+                  "Journal analytics count backorders",
+                  "API responses expose backorders",
+                  "Tower markup distinguishes express orders",
+                  "g6 probe emits deterministic JSON",
+                  "existing validations still pass"
+                ],
+                "acceptanceIntentIds": [
+                  "intent-order-contract",
+                  "intent-reserve-backorders",
+                  "intent-express-first-planning",
+                  "intent-backorder-analytics",
+                  "intent-api-backorders",
+                  "intent-express-ui",
+                  "intent-g6-probe",
+                  "intent-global-regression"
+                ],
+                "evidenceIds": [
+                  "path-12",
+                  "path-11",
+                  "path-6",
+                  "path-5",
+                  "path-16",
+                  "path-15",
+                  "path-14",
+                  "path-13",
+                  "path-2",
+                  "path-1",
+                  "path-18",
+                  "path-17",
+                  "path-19",
+                  "path-20",
+                  "config-package-json",
+                  "script-0",
+                  "script-2",
+                  "script-6",
+                  "script-7"
+                ],
+                "plannedPaths": [
+                  "src/probe/g6.ts",
+                  "src/probe/g6.test.ts"
+                ],
+                "complexitySignals": {
+                  "scopeRadius": 9,
+                  "interfaceImpact": 9,
+                  "validationSurface": 9,
+                  "contextTokenMass": 8,
+                  "rationale": "The change spans six existing layers plus a new probe entry point and touches exported contracts used by multiple consumers."
+                },
+                "kind": "composite",
+                "cut": {
+                  "criterion": "integration",
+                  "rationale": "The work already follows the repository's executable layers, so the cleanest boundary is by layer with explicit seam contracts rather than by file count or depth."
+                },
+                "children": [
+                  {
+                    "key": "leaf-domain-orders",
+                    "title": "Domain order contract and backorders",
+                    "objective": "Extend the order model with priority, backorder state, and a backorder listing API.",
+                    "concerns": [
+                      "order model",
+                      "validation",
+                      "state shape",
+                      "domain tests"
+                    ],
+                    "expectedOutcomes": [
+                      "Order.priority defaults to standard",
+                      "Invalid priority values raise OrderError",
+                      "Backorder is available with orderId, skuId, and positive missing",
+                      "WarehouseState stores backorders",
+                      "listBackorders returns the current backorders"
+                    ],
+                    "acceptanceIntentIds": [
+                      "intent-order-contract"
+                    ],
+                    "evidenceIds": [
+                      "path-12",
+                      "path-11"
+                    ],
+                    "plannedPaths": [],
+                    "complexitySignals": {
+                      "scopeRadius": 6,
+                      "interfaceImpact": 8,
+                      "validationSurface": 6,
+                      "contextTokenMass": 7
+                    },
+                    "kind": "leaf"
+                  },
+                  {
+                    "key": "leaf-application-warehouse-service",
+                    "title": "Warehouse service backorder flow",
+                    "objective": "Record backorders in the service layer and expose the corresponding event and snapshot data.",
+                    "concerns": [
+                      "reservation flow",
+                      "event emission",
+                      "snapshot materialization",
+                      "service tests"
+                    ],
+                    "expectedOutcomes": [
+                      "reserveOrder records backorders instead of throwing when stock is insufficient",
+                      "The service exposes the backorder-related event in its event stream",
+                      "Warehouse snapshots carry the data needed by downstream consumers"
+                    ],
+                    "acceptanceIntentIds": [
+                      "intent-reserve-backorders",
+                      "intent-api-backorders"
+                    ],
+                    "evidenceIds": [
+                      "path-6",
+                      "path-5"
+                    ],
+                    "plannedPaths": [],
+                    "complexitySignals": {
+                      "scopeRadius": 7,
+                      "interfaceImpact": 8,
+                      "validationSurface": 7,
+                      "contextTokenMass": 7
+                    },
+                    "kind": "leaf"
+                  },
+                  {
+                    "key": "leaf-fulfillment-planner",
+                    "title": "Fulfillment express-first planner",
+                    "objective": "Schedule express orders ahead of standard orders while preserving deterministic planning.",
+                    "concerns": [
+                      "ordering",
+                      "batching",
+                      "determinism",
+                      "planner tests"
+                    ],
+                    "expectedOutcomes": [
+                      "Express orders are ordered before standard orders",
+                      "Existing invalid-status handling remains unchanged",
+                      "Repeated planning over the same inputs stays deterministic"
+                    ],
+                    "acceptanceIntentIds": [
+                      "intent-express-first-planning"
+                    ],
+                    "evidenceIds": [
+                      "path-16",
+                      "path-15"
+                    ],
+                    "plannedPaths": [],
+                    "complexitySignals": {
+                      "scopeRadius": 5,
+                      "interfaceImpact": 6,
+                      "validationSurface": 5,
+                      "contextTokenMass": 5
+                    },
+                    "kind": "leaf"
+                  },
+                  {
+                    "key": "leaf-durability-journal",
+                    "title": "Journal backorder analytics",
+                    "objective": "Count backorders in journal analytics without changing existing history behavior.",
+                    "concerns": [
+                      "event projection",
+                      "analytics",
+                      "journal tests"
+                    ],
+                    "expectedOutcomes": [
+                      "History analytics includes a backorders count",
+                      "Existing event counting and alert behavior remain intact",
+                      "Journal snapshot and replay behavior remains unchanged"
+                    ],
+                    "acceptanceIntentIds": [
+                      "intent-backorder-analytics"
+                    ],
+                    "evidenceIds": [
+                      "path-14",
+                      "path-13"
+                    ],
+                    "plannedPaths": [],
+                    "complexitySignals": {
+                      "scopeRadius": 5,
+                      "interfaceImpact": 6,
+                      "validationSurface": 5,
+                      "contextTokenMass": 5
+                    },
+                    "kind": "leaf"
+                  },
+                  {
+                    "key": "leaf-api-server",
+                    "title": "HTTP API backorder exposure",
+                    "objective": "Expose backorders through the HTTP server while preserving current endpoints.",
+                    "concerns": [
+                      "HTTP response shape",
+                      "state endpoint",
+                      "history exposure",
+                      "server tests"
+                    ],
+                    "expectedOutcomes": [
+                      "GET /api/v1/state exposes backorders",
+                      "Existing order and history endpoints continue to work",
+                      "The public API remains versioned and JSON encoded"
+                    ],
+                    "acceptanceIntentIds": [
+                      "intent-api-backorders"
+                    ],
+                    "evidenceIds": [
+                      "path-2",
+                      "path-1"
+                    ],
+                    "plannedPaths": [],
+                    "complexitySignals": {
+                      "scopeRadius": 6,
+                      "interfaceImpact": 7,
+                      "validationSurface": 6,
+                      "contextTokenMass": 6
+                    },
+                    "kind": "leaf"
+                  },
+                  {
+                    "key": "leaf-presentation-tower",
+                    "title": "Tower express-order rendering",
+                    "objective": "Distinguish express orders in the tower rendering without losing the current heatmap and accessibility structure.",
+                    "concerns": [
+                      "rendering",
+                      "snapshot consumption",
+                      "accessibility",
+                      "presentation tests"
+                    ],
+                    "expectedOutcomes": [
+                      "Express orders are visually distinguished in the tower output",
+                      "The existing heatmap remains intact",
+                      "The markup stays accessible and deterministic"
+                    ],
+                    "acceptanceIntentIds": [
+                      "intent-express-ui"
+                    ],
+                    "evidenceIds": [
+                      "path-18",
+                      "path-17"
+                    ],
+                    "plannedPaths": [],
+                    "complexitySignals": {
+                      "scopeRadius": 5,
+                      "interfaceImpact": 5,
+                      "validationSurface": 5,
+                      "contextTokenMass": 5
+                    },
+                    "kind": "leaf"
+                  },
+                  {
+                    "key": "leaf-probe-g6",
+                    "title": "G6 deterministic probe",
+                    "objective": "Add the g6 study probe as a deterministic JSON-emitting entrypoint and test it next to the module.",
+                    "concerns": [
+                      "CLI/script",
+                      "deterministic output",
+                      "JSON formatting",
+                      "probe tests"
+                    ],
+                    "expectedOutcomes": [
+                      "package.json exposes study:g6-probe",
+                      "src/probe/g6.ts emits one deterministic JSON object",
+                      "A next-to-module test verifies the emitted shape and determinism"
+                    ],
+                    "acceptanceIntentIds": [
+                      "intent-g6-probe"
+                    ],
+                    "evidenceIds": [
+                      "config-package-json",
+                      "path-19",
+                      "path-20",
+                      "script-2"
+                    ],
+                    "plannedPaths": [
+                      "src/probe/g6.ts",
+                      "src/probe/g6.test.ts"
+                    ],
+                    "complexitySignals": {
+                      "scopeRadius": 3,
+                      "interfaceImpact": 3,
+                      "validationSurface": 4,
+                      "contextTokenMass": 4
+                    },
+                    "kind": "leaf"
+                  }
+                ]
+              },
+              "candidateArtifacts": [
+                {
+                  "id": "artifact-order-state-contract",
+                  "artifactType": "type-contract",
+                  "producerUnitKey": "leaf-domain-orders",
+                  "consumerUnitKeys": [
+                    "leaf-application-warehouse-service",
+                    "leaf-fulfillment-planner",
+                    "leaf-api-server",
+                    "leaf-presentation-tower"
+                  ],
+                  "purpose": "Carry order priority, backorders, and listBackorders through consumers that compile against the domain model.",
+                  "materializationHint": "files",
+                  "evidenceIds": [
+                    "path-12"
+                  ]
+                },
+                {
+                  "id": "artifact-backorder-reservation-flow",
+                  "artifactType": "event-contract",
+                  "producerUnitKey": "leaf-application-warehouse-service",
+                  "consumerUnitKeys": [
+                    "leaf-durability-journal",
+                    "leaf-api-server"
+                  ],
+                  "purpose": "Materialize reserve-with-shortage behavior so the journal can count backorders and the API can surface them.",
+                  "materializationHint": "files",
+                  "evidenceIds": [
+                    "path-6"
+                  ]
+                },
+                {
+                  "id": "artifact-fulfillment-ordering",
+                  "artifactType": "ordering-contract",
+                  "producerUnitKey": "leaf-fulfillment-planner",
+                  "consumerUnitKeys": [
+                    "leaf-application-warehouse-service"
+                  ],
+                  "purpose": "Preserve express-before-standard batching for the service's fulfillment plan call.",
+                  "materializationHint": "files",
+                  "evidenceIds": [
+                    "path-16"
+                  ]
+                },
+                {
+                  "id": "artifact-history-backorders",
+                  "artifactType": "analytics-projection",
+                  "producerUnitKey": "leaf-durability-journal",
+                  "consumerUnitKeys": [
+                    "leaf-api-server"
+                  ],
+                  "purpose": "Expose backorder counts through the history analytics surface.",
+                  "materializationHint": "files",
+                  "evidenceIds": [
+                    "path-14"
+                  ]
+                },
+                {
+                  "id": "artifact-snapshot-express-ui",
+                  "artifactType": "snapshot-contract",
+                  "producerUnitKey": "leaf-application-warehouse-service",
+                  "consumerUnitKeys": [
+                    "leaf-presentation-tower"
+                  ],
+                  "purpose": "Carry order priority into the tower rendering so express orders can be distinguished.",
+                  "materializationHint": "files",
+                  "evidenceIds": [
+                    "path-6",
+                    "path-18"
+                  ]
+                }
+              ],
+              "candidateSeams": [
+                {
+                  "id": "seam-order-contract",
+                  "kind": "type",
+                  "specification": "src/domain/orders.ts exports OrderPriority, Backorder, WarehouseState.backorders, and listBackorders; Order.priority defaults to standard and rejects invalid priorities; consumers compile against the exported shape.",
+                  "producerUnitKey": "leaf-domain-orders",
+                  "consumerUnitKeys": [
+                    "leaf-application-warehouse-service",
+                    "leaf-fulfillment-planner",
+                    "leaf-api-server",
+                    "leaf-presentation-tower"
+                  ],
+                  "evidenceIds": [
+                    "path-12",
+                    "path-5",
+                    "path-16",
+                    "path-2",
+                    "path-18"
+                  ]
+                },
+                {
+                  "id": "seam-reserve-backorders",
+                  "kind": "event",
+                  "specification": "reserveOrder records Backorder entries instead of throwing on insufficient stock, while preserving atomic updates for valid lines and emitting service data the journal can count.",
+                  "producerUnitKey": "leaf-application-warehouse-service",
+                  "consumerUnitKeys": [
+                    "leaf-durability-journal",
+                    "leaf-api-server"
+                  ],
+                  "evidenceIds": [
+                    "path-6",
+                    "path-13",
+                    "path-1"
+                  ]
+                },
+                {
+                  "id": "seam-express-first-planning",
+                  "kind": "data",
+                  "specification": "planFulfillment must place express orders ahead of standard orders, then preserve stable order within each priority bucket before batching by picker capacity.",
+                  "producerUnitKey": "leaf-fulfillment-planner",
+                  "consumerUnitKeys": [
+                    "leaf-application-warehouse-service"
+                  ],
+                  "evidenceIds": [
+                    "path-16",
+                    "path-5"
+                  ]
+                },
+                {
+                  "id": "seam-backorder-analytics",
+                  "kind": "data",
+                  "specification": "deriveAnalytics returns a backorders count computed from the event timeline, and the history endpoint forwards that count unchanged.",
+                  "producerUnitKey": "leaf-durability-journal",
+                  "consumerUnitKeys": [
+                    "leaf-api-server"
+                  ],
+                  "evidenceIds": [
+                    "path-14",
+                    "path-2"
+                  ]
+                },
+                {
+                  "id": "seam-express-snapshot-ui",
+                  "kind": "ui",
+                  "specification": "WarehouseSnapshot carries order priority so renderTowerSvg can distinguish express orders without altering the existing bin heatmap or aria structure.",
+                  "producerUnitKey": "leaf-application-warehouse-service",
+                  "consumerUnitKeys": [
+                    "leaf-presentation-tower"
+                  ],
+                  "evidenceIds": [
+                    "path-6",
+                    "path-18"
+                  ]
+                }
+              ],
+              "repositoryEvidence": [
+                {
+                  "id": "path-12",
+                  "kind": "path",
+                  "reference": "src/domain/orders.ts",
+                  "observation": "Domain orders currently define order statuses, lines, reservations, warehouse state, and stock-consuming reservation logic.",
+                  "confidence": 1
+                },
+                {
+                  "id": "path-11",
+                  "kind": "path",
+                  "reference": "src/domain/orders.test.ts",
+                  "observation": "Existing domain tests cover atomic reservation, insufficient stock failure, and invalid transitions.",
+                  "confidence": 1
+                },
+                {
+                  "id": "path-6",
+                  "kind": "path",
+                  "reference": "src/application/warehouse-service.ts",
+                  "observation": "Warehouse service currently creates, reserves, transitions orders, emits events, and returns snapshots.",
+                  "confidence": 1
+                },
+                {
+                  "id": "path-5",
+                  "kind": "path",
+                  "reference": "src/application/warehouse-service.test.ts",
+                  "observation": "Existing service tests verify monotonic events and the public snapshot flow.",
+                  "confidence": 1
+                },
+                {
+                  "id": "path-16",
+                  "kind": "path",
+                  "reference": "src/fulfillment/planner.ts",
+                  "observation": "Fulfillment planner currently batches reserved orders and produces deterministic route plans.",
+                  "confidence": 1
+                },
+                {
+                  "id": "path-15",
+                  "kind": "path",
+                  "reference": "src/fulfillment/planner.test.ts",
+                  "observation": "Planner tests currently verify route determinism, unassigned explanations, and cost behavior.",
+                  "confidence": 1
+                },
+                {
+                  "id": "path-14",
+                  "kind": "path",
+                  "reference": "src/durability/journal.ts",
+                  "observation": "Journal currently appends events, snapshots projections, and derives analytics from history.",
+                  "confidence": 1
+                },
+                {
+                  "id": "path-13",
+                  "kind": "path",
+                  "reference": "src/durability/journal.test.ts",
+                  "observation": "Journal tests currently verify replay, corruption handling, and analytics derivation.",
+                  "confidence": 1
+                },
+                {
+                  "id": "path-2",
+                  "kind": "path",
+                  "reference": "src/api/server.ts",
+                  "observation": "HTTP server currently exposes state, fulfillment, history, events, and order operations.",
+                  "confidence": 1
+                },
+                {
+                  "id": "path-1",
+                  "kind": "path",
+                  "reference": "src/api/server.test.ts",
+                  "observation": "Server tests currently cover create, reserve, state, plan, and history endpoints.",
+                  "confidence": 1
+                },
+                {
+                  "id": "path-18",
+                  "kind": "path",
+                  "reference": "src/presentation/tower.ts",
+                  "observation": "Tower currently renders warehouse bin heatmaps from the service snapshot.",
+                  "confidence": 1
+                },
+                {
+                  "id": "path-17",
+                  "kind": "path",
+                  "reference": "src/presentation/tower.test.ts",
+                  "observation": "Tower tests currently cover heatmap output and accessibility labels.",
+                  "confidence": 1
+                },
+                {
+                  "id": "path-19",
+                  "kind": "path",
+                  "reference": "src/probe/cli.test.ts",
+                  "observation": "Probe CLI tests show the repo's existing probe pattern and JSON output style.",
+                  "confidence": 1
+                },
+                {
+                  "id": "path-20",
+                  "kind": "path",
+                  "reference": "src/probe/cli.ts",
+                  "observation": "Probe CLI module emits deterministic JSON reports from arguments and scenario state.",
+                  "confidence": 1
+                },
+                {
+                  "id": "config-package-json",
+                  "kind": "path",
+                  "reference": "package.json",
+                  "observation": "Package manifest defines the current build, typecheck, test, probe, and server scripts.",
+                  "confidence": 1
+                },
+                {
+                  "id": "script-0",
+                  "kind": "script",
+                  "reference": "package.json#scripts.build",
+                  "observation": "Build script runs the TypeScript compiler over the repository project.",
+                  "confidence": 1
+                },
+                {
+                  "id": "script-2",
+                  "kind": "script",
+                  "reference": "package.json#scripts.study:probe",
+                  "observation": "Existing study probe script shows the conventional study:* entrypoint shape.",
+                  "confidence": 1
+                },
+                {
+                  "id": "script-6",
+                  "kind": "script",
+                  "reference": "package.json#scripts.test",
+                  "observation": "Current test script covers all module test globs in the repository.",
+                  "confidence": 1
+                },
+                {
+                  "id": "script-7",
+                  "kind": "script",
+                  "reference": "package.json#scripts.typecheck",
+                  "observation": "Typecheck script runs the project TypeScript program.",
+                  "confidence": 1
+                }
+              ],
+              "uncertainties": [],
+              "questions": []
+            },
+            "scopes": [
+              {
+                "unitKey": "leaf-domain-orders",
+                "paths": [
+                  "src/domain/orders.ts",
+                  "src/domain/orders.test.ts"
+                ]
+              },
+              {
+                "unitKey": "leaf-application-warehouse-service",
+                "paths": [
+                  "src/application/warehouse-service.ts",
+                  "src/application/warehouse-service.test.ts"
+                ]
+              },
+              {
+                "unitKey": "leaf-fulfillment-planner",
+                "paths": [
+                  "src/fulfillment/planner.ts",
+                  "src/fulfillment/planner.test.ts"
+                ]
+              },
+              {
+                "unitKey": "leaf-durability-journal",
+                "paths": [
+                  "src/durability/journal.ts",
+                  "src/durability/journal.test.ts"
+                ]
+              },
+              {
+                "unitKey": "leaf-api-server",
+                "paths": [
+                  "src/api/server.ts",
+                  "src/api/server.test.ts"
+                ]
+              },
+              {
+                "unitKey": "leaf-presentation-tower",
+                "paths": [
+                  "src/presentation/tower.ts",
+                  "src/presentation/tower.test.ts"
+                ]
+              },
+              {
+                "unitKey": "leaf-probe-g6",
+                "paths": [
+                  "package.json",
+                  "src/probe/g6.ts",
+                  "src/probe/g6.test.ts"
+                ]
+              }
+            ],
+            "acceptanceCriteria": [
+              {
+                "intentId": "intent-order-contract",
+                "kind": "leafAcceptance",
+                "description": "Order priority defaults to standard; invalid priorities raise OrderError; backorders are materialized on WarehouseState and listBackorders returns them."
+              },
+              {
+                "intentId": "intent-reserve-backorders",
+                "kind": "seamAcceptance",
+                "description": "reserveOrder records backorders instead of throwing when stock is insufficient, while preserving atomic state updates for valid lines."
+              },
+              {
+                "intentId": "intent-express-first-planning",
+                "kind": "seamAcceptance",
+                "description": "Fulfillment planning orders express orders before standard orders without breaking deterministic batching or existing invalid-status handling."
+              },
+              {
+                "intentId": "intent-backorder-analytics",
+                "kind": "seamAcceptance",
+                "description": "Journal analytics count backorders from the event timeline and keep the existing history projection behavior intact."
+              },
+              {
+                "intentId": "intent-api-backorders",
+                "kind": "seamAcceptance",
+                "description": "The HTTP API exposes backorders in the state surface and keeps the order flow endpoints working."
+              },
+              {
+                "intentId": "intent-express-ui",
+                "kind": "seamAcceptance",
+                "description": "The tower rendering distinguishes express orders without removing the current heatmap and accessibility details."
+              },
+              {
+                "intentId": "intent-g6-probe",
+                "kind": "leafAcceptance",
+                "description": "study:g6-probe runs src/probe/g6.ts and emits exactly one deterministic JSON object."
+              },
+              {
+                "intentId": "intent-global-regression",
+                "kind": "globalAcceptance",
+                "description": "Existing behavior, build, typecheck, and repository tests remain green after the feature lands."
+              }
+            ],
+            "acceptanceOwnership": [
+              {
+                "intentId": "intent-order-contract",
+                "ownerUnitKey": "leaf-domain-orders",
+                "role": "local",
+                "rationale": "It owns the exported model and can prove defaulting and validation directly."
+              },
+              {
+                "intentId": "intent-reserve-backorders",
+                "ownerUnitKey": "leaf-application-warehouse-service",
+                "role": "seam",
+                "rationale": "It owns the reservation path that turns shortage into backorder data and emits the observable event."
+              },
+              {
+                "intentId": "intent-express-first-planning",
+                "ownerUnitKey": "leaf-fulfillment-planner",
+                "role": "seam",
+                "rationale": "It owns the ordering algorithm that must reorder express before standard."
+              },
+              {
+                "intentId": "intent-backorder-analytics",
+                "ownerUnitKey": "leaf-durability-journal",
+                "role": "seam",
+                "rationale": "It owns the analytics projection that counts backorders from the event timeline."
+              },
+              {
+                "intentId": "intent-api-backorders",
+                "ownerUnitKey": "leaf-api-server",
+                "role": "seam",
+                "rationale": "It owns the HTTP response shape that must surface the new backorder state."
+              },
+              {
+                "intentId": "intent-express-ui",
+                "ownerUnitKey": "leaf-presentation-tower",
+                "role": "seam",
+                "rationale": "It owns the markup that distinguishes express orders in the tower view."
+              },
+              {
+                "intentId": "intent-g6-probe",
+                "ownerUnitKey": "leaf-probe-g6",
+                "role": "local",
+                "rationale": "It owns the new probe entrypoint and can prove the emitted JSON is deterministic."
+              },
+              {
+                "intentId": "intent-global-regression",
+                "ownerUnitKey": "warehouse-order-priority-backorders",
+                "role": "global",
+                "rationale": "Only the composite can assert that all leaf validations still hold together across the full stack."
+              }
+            ],
+            "seamSpecifications": [
+              {
+                "seamId": "seam-order-contract",
+                "producerUnitKey": "leaf-domain-orders",
+                "consumerUnitKeys": [
+                  "leaf-application-warehouse-service",
+                  "leaf-fulfillment-planner",
+                  "leaf-api-server",
+                  "leaf-presentation-tower"
+                ],
+                "compatibility": "The domain export must keep OrderPriority as the accepted priority vocabulary, default Order.priority to standard, reject invalid priorities with OrderError, and expose Backorder, WarehouseState.backorders, and listBackorders to consumers that compile against the model.",
+                "materialization": "files",
+                "validation": "Domain, service, planner, API, and presentation tests must compile against the exported model without adapter shims."
+              },
+              {
+                "seamId": "seam-reserve-backorders",
+                "producerUnitKey": "leaf-application-warehouse-service",
+                "consumerUnitKeys": [
+                  "leaf-durability-journal",
+                  "leaf-api-server"
+                ],
+                "compatibility": "reserveOrder records Backorder entries instead of throwing on insufficient stock, while preserving atomic updates for valid lines and emitting service data the journal can count.",
+                "materialization": "files",
+                "validation": "Service, journal, and API tests must observe the shortage path and its serialized state."
+              },
+              {
+                "seamId": "seam-express-first-planning",
+                "producerUnitKey": "leaf-fulfillment-planner",
+                "consumerUnitKeys": [
+                  "leaf-application-warehouse-service"
+                ],
+                "compatibility": "planFulfillment must place express orders ahead of standard orders, then preserve stable order within each priority bucket before batching by picker capacity.",
+                "materialization": "files",
+                "validation": "Planner tests must show express-first ordering and deterministic output for repeated inputs."
+              },
+              {
+                "seamId": "seam-backorder-analytics",
+                "producerUnitKey": "leaf-durability-journal",
+                "consumerUnitKeys": [
+                  "leaf-api-server"
+                ],
+                "compatibility": "deriveAnalytics returns a backorders count computed from the event timeline, and the history endpoint forwards that count unchanged.",
+                "materialization": "files",
+                "validation": "Journal and API tests must observe the new count while preserving existing event and alert metrics."
+              },
+              {
+                "seamId": "seam-express-snapshot-ui",
+                "producerUnitKey": "leaf-application-warehouse-service",
+                "consumerUnitKeys": [
+                  "leaf-presentation-tower"
+                ],
+                "compatibility": "WarehouseSnapshot carries order priority so renderTowerSvg can distinguish express orders without altering the existing bin heatmap or aria structure.",
+                "materialization": "files",
+                "validation": "Tower tests must confirm express-order distinction without regressing current accessibility markers."
+              }
+            ],
+            "contractObligations": [
+              {
+                "obligationId": "obligation-order-contract-files",
+                "kind": "cross_layer_contract",
+                "ownerUnitKey": "leaf-domain-orders",
+                "producerUnitKey": "leaf-domain-orders",
+                "consumerUnitKeys": [
+                  "leaf-application-warehouse-service",
+                  "leaf-fulfillment-planner",
+                  "leaf-api-server",
+                  "leaf-presentation-tower"
+                ],
+                "validation": "node --test src/domain/orders.test.ts"
+              },
+              {
+                "obligationId": "obligation-backorder-reservation-materialization",
+                "kind": "cross_layer_contract",
+                "ownerUnitKey": "leaf-application-warehouse-service",
+                "producerUnitKey": "leaf-application-warehouse-service",
+                "consumerUnitKeys": [
+                  "leaf-durability-journal",
+                  "leaf-api-server"
+                ],
+                "validation": "node --test src/application/warehouse-service.test.ts"
+              },
+              {
+                "obligationId": "obligation-express-ordering-materialization",
+                "kind": "cross_layer_contract",
+                "ownerUnitKey": "leaf-fulfillment-planner",
+                "producerUnitKey": "leaf-fulfillment-planner",
+                "consumerUnitKeys": [
+                  "leaf-application-warehouse-service"
+                ],
+                "validation": "node --test src/fulfillment/planner.test.ts"
+              },
+              {
+                "obligationId": "obligation-history-backorder-counts",
+                "kind": "cross_layer_contract",
+                "ownerUnitKey": "leaf-durability-journal",
+                "producerUnitKey": "leaf-durability-journal",
+                "consumerUnitKeys": [
+                  "leaf-api-server"
+                ],
+                "validation": "node --test src/durability/journal.test.ts"
+              },
+              {
+                "obligationId": "obligation-express-ui-materialization",
+                "kind": "cross_layer_contract",
+                "ownerUnitKey": "leaf-presentation-tower",
+                "producerUnitKey": "leaf-application-warehouse-service",
+                "consumerUnitKeys": [
+                  "leaf-presentation-tower"
+                ],
+                "validation": "node --test src/presentation/tower.test.ts"
+              }
+            ],
+            "leafValidations": [
+              {
+                "unitKey": "leaf-domain-orders",
+                "command": "node --test src/domain/orders.test.ts",
+                "evidenceRefs": [
+                  "path-12",
+                  "path-11",
+                  "script-6"
+                ]
+              },
+              {
+                "unitKey": "leaf-application-warehouse-service",
+                "command": "node --test src/application/warehouse-service.test.ts",
+                "evidenceRefs": [
+                  "path-6",
+                  "path-5",
+                  "script-6"
+                ]
+              },
+              {
+                "unitKey": "leaf-fulfillment-planner",
+                "command": "node --test src/fulfillment/planner.test.ts",
+                "evidenceRefs": [
+                  "path-16",
+                  "path-15",
+                  "script-6"
+                ]
+              },
+              {
+                "unitKey": "leaf-durability-journal",
+                "command": "node --test src/durability/journal.test.ts",
+                "evidenceRefs": [
+                  "path-14",
+                  "path-13",
+                  "script-6"
+                ]
+              },
+              {
+                "unitKey": "leaf-api-server",
+                "command": "node --test src/api/server.test.ts",
+                "evidenceRefs": [
+                  "path-2",
+                  "path-1",
+                  "script-6"
+                ]
+              },
+              {
+                "unitKey": "leaf-presentation-tower",
+                "command": "node --test src/presentation/tower.test.ts",
+                "evidenceRefs": [
+                  "path-18",
+                  "path-17",
+                  "script-6"
+                ]
+              },
+              {
+                "unitKey": "leaf-probe-g6",
+                "command": "node --test src/probe/g6.test.ts",
+                "evidenceRefs": [
+                  "config-package-json",
+                  "path-19",
+                  "path-20",
+                  "script-2",
+                  "script-6"
+                ]
+              }
+            ],
+            "repositorySnapshotId": "sha256:2a67b0110615b73edc0a5ef3cb76a0756491962f28ad44ad7f56a378cc05680c",
+            "goalDigest": "sha256:8a1159aecffd2ee837795c2ed730803d361b6c9fb9f0a7034a9cb73c83047e12",
+            "candidateHash": "sha256:6c5d7824b7b4694ed43b3ce0e2be65f41ede92555879f0f22bd96fe69c63bfed"
+          },
+          "valid": false,
+          "gates": [
+            {
+              "gate": "identity",
+              "passed": false,
+              "diagnosticCodes": [
+                "snapshot_mismatch"
+              ]
+            },
+            {
+              "gate": "scope",
+              "passed": true,
+              "diagnosticCodes": []
+            },
+            {
+              "gate": "acceptance",
+              "passed": false,
+              "diagnosticCodes": [
+                "leaf_without_local_acceptance",
+                "leaf_without_local_acceptance",
+                "leaf_without_local_acceptance",
+                "leaf_without_local_acceptance",
+                "leaf_without_local_acceptance"
+              ]
+            },
+            {
+              "gate": "seams",
+              "passed": true,
+              "diagnosticCodes": []
+            },
+            {
+              "gate": "obligations",
+              "passed": true,
+              "diagnosticCodes": []
+            },
+            {
+              "gate": "validation",
+              "passed": true,
+              "diagnosticCodes": []
+            },
+            {
+              "gate": "policy_viability",
+              "passed": true,
+              "diagnosticCodes": []
+            }
+          ],
+          "diagnostics": [
+            {
+              "code": "leaf_without_local_acceptance",
+              "message": "Leaf leaf-api-server has no local acceptance ownership.",
+              "refs": [
+                "leaf-api-server"
+              ]
+            },
+            {
+              "code": "leaf_without_local_acceptance",
+              "message": "Leaf leaf-application-warehouse-service has no local acceptance ownership.",
+              "refs": [
+                "leaf-application-warehouse-service"
+              ]
+            },
+            {
+              "code": "leaf_without_local_acceptance",
+              "message": "Leaf leaf-durability-journal has no local acceptance ownership.",
+              "refs": [
+                "leaf-durability-journal"
+              ]
+            },
+            {
+              "code": "leaf_without_local_acceptance",
+              "message": "Leaf leaf-fulfillment-planner has no local acceptance ownership.",
+              "refs": [
+                "leaf-fulfillment-planner"
+              ]
+            },
+            {
+              "code": "leaf_without_local_acceptance",
+              "message": "Leaf leaf-presentation-tower has no local acceptance ownership.",
+              "refs": [
+                "leaf-presentation-tower"
+              ]
+            },
+            {
+              "code": "snapshot_mismatch",
+              "message": "Candidate breakdown was planned against a different repository snapshot.",
+              "refs": [
+                "sha256:2a67b0110615b73edc0a5ef3cb76a0756491962f28ad44adf56a378cc05680c",
+                "sha256:2a67b0110615b73edc0a5ef3cb76a0756491962f28ad44ad7f56a378cc05680c"
+              ]
+            }
+          ]
+        },
+        {
+          "candidateId": "semantic-order-priority-backorders-candidate-2",
+          "candidateHash": "sha256:2e5e9a5f6c17c032ad67d9736a86b81208e274593918f8135e377ea247a93282",
+          "candidate": {
+            "candidateId": "semantic-order-priority-backorders-candidate-2",
+            "breakdown": {
+              "schemaVersion": 2,
+              "breakdownId": "semantic-order-priority-backorders-candidate-2",
+              "objective": "Add order priority and backorders across the warehouse stack while preserving existing behavior and tests",
+              "repositorySnapshotId": "sha256:2a67b0110615b73edc0a5ef3cb76a0756491962f28ad44ad7f56a378cc05680c",
+              "acceptanceIntents": [
+                {
+                  "id": "intent-core-order-backorder",
+                  "description": "Orders default to `standard`, reject invalid priorities with `OrderError`, and record `Backorder` entries with positive `missing` quantities in warehouse state when stock is insufficient.",
+                  "required": true
+                },
+                {
+                  "id": "intent-service-backorder-flow",
+                  "description": "WarehouseService exposes the backorder-aware order operation and emits the corresponding event instead of surfacing an insufficiency throw.",
+                  "required": true
+                },
+                {
+                  "id": "intent-surface-propagation",
+                  "description": "Fulfillment planning orders `express` before `standard`, journal analytics count backorders, the API exposes backorders, and the tower distinguishes express orders.",
+                  "required": true
+                },
+                {
+                  "id": "intent-g6-probe",
+                  "description": "study:g6-probe returns one deterministic JSON object.",
+                  "required": true
+                },
+                {
+                  "id": "intent-end-to-end",
+                  "description": "The integrated stack preserves existing behavior while the new priority and backorder semantics remain observable from API to probe.",
+                  "required": true
+                }
+              ],
+              "root": {
+                "key": "root-order-priority-backorders",
+                "title": "Order priority and backorders",
+                "objective": "Add order priority and backorders across the warehouse stack while preserving existing behavior and tests",
+                "concerns": [
+                  "domain contract",
+                  "service events",
+                  "fulfillment ordering",
+                  "durability analytics",
+                  "api exposure",
+                  "presentation labeling",
+                  "probe determinism"
+                ],
+                "expectedOutcomes": [
+                  "The core order model accepts only `standard` and `express`, defaults to `standard`, and rejects invalid priorities with `OrderError`.",
+                  "Insufficient stock becomes recorded backorders instead of an exception path, and the service layer exposes that flow and event.",
+                  "Downstream consumers compile and behave against the updated contract: express orders sort first, backorders are counted and exposed, and the tower distinguishes express orders.",
+                  "A new deterministic `study:g6-probe` entrypoint emits exactly one JSON object and is covered by a colocated test."
+                ],
+                "acceptanceIntentIds": [
+                  "intent-end-to-end"
+                ],
+                "evidenceIds": [
+                  "path-11",
+                  "path-12",
+                  "path-5",
+                  "path-6",
+                  "path-15",
+                  "path-16",
+                  "path-13",
+                  "path-14",
+                  "path-1",
+                  "path-2",
+                  "path-17",
+                  "path-18",
+                  "path-19",
+                  "path-20",
+                  "path-23",
+                  "path-25",
+                  "path-27",
+                  "config-package-json"
+                ],
+                "plannedPaths": [
+                  "src/probe/g6.ts",
+                  "src/probe/g6.test.ts"
+                ],
+                "complexitySignals": {
+                  "scopeRadius": 9,
+                  "interfaceImpact": 9,
+                  "validationSurface": 9,
+                  "contextTokenMass": 8,
+                  "rationale": "This cut spans the core state contract, the service boundary, multiple downstream consumers, and a new probe entrypoint."
+                },
+                "kind": "composite",
+                "cut": {
+                  "criterion": "integration",
+                  "rationale": "The feature has a hard producer/consumer boundary after the order and service contract; downstream surfaces can be validated independently once that contract exists."
+                },
+                "children": [
+                  {
+                    "key": "leaf-order-domain-service",
+                    "title": "Order model and warehouse service backorder semantics",
+                    "objective": "Extend the order model, warehouse state, reservation flow, and service events to support priority and backorders without regressing existing flows",
+                    "concerns": [
+                      "domain",
+                      "service",
+                      "tests"
+                    ],
+                    "expectedOutcomes": [
+                      "Order priority defaults to `standard` and invalid priorities are rejected with `OrderError`.",
+                      "WarehouseState includes backorders, `reserveOrder` records them instead of throwing when stock is insufficient, and the missing quantity stays positive.",
+                      "WarehouseService exposes the updated reserve/backorder flow and emits the matching event."
+                    ],
+                    "acceptanceIntentIds": [
+                      "intent-core-order-backorder",
+                      "intent-service-backorder-flow"
+                    ],
+                    "evidenceIds": [
+                      "path-11",
+                      "path-12",
+                      "path-5",
+                      "path-6"
+                    ],
+                    "plannedPaths": [],
+                    "complexitySignals": {
+                      "scopeRadius": 4,
+                      "interfaceImpact": 9,
+                      "validationSurface": 7,
+                      "contextTokenMass": 7
+                    },
+                    "kind": "leaf"
+                  },
+                  {
+                    "key": "leaf-surfaces-observability",
+                    "title": "Consumer surfaces and observability",
+                    "objective": "Propagate the updated order and backorder contract through fulfillment, durability, API, and presentation surfaces",
+                    "concerns": [
+                      "planner",
+                      "journal",
+                      "api",
+                      "presentation",
+                      "tests"
+                    ],
+                    "expectedOutcomes": [
+                      "Fulfillment planning orders `express` before `standard`.",
+                      "Journal analytics count backorders.",
+                      "The API exposes backorders from the warehouse state and event history.",
+                      "The tower distinguishes express orders in its rendered output."
+                    ],
+                    "acceptanceIntentIds": [
+                      "intent-surface-propagation"
+                    ],
+                    "evidenceIds": [
+                      "path-15",
+                      "path-16",
+                      "path-13",
+                      "path-14",
+                      "path-1",
+                      "path-2",
+                      "path-17",
+                      "path-18"
+                    ],
+                    "plannedPaths": [],
+                    "complexitySignals": {
+                      "scopeRadius": 8,
+                      "interfaceImpact": 8,
+                      "validationSurface": 9,
+                      "contextTokenMass": 8
+                    },
+                    "kind": "leaf"
+                  },
+                  {
+                    "key": "leaf-g6-probe",
+                    "title": "Deterministic g6 probe",
+                    "objective": "Add study:g6-probe with a single deterministic JSON object and cover it with a colocated test",
+                    "concerns": [
+                      "probe",
+                      "script",
+                      "tests"
+                    ],
+                    "expectedOutcomes": [
+                      "src/probe/g6.ts emits one stable JSON object.",
+                      "package.json exposes `study:g6-probe`.",
+                      "The new probe test asserts deterministic output."
+                    ],
+                    "acceptanceIntentIds": [
+                      "intent-g6-probe"
+                    ],
+                    "evidenceIds": [
+                      "config-package-json",
+                      "path-19",
+                      "path-20",
+                      "path-23",
+                      "path-25",
+                      "path-27"
+                    ],
+                    "plannedPaths": [
+                      "src/probe/g6.ts",
+                      "src/probe/g6.test.ts"
+                    ],
+                    "complexitySignals": {
+                      "scopeRadius": 2,
+                      "interfaceImpact": 4,
+                      "validationSurface": 4,
+                      "contextTokenMass": 3
+                    },
+                    "kind": "leaf"
+                  }
+                ]
+              },
+              "candidateArtifacts": [
+                {
+                  "id": "artifact-order-priority-contract",
+                  "artifactType": "exported-type-and-state-contract",
+                  "producerUnitKey": "leaf-order-domain-service",
+                  "consumerUnitKeys": [
+                    "leaf-surfaces-observability"
+                  ],
+                  "purpose": "Carries `OrderPriority`, `Order.priority`, `Backorder`, `WarehouseState.backorders`, and `listBackorders` across the rest of the stack.",
+                  "materializationHint": "files",
+                  "evidenceIds": [
+                    "path-12",
+                    "path-6"
+                  ]
+                },
+                {
+                  "id": "artifact-backorder-observability",
+                  "artifactType": "event-and-state-observability-contract",
+                  "producerUnitKey": "leaf-order-domain-service",
+                  "consumerUnitKeys": [
+                    "leaf-surfaces-observability"
+                  ],
+                  "purpose": "Carries the backorder event flow and service snapshot shape that lets journal, API, and presentation layers count or expose backorders.",
+                  "materializationHint": "files",
+                  "evidenceIds": [
+                    "path-6",
+                    "path-13",
+                    "path-14",
+                    "path-2"
+                  ]
+                }
+              ],
+              "candidateSeams": [
+                {
+                  "id": "seam-order-priority-routing",
+                  "kind": "type",
+                  "specification": "The producer exports the exact `standard | express` order-priority contract and backorder state shape; the consumer must import and honor that contract so express orders sort before standard orders without reinterpreting the state model.",
+                  "producerUnitKey": "leaf-order-domain-service",
+                  "consumerUnitKeys": [
+                    "leaf-surfaces-observability"
+                  ],
+                  "evidenceIds": [
+                    "path-12",
+                    "path-6",
+                    "path-15",
+                    "path-16",
+                    "path-17",
+                    "path-18"
+                  ]
+                },
+                {
+                  "id": "seam-backorder-telemetry",
+                  "kind": "event",
+                  "specification": "The producer records backorders instead of throwing and emits the corresponding event payload; the consumer counts and exposes that telemetry through durability, API, and presentation surfaces.",
+                  "producerUnitKey": "leaf-order-domain-service",
+                  "consumerUnitKeys": [
+                    "leaf-surfaces-observability"
+                  ],
+                  "evidenceIds": [
+                    "path-6",
+                    "path-13",
+                    "path-14",
+                    "path-1",
+                    "path-2"
+                  ]
+                }
+              ],
+              "repositoryEvidence": [
+                {
+                  "id": "path-12",
+                  "kind": "path",
+                  "reference": "src/domain/orders.ts",
+                  "observation": "Current order model, reservation logic, state, and transitions are defined here.",
+                  "confidence": 1
+                },
+                {
+                  "id": "path-11",
+                  "kind": "path",
+                  "reference": "src/domain/orders.test.ts",
+                  "observation": "Existing tests cover reservation atomicity and invalid transitions, giving a natural home for new order semantics tests.",
+                  "confidence": 1
+                },
+                {
+                  "id": "path-6",
+                  "kind": "path",
+                  "reference": "src/application/warehouse-service.ts",
+                  "observation": "Service owns state mutation, event emission, and snapshot exposure, so it is the integration point for the new flow.",
+                  "confidence": 1
+                },
+                {
+                  "id": "path-5",
+                  "kind": "path",
+                  "reference": "src/application/warehouse-service.test.ts",
+                  "observation": "Existing service test already validates monotonic event emission and snapshot status.",
+                  "confidence": 1
+                },
+                {
+                  "id": "path-16",
+                  "kind": "path",
+                  "reference": "src/fulfillment/planner.ts",
+                  "observation": "Planner currently derives fulfillment order from reserved orders and will need to distinguish express priority.",
+                  "confidence": 1
+                },
+                {
+                  "id": "path-15",
+                  "kind": "path",
+                  "reference": "src/fulfillment/planner.test.ts",
+                  "observation": "Existing planner tests already assert deterministic routes, capacity, and unassigned reasoning.",
+                  "confidence": 1
+                },
+                {
+                  "id": "path-14",
+                  "kind": "path",
+                  "reference": "src/durability/journal.ts",
+                  "observation": "Journal analytics currently count creations and reservations, so it is the durable telemetry surface for backorder counting.",
+                  "confidence": 1
+                },
+                {
+                  "id": "path-13",
+                  "kind": "path",
+                  "reference": "src/durability/journal.test.ts",
+                  "observation": "Existing journal tests cover replay, corruption, and analytics derivation.",
+                  "confidence": 1
+                },
+                {
+                  "id": "path-2",
+                  "kind": "path",
+                  "reference": "src/api/server.ts",
+                  "observation": "API exposes warehouse state, fulfillment plan, history, events, and order actions.",
+                  "confidence": 1
+                },
+                {
+                  "id": "path-1",
+                  "kind": "path",
+                  "reference": "src/api/server.test.ts",
+                  "observation": "Existing API test covers state, reserve flow, fulfillment plan, and history exposure.",
+                  "confidence": 1
+                },
+                {
+                  "id": "path-18",
+                  "kind": "path",
+                  "reference": "src/presentation/tower.ts",
+                  "observation": "Tower rendering currently presents the warehouse snapshot as a visual/textual inventory view.",
+                  "confidence": 1
+                },
+                {
+                  "id": "path-17",
+                  "kind": "path",
+                  "reference": "src/presentation/tower.test.ts",
+                  "observation": "Existing tower test validates the rendered HTML and textual detail.",
+                  "confidence": 1
+                },
+                {
+                  "id": "path-20",
+                  "kind": "path",
+                  "reference": "src/probe/cli.ts",
+                  "observation": "Probe entrypoints already exist and follow a deterministic JSON-report pattern.",
+                  "confidence": 1
+                },
+                {
+                  "id": "path-19",
+                  "kind": "path",
+                  "reference": "src/probe/cli.test.ts",
+                  "observation": "Probe-related tests already assert deterministic command output.",
+                  "confidence": 1
+                },
+                {
+                  "id": "path-23",
+                  "kind": "path",
+                  "reference": "src/probe/wc1.test.ts",
+                  "observation": "Probe tests live next to their modules and assert deterministic JSON report shape.",
+                  "confidence": 1
+                },
+                {
+                  "id": "path-25",
+                  "kind": "path",
+                  "reference": "src/probe/wc2.test.ts",
+                  "observation": "Probe tests already check byte-deterministic output for a JSON-producing module.",
+                  "confidence": 1
+                },
+                {
+                  "id": "path-27",
+                  "kind": "path",
+                  "reference": "src/probe/wc3.test.ts",
+                  "observation": "Another probe test confirms deterministic replay and exact hash reporting.",
+                  "confidence": 1
+                },
+                {
+                  "id": "config-package-json",
+                  "kind": "path",
+                  "reference": "package.json",
+                  "observation": "The repository manifest defines the test/build scripts that constrain any probe-script addition.",
+                  "confidence": 1
+                }
+              ],
+              "uncertainties": [],
+              "questions": []
+            },
+            "scopes": [
+              {
+                "unitKey": "leaf-order-domain-service",
+                "paths": [
+                  "src/domain/orders.ts",
+                  "src/domain/orders.test.ts",
+                  "src/application/warehouse-service.ts",
+                  "src/application/warehouse-service.test.ts"
+                ]
+              },
+              {
+                "unitKey": "leaf-surfaces-observability",
+                "paths": [
+                  "src/fulfillment/planner.ts",
+                  "src/fulfillment/planner.test.ts",
+                  "src/durability/journal.ts",
+                  "src/durability/journal.test.ts",
+                  "src/api/server.ts",
+                  "src/api/server.test.ts",
+                  "src/presentation/tower.ts",
+                  "src/presentation/tower.test.ts"
+                ]
+              },
+              {
+                "unitKey": "leaf-g6-probe",
+                "paths": [
+                  "package.json",
+                  "src/probe/g6.ts",
+                  "src/probe/g6.test.ts"
+                ]
+              }
+            ],
+            "acceptanceCriteria": [
+              {
+                "intentId": "intent-core-order-backorder",
+                "kind": "leafAcceptance",
+                "description": "Order priority defaults to `standard`, invalid priorities are rejected with `OrderError`, and insufficient stock becomes persisted backorders with positive missing quantities."
+              },
+              {
+                "intentId": "intent-service-backorder-flow",
+                "kind": "leafAcceptance",
+                "description": "WarehouseService exposes the backorder-aware order operation and emits the corresponding event instead of surfacing an insufficiency throw."
+              },
+              {
+                "intentId": "intent-surface-propagation",
+                "kind": "seamAcceptance",
+                "description": "Fulfillment planning orders `express` before `standard`, journal analytics count backorders, the API exposes backorders, and the tower distinguishes express orders."
+              },
+              {
+                "intentId": "intent-g6-probe",
+                "kind": "leafAcceptance",
+                "description": "study:g6-probe returns one deterministic JSON object."
+              },
+              {
+                "intentId": "intent-end-to-end",
+                "kind": "globalAcceptance",
+                "description": "The integrated stack preserves existing behavior while the new priority and backorder semantics remain observable from API to probe."
+              }
+            ],
+            "acceptanceOwnership": [
+              {
+                "intentId": "intent-core-order-backorder",
+                "ownerUnitKey": "leaf-order-domain-service",
+                "role": "local",
+                "rationale": "This leaf owns the order model, warehouse state, reservation path, and the service mutation that proves the new invariants."
+              },
+              {
+                "intentId": "intent-service-backorder-flow",
+                "ownerUnitKey": "leaf-order-domain-service",
+                "role": "local",
+                "rationale": "The same leaf proves the service-level operation and event emission that wrap the core backorder behavior."
+              },
+              {
+                "intentId": "intent-surface-propagation",
+                "ownerUnitKey": "leaf-surfaces-observability",
+                "role": "seam",
+                "rationale": "This leaf consumes the producer contract through all downstream surfaces, so it is the unit that can prove cross-leaf compatibility."
+              },
+              {
+                "intentId": "intent-g6-probe",
+                "ownerUnitKey": "leaf-g6-probe",
+                "role": "local",
+                "rationale": "This leaf owns the new probe module, its colocated test, and the script exposure needed to prove deterministic output."
+              },
+              {
+                "intentId": "intent-end-to-end",
+                "ownerUnitKey": "root-order-priority-backorders",
+                "role": "global",
+                "rationale": "Only the integration composite can prove the full stack remains coherent after the contract change reaches every existing layer."
+              }
+            ],
+            "seamSpecifications": [
+              {
+                "seamId": "seam-order-priority-contract",
+                "producerUnitKey": "leaf-order-domain-service",
+                "consumerUnitKeys": [
+                  "leaf-surfaces-observability"
+                ],
+                "compatibility": "Consumers must honor the exact `standard | express` priority vocabulary, the `Backorder` state shape, and the `listBackorders` export without redefining the priority model.",
+                "materialization": "files",
+                "validation": "Planner and tower tests compile and pass while express orders are ordered before standard orders."
+              },
+              {
+                "seamId": "seam-backorder-event",
+                "producerUnitKey": "leaf-order-domain-service",
+                "consumerUnitKeys": [
+                  "leaf-surfaces-observability"
+                ],
+                "compatibility": "The reservation flow records backorders instead of throwing and emits the matching event payload that durable history and the API can count and expose.",
+                "materialization": "files",
+                "validation": "Journal and server tests observe the backorder count and the exposed state/history shape."
+              }
+            ],
+            "contractObligations": [
+              {
+                "obligationId": "obligation-order-priority-contract",
+                "kind": "cross_layer_contract",
+                "ownerUnitKey": "leaf-order-domain-service",
+                "producerUnitKey": "leaf-order-domain-service",
+                "consumerUnitKeys": [
+                  "leaf-surfaces-observability"
+                ],
+                "validation": "Downstream planner and tower tests continue to compile and pass against the exported priority and backorder contract."
+              },
+              {
+                "obligationId": "obligation-backorder-telemetry",
+                "kind": "cross_layer_contract",
+                "ownerUnitKey": "leaf-order-domain-service",
+                "producerUnitKey": "leaf-order-domain-service",
+                "consumerUnitKeys": [
+                  "leaf-surfaces-observability"
+                ],
+                "validation": "Journal and API tests observe backorder counts from the emitted service event stream and exposed warehouse state."
+              }
+            ],
+            "leafValidations": [
+              {
+                "unitKey": "leaf-order-domain-service",
+                "command": "node --test src/domain/orders.test.ts src/application/warehouse-service.test.ts",
+                "evidenceRefs": [
+                  "path-11",
+                  "path-5"
+                ]
+              },
+              {
+                "unitKey": "leaf-surfaces-observability",
+                "command": "node --test src/fulfillment/planner.test.ts src/durability/journal.test.ts src/api/server.test.ts src/presentation/tower.test.ts",
+                "evidenceRefs": [
+                  "path-15",
+                  "path-13",
+                  "path-1",
+                  "path-17"
+                ]
+              },
+              {
+                "unitKey": "leaf-g6-probe",
+                "command": "node --test src/probe/*.test.ts",
+                "evidenceRefs": [
+                  "path-19",
+                  "path-23",
+                  "path-25",
+                  "path-27",
+                  "config-package-json"
+                ]
+              }
+            ],
+            "repositorySnapshotId": "sha256:2a67b0110615b73edc0a5ef3cb76a0756491962f28ad44ad7f56a378cc05680c",
+            "goalDigest": "sha256:8a1159aecffd2ee837795c2ed730803d361b6c9fb9f0a7034a9cb73c83047e12",
+            "candidateHash": "sha256:2e5e9a5f6c17c032ad67d9736a86b81208e274593918f8135e377ea247a93282"
+          },
+          "valid": false,
+          "gates": [
+            {
+              "gate": "identity",
+              "passed": true,
+              "diagnosticCodes": []
+            },
+            {
+              "gate": "scope",
+              "passed": true,
+              "diagnosticCodes": []
+            },
+            {
+              "gate": "acceptance",
+              "passed": false,
+              "diagnosticCodes": [
+                "leaf_without_local_acceptance"
+              ]
+            },
+            {
+              "gate": "seams",
+              "passed": false,
+              "diagnosticCodes": [
+                "missing_seam_specification",
+                "missing_seam_specification",
+                "orphan_seam_specification",
+                "orphan_seam_specification"
+              ]
+            },
+            {
+              "gate": "obligations",
+              "passed": true,
+              "diagnosticCodes": []
+            },
+            {
+              "gate": "validation",
+              "passed": true,
+              "diagnosticCodes": []
+            },
+            {
+              "gate": "policy_viability",
+              "passed": true,
+              "diagnosticCodes": []
+            }
+          ],
+          "diagnostics": [
+            {
+              "code": "leaf_without_local_acceptance",
+              "message": "Leaf leaf-surfaces-observability has no local acceptance ownership.",
+              "refs": [
+                "leaf-surfaces-observability"
+              ]
+            },
+            {
+              "code": "missing_seam_specification",
+              "message": "Seam seam-backorder-telemetry has no compatibility and validation specification.",
+              "refs": [
+                "seam-backorder-telemetry"
+              ]
+            },
+            {
+              "code": "missing_seam_specification",
+              "message": "Seam seam-order-priority-routing has no compatibility and validation specification.",
+              "refs": [
+                "seam-order-priority-routing"
+              ]
+            },
+            {
+              "code": "orphan_seam_specification",
+              "message": "Seam specification seam-backorder-event has no candidate seam.",
+              "refs": [
+                "seam-backorder-event"
+              ]
+            },
+            {
+              "code": "orphan_seam_specification",
+              "message": "Seam specification seam-order-priority-contract has no candidate seam.",
+              "refs": [
+                "seam-order-priority-contract"
+              ]
+            }
+          ]
+        }
+      ],
+      "selection": {
+        "kind": "replan_required",
+        "reason": "The bounded candidate set did not contain enough structurally valid, policy-viable alternatives.",
+        "rejectedCandidateIds": [
+          "semantic-order-priority-backorders-candidate-2",
+          "warehouse-order-priority-backorders-c1"
+        ],
+        "diagnostics": [
+          {
+            "code": "leaf_without_local_acceptance",
+            "message": "Leaf leaf-surfaces-observability has no local acceptance ownership.",
+            "refs": [
+              "leaf-surfaces-observability"
+            ]
+          },
+          {
+            "code": "missing_seam_specification",
+            "message": "Seam seam-backorder-telemetry has no compatibility and validation specification.",
+            "refs": [
+              "seam-backorder-telemetry"
+            ]
+          },
+          {
+            "code": "missing_seam_specification",
+            "message": "Seam seam-order-priority-routing has no compatibility and validation specification.",
+            "refs": [
+              "seam-order-priority-routing"
+            ]
+          },
+          {
+            "code": "orphan_seam_specification",
+            "message": "Seam specification seam-backorder-event has no candidate seam.",
+            "refs": [
+              "seam-backorder-event"
+            ]
+          },
+          {
+            "code": "orphan_seam_specification",
+            "message": "Seam specification seam-order-priority-contract has no candidate seam.",
+            "refs": [
+              "seam-order-priority-contract"
+            ]
+          },
+          {
+            "code": "leaf_without_local_acceptance",
+            "message": "Leaf leaf-api-server has no local acceptance ownership.",
+            "refs": [
+              "leaf-api-server"
+            ]
+          },
+          {
+            "code": "leaf_without_local_acceptance",
+            "message": "Leaf leaf-application-warehouse-service has no local acceptance ownership.",
+            "refs": [
+              "leaf-application-warehouse-service"
+            ]
+          },
+          {
+            "code": "leaf_without_local_acceptance",
+            "message": "Leaf leaf-durability-journal has no local acceptance ownership.",
+            "refs": [
+              "leaf-durability-journal"
+            ]
+          },
+          {
+            "code": "leaf_without_local_acceptance",
+            "message": "Leaf leaf-fulfillment-planner has no local acceptance ownership.",
+            "refs": [
+              "leaf-fulfillment-planner"
+            ]
+          },
+          {
+            "code": "leaf_without_local_acceptance",
+            "message": "Leaf leaf-presentation-tower has no local acceptance ownership.",
+            "refs": [
+              "leaf-presentation-tower"
+            ]
+          },
+          {
+            "code": "snapshot_mismatch",
+            "message": "Candidate breakdown was planned against a different repository snapshot.",
+            "refs": [
+              "sha256:2a67b0110615b73edc0a5ef3cb76a0756491962f28ad44adf56a378cc05680c",
+              "sha256:2a67b0110615b73edc0a5ef3cb76a0756491962f28ad44ad7f56a378cc05680c"
+            ]
+          },
+          {
+            "code": "candidate_budget_not_met",
+            "message": "Candidate set has 0 viable plans but the envelope requires 2..2.",
+            "refs": []
+          }
+        ]
+      }
+    }
+  },
+  "checksum": "b2e6d55c5b191e4f6ee6db29fda49c005fa583636dd84ddbeafe9a6e43c2b759"
+}

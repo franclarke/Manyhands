@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 2,
+  "runId": "4a57d8ce-2785-45b5-92c8-323d98952942",
+  "eventSequence": 6,
+  "lastEventId": "planning:4a57d8ce-2785-45b5-92c8-323d98952942:failed:6",
+  "operationId": "f88c0f61-aad5-4d34-9ac4-6dfe751df29c",
+  "fencingToken": 2,
+  "projection": {
+    "runId": "4a57d8ce-2785-45b5-92c8-323d98952942",
+    "goal": "Add order priority and backorders to this warehouse codebase across every layer that already exists. In src/domain/orders.ts export OrderPriority = standard | express; make Order.priority default to standard; reject invalid priorities with OrderError; add Backorder with orderId, skuId and positive missing; add backorders to WarehouseState; make reserveOrder record backorders instead of throwing when stock is insufficient; export listBackorders. Expose the operation and event in src/application/warehouse-service.ts, order express before standard in src/fulfillment/planner.ts, count backorders in src/durability/journal.ts, expose backorders in src/api/server.ts, distinguish express orders in src/presentation/tower.ts, and add study:g6-probe in src/probe/g6.ts with one deterministic JSON object. Preserve all existing behavior and tests, adding tests next to each changed module.",
+    "lifecycle": "failed",
+    "sequence": 6,
+    "appliedEventIds": [
+      "run:4a57d8ce-2785-45b5-92c8-323d98952942:created",
+      "repository:sha256:2a67b0110615b73edc0a5ef3cb76a0756491962f28ad44ad7f56a378cc05680c:inspection:2",
+      "planning:4a57d8ce-2785-45b5-92c8-323d98952942:envelope:3",
+      "planning:4a57d8ce-2785-45b5-92c8-323d98952942:attempt:1:started",
+      "planning:4a57d8ce-2785-45b5-92c8-323d98952942:attempt:1:failed",
+      "planning:4a57d8ce-2785-45b5-92c8-323d98952942:failed:6"
+    ],
+    "decisions": {},
+    "stoppedNodeIds": [],
+    "readiness": {
+      "readyNodeIds": [],
+      "pendingDecisionIds": []
+    },
+    "selectedWaves": [],
+    "attempts": {},
+    "adoptedArtifacts": {},
+    "nodeEvidenceMatrixIds": {},
+    "integrations": {},
+    "recoveryHistory": [],
+    "evidenceMatrices": [],
+    "outcomes": {
+      "execution": "pending",
+      "artifact": "missing",
+      "delivery": "not_started"
+    },
+    "evidenceMatrixSummaries": {},
+    "planningEnvelope": {
+      "schemaVersion": 1,
+      "policyVersion": "adaptive-utility/3.1.0-pilot",
+      "repositorySnapshotId": "sha256:2a67b0110615b73edc0a5ef3cb76a0756491962f28ad44ad7f56a378cc05680c",
+      "goalDigest": "sha256:8a1159aecffd2ee837795c2ed730803d361b6c9fb9f0a7034a9cb73c83047e12",
+      "candidateBudget": {
+        "minimum": 2,
+        "maximum": 3
+      },
+      "executionBudget": {
+        "maxLeafContextTokens": 24000,
+        "maxLeafScopePaths": 40,
+        "maxParallelism": 4
+      },
+      "requirements": {
+        "requireExplicitAcceptanceOwnership": true,
+        "requireCompleteSeamSpecifications": true,
+        "requireObservableLeafValidation": true
+      }
+    },
+    "failureReason": "Candidate planning failed after 1 attempts: codex-cli planning failed with exit code 1 (envelopes=none; stdoutBytes=0; stderr=\"ts: deriveAnalytics(journal.events()).alerts, }); } if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) { process.stdout.write(`${main()}\\\\n`); } 2026-08-03T06:58:23.499639Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 86 column 5 2026-08-03T07:03:25.059440Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 86 column 5\")."
+  },
+  "checksum": "65ced95cf488a75d3b605cc1618a129a52bfe79c8a73d0658dae828b2b273317"
+}

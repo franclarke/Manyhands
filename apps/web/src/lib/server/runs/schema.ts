@@ -105,6 +105,7 @@ export const RunRecordSchema = z.object({
   executionSelection: StageSelectionSchema,
   repairSelection: StageSelectionSchema,
   executionConfig: ExecutionConfigSchema,
+  candidateCount: z.number().int().min(2).max(3).optional(),
   /**
    * Granularity condition for the comparative study. Absent means the
    * productive adaptive policy; a run that names one is self-describing about
@@ -143,7 +144,8 @@ export const RunCreateRequestSchema = z.object({
   repairSelection: StageSelectionSchema.optional(),
   granularityCondition: GranularityConditionSchema.optional(),
   experimentalCandidate: ExperimentalPlanningCandidateSchema.optional(),
-  executionConfig: ExecutionConfigSchema.partial().omit({ routing: true }).strict().optional()
+  executionConfig: ExecutionConfigSchema.partial().omit({ routing: true }).strict().optional(),
+  candidateCount: z.number().int().min(2).max(3).optional()
 }).strict();
 
 export type RunCreateRequest = z.infer<typeof RunCreateRequestSchema>;

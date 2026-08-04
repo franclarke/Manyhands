@@ -34,15 +34,15 @@ flowchart TD
 2. **Propiedad de Nodos por Kind**:
    - `root` / `composite`: Deben poseer obligatoriamente al menos un nodo hijo (`hasChildren === true`). No pueden ejecutar código directamente.
    - `leaf` / `integrator`: Tareas ejecutoras cohesivas que **prohibido** tener nodos hijos (`hasChildren === false`).
-3. **Inmutabilidad de Revisiones**: Una revisión ([GraphRevision](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/task-graph/src/graph-revision.ts#L23-L38)) es una foto inmutable e identificada por su número de revisión entero monótono creciente ($r \ge 1$).
-4. **Mutación Vía Reducer CAS**: Ningún nodo o relación se muta in-place. Toda modificación se canaliza mediante [reduceGraphRevision()](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/task-graph/src/graph-reducer.ts#L26-L106) requiriendo la versión esperada (`expectedRevision`).
+3. **Inmutabilidad de Revisiones**: Una revisión ([GraphRevision](../../packages/task-graph/src/graph-revision.ts#L23-L38)) es una foto inmutable e identificada por su número de revisión entero monótono creciente ($r \ge 1$).
+4. **Mutación Vía Reducer CAS**: Ningún nodo o relación se muta in-place. Toda modificación se canaliza mediante [reduceGraphRevision()](../../packages/task-graph/src/graph-reducer.ts#L26-L106) requiriendo la versión esperada (`expectedRevision`).
 5. **Aislamiento en Commits Exactos**: Todo `GraphRevision` está estrictamente vinculado a un commit base Git (`baseCommit`) y a un snapshot del repositorio (`repositorySnapshotId`).
 
 ---
 
 ## 3. ESQUEMA DE DATOS Y MODELO ZOD (`GraphRevision`)
 
-El modelo formal está implementado en [graph-revision.ts](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/task-graph/src/graph-revision.ts) y validado mediante **Zod**.
+El modelo formal está implementado en [graph-revision.ts](../../packages/task-graph/src/graph-revision.ts) y validado mediante **Zod**.
 
 ### 3.1 Nodos del Grafo (`TaskNodeV2`)
 
@@ -83,7 +83,7 @@ export const GraphRevisionSchema = z.object({
 
 ### 4.1 Semántica del Reducer CAS (*Compare-And-Swap*)
 
-El reducer [reduceGraphRevision()](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/task-graph/src/graph-reducer.ts#L26-L106) aplica operaciones semánticas deterministas sobre la revisión actual, verificando la consistencia atómica del número de revisión.
+El reducer [reduceGraphRevision()](../../packages/task-graph/src/graph-reducer.ts#L26-L106) aplica operaciones semánticas deterministas sobre la revisión actual, verificando la consistencia atómica del número de revisión.
 
 ```typescript
 export function reduceGraphRevision(
@@ -115,7 +115,7 @@ El reducer acepta una lista ordenada de operaciones atómicas:
 
 ### 4.3 Garantía de Inmutabilidad en Tiempo de Ejecución (`deepFreeze`)
 
-Una vez validada la nueva revisión, el objeto retornado es recursivamente congelado mediante [deepFreeze()](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/task-graph/src/graph-reducer.ts#L13-L24), impidiendo cualquier mutación accidental de propiedades en el runtime de JavaScript/TypeScript.
+Una vez validada la nueva revisión, el objeto retornado es recursivamente congelado mediante [deepFreeze()](../../packages/task-graph/src/graph-reducer.ts#L13-L24), impidiendo cualquier mutación accidental de propiedades en el runtime de JavaScript/TypeScript.
 
 ```typescript
 export function deepFreeze<T>(obj: T): T {
@@ -136,7 +136,7 @@ export function deepFreeze<T>(obj: T): T {
 
 ## 5. RELACIONES TIPADAS CANÓNICAS (V3)
 
-TaskGraph V3 reemplaza las aristas arbitrarias de ordenamiento por 4 tipos de relaciones canónicas fuertemente tipadas en [relations.ts](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/task-graph/src/relations.ts):
+TaskGraph V3 reemplaza las aristas arbitrarias de ordenamiento por 4 tipos de relaciones canónicas fuertemente tipadas en [relations.ts](../../packages/task-graph/src/relations.ts):
 
 | Relación | Categoría | Propósito Arquitectónico | Restricción de Dominio |
 |---|---|---|---|
@@ -202,7 +202,7 @@ Las aristas genéricas `LegacyOrderingConstraint` están marcadas como desaconse
 
 ## 6. VALIDACIÓN DEL GRAFO Y DETECCIÓN DE CICLOS (`validateGraphRevision`)
 
-El módulo [validate-v2.ts](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/task-graph/src/validate-v2.ts) implementa la suite completa de validación de integridad para todo `GraphRevision`.
+El módulo [validate-v2.ts](../../packages/task-graph/src/validate-v2.ts) implementa la suite completa de validación de integridad para todo `GraphRevision`.
 
 ### 6.1 Algoritmo de Detección de Ciclos (DFS por Tipo de Arista)
 
@@ -252,7 +252,7 @@ function dfs(nodeId: string, path: string[], edgesInPath: EdgeType[]) {
 
 ### 6.3 Evaluación de Disponibilidad Ejecutable (`ExecutableReadinessV2`)
 
-Para decidir qué nodos `leaf` o `integrator` están listos para ser despachados, la función [getExecutableReadinessV2()](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/task-graph/src/validate-v2.ts#L64-L78) evalúa los requerimientos de artefactos de ejecución contra el conjunto de contratos ya disponibles (`availableArtifactContractIds`):
+Para decidir qué nodos `leaf` o `integrator` están listos para ser despachados, la función [getExecutableReadinessV2()](../../packages/task-graph/src/validate-v2.ts#L64-L78) evalúa los requerimientos de artefactos de ejecución contra el conjunto de contratos ya disponibles (`availableArtifactContractIds`):
 
 $$\text{Ready}(n) \iff \forall r \in \text{ArtifactRequirements}(n, \text{"execution"}), \, r.\text{artifactContract.id} \in \text{AvailableContracts}$$
 
@@ -260,7 +260,7 @@ $$\text{Ready}(n) \iff \forall r \in \text{ArtifactRequirements}(n, \text{"execu
 
 ## 7. PAQUETE DE CONTRATOS (`TaskContractBundle`)
 
-Cada nodo hoja o integrador del TaskGraph está vinculado a un paquete inmutable de contratos de tareas definido en [packages/contracts](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/contracts/src/task-contract.ts):
+Cada nodo hoja o integrador del TaskGraph está vinculado a un paquete inmutable de contratos de tareas definido en [packages/contracts](../../packages/contracts/src/task-contract.ts):
 
 ```typescript
 export interface TaskContractBundle {
@@ -281,8 +281,8 @@ export interface TaskContractBundle {
 
 ## 8. UBICACIÓN DE ARCHIVOS DE CÓDIGO FUENTE
 
-- **Modelos y Schemas Zod**: [packages/task-graph/src/graph-revision.ts](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/task-graph/src/graph-revision.ts)
-- **Reducer CAS e Inmutabilidad**: [packages/task-graph/src/graph-reducer.ts](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/task-graph/src/graph-reducer.ts)
-- **Relaciones Tipadas Canónicas**: [packages/task-graph/src/relations.ts](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/task-graph/src/relations.ts)
-- **Validación y Detección de Ciclos**: [packages/task-graph/src/validate-v2.ts](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/task-graph/src/validate-v2.ts)
-- **Definiciones de Contratos**: [packages/contracts/src/task-contract.ts](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/contracts/src/task-contract.ts)
+- **Modelos y Schemas Zod**: [packages/task-graph/src/graph-revision.ts](../../packages/task-graph/src/graph-revision.ts)
+- **Reducer CAS e Inmutabilidad**: [packages/task-graph/src/graph-reducer.ts](../../packages/task-graph/src/graph-reducer.ts)
+- **Relaciones Tipadas Canónicas**: [packages/task-graph/src/relations.ts](../../packages/task-graph/src/relations.ts)
+- **Validación y Detección de Ciclos**: [packages/task-graph/src/validate-v2.ts](../../packages/task-graph/src/validate-v2.ts)
+- **Definiciones de Contratos**: [packages/contracts/src/task-contract.ts](../../packages/contracts/src/task-contract.ts)

@@ -218,8 +218,8 @@ Esta función convierte barras invertidas `\` a barras diagonales `/` e inyecta 
 
 | Componente | Amenaza Mitigada | Mecanismo de Control | Referencia de Código |
 |---|---|---|---|
-| **Worktree Pool** | Contaminación del repositorio principal del usuario | Aislamiento en directorios Git Worktree dedicados | [manager.ts](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/execution-core/src/worktree/manager.ts#L176-L236) |
-| **ScopeChecker** | Path Traversal (`../`) y Symlink Escape fuera del worktree | `validatePathBoundary` con `realpathSync` | [checker.ts](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/execution-core/src/scope/checker.ts#L37-L59) |
-| **Process Supervisor** | Procesos huérfanos escabullidos tras cancelación | `killProcessTreeVerified` con sondeo Signal-0 | [live-process-registry.ts](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/execution-core/src/executor/live-process-registry.ts#L237-L272) |
-| **Agent Environment** | Fuga de credenciales internas o variables del sistema | Sanitización por lista blanca en `buildAgentEnvironment` | [agent-env.ts](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/execution-core/src/executor/agent-env.ts#L100-L120) |
-| **Safe Git Args** | Errores de propiedad de repositorio en Windows | Inyección local `safe.directory=<cwd>` | [runner.ts](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/execution-core/src/git/runner.ts#L403-L405) |
+| **Worktree Pool** | Contaminación del repositorio principal del usuario | Aislamiento en directorios Git Worktree dedicados | [manager.ts](../../packages/execution-core/src/worktree/manager.ts#L176-L236) |
+| **ScopeChecker** | Path Traversal (`../`) y Symlink Escape fuera del worktree | `validatePathBoundary` con `realpathSync` | [checker.ts](../../packages/execution-core/src/scope/checker.ts#L37-L59) |
+| **Process Supervisor** | Procesos huérfanos escabullidos tras cancelación | `killProcessTreeVerified` con sondeo Signal-0 | [live-process-registry.ts](../../packages/execution-core/src/executor/live-process-registry.ts#L237-L272) |
+| **Agent Environment** | Fuga de credenciales internas o variables del sistema | Sanitización por lista blanca en `buildAgentEnvironment` | [agent-env.ts](../../packages/execution-core/src/executor/agent-env.ts#L100-L120) |
+| **Safe Git Args** | Errores de propiedad de repositorio en Windows | Inyección local `safe.directory=<cwd>` | [runner.ts](../../packages/execution-core/src/git/runner.ts#L403-L405) |

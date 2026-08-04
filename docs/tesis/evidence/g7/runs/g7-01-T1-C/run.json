@@ -1,0 +1,65 @@
+{
+  "version": 2,
+  "run": {
+    "runId": "4a57d8ce-2785-45b5-92c8-323d98952942",
+    "workspaceId": "6b4d4127-d1e3-4425-91ba-6f7ecca9d347",
+    "userPrompt": "Add order priority and backorders to this warehouse codebase across every layer that already exists. In src/domain/orders.ts export OrderPriority = standard | express; make Order.priority default to standard; reject invalid priorities with OrderError; add Backorder with orderId, skuId and positive missing; add backorders to WarehouseState; make reserveOrder record backorders instead of throwing when stock is insufficient; export listBackorders. Expose the operation and event in src/application/warehouse-service.ts, order express before standard in src/fulfillment/planner.ts, count backorders in src/durability/journal.ts, expose backorders in src/api/server.ts, distinguish express orders in src/presentation/tower.ts, and add study:g6-probe in src/probe/g6.ts with one deterministic JSON object. Preserve all existing behavior and tests, adding tests next to each changed module.",
+    "title": "Add order priority and backorders to this warehouse codebase across every layer that already exists. In src/domain/order",
+    "planningSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.4-mini",
+      "effort": "medium"
+    },
+    "executionSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.4-mini",
+      "effort": "medium"
+    },
+    "repairSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.4-mini",
+      "effort": "medium"
+    },
+    "executionConfig": {
+      "maxParallel": 2,
+      "scopePolicy": "strict",
+      "leafTimeoutMs": 1200000,
+      "integrationTimeoutMs": 1200000,
+      "maxOutputBytes": 65536,
+      "maxValidationCommands": 20,
+      "installTimeoutMs": 300000,
+      "maxPlanningAttempts": 1,
+      "unexpectedCommitPolicy": "reject",
+      "routing": "fixed",
+      "maxCostUsd": 8,
+      "automaticRetryBudget": 0
+    },
+    "granularityCondition": "C",
+    "targetContext": {
+      "sourceRealPath": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-policy-g7-t1",
+      "gitCommonDir": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-policy-g7-t1\\.git",
+      "physicalIdentity": {
+        "version": 1,
+        "device": "3156479238",
+        "file": "42502721483372148"
+      },
+      "sourceBranch": "HEAD",
+      "sourceBaseCommit": "5da60192cc788032c59c7e7be27696ca0e0a30d7",
+      "remoteUrl": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-g6-04-remediation-8",
+      "fingerprint": "0803af0e1d8a7aec",
+      "capturedAt": "2026-08-03T06:56:00.465Z"
+    },
+    "projection": {
+      "eventSequence": 6,
+      "lifecycle": "failed",
+      "repositorySnapshotId": "sha256:2a67b0110615b73edc0a5ef3cb76a0756491962f28ad44ad7f56a378cc05680c",
+      "failureReason": "Candidate planning failed after 1 attempts: codex-cli planning failed with exit code 1 (envelopes=none; stdoutBytes=0; stderr=\"ts: deriveAnalytics(journal.events()).alerts, }); } if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) { process.stdout.write(`${main()}\\\\n`); } 2026-08-03T06:58:23.499639Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 86 column 5 2026-08-03T07:03:25.059440Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 86 column 5\").",
+      "updatedAt": "2026-08-03T07:06:07.262Z"
+    },
+    "version": 152,
+    "mutationFence": 2,
+    "createdAt": "2026-08-03T06:56:00.465Z",
+    "updatedAt": "2026-08-03T07:06:07.277Z",
+    "heartbeatAt": "2026-08-03T07:06:03.340Z"
+  }
+}

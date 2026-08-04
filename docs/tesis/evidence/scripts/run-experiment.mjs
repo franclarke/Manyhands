@@ -87,6 +87,7 @@ if (runId === undefined) {
     planningSelection: config.planningSelection,
     executionSelection: config.executionSelection,
     repairSelection: config.repairSelection ?? config.executionSelection,
+    ...(config.candidateCount !== undefined ? { candidateCount: config.candidateCount } : {}),
     // The condition is persisted on the run, so the journal names the policy
     // that shaped the plan instead of leaving it to the operator's notes.
     ...(config.granularityCondition !== undefined

@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 2,
+  "runId": "51ea1c3b-dd5d-4720-b67e-756cd368ee16",
+  "eventSequence": 12,
+  "lastEventId": "planning:51ea1c3b-dd5d-4720-b67e-756cd368ee16:failed:12",
+  "operationId": "f9544c28-43e1-45d4-8a29-11aea21aac9b",
+  "fencingToken": 2,
+  "projection": {
+    "runId": "51ea1c3b-dd5d-4720-b67e-756cd368ee16",
+    "goal": "Add order priority and backorders to this warehouse codebase across every layer that already exists. In src/domain/orders.ts export OrderPriority = standard | express; make Order.priority default to standard; reject invalid priorities with OrderError; add Backorder with orderId, skuId and positive missing; add backorders to WarehouseState; make reserveOrder record backorders instead of throwing when stock is insufficient; export listBackorders. Expose the operation and event in src/application/warehouse-service.ts, order express before standard in src/fulfillment/planner.ts, count backorders in src/durability/journal.ts, expose backorders in src/api/server.ts, distinguish express orders in src/presentation/tower.ts, and add study:g6-probe in src/probe/g6.ts with one deterministic JSON object. Preserve all existing behavior and tests, adding tests next to each changed module.",
+    "lifecycle": "failed",
+    "sequence": 12,
+    "appliedEventIds": [
+      "run:51ea1c3b-dd5d-4720-b67e-756cd368ee16:created",
+      "repository:sha256:2a67b0110615b73edc0a5ef3cb76a0756491962f28ad44ad7f56a378cc05680c:inspection:2",
+      "planning:51ea1c3b-dd5d-4720-b67e-756cd368ee16:envelope:3",
+      "planning:51ea1c3b-dd5d-4720-b67e-756cd368ee16:attempt:1:started",
+      "planning:51ea1c3b-dd5d-4720-b67e-756cd368ee16:attempt:1:node:semantic-root-order-priority-backorders",
+      "planning:51ea1c3b-dd5d-4720-b67e-756cd368ee16:attempt:1:node:leaf-domain-orders",
+      "planning:51ea1c3b-dd5d-4720-b67e-756cd368ee16:attempt:1:node:leaf-warehouse-service",
+      "planning:51ea1c3b-dd5d-4720-b67e-756cd368ee16:attempt:1:node:leaf-journal-api",
+      "planning:51ea1c3b-dd5d-4720-b67e-756cd368ee16:attempt:1:node:leaf-fulfillment-priority-ui",
+      "planning:51ea1c3b-dd5d-4720-b67e-756cd368ee16:attempt:1:node:leaf-probe-g6-script",
+      "planning:51ea1c3b-dd5d-4720-b67e-756cd368ee16:attempt:1:failed",
+      "planning:51ea1c3b-dd5d-4720-b67e-756cd368ee16:failed:12"
+    ],
+    "decisions": {},
+    "stoppedNodeIds": [],
+    "readiness": {
+      "readyNodeIds": [],
+      "pendingDecisionIds": []
+    },
+    "selectedWaves": [],
+    "attempts": {},
+    "adoptedArtifacts": {},
+    "nodeEvidenceMatrixIds": {},
+    "integrations": {},
+    "recoveryHistory": [],
+    "evidenceMatrices": [],
+    "outcomes": {
+      "execution": "pending",
+      "artifact": "missing",
+      "delivery": "not_started"
+    },
+    "evidenceMatrixSummaries": {},
+    "planningEnvelope": {
+      "schemaVersion": 1,
+      "policyVersion": "adaptive-utility/3.1.0-pilot",
+      "repositorySnapshotId": "sha256:2a67b0110615b73edc0a5ef3cb76a0756491962f28ad44ad7f56a378cc05680c",
+      "goalDigest": "sha256:8a1159aecffd2ee837795c2ed730803d361b6c9fb9f0a7034a9cb73c83047e12",
+      "candidateBudget": {
+        "minimum": 2,
+        "maximum": 3
+      },
+      "executionBudget": {
+        "maxLeafContextTokens": 24000,
+        "maxLeafScopePaths": 40,
+        "maxParallelism": 4
+      },
+      "requirements": {
+        "requireExplicitAcceptanceOwnership": true,
+        "requireCompleteSeamSpecifications": true,
+        "requireObservableLeafValidation": true
+      }
+    },
+    "failureReason": "Candidate planning failed after 1 attempts: candidateId: Required; breakdown: Required; scopes: Required; acceptanceCriteria: Required; acceptanceOwnership: Required; seamSpecifications: Required; root: Unrecognized key(s) in object: 'schemaVersion', 'breakdownId', 'objective', 'repositorySnapshotId', 'acceptanceIntents', 'root', 'candidateArtifacts', 'candidateSeams', 'repositoryEvidence', 'uncertainties', 'questions'"
+  },
+  "checksum": "3ac18f8f226bc49dcf3b66fc580700f425e47b647a2fde6dfcaf42f7f893cf9c"
+}

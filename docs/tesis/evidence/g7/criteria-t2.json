@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "taskId": "T2",
+  "criteria": [
+    { "id": "gate-install", "kind": "repository_gate", "description": "pnpm install --frozen-lockfile termina con exit 0 en un clon limpio del SHA entregado." },
+    { "id": "gate-test", "kind": "repository_gate", "description": "pnpm test termina con exit 0." },
+    { "id": "gate-typecheck", "kind": "repository_gate", "description": "pnpm typecheck termina con exit 0." },
+    { "id": "gate-build", "kind": "repository_gate", "description": "pnpm build termina con exit 0." },
+    { "id": "command-surface", "kind": "surface", "description": "package.json declara un script real study:stock-summary que no es un echo inline." },
+    { "id": "summary-shape", "kind": "probe", "description": "study:stock-summary emite un único objeto JSON con schemaVersion 1, scenario thesis-seed-2026, totalUnits, occupiedBins, skuCount y topSku." },
+    { "id": "summary-derived-values", "kind": "probe", "description": "El resumen coincide con el escenario: totalUnits 170, occupiedBins 8, skuCount 5, topSku SKU-1004 con 43 unidades." },
+    { "id": "summary-deterministic", "kind": "probe", "description": "Dos invocaciones desde el mismo commit emiten bytes idénticos." }
+  ]
+}

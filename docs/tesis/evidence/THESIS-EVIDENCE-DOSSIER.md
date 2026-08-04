@@ -31,8 +31,9 @@ y el resumen de continuidad de [HANDOFF.md](../HANDOFF.md). Las tres celdas de
 [series-ledger](warehouse/wide-graph/retry-11/runs/series-ledger.json).
 
 Las causas no autorizan a convertir un fallo de entrega en una decisión de
-granularidad: el [informe de cierre](../CLOSURE-REPORT.md) distingue muerte del
-proceso, abort de libuv, fallo de planificación y otros problemas operativos.
+granularidad: los journals, series-ledgers y clasificaciones de
+[`leaf-outcomes`](leaf-outcomes/README.md) distinguen muerte del proceso, abort
+de libuv, fallo de planificación y otros problemas operativos.
 La conclusión de PI-1 es de capacidad observada y trazabilidad, no de entrega
 amplia sostenida.
 
@@ -153,7 +154,7 @@ comprometido en [canonical-runs/manifest.json](g6/canonical-runs/manifest.json).
 | Archivo | Contiene | Reclamo que permite sostener |
 |---|---|---|
 | [EVIDENCE-BASELINE.md](../EVIDENCE-BASELINE.md) | Resultados previos, PI-1/PI-2, 1/8, 94,6 % y límites | No confundir evidencia ya medida con nueva evidencia. |
-| [CLOSURE-REPORT.md](../CLOSURE-REPORT.md) | Causas raíz y cierre operativo histórico | Distinguir fallos de infraestructura, proceso y planner. |
+| [g6/FINAL-REPORT.md](g6/FINAL-REPORT.md) | Informe final de evidencia, gates, runs y limitaciones | Resultado vigente del cierre G6. |
 | [HANDOFF.md](../HANDOFF.md) | Continuidad y análisis de implementabilidad | Contexto de los 84 intentos y del límite longitudinal. |
 | [leaf-outcomes/README.md](leaf-outcomes/README.md) y [summary.json](leaf-outcomes/summary.json) | Derivación de hojas, conteos, clases y distribuciones | Ningún proxy de tamaño separa entrega de fallo. |
 | [policy-c-refuses-a-clean-wide-cut](warehouse/pilot/defects/policy-c-refuses-a-clean-wide-cut/README.md) | Auditoría del caso motivador y fórmula | `validationDuplication` y el rechazo del corte ancho. |

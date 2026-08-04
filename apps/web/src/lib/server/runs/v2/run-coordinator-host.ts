@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { ChildProcess } from "node:child_process";
 import { buildAgentEnvironment } from "@manyhands/execution-core";
-import { NonRetryablePlanningError, PlanningCapacityError, WorkBreakdownPlanner, compileGraphRevision, parseWorkBreakdownProgressLine, type WorkBreakdownModelRequest } from "@manyhands/decomposer";
+import { NonRetryablePlanningError, PlanningCapacityError, PlanningModule, WorkBreakdownPlanner, compileGraphRevision, parseWorkBreakdownProgressLine, type SemanticPlanningModelRequest, type WorkBreakdownModelRequest } from "@manyhands/decomposer";
 import { foldRun } from "@manyhands/run-coordinator";
 import { buildFastRepositorySnapshot } from "@manyhands/repository-index";
 import { EventStoreCompactor, JsonlRunEventStore, RunSnapshotStore, verifyAndRecoverRunStore } from "@manyhands/run-store";
@@ -69,17 +69,24 @@ export async function runPlanningV2Pipeline(runId: string): Promise<void> {
       const existingEvents = await events.load(runId);
       const questionAnswers = resolvedPlanningAnswers(existingEvents.length === 0 ? undefined : foldRun(existingEvents));
       const stage = planningSelection(run);
+      const planningModel = {
+        generate: (request: WorkBreakdownModelRequest | SemanticPlanningModelRequest) => invokeSelectedPlanningCli(
+          runId,
+          repoPath,
+          stage,
+          lease.operationId,
+          planningSignal,
+          request
+        )
+      };
       const planner = new WorkBreakdownPlanner({
-        model: {
-          generate: (request) => invokeSelectedPlanningCli(
-            runId,
-            repoPath,
-            stage,
-            lease.operationId,
-            planningSignal,
-            request
-          )
-        },
+        model: planningModel,
+        ...(run.executionConfig.maxPlanningAttempts !== undefined
+          ? { maxAttempts: run.executionConfig.maxPlanningAttempts }
+          : { maxAttempts: 3 })
+      });
+      const planningModule = new PlanningModule({
+        model: planningModel,
         ...(run.executionConfig.maxPlanningAttempts !== undefined
           ? { maxAttempts: run.executionConfig.maxPlanningAttempts }
           : { maxAttempts: 3 })
@@ -93,6 +100,7 @@ export async function runPlanningV2Pipeline(runId: string): Promise<void> {
         authority,
         ...(Object.keys(questionAnswers).length > 0 ? { questionAnswers } : {}),
         ...(run.granularityCondition !== undefined ? { granularityCondition: run.granularityCondition } : {}),
+        ...(run.candidateCount !== undefined ? { candidateCount: run.candidateCount } : {}),
         ...(run.experimentalCandidate !== undefined ? {
           acceptanceCriteria: run.experimentalCandidate.acceptanceCriteria,
           experimentalCandidate: run.experimentalCandidate
@@ -103,6 +111,7 @@ export async function runPlanningV2Pipeline(runId: string): Promise<void> {
         inspect: (input) => buildFastRepositorySnapshot({ rootPath: input.repoPath, targetFingerprint: input.targetFingerprint, baseCommit: input.baseCommit }),
         plan: (input, observer) => planner.plan(input, observer),
         planCandidates: (input, envelope, count, observer) => planner.planCandidates(input, envelope, count, observer),
+        planningModule,
         compile: (input) => compileGraphRevision(input, { idFor: stableId, now: () => new Date().toISOString() }),
         nodeIdFor: (key) => stableId("node", key),
         now: () => new Date().toISOString()
@@ -157,7 +166,7 @@ async function invokeSelectedPlanningCli(
   stage: { executorId: string; model: string; effort?: string },
   operationId: string,
   signal: AbortSignal,
-  request: WorkBreakdownModelRequest
+  request: WorkBreakdownModelRequest | SemanticPlanningModelRequest
 ): Promise<string> {
   const repair = request.repairIssues.length === 0
     ? ""

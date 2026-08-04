@@ -13,9 +13,14 @@ import { WorkBreakdownSchema, type WorkBreakdown, type WorkUnit } from "../plann
 import { CandidatePlanSchema, PlanningEnvelopeSchema, validateCandidatePlan, type CandidatePlan, type PlanningEnvelope } from "../planner/planning-envelope.js";
 import { compileContractBundles } from "./contract-compiler.js";
 import { repositorySnapshotIdsMatch } from "../planner/repository-snapshot-id.js";
+import { projectSemanticPlanForLegacyCompiler } from "../planner/semantic-plan-projection.js";
+import { SemanticPlanSchema, type SemanticPlan } from "../planner/semantic-plan.js";
 
 export interface GraphCompilerInput {
-  breakdown: WorkBreakdown;
+  /** Historical compiler input. New productive planning supplies semanticPlan. */
+  breakdown?: WorkBreakdown;
+  /** The sole canonical planning representation for the productive route. */
+  semanticPlan?: SemanticPlan;
   repositorySnapshot: RepositorySnapshot;
   sourceContract?: SourceContract;
   planningEnvelope?: PlanningEnvelope;
@@ -48,11 +53,18 @@ export function compileGraphRevision(
   rawInput: GraphCompilerInput,
   dependencies: GraphCompilerDependencies
 ): CompiledGraphRevision {
-  const breakdown = WorkBreakdownSchema.parse(rawInput.breakdown);
+  const hasSemanticPlan = rawInput.semanticPlan !== undefined;
+  if (hasSemanticPlan && rawInput.breakdown !== undefined) throw new Error("Graph compilation accepts either semanticPlan or legacy breakdown, not both.");
+  if (!hasSemanticPlan && rawInput.breakdown === undefined) throw new Error("Graph compilation requires a semanticPlan or legacy breakdown.");
+  const semanticPlan = hasSemanticPlan ? SemanticPlanSchema.parse(rawInput.semanticPlan) : undefined;
+  const semanticProjection = semanticPlan === undefined ? undefined : projectSemanticPlanForLegacyCompiler(semanticPlan);
+  const breakdown = WorkBreakdownSchema.parse(semanticProjection?.breakdown ?? rawInput.breakdown!);
+  const candidatePlan = semanticProjection?.candidatePlan ?? rawInput.candidatePlan;
   const hasEnvelope = rawInput.planningEnvelope !== undefined;
-  const hasCandidate = rawInput.candidatePlan !== undefined;
-  if (hasEnvelope !== hasCandidate) throw new Error("Graph compilation requires planningEnvelope and candidatePlan together.");
-  if (hasEnvelope && hasCandidate) {
+  const hasCandidate = candidatePlan !== undefined;
+  if (!hasSemanticPlan && hasEnvelope !== hasCandidate) throw new Error("Graph compilation requires planningEnvelope and candidatePlan together.");
+  if (hasSemanticPlan && hasEnvelope) throw new Error("SemanticPlan compilation does not accept a legacy PlanningEnvelope.");
+  if (!hasSemanticPlan && hasEnvelope && hasCandidate) {
     const planningEnvelope = PlanningEnvelopeSchema.parse(rawInput.planningEnvelope);
     const candidatePlan = CandidatePlanSchema.parse(rawInput.candidatePlan);
     const diagnostics = validateCandidatePlan({ envelope: planningEnvelope, candidate: candidatePlan });
@@ -79,7 +91,7 @@ export function compileGraphRevision(
     breakdown,
     repositorySnapshot,
     nodeIdByUnitKey,
-    ...(rawInput.candidatePlan === undefined ? {} : { candidatePlan: rawInput.candidatePlan }),
+    ...(candidatePlan === undefined ? {} : { candidatePlan }),
     ...(rawInput.sourceContract === undefined ? {} : { sourceContract: rawInput.sourceContract })
   }, dependencies);
   const trace: CompilationRelationTrace[] = [];

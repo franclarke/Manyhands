@@ -279,6 +279,26 @@ Graph Compiler. Una assessment interna no puede podar después los contratos del
 candidato seleccionado. Véanse [ADR 0012](adr/0012-utility-based-granularity-selection.md)
 y [ADR 0013](adr/0013-policy-guided-candidate-planning.md).
 
+## A22. Planning profundo con un SemanticPlan canÃ³nico
+
+El caller entrega objetivo, criterios, snapshot y restricciones a un Ãºnico
+`PlanningModule`. El mÃ³dulo posee la generaciÃ³n acotada de alternativas, el
+grounding, la verificaciÃ³n estructural y la selecciÃ³n determinista. Su salida
+es un `SemanticPlan` canÃ³nico o un resultado tipado `needs_input`/`rejected`.
+
+Cada unidad declara su superficie grounded y outcomes; cada outcome posee los
+criterios que cubre. Cada seam aparece una sola vez y contiene participantes,
+promise, compatibilidad, materializaciÃ³n, verificaciÃ³n y evidencia. El compiler
+deriva scopes, ownership, contratos, requisitos de artefactos, conflictos,
+identidades y revisiones. No se intercambian ni persisten en la ruta productiva
+`PlanningEnvelope`, `CandidatePlan`, matrices de ownership, listas paralelas de
+scopes, artifacts, seam specifications, contract obligations o leaf validations.
+
+La polÃ­tica nunca fabrica unidades desde paths. Si no hay un corte seguro, el
+resultado es `rejected`; si existe una sola alternativa segura, el resultado se
+marca `degraded`. Los formatos histÃ³ricos se leen para replay, pero se proyectan
+sÃ³lo dentro del adapter de compatibilidad del compiler.
+
 ## Decisiones retiradas
 
 Quedan retiradas como arquitectura vigente:

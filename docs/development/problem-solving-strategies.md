@@ -97,8 +97,10 @@ El modelo separa `evidenceIds` de `plannedPaths`:
   [`compiler/contract-compiler.ts`](../../packages/decomposer/src/compiler/contract-compiler.ts).
 - Regresión: [`decomposer-work-breakdown.test.ts`](../../tests/decomposer-work-breakdown.test.ts)
   cubre paths planificados y el rechazo de contradicciones.
-- Smoke observado: [`v2-productive-run-audit-2026-07-18.md`](../audits/v2-productive-run-audit-2026-07-18.md)
-  registra un run greenfield que llegó a `needs_approval` con scopes concretos.
+- La evidencia de cierre y sus límites están documentados en
+  [`docs/tesis/evidence/g6/FINAL-REPORT.md`](../tesis/evidence/g6/FINAL-REPORT.md) y
+  [`docs/tesis/HANDOFF.md`](../tesis/HANDOFF.md); los smokes históricos no son
+  gates vigentes.
 
 ## 4. Relaciones del grafo con un único significado
 
@@ -354,7 +356,7 @@ nodo afectado y usa el inspector; no crea un status paralelo.
 - Código: [`run-model/reducer.ts`](../../apps/web/src/lib/run-model/reducer.ts),
   [`presentation.ts`](../../apps/web/src/lib/run-model/presentation.ts),
   [`tree-layout.ts`](../../apps/web/src/lib/run-model/tree-layout.ts),
-  [`minimal-run-graph.tsx`](../../apps/web/src/components/run-model/minimal-run-graph.tsx)
+  [`cockpit-run-graph.tsx`](../../apps/web/src/app/runs/[runId]/_components/cockpit-run-graph.tsx)
   y [`run-model-view.client.tsx`](../../apps/web/src/app/runs/[runId]/_components/run-model-view.client.tsx).
 - Tests: [`run-model-v2-reducer.test.ts`](../../tests/run-model-v2-reducer.test.ts),
   [`run-model-presentation.test.ts`](../../tests/run-model-presentation.test.ts),

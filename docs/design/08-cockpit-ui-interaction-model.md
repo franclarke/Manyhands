@@ -178,7 +178,7 @@ Cockpit UI está diseñada bajo la paleta semántica **Ember sobre Grafito**, cu
 
 | Componente | Archivo de Origen | Responsabilidad de UI |
 |---|---|---|
-| `<MinimalRunGraph />` | `apps/web/src/components/run-model/minimal-run-graph.tsx` | Renderizado del canvas interactivo de `TaskGraph V3` sin auto-fitView. |
+| `<CockpitRunGraph />` | `apps/web/src/app/runs/[runId]/_components/cockpit-run-graph.tsx` | Renderizado del canvas interactivo de `TaskGraph V3` sin auto-fitView. |
 | `<DecisionQueueDrawer />` | `apps/web/src/components/decision-queue-drawer.tsx` | Drawer lateral no bloqueante para resolver decisiones humanas. |
 | `<SideBySideDiffViewer />` | `apps/web/src/components/side-by-side-diff-viewer.tsx` | Comparador de código fuente y artefactos propuestos. |
 | `<RunModelView />` | `apps/web/src/app/runs/[runId]/_components/run-model-view.client.tsx` | Vista contenedora principal del workspace persistente. |

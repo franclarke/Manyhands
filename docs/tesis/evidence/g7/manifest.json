@@ -1,0 +1,56 @@
+{
+  "series": "G7",
+  "date": "2026-08-03",
+  "status": "partial",
+  "runtimeCommit": "6b339446efe8880c8e7c6380aeaa2243d139ff6d",
+  "warehouseBaseline": "5da60192cc788032c59c7e7be27696ca0e0a30d7",
+  "policyVersion": "adaptive-utility/3.1.0-pilot",
+  "executor": "codex-cli",
+  "model": "gpt-5.4-mini",
+  "effort": "medium",
+  "candidateCount": 2,
+  "maxPlanningAttempts": 1,
+  "automaticRetryBudget": 0,
+  "maxCellCostUsd": 8,
+  "maxSeriesCostUsd": 32,
+  "maxSeriesTokens": 1000000,
+  "files": {
+    "preregistration": {
+      "path": "docs/tesis/evidence/g7-preregistration.md",
+      "sha256": "e84ecf44c2f5a730392516e2a50a21470bc2af93d6e753aebf2ac69c3f7a64df"
+    },
+    "criteriaT1": {
+      "path": "docs/tesis/evidence/g7/criteria-t1.json",
+      "sha256": "483f0ad6a61aa323a57fbff5ba2dbe2ab5c5cdcfde65cc9fa080aa00972cf9c3"
+    },
+    "criteriaT2": {
+      "path": "docs/tesis/evidence/g7/criteria-t2.json",
+      "sha256": "af53aff3e0cec938e670c0c26b4dc554f1eb86de06251fc8cb2ef47250e5eead"
+    },
+    "cellT1C": {
+      "path": "docs/tesis/evidence/g7/cells/g7-01-T1-C.json",
+      "sha256": "c2395b461e78eab8584f04d605c17db6d842d3dfe5d0f1dadd1c007a76872c77"
+    },
+    "cellT1A": {
+      "path": "docs/tesis/evidence/g7/cells/g7-02-T1-A.json",
+      "sha256": "7361469b50c7a3b197489e7e348c002ea35289a657b2e45e7e7af6b175c9a2eb"
+    },
+    "cellT2C": {
+      "path": "docs/tesis/evidence/g7/cells/g7-03-T2-C.json",
+      "sha256": "4e61571673f8e6c5f5a7c9867279dea80784b138852a4a5415acfcbb2e89794f"
+    },
+    "cellT2B": {
+      "path": "docs/tesis/evidence/g7/cells/g7-04-T2-B.json",
+      "sha256": "dcd9888b4ecc22f0611259c1f3f0a44842472b86ce8ac3fb11f102ca20e092e6"
+    }
+  },
+  "runs": [
+    { "cell": "g7-01-T1-C", "runId": "4a57d8ce-2785-45b5-92c8-323d98952942", "outcome": "failed" },
+    { "cell": "g7-01-T1-C", "runId": "51ea1c3b-dd5d-4720-b67e-756cd368ee16", "outcome": "failed" },
+    { "cell": "g7-01-T1-C", "runId": "82e23422-5926-4d67-b36e-e81bcfd8e77f", "outcome": "failed" },
+    { "cell": "g7-01-T1-C", "runId": "429c7825-c4f1-4f94-a2b2-20b4e8982c7c", "outcome": "failed" },
+    { "cell": "g7-01-T1-C", "runId": "7238db09-9331-4f41-9ad3-c656fc1e5b2c", "outcome": "failed" },
+    { "cell": "g7-01-T1-C", "runId": "277d8ed8-4bd4-4113-a5dc-2cd5e17dd45b", "outcome": "failed" },
+    { "cell": "g7-01-T1-C", "runId": "4fdc41da-c6c1-4206-b5f0-2c84a53430df", "outcome": "timeout" }
+  ]
+}

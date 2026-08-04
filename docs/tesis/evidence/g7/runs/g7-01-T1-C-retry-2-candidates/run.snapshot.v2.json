@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 2,
+  "runId": "429c7825-c4f1-4f94-a2b2-20b4e8982c7c",
+  "eventSequence": 22,
+  "lastEventId": "planning:429c7825-c4f1-4f94-a2b2-20b4e8982c7c:failed:22",
+  "operationId": "0b127112-85e9-41c0-8934-a4afe7680238",
+  "fencingToken": 2,
+  "projection": {
+    "runId": "429c7825-c4f1-4f94-a2b2-20b4e8982c7c",
+    "goal": "Add order priority and backorders to this warehouse codebase across every layer that already exists. In src/domain/orders.ts export OrderPriority = standard | express; make Order.priority default to standard; reject invalid priorities with OrderError; add Backorder with orderId, skuId and positive missing; add backorders to WarehouseState; make reserveOrder record backorders instead of throwing when stock is insufficient; export listBackorders. Expose the operation and event in src/application/warehouse-service.ts, order express before standard in src/fulfillment/planner.ts, count backorders in src/durability/journal.ts, expose backorders in src/api/server.ts, distinguish express orders in src/presentation/tower.ts, and add study:g6-probe in src/probe/g6.ts with one deterministic JSON object. Preserve all existing behavior and tests, adding tests next to each changed module.",
+    "lifecycle": "failed",
+    "sequence": 22,
+    "appliedEventIds": [
+      "run:429c7825-c4f1-4f94-a2b2-20b4e8982c7c:created",
+      "repository:sha256:2a67b0110615b73edc0a5ef3cb76a0756491962f28ad44ad7f56a378cc05680c:inspection:2",
+      "planning:429c7825-c4f1-4f94-a2b2-20b4e8982c7c:envelope:3",
+      "planning:429c7825-c4f1-4f94-a2b2-20b4e8982c7c:attempt:1:started",
+      "planning:429c7825-c4f1-4f94-a2b2-20b4e8982c7c:attempt:1:node:u-warehouse-orders-backorders-root",
+      "planning:429c7825-c4f1-4f94-a2b2-20b4e8982c7c:attempt:1:node:u-domain-orders",
+      "planning:429c7825-c4f1-4f94-a2b2-20b4e8982c7c:attempt:1:node:u-service-warehouse",
+      "planning:429c7825-c4f1-4f94-a2b2-20b4e8982c7c:attempt:1:node:u-api-server",
+      "planning:429c7825-c4f1-4f94-a2b2-20b4e8982c7c:attempt:1:node:u-fulfillment-planner",
+      "planning:429c7825-c4f1-4f94-a2b2-20b4e8982c7c:attempt:1:node:u-durability-journal",
+      "planning:429c7825-c4f1-4f94-a2b2-20b4e8982c7c:attempt:1:node:u-presentation-tower",
+      "planning:429c7825-c4f1-4f94-a2b2-20b4e8982c7c:attempt:1:node:u-probe-g6",
+      "planning:429c7825-c4f1-4f94-a2b2-20b4e8982c7c:attempt:2:started",
+      "planning:429c7825-c4f1-4f94-a2b2-20b4e8982c7c:attempt:2:node:order-priority-backorders-rollout",
+      "planning:429c7825-c4f1-4f94-a2b2-20b4e8982c7c:attempt:2:node:domain-order-model",
+      "planning:429c7825-c4f1-4f94-a2b2-20b4e8982c7c:attempt:2:node:operational-order-surface",
+      "planning:429c7825-c4f1-4f94-a2b2-20b4e8982c7c:attempt:2:node:fulfillment-priority-planner",
+      "planning:429c7825-c4f1-4f94-a2b2-20b4e8982c7c:attempt:2:node:durability-backorder-analytics",
+      "planning:429c7825-c4f1-4f94-a2b2-20b4e8982c7c:attempt:2:node:presentation-probe-outputs",
+      "planning:429c7825-c4f1-4f94-a2b2-20b4e8982c7c:attempt:3:started",
+      "planning:429c7825-c4f1-4f94-a2b2-20b4e8982c7c:attempt:3:failed",
+      "planning:429c7825-c4f1-4f94-a2b2-20b4e8982c7c:failed:22"
+    ],
+    "decisions": {},
+    "stoppedNodeIds": [],
+    "readiness": {
+      "readyNodeIds": [],
+      "pendingDecisionIds": []
+    },
+    "selectedWaves": [],
+    "attempts": {},
+    "adoptedArtifacts": {},
+    "nodeEvidenceMatrixIds": {},
+    "integrations": {},
+    "recoveryHistory": [],
+    "evidenceMatrices": [],
+    "outcomes": {
+      "execution": "pending",
+      "artifact": "missing",
+      "delivery": "not_started"
+    },
+    "evidenceMatrixSummaries": {},
+    "planningEnvelope": {
+      "schemaVersion": 1,
+      "policyVersion": "adaptive-utility/3.1.0-pilot",
+      "repositorySnapshotId": "sha256:2a67b0110615b73edc0a5ef3cb76a0756491962f28ad44ad7f56a378cc05680c",
+      "goalDigest": "sha256:8a1159aecffd2ee837795c2ed730803d361b6c9fb9f0a7034a9cb73c83047e12",
+      "candidateBudget": {
+        "minimum": 2,
+        "maximum": 3
+      },
+      "executionBudget": {
+        "maxLeafContextTokens": 24000,
+        "maxLeafScopePaths": 40,
+        "maxParallelism": 4
+      },
+      "requirements": {
+        "requireExplicitAcceptanceOwnership": true,
+        "requireCompleteSeamSpecifications": true,
+        "requireObservableLeafValidation": true
+      }
+    },
+    "failureReason": "Candidate planning failed after 1 attempts: codex-cli planning failed with exit code 1 (envelopes=none; stdoutBytes=0; stderr=\" of 3. Do not reproduce prior candidate hashes: 4e2792ccd8d6780286bedc525b6f4d019c55af1bfacc405eafb1aa83c87da9dc, a005dcd1f1f24e28a89c5830f7a55fa39909c4f809d75e9019a2413ae8e07305. Propose a genuinely different semantic cut or return the best cohesive single leaf; do not reshuffle paths to appear different. codex I’m grounding the plan against the existing `src/*` modules and tests, then I’ll emit the required parent-first `planning.node` lines followed by a schema-valid CandidatePlan draft JSON.\")."
+  },
+  "checksum": "3677f332dbc6acbc1e1b9414000e266271498be2a6d2beaa4831f0a9c5e2b3b7"
+}

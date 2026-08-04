@@ -6,8 +6,8 @@
 Goal + RunTargetContext
   -> Repository Inspector
   -> Planning Brief
-  -> Planner
-  -> WorkBreakdown
+  -> PlanningModule
+  -> SemanticPlan
   -> Graph Compiler
   -> GraphRevision
   -> Critics
@@ -41,6 +41,14 @@ cohesión, integración, riesgo o verificabilidad.
 
 Una pregunta se eleva solo si la respuesta cambia comportamiento, arquitectura,
 scope, riesgo o aceptación. Preferencias locales reversibles se dejan al agente.
+
+## SemanticPlan y PlanningModule
+
+El planner productivo devuelve un `SemanticPlan` canÃ³nico. Sus unidades contienen
+outcomes que cubren criterios, y cada seam contiene una sola vez productor,
+consumidores, promise, compatibilidad, materializaciÃ³n, verificaciÃ³n y evidencia.
+El `PlanningModule` encapsula la generaciÃ³n y selecciÃ³n acotada; el caller no
+arma scopes, ownership, artifacts, obligations ni validaciones paralelas.
 
 ## Graph Compiler
 

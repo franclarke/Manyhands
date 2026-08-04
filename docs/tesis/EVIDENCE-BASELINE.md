@@ -30,7 +30,7 @@ capítulo de metodología.
 ## 2. Estado de tickets
 
 Los 26 tickets de `.scratch/code-review-remediation/issues/` están `closed`. El
-informe de cierre está en `docs/tesis/CLOSURE-REPORT.md`.
+informe final vigente está en `docs/tesis/evidence/g6/FINAL-REPORT.md`.
 
 **Excepción declarada:** los tickets 11, 12, 02, 14 y 15 se cerraron con TDD,
 gates y evidencia, pero **sin las reviews independientes Standards y Spec** que

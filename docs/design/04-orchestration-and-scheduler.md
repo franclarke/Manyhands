@@ -226,8 +226,8 @@ attempt.started / integration.started
 
 | Invariante | Garantía de Implementación | Ubicación de Código |
 |---|---|---|
-| **Límite Parallelo Estricto** | `selected.length < maxParallel` | [wave-selector-v2.ts](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/scheduler/src/wave-selector-v2.ts#L21) |
-| **Simetría de Conflictos** | `blocksPair` evalúa combinaciones `(A, B)` y `(B, A)` | [wave-selector-v2.ts](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/scheduler/src/wave-selector-v2.ts#L28-L34) |
-| **Serialización de Hechos** | Encadenamiento de `recordQueue` con `Promise.resolve()` | [execution-driver.ts](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/orchestrator-graph/src/v2/execution-driver.ts#L160-L183) |
-| **Integridad de Contratos** | Comprobación de versiones `requiredContractRevisions` | [readiness-v2.ts](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/scheduler/src/readiness-v2.ts#L14-L17) |
-| **Aprobación Estricta** | Coincidencia exacta de `approvedGraphRevision` antes de ejecutar | [execution-driver.ts](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/orchestrator-graph/src/v2/execution-driver.ts#L105-L113) |
+| **Límite Parallelo Estricto** | `selected.length < maxParallel` | [wave-selector-v2.ts](../../packages/scheduler/src/wave-selector-v2.ts#L21) |
+| **Simetría de Conflictos** | `blocksPair` evalúa combinaciones `(A, B)` y `(B, A)` | [wave-selector-v2.ts](../../packages/scheduler/src/wave-selector-v2.ts#L28-L34) |
+| **Serialización de Hechos** | Encadenamiento de `recordQueue` con `Promise.resolve()` | [execution-driver.ts](../../packages/orchestrator-graph/src/v2/execution-driver.ts#L160-L183) |
+| **Integridad de Contratos** | Comprobación de versiones `requiredContractRevisions` | [readiness-v2.ts](../../packages/scheduler/src/readiness-v2.ts#L14-L17) |
+| **Aprobación Estricta** | Coincidencia exacta de `approvedGraphRevision` antes de ejecutar | [execution-driver.ts](../../packages/orchestrator-graph/src/v2/execution-driver.ts#L105-L113) |

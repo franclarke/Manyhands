@@ -69,6 +69,9 @@ export function buildWorkBreakdownPrompt(input: WorkBreakdownPlannerInput): Work
         : "Emit planning.node lines in parent-first order. Then emit the complete schema-valid WorkBreakdown JSON. Never invent repository evidence.",
       ...(requestsTypedCandidate ? [
         "Candidate metadata is an explicit correctness boundary. Do not infer or omit ownership, seam compatibility, contract consumers, or leaf validation.",
+        "The top-level response for this request MUST be a CandidatePlan draft wrapper: candidateId, breakdown, scopes, acceptanceCriteria, acceptanceOwnership, seamSpecifications, contractObligations, and leafValidations are top-level fields. Put schemaVersion, breakdownId, objective, root, candidateArtifacts, candidateSeams, repositoryEvidence, uncertainties, and questions inside the nested breakdown field. A bare WorkBreakdown object at the top level is invalid and must not be emitted.",
+        "Copy the supplied repositorySnapshotId byte-for-byte, including the exact `sha256:` prefix, only into breakdown.repositorySnapshotId. Do not put repositorySnapshotId inside breakdown.root or any WorkUnit, and do not invent a second candidate metadata field.",
+        "Every leafValidations entry must name a unit whose kind is `leaf`; never put a composite/root unit in leafValidations. Validate global/composite obligations through acceptance ownership and integration gates instead.",
         "Every acceptance criterion has exactly one compatible owner. Local owners are leaves; global owners are integration composites; seam owners name the units that prove the seam.",
         "Every cross-leaf seam and contract obligation names its producer, every consumer, materialization, compatibility rule, and observable validation.",
         "CandidatePlan draft JSON shape:",

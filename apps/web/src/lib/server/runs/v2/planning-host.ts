@@ -1,6 +1,6 @@
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { CandidatePlan, CandidatePlanDiagnostic, CandidatePlanSelection, CompiledGraphRevision, GranularityStrategyResult, GraphCompilerInput, PlanningEnvelope, WorkBreakdown, WorkBreakdownPlannerInput, WorkBreakdownPlanningObserver, WorkUnit } from "@manyhands/decomposer";
+import type { CandidatePlan, CandidatePlanDiagnostic, CandidatePlanSelection, CompiledGraphRevision, GranularityStrategyResult, GraphCompilerInput, PlanningEnvelope, PlanningModule, SemanticPlan, SemanticPlanningObserver, WorkBreakdown, WorkBreakdownPlannerInput, WorkBreakdownPlanningObserver, WorkUnit } from "@manyhands/decomposer";
 import type { RepositorySnapshot } from "@manyhands/repository-index";
 import { PLAN_CRITIC_KINDS, PILOT_UTILITY_POLICY, buildGranularityPlanningBrief, canonicalRepositorySnapshotId, candidateBreakdownHash, createPlanningEnvelope, repositorySnapshotIdsMatch, resolveGranularityCondition, selectGranularityStrategy, selectPlannerCandidate, validatePlannerCandidateSet } from "@manyhands/decomposer";
 import { foldRun, supersededDecisionIds, type RunEventInput, type RunProjection } from "@manyhands/run-coordinator";
@@ -23,6 +23,8 @@ export interface PlanningV2Input {
   questionAnswers?: Record<string, string>;
   /** G5 condition label; absent means the productive adaptive policy. */
   granularityCondition?: string;
+  /** Compact comparative runs may request the contractual minimum of two candidates. */
+  candidateCount?: number;
   /** Frozen typed alternatives for deterministic policy replay without an LLM call. */
   frozenCandidates?: CandidatePlan[];
   experimentalCandidate?: {
@@ -40,6 +42,8 @@ export interface PlanningV2Dependencies {
   inspect(input: Pick<PlanningV2Input, "repoPath" | "targetFingerprint" | "baseCommit">): Promise<RepositorySnapshot>;
   plan(input: WorkBreakdownPlannerInput, observer: WorkBreakdownPlanningObserver): Promise<WorkBreakdown>;
   planCandidates(input: WorkBreakdownPlannerInput, envelope: PlanningEnvelope, count: number, observer: WorkBreakdownPlanningObserver): Promise<CandidatePlan[]>;
+  /** Product planning uses the deep module. Legacy callbacks remain only for historical replay. */
+  planningModule?: PlanningModule;
   compile(input: GraphCompilerInput): CompiledGraphRevision;
   nodeIdFor?(key: string): string;
   now(): string;
@@ -113,6 +117,47 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
         }])];
       }
     });
+    if (input.experimentalCandidate === undefined && dependencies.planningModule !== undefined) {
+      const outcome = await dependencies.planningModule.plan({
+        goal: input.goal,
+        acceptanceCriteria: input.acceptanceCriteria ?? [],
+        constraints: input.constraints ?? [],
+        repositorySnapshot: {
+          snapshotId: repositorySnapshot.snapshotId,
+          inspectionDisposition: repositorySnapshot.inspectionDisposition,
+          evidence: repositoryEvidence(repositorySnapshot)
+        },
+        granularityBrief: buildGranularityPlanningBrief({
+          repositorySnapshot,
+          config: PILOT_UTILITY_POLICY,
+          ...(input.candidateCount === undefined ? {} : { candidateCount: input.candidateCount })
+        }),
+        ...(input.candidateCount === undefined ? {} : { candidateCount: input.candidateCount }),
+        ...(input.questionAnswers === undefined ? {} : { questionAnswers: input.questionAnswers })
+      }, planningObserverFor(0) satisfies SemanticPlanningObserver);
+      if (outcome.kind === "rejected") throw new Error(`${outcome.error.code}: ${outcome.error.message}`);
+      if (outcome.kind === "needs_input") {
+        const drafts = semanticClarificationEvents(outcome.plan, nodeIdFor, dependencies.now, events.length);
+        events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, drafts)];
+        state = foldRun(events);
+        await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, events.at(-1)!.eventId);
+        return state;
+      }
+      const compiled = dependencies.compile({
+        semanticPlan: outcome.plan,
+        repositorySnapshot,
+        sourceContract: {
+          goal: input.goal,
+          acceptanceCriteria: input.acceptanceCriteria ?? [],
+          constraints: input.constraints ?? []
+        }
+      });
+      const drafts = semanticSuccessEvents(input.runId, outcome.plan, compiled, dependencies.now);
+      events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, drafts)];
+      state = foldRun(events);
+      await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, events.at(-1)!.eventId);
+      return state;
+    }
     const plannerInput: WorkBreakdownPlannerInput = {
       goal: input.goal,
       acceptanceCriteria: input.acceptanceCriteria ?? [],
@@ -124,7 +169,8 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
       },
       granularityBrief: buildGranularityPlanningBrief({
         repositorySnapshot,
-        config: PILOT_UTILITY_POLICY
+        config: PILOT_UTILITY_POLICY,
+        ...(input.candidateCount !== undefined ? { candidateCount: input.candidateCount } : {})
       }),
       ...(input.questionAnswers !== undefined ? { questionAnswers: input.questionAnswers } : {})
     };
@@ -133,7 +179,8 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
       goal: input.goal,
       repositorySnapshot,
       maxLeafContextTokens: PILOT_UTILITY_POLICY.maxLeafContextTokens,
-      maxLeafScopePaths: PILOT_UTILITY_POLICY.maxLeafScopePaths
+      maxLeafScopePaths: PILOT_UTILITY_POLICY.maxLeafScopePaths,
+      ...(input.candidateCount !== undefined ? { maxCandidatePlans: input.candidateCount } : {})
     });
     events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [{
       eventId: `planning:${input.runId}:envelope:${events.length + 1}`,
@@ -499,6 +546,18 @@ function strategySuccessEvents(
   ];
 }
 
+function semanticSuccessEvents(
+  runId: string,
+  plan: SemanticPlan,
+  compiled: CompiledGraphRevision,
+  now: () => string
+): RunEventInput[] {
+  return [
+    { eventId: `planning:${plan.planId}:completed:${runId}`, occurredAt: now(), type: "planning.completed", payload: { breakdownId: plan.planId, breakdown: asRecord(plan) } },
+    ...compiledEvents(compiled, now)
+  ];
+}
+
 function validateExperimentalCandidate(
   input: PlanningV2Input,
   repositorySnapshot: RepositorySnapshot
@@ -617,6 +676,69 @@ function clarificationEvents(
       }
     }))
   ];
+}
+
+function semanticClarificationEvents(
+  plan: SemanticPlan,
+  nodeIdFor: (key: string) => string,
+  now: () => string,
+  sequenceOffset: number
+): RunEventInput[] {
+  const completion: RunEventInput = {
+    eventId: `planning:${plan.planId}:clarification:${sequenceOffset + 1}`,
+    occurredAt: now(),
+    type: "planning.completed",
+    payload: { breakdownId: plan.planId, breakdown: asRecord(plan) }
+  };
+  const questions = plan.questions.length > 0
+    ? plan.questions.map((question) => ({
+        id: question.id,
+        question: question.question,
+        options: question.options,
+        impact: question.impact,
+        evidenceIds: question.evidenceIds,
+        sourceRef: `semantic-question:${question.id}`
+      }))
+    : plan.uncertainties
+        .filter((uncertainty) => uncertainty.requiresHumanDecision)
+        .map((uncertainty) => ({
+          id: uncertainty.id,
+          question: uncertainty.description,
+          options: ["Provide direction", "Stop this run"],
+          impact: "risk" as const,
+          evidenceIds: uncertainty.evidenceIds,
+          sourceRef: `semantic-uncertainty:${uncertainty.id}`
+        }));
+  return [
+    completion,
+    ...questions.map((question) => ({
+      eventId: question.id,
+      occurredAt: now(),
+      type: "decision.raised" as const,
+      payload: {
+        decision: {
+          id: question.id,
+          kind: "clarify_goal" as const,
+          question: question.question,
+          options: question.options.map((label, index) => ({ id: `option-${index + 1}`, label })),
+          affectedNodeIds: affectedSemanticNodeIds(plan.root, question.evidenceIds, nodeIdFor),
+          evidenceRefs: [question.sourceRef, ...question.evidenceIds],
+          impact: question.impact
+        }
+      }
+    }))
+  ];
+}
+
+function affectedSemanticNodeIds(root: SemanticPlan["root"], evidenceIds: readonly string[], nodeIdFor: (key: string) => string): string[] {
+  const units = root.kind === "leaf" ? [root] : [root, ...root.children.flatMap((child) => flattenSemanticUnits(child))];
+  if (evidenceIds.length === 0) return [nodeIdFor(root.key)];
+  const matches = units.filter((unit) => unit.evidenceIds.some((id) => evidenceIds.includes(id))).map((unit) => nodeIdFor(unit.key));
+  return matches.length > 0 ? [...new Set(matches)] : [nodeIdFor(root.key)];
+}
+
+function flattenSemanticUnits(unit: SemanticPlan["root"]): SemanticPlan["root"][] {
+  return unit.kind === "leaf" ? [unit] : [unit, ...unit.children.flatMap(flattenSemanticUnits)];
 }
 
 function affectedNodeIds(root: WorkUnit, evidenceIds: readonly string[], nodeIdFor: (key: string) => string): string[] {

@@ -1543,6 +1543,45 @@ export type {
 } from "./llm/errors";
 export { executionScopeFromAllowed } from "./scope";
 export {
+  SEMANTIC_PLAN_SCHEMA_VERSION,
+  SemanticVerificationSchema,
+  SemanticOutcomeSchema,
+  SemanticWorkUnitSchema,
+  GoalCriterionSchema,
+  SemanticSeamSchema,
+  SemanticPlanDraftSchema,
+  SemanticPlanSchema,
+  createSemanticPlan,
+  semanticPlanHash,
+  flattenSemanticWorkUnits,
+  buildSemanticPlanPrompt
+} from "./planner/semantic-plan.js";
+export type {
+  SemanticVerification,
+  SemanticOutcome,
+  SemanticWorkLeaf,
+  SemanticWorkComposite,
+  SemanticWorkUnit,
+  GoalCriterion,
+  SemanticSeam,
+  SemanticPlanDraft,
+  SemanticPlan,
+  CreateSemanticPlanInput,
+  SemanticPlanPromptInput
+} from "./planner/semantic-plan.js";
+export { PlanningModule } from "./planner/planning-module.js";
+export type {
+  SemanticPlanningProgressUnit,
+  SemanticPlanningObserver,
+  SemanticPlanningModelRequest,
+  SemanticPlanningModel,
+  PlanningModuleRequest,
+  PlanningContinuation,
+  PlanningModuleError,
+  PlanningOutcome,
+  PlanningModuleOptions
+} from "./planner/planning-module.js";
+export {
   PLANNING_ENVELOPE_SCHEMA_VERSION,
   PlanningEnvelopeSchema,
   AcceptanceOwnershipSchema,

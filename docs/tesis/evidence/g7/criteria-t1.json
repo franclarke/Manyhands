@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "taskId": "T1",
+  "criteria": [
+    { "id": "gate-install", "kind": "repository_gate", "description": "pnpm install --frozen-lockfile termina con exit 0 en un clon limpio del SHA entregado." },
+    { "id": "gate-test", "kind": "repository_gate", "description": "pnpm test termina con exit 0." },
+    { "id": "gate-typecheck", "kind": "repository_gate", "description": "pnpm typecheck termina con exit 0." },
+    { "id": "gate-build", "kind": "repository_gate", "description": "pnpm build termina con exit 0." },
+    { "id": "integrity-baseline-tests", "kind": "integrity", "description": "Ningún archivo de test presente en el commit base fue borrado ni vaciado." },
+    { "id": "behaviour-express-first", "kind": "imported_behaviour", "description": "planFulfillment lista pedidos express antes que los estándar dentro de una misma ola." },
+    { "id": "behaviour-backorder-recorded", "kind": "imported_behaviour", "description": "reserveOrder registra un Backorder cuando una línea excede las unidades disponibles y listBackorders lo devuelve." },
+    { "id": "behaviour-invalid-priority-rejected", "kind": "imported_behaviour", "description": "placeOrder rechaza con OrderError una prioridad distinta de standard o express." },
+    { "id": "probe-single-json", "kind": "probe", "description": "study:g6-probe escribe exactamente un objeto JSON en stdout y nada más." },
+    { "id": "probe-deterministic", "kind": "probe", "description": "Dos invocaciones de study:g6-probe desde el mismo commit emiten bytes idénticos." }
+  ]
+}

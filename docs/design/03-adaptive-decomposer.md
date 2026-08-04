@@ -93,7 +93,7 @@ flowchart TD
 
 ## 3. MODELO DE EVALUACIÓN DE COMPLEJIDAD INTRÍNSECA ($C_{task}$)
 
-Antes de decidir si una tarea debe dividirse, el evaluador de complejidad ([complexity-evaluator.ts](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/decomposer/src/granularity/complexity-evaluator.ts)) calcula el **Índice de Complejidad Intrínseca** ($C_{task}$) evaluando 4 dimensiones estructurales:
+Antes de decidir si una tarea debe dividirse, el evaluador de complejidad ([complexity-evaluator.ts](../../packages/decomposer/src/granularity/complexity-evaluator.ts)) calcula el **Índice de Complejidad Intrínseca** ($C_{task}$) evaluando 4 dimensiones estructurales:
 
 $$C_{task} = w_1 \cdot S_r + w_2 \cdot I_i + w_3 \cdot V_s + w_4 \cdot T_m$$
 
@@ -141,7 +141,7 @@ export interface GranularityAssessment {
 
 ## 5. CRÍTICOS DE COALESCENCIA Y RE-DIVISIÓN (*CRITICS PASS*)
 
-La segunda fase ejecuta dos críticos deterministas en TypeScript ([review.ts](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/decomposer/src/critics/review.ts)) para corregir sesgos del modelo de lenguaje.
+La segunda fase ejecuta dos críticos deterministas en TypeScript ([review.ts](../../packages/decomposer/src/critics/review.ts)) para corregir sesgos del modelo de lenguaje.
 
 ### 5.1 Over-splitting Critic (Coalescencia / Fusión de Hojas)
 
@@ -163,7 +163,7 @@ Para evitar desbordar la ventana de contexto del LLM y optimizar los costos de i
 
 ### 6.1 Resumen de Árbol por Alcance (*Scope Tree Summarization*)
 
-En lugar de enviar la totalidad del árbol de archivos del repositorio, el compresor filtra el índice del repositorio ([packages/repository-index](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/repository-index)) entregando únicamente las rutas declaradas en el `ScopeContract` del nodo (`allowedPaths`).
+En lugar de enviar la totalidad del árbol de archivos del repositorio, el compresor filtra el índice del repositorio ([packages/repository-index](../../packages/repository-index)) entregando únicamente las rutas declaradas en el `ScopeContract` del nodo (`allowedPaths`).
 
 ### 6.2 Extractor de Firmas de Interfaz (*Interface Signature Extractor*)
 
@@ -189,10 +189,10 @@ Todas las entradas de prompt del decompositor se procesan mediante un hash SHA-2
 
 ## 7. CANALIZACIÓN DE SYSTEM-PROMPTS Y PLANTILLAS LLM
 
-El empaquetado de prompts para el decompositor (en [prompt-template.ts](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/decomposer/src/llm/prompt-template.ts)) impone restricciones estrictas al modelo mediante canalización de sistema (*System-Prompt Channeling*):
+El empaquetado de prompts para el decompositor (en [prompt-template.ts](../../packages/decomposer/src/llm/prompt-template.ts)) impone restricciones estrictas al modelo mediante canalización de sistema (*System-Prompt Channeling*):
 
 1. **Definición de Rol**: Principal AI & Graph Compiler Engineer.
-2. **Formato JSON Estricto**: Salida requerida en un único bloque JSON conforme al esquema Zod `WorkBreakdownSchema` ([planner/schema.ts](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/decomposer/src/planner/schema.ts)).
+2. **Formato JSON Estricto**: Salida requerida en un único bloque JSON conforme al esquema Zod `WorkBreakdownSchema` ([planner/schema.ts](../../packages/decomposer/src/planner/schema.ts)).
 3. **Invariante de Alcance**: Ninguna sub-tarea puede solicitar rutas fuera de los límites autorizados del objetivo superior.
 
 ---
@@ -219,8 +219,8 @@ Un $GEI$ elevado indica un equilibrio óptimo entre granularidad y costo: las ta
 
 ## 9. MAPA DE PAQUETES Y COMPONENTES EN CÓDIGO
 
-- **Compilador de Grafos V3**: [packages/decomposer/src/compiler/graph-compiler.ts](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/decomposer/src/compiler/graph-compiler.ts)
-- **Compilador de Contratos Zod**: [packages/decomposer/src/compiler/contract-compiler.ts](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/decomposer/src/compiler/contract-compiler.ts)
-- **Críticos de Validación**: [packages/decomposer/src/critics/review.ts](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/decomposer/src/critics/review.ts)
-- **Esquema de Desglose de Trabajo**: [packages/decomposer/src/planner/schema.ts](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/decomposer/src/planner/schema.ts)
-- **Mapeo de Alcances**: [packages/decomposer/src/scope.ts](file:///c:/Users/franc/Documents/Proyectos/Manyhands/packages/decomposer/src/scope.ts)
+- **Compilador de Grafos V3**: [packages/decomposer/src/compiler/graph-compiler.ts](../../packages/decomposer/src/compiler/graph-compiler.ts)
+- **Compilador de Contratos Zod**: [packages/decomposer/src/compiler/contract-compiler.ts](../../packages/decomposer/src/compiler/contract-compiler.ts)
+- **Críticos de Validación**: [packages/decomposer/src/critics/review.ts](../../packages/decomposer/src/critics/review.ts)
+- **Esquema de Desglose de Trabajo**: [packages/decomposer/src/planner/schema.ts](../../packages/decomposer/src/planner/schema.ts)
+- **Mapeo de Alcances**: [packages/decomposer/src/scope.ts](../../packages/decomposer/src/scope.ts)
