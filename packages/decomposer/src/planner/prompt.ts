@@ -53,6 +53,7 @@ export function buildWorkBreakdownPrompt(input: WorkBreakdownPlannerInput): Work
       "The producer owns or provides the named contract or output; a consumer imports, calls, or uses it. Do not reverse this direction just because the producer consumes a different artifact from the same unit.",
       "When a type or state contract crosses executable leaves, pair it with a materialized files or commit artifact for every consumer that compiles against producer code; a logical artifact alone is insufficient for execution ordering.",
       "A logical artifact must not be the only relation ordering a consumer that compiles against producer code. Use logical only for facts that do not require the consumer to see producer files or exported implementation state.",
+      "When a runtime surface such as an API exposes state owned by another executable leaf, the producer implementation must cross the seam as files or a commit; do not model that implementation dependency as logical merely because the shared shape is typed.",
       "Do not name one of a command unit's own dependencies as a consumer of that command. If no unit inside the breakdown consumes a command or API, omit that seam.",
       "Every candidate artifact and seam must name at least one consumer unit key. A candidate whose only consumer would be its own producer, or which has no consumer yet, is not a relation: omit it entirely rather than emitting an empty consumerUnitKeys array.",
       "Raise a human question only when the answer changes behavior, architecture, scope, risk, or acceptance.",
