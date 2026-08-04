@@ -114,7 +114,7 @@ function commandForObligation(input: {
 }): ExecutionValidationCommand {
   const binding = input.obligation.evidence;
   const selectors = binding?.kind === "focused_command"
-    ? binding.selectors
+    ? binding.selectors.filter(isExecutableTestSelector)
     : binding?.kind === "shared_command"
       ? binding.references
       : [];
@@ -137,6 +137,14 @@ function commandForObligation(input: {
     timeoutMs: 60_000,
     cwd: "worktree"
   };
+}
+
+function isExecutableTestSelector(selector: string): boolean {
+  // Manifest files are evidence references (they prove the script/configuration
+  // contract) but are not runnable test inputs. Passing package.json to
+  // `node --test` makes both baseline and candidate validation fail before the
+  // actual focused tests run.
+  return !/(^|\/)package\.json$/u.test(selector);
 }
 
 function focusedRunnerTokens(script: string | undefined): string[] | undefined {

@@ -105,4 +105,31 @@ describe("compileValidationRecipe", () => {
     });
   });
 
+  it("does not pass package manifests as executable test selectors", () => {
+    const nodeTestCapabilities: RepositoryCapabilities = {
+      ...capabilities,
+      scripts: { test: "node --test src/**/*.test.ts" },
+      baselineCommands: [{ kind: "test", command: "pnpm", args: ["test"], sourceScript: "test" }]
+    };
+    const recipe = compileValidationRecipe({
+      contract: {
+        ...contract,
+        obligations: [{
+          ...contract.obligations[1]!,
+          evidence: {
+            kind: "focused_command",
+            selectors: ["package.json", "tests/booking.test.ts"],
+            references: ["package.json", "tests/booking.test.ts"]
+          }
+        }]
+      },
+      capabilities: nodeTestCapabilities,
+      repositorySnapshotId: "snapshot-1",
+      candidateCommit: "abc"
+    });
+
+    expect(recipe.steps[0]?.command.args).toEqual(["exec", "node", "--test", "tests/booking.test.ts"]);
+    expect(recipe.steps[0]?.attributions?.[0]?.references).toEqual(["package.json", "tests/booking.test.ts"]);
+  });
+
 });
