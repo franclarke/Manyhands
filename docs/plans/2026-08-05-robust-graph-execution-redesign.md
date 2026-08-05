@@ -258,7 +258,7 @@ interesante: por qué un escalar no servía para decidir. Retira
 
 | Etapa | Objetivo | Estado |
 |---|---|---|
-| 1 | Arnés de planning en proceso | pendiente |
+| 1 | Arnés de planning en proceso | **completada** — `d508b7b` |
 | 2 | Contrato mínimo y descomposición recursiva | pendiente |
 | 3 | Punto fijo P1–P4 y relaciones derivadas | pendiente |
 | 4 | Scheduler de ready-set y workspace por intento | pendiente |
@@ -296,6 +296,24 @@ interesante: por qué un escalar no servía para decidir. Retira
 - Ninguna transcripción de replay se edita a mano para hacer pasar un test.
 
 **Fuera de alcance:** ejecución, worktrees, integración, UI.
+
+**Cerrada el 2026-08-05 en `d508b7b`.** 8/8 tests, 2,53 s de ejecución (5,3 s de
+reloj con arranque de vitest). Los cuatro defectos quedan marcados con `it.fails`,
+que pasa mientras el comportamiento sigue roto y **se pone rojo al arreglarlo** —
+esa es la señal para borrar el marcador. Se comparte un repositorio por fixture
+porque planning solo lee; eso bajó el arnés de 14,4 s a 2,5 s.
+
+> **Defecto nuevo, encontrado por el arnés en su primera corrida.**
+> `fast-indexer.ts` declara `SOURCE_EXTENSIONS = { .ts, .tsx, .js }`. El template
+> de SP2 es **enteramente `.mjs`**, así que su planner recibió **cero rutas de
+> evidencia**: no podía citar ningún archivo existente y solo podía declarar
+> `plannedPaths`. Nadie lo había visto en trece series. **La etapa 2 debe indexar
+> `.mjs` y `.cjs`.**
+
+Nota de gates: `pnpm typecheck` (raíz) ya estaba rojo antes de esta etapa con 95
+errores, todos en tests históricos que importan `.mjs` sin declaraciones. El
+conteo es idéntico con y sin este cambio; los archivos nuevos no aportan ninguno.
+Ese comando no forma parte de la lista de gates del proyecto.
 
 ---
 
