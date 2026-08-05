@@ -1570,6 +1570,7 @@ export type {
   SemanticPlanPromptInput
 } from "./planner/semantic-plan.js";
 export { PlanningModule } from "./planner/planning-module.js";
+export * from "./planner/recursive-planner.js";
 export type {
   SemanticPlanningProgressUnit,
   SemanticPlanningObserver,
