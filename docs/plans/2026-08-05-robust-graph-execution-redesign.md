@@ -259,7 +259,7 @@ interesante: por qué un escalar no servía para decidir. Retira
 | Etapa | Objetivo | Estado |
 |---|---|---|
 | 1 | Arnés de planning en proceso | **completada** — `d508b7b` |
-| 2 | Contrato mínimo y descomposición recursiva | pendiente |
+| 2 | Contrato mínimo y descomposición recursiva | **completada** — `d111bd1`, `25be9c7` |
 | 3 | Punto fijo P1–P4 y relaciones derivadas | pendiente |
 | 4 | Scheduler de ready-set y workspace por intento | pendiente |
 | 5 | Terminalidad total y validación derivada | pendiente |
@@ -321,7 +321,9 @@ Ese comando no forma parte de la lista de gates del proyecto.
 
 **Qué se construye**
 
-- El nuevo contrato de nodo (§2.3), en Zod, con los cinco campos por hijo.
+- El nuevo contrato de nodo (§2.3), en Zod, con los cinco campos por hijo más
+  un `rationale` por corte. El `rationale` es un solo string y es lo que hace
+  explicable la profundidad en la tesis; sin él el árbol no se puede defender.
 - El descompositor recursivo: una llamada por unidad, parent-first, con
   reparación local acotada a 2 reintentos usando los errores exactos del
   validador.
@@ -329,6 +331,20 @@ Ese comando no forma parte de la lista de gates del proyecto.
   progreso embebido y su parser.
 - Eventos de dominio nuevos: un nodo resuelto es un evento; un reintento de
   reparación es un evento con su diagnóstico.
+- **Fix del indexador**: `.mjs`, `.cjs`, `.mts`, `.cts` y `.jsx`.
+
+**Refinación decidida el 2026-08-05 (durante la ejecución de la etapa):** la
+recursión de esta etapa se gobierna con **P4 solamente** — el scope de la unidad
+contra el presupuesto del ejecutor — porque P4 ya es medible sin la maquinaria
+de la etapa 3. La etapa 3 agrega P1–P3 y la derivación de relaciones. Así cada
+etapa es verificable por separado y ninguna depende de la siguiente para tener
+sentido. **El modelo nunca decide hoja contra composite**: eso es responsabilidad
+de la política, y mezclarlo sería repetir el error de origen.
+
+**Estado terminal de un nodo:** `leaf`, `composite` o `unresolved`. `unresolved`
+es lo que hace que un fallo en profundidad 3 no invalide 0–2: el nodo que falla
+queda marcado en su lugar, con su diagnóstico, y sus hermanos y ancestros
+sobreviven.
 
 **Aceptación**
 
@@ -344,6 +360,36 @@ Ese comando no forma parte de la lista de gates del proyecto.
 **Fuera de alcance:** las propiedades P1–P4 todavía no deciden; esta etapa solo
 produce el árbol que el modelo propone, nodo a nodo.
 
+**Cerrada el 2026-08-05.** Fix del indexador en `d111bd1`; planner en `25be9c7`.
+
+- `RecursivePlanner` + `UnitProposalSchema` + `CutProposalSchema` +
+  `buildCutPrompt` en `packages/decomposer/src/planner/recursive-planner.ts`.
+- 7/7 en `tests/recursive-planner.test.ts`, en 13 ms. Aceptación cubierta:
+  profundidad 4 con stub, `unresolved` aislado que preserva ancestros y
+  hermanos, reparación de una respuesta con `children` en prosa dentro de 2
+  intentos, y diagnóstico atribuible al nodo exacto tras agotarlos.
+- Validación más allá del schema, con los dos hechos que solo el padre conoce:
+  el corte **particiona** los criterios del padre, y un `existingPath` debe
+  existir en el snapshot. Los diagnósticos vuelven al modelo textualmente.
+- El prompt muestra la forma JSON **literal**. Un test lo verifica campo por
+  campo, precisamente porque SP2 murió en un campo nombrado y nunca formado.
+- Regresión amplia sobre indexación y planning: 64/65 archivos, 464 tests PASS.
+  El único rojo es `wide-graph-oracle-contract`, el hash de `dist` congelado,
+  preexistente y preservado sin reconciliar.
+
+**Movido a la etapa 3, con razón:**
+
+- *Retirar el canal de progreso embebido y su parser.* El planner nuevo no lo
+  usa: su contrato es un objeto JSON por llamada. Pero el parser sigue vivo
+  porque lo usa la ruta vieja, y esa ruta se retira en la etapa 3. Borrarlo
+  antes rompería producción sin reemplazo.
+- *Eventos de dominio en el journal.* La etapa 2 entrega la superficie de
+  observador (`onUnitResolved`, `onCutProposed`, `onRepairAttempted`,
+  `onUnitUnresolved`). Los eventos durables se emiten cuando el planner se
+  cablea al host productivo, y eso ocurre en la etapa 3: cablearlo antes
+  significaría correr producción decidiendo solo con P4 y sin derivación de
+  relaciones, o sea un sistema **peor** que el actual.
+
 ---
 
 ### Etapa 3 — Punto fijo P1–P4 y relaciones derivadas
@@ -356,8 +402,13 @@ produce el árbol que el modelo propone, nodo a nodo.
 - Derivación de relaciones (§2.4) desde write-sets y read-sets.
 - La fórmula de utilidad pasa a observación: se calcula y persiste por nodo y no
   participa de ninguna decisión.
+- **Cableado productivo del `RecursivePlanner`** en el host de planning, con sus
+  eventos durables de journal: nodo resuelto, corte propuesto, reparación
+  intentada y nodo sin resolver.
 - **Retiros:** `planning-envelope.ts`, `work-breakdown.ts` y la mitad de
-  `schema.ts` que los sostiene; `strategy-selector` deja de decidir.
+  `schema.ts` que los sostiene; `strategy-selector` deja de decidir; el canal de
+  progreso embebido y `parseWorkBreakdownProgressLine`, que quedan sin
+  consumidor una vez retirada la ruta vieja.
 
 **Aceptación**
 
