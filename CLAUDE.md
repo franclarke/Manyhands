@@ -54,6 +54,19 @@ unknown.
 - El índice usa LF y `core.autocrlf=false`. Las herramientas de edición escriben
   CRLF, lo que produce diffs de archivo entero. Normalizar a LF los archivos
   modificados antes de cada commit y verificar con `git diff --numstat`.
+- Antes de planificar o congelar una serie experimental, verificar que sus
+  activos externos existan: el repositorio base con su SHA exacto, el seed, los
+  targets y el evaluador externo que cubre *ese* alcance. Viven fuera de este
+  repo y desaparecen sin dejar rastro en el historial; descubrirlo después de
+  escribir el freeze cuesta la sesión entera.
+- El modelo de planning productivo (`invokeSelectedPlanningCli`) entrega la
+  respuesta como **string**. Un test de `PlanningModule` o `WorkBreakdownPlanner`
+  que devuelva array u objeto no ejercita el camino real y deja pasar defectos
+  productivos. Cubrir siempre la forma string.
+- El store de pnpm compartido (`%LOCALAPPDATA%\pnpm\store\v3`) tiene archivos
+  escritos por el perfil `franc_rgy` cuyo ACL excluye a `franc`, así que
+  `pnpm install` aborta con `EPERM`. Instalar con
+  `--store-dir <store propio>` en vez de tocar ACLs.
 - No marcar un ticket `closed` sin haber corrido `pnpm test` **completo sobre su
   commit exacto**. Cerrar 23–26 con gates focales dejó 12 tests rojos que nadie
   vio hasta el freeze siguiente, incluidos tres defectos productivos reales.
