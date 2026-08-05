@@ -145,8 +145,8 @@ function languageCapabilities(
   index: RepositoryIndexForCapabilities | undefined
 ): RepositoryCapabilities["languages"] {
   if (index === undefined) return [];
-  const typescriptFiles = index.files.filter((file) => /\.tsx?$/u.test(file.path)).map((file) => file.path);
-  const javascriptFiles = index.files.filter((file) => /\.jsx?$/u.test(file.path)).map((file) => file.path);
+  const typescriptFiles = index.files.filter((file) => /\.[cm]?tsx?$/u.test(file.path)).map((file) => file.path);
+  const javascriptFiles = index.files.filter((file) => /\.[cm]?jsx?$/u.test(file.path)).map((file) => file.path);
   return [
     ...(typescriptFiles.length > 0
       ? [{ language: "typescript" as const, coverage: "structural" as const, confidence: 1, evidence: typescriptFiles }]

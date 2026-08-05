@@ -260,24 +260,36 @@ describe("FastRepositoryIndexer", () => {
     ]);
   });
 
-  it("indexes only ts, tsx and js files and handles NUL-delimited paths", async () => {
+  it("indexes every parseable source extension, including the module variants", async () => {
     const root = await createRepository();
     await mkdir(path.join(root, "src"), { recursive: true });
     await Promise.all([
       writeFile(path.join(root, "src", "plain.ts"), "export const plain = 1;\n", "utf8"),
       writeFile(path.join(root, "src", "component.tsx"), "export const Component = () => null;\n", "utf8"),
       writeFile(path.join(root, "src", "legacy.js"), "export const legacy = 1;\n", "utf8"),
-      writeFile(path.join(root, "src", "excluded.jsx"), "export const excluded = 1;\n", "utf8"),
-      writeFile(path.join(root, "src", "excluded.json"), "{}\n", "utf8")
+      writeFile(path.join(root, "src", "widget.jsx"), "export const widget = 1;\n", "utf8"),
+      writeFile(path.join(root, "src", "esm.mjs"), "export const esm = 1;\n", "utf8"),
+      writeFile(path.join(root, "src", "common.cjs"), "module.exports = { common: 1 };\n", "utf8"),
+      writeFile(path.join(root, "src", "typed.mts"), "export const typed = 1;\n", "utf8"),
+      writeFile(path.join(root, "src", "script.cts"), "export const script = 1;\n", "utf8"),
+      writeFile(path.join(root, "src", "excluded.json"), "{}\n", "utf8"),
+      writeFile(path.join(root, "src", "excluded.md"), "# no\n", "utf8")
     ]);
     const headSha = await commitAll(root, "source extensions");
 
     const index = await new FastRepositoryIndexer().index({ rootPath: root, baseCommit: headSha });
 
+    // An all-`.mjs` repository used to index as empty, so its planner received
+    // no path evidence at all. Data files stay out: this indexer parses source.
     expect(index.files.map((file) => file.path)).toEqual([
+      "src/common.cjs",
       "src/component.tsx",
+      "src/esm.mjs",
       "src/legacy.js",
-      "src/plain.ts"
+      "src/plain.ts",
+      "src/script.cts",
+      "src/typed.mts",
+      "src/widget.jsx"
     ]);
   });
 

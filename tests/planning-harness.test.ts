@@ -149,14 +149,17 @@ describe("historical defects the redesign must eliminate", () => {
   // { .ts, .tsx, .js }. The SP2 target template is entirely .mjs, so its
   // planner received zero path evidence and could only ever declare planned
   // paths. Stage 2 must index .mjs and .cjs.
-  it.fails("indexer blindness — .mjs sources are visible to the planner", async () => {
+  it("indexer blindness — .mjs sources are visible to the planner", async () => {
     const fixture = await sharedFixture(warehouseSliceMjs);
     const snapshot = await buildFastRepositorySnapshot({
       rootPath: fixture.root,
       targetFingerprint: "mjs",
       baseCommit: fixture.commit
     });
-    expect(snapshot.index?.files.length ?? 0).toBeGreaterThan(0);
+    const indexed = (snapshot.index?.files ?? []).map((file) => file.path.replaceAll("\\", "/"));
+    expect(indexed).toContain("src/domain/orders.mjs");
+    expect(indexed).toContain("src/application/order-service.mjs");
+    expect(snapshot.capabilities.languages.map((entry) => entry.language)).toContain("javascript");
   });
 
   // SP2: six of six candidates died because the prompt names `interface`

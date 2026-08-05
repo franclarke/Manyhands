@@ -38,7 +38,10 @@ const FAST_INDEX_CACHE_SCHEMA_VERSION = 2 as const;
 // granularity policy reads.
 const INDEXER_PROFILE = "exports-only-v2-size-metrics" as const;
 const INDEXER_NAME = "ripgrep-native-v2";
-const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js"]);
+// Every extension the TypeScript parser can read. Omitting the ESM/CJS module
+// variants made an all-`.mjs` repository index as empty, so its planner saw no
+// path evidence at all and could only ever declare planned paths.
+const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"]);
 const RG_FILE_ARGS = ["--files", "--hidden", "--glob", "!.git", "--null"] as const;
 const DEFAULT_RG_PATH = resolveNativeRipgrepPath();
 const DEFAULT_LIMITS: RepositoryIndexLimits = {

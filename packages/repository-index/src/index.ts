@@ -165,7 +165,7 @@ export interface RepositoryIndexer {
 
 const INDEXER_NAME = "typescript-repository-indexer-v0";
 const DEFAULT_INDEXED_AT = "1970-01-01T00:00:00.000Z";
-const INDEXABLE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".json"]);
+const INDEXABLE_EXTENSIONS = new Set([".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs", ".json"]);
 const IGNORED_DIRECTORIES = new Set([
   ".git",
   ".manyhands",

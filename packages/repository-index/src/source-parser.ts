@@ -421,6 +421,10 @@ function variableSymbolKind(name: string, filePath: string): RepositorySymbolKin
     : "const";
 }
 
+/** Any extension the parser reads, including the ESM/CJS module variants. */
+const SOURCE_FILE = /\.[cm]?[tj]sx?$/u;
+const TEST_FILE = /\.(?:test|spec)\.[cm]?[tj]sx?$/u;
+
 function classifyFileKind(filePath: string): RepositoryFileKind {
   const normalized = normalizePath(filePath);
   const baseName = path.posix.basename(normalized);
@@ -444,14 +448,11 @@ function classifyFileKind(filePath: string): RepositoryFileKind {
   if (
     normalized.includes("/tests/") ||
     normalized.startsWith("tests/") ||
-    normalized.endsWith(".test.ts") ||
-    normalized.endsWith(".test.tsx") ||
-    normalized.endsWith(".spec.ts") ||
-    normalized.endsWith(".spec.tsx")
+    TEST_FILE.test(normalized)
   ) {
     return "test";
   }
-  if ([".ts", ".tsx", ".js", ".jsx"].includes(path.posix.extname(normalized))) return "source";
+  if (SOURCE_FILE.test(normalized)) return "source";
   return "unknown";
 }
 
