@@ -7,6 +7,8 @@ import { ComplexitySignalsSchema, RepositoryEvidenceSchema, SemanticCutSchema, W
 
 export const SEMANTIC_PLAN_SCHEMA_VERSION = 1 as const;
 
+export type { RepositoryEvidence };
+
 export const SemanticVerificationSchema = z.object({
   kind: z.enum(["existing", "author_test", "manual"]),
   references: z.array(NonEmptyStringSchema).min(1),

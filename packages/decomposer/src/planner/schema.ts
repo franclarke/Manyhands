@@ -97,6 +97,8 @@ export const RepositoryEvidenceSchema = z.object({
   confidence: z.number().min(0).max(1)
 }).strict();
 
+export type RepositoryEvidence = z.infer<typeof RepositoryEvidenceSchema>;
+
 export const CandidateArtifactSchema = z.object({
   id: EntityIdSchema,
   artifactType: NonEmptyStringSchema,

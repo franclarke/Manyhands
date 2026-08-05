@@ -253,15 +253,29 @@ function progressUnits(root: SemanticPlan["root"]): SemanticPlanningProgressUnit
 }
 
 function offsetObserver(observer: SemanticPlanningObserver, offset: number): SemanticPlanningObserver {
+  const onAttemptStarted = observer.onAttemptStarted?.bind(observer);
+  const onUnitDiscovered = observer.onUnitDiscovered?.bind(observer);
+  const onAttemptFailed = observer.onAttemptFailed?.bind(observer);
   return {
-    onAttemptStarted: observer.onAttemptStarted === undefined ? undefined : ({ attempt }) => observer.onAttemptStarted!({ attempt: offset + attempt }),
-    onUnitDiscovered: observer.onUnitDiscovered === undefined ? undefined : ({ attempt, unit }) => observer.onUnitDiscovered!({ attempt: offset + attempt, unit }),
-    onAttemptFailed: observer.onAttemptFailed === undefined ? undefined : ({ attempt, reason }) => observer.onAttemptFailed!({ attempt: offset + attempt, reason })
+    ...(onAttemptStarted === undefined ? {} : { onAttemptStarted: ({ attempt }) => onAttemptStarted({ attempt: offset + attempt }) }),
+    ...(onUnitDiscovered === undefined ? {} : { onUnitDiscovered: ({ attempt, unit }) => onUnitDiscovered({ attempt: offset + attempt, unit }) }),
+    ...(onAttemptFailed === undefined ? {} : { onAttemptFailed: ({ attempt, reason }) => onAttemptFailed({ attempt: offset + attempt, reason }) })
   };
 }
 
+/**
+ * The productive planning model resolves the CLI response as a string, so a
+ * string is the shape that must yield candidates. `parseJsonObjectCandidates`
+ * answers with a result envelope, not a list: unwrapping it here is what keeps
+ * the attempt loop iterating over parsed drafts. A parse failure is raised so
+ * the attempt records the parser's own diagnostic instead of an empty batch.
+ */
 function normalizeModelOutputs(output: unknown): unknown[] {
-  if (typeof output === "string") return parseJsonObjectCandidates(output);
+  if (typeof output === "string") {
+    const parsed = parseJsonObjectCandidates(output);
+    if (!parsed.ok) throw new Error(parsed.message);
+    return parsed.candidates.map((candidate) => candidate.value);
+  }
   if (Array.isArray(output)) return output.flatMap(normalizeModelOutputs);
   return [output];
 }
