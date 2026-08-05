@@ -1,0 +1,12 @@
+{
+  "cellId": "sp2-02",
+  "condition": "semantic-product",
+  "taskId": "SP2-T1",
+  "runId": "89f94dca-bef9-4682-b11c-dfb3b4542c8a",
+  "started": "2026-08-05T19:35:05.464Z",
+  "finished": "2026-08-05T19:40:31.498Z",
+  "outcome": {
+    "lifecycle": "failed",
+    "receipt": null
+  }
+}

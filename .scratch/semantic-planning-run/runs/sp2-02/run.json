@@ -1,0 +1,60 @@
+{
+  "version": 2,
+  "run": {
+    "runId": "89f94dca-bef9-4682-b11c-dfb3b4542c8a",
+    "workspaceId": "c31a181d-dcef-4e00-a062-db3b9366ed76",
+    "userPrompt": "Add express/standard order priority and backorder recording across the existing domain, application and API. An order that exceeds available stock must remain cancellable, record a positive backorder, emit one application event, and be observable through the API. Preserve existing behavior. Add focused tests beside the modified code.",
+    "title": "Add express/standard order priority and backorder recording across the existing domain, application and API. An order th",
+    "planningSelection": {
+      "executorId": "claude-code-cli",
+      "model": "haiku"
+    },
+    "executionSelection": {
+      "executorId": "claude-code-cli",
+      "model": "haiku"
+    },
+    "repairSelection": {
+      "executorId": "claude-code-cli",
+      "model": "haiku"
+    },
+    "executionConfig": {
+      "maxParallel": 2,
+      "scopePolicy": "strict",
+      "leafTimeoutMs": 1200000,
+      "integrationTimeoutMs": 1200000,
+      "maxOutputBytes": 65536,
+      "maxValidationCommands": 20,
+      "installTimeoutMs": 300000,
+      "maxPlanningAttempts": 1,
+      "unexpectedCommitPolicy": "reject",
+      "routing": "fixed",
+      "maxCostUsd": 8,
+      "automaticRetryBudget": 0
+    },
+    "targetContext": {
+      "sourceRealPath": "C:\\Users\\franc\\Documents\\Proyectos\\sp2-target-02",
+      "gitCommonDir": "C:\\Users\\franc\\Documents\\Proyectos\\sp2-target-02\\.git",
+      "physicalIdentity": {
+        "version": 1,
+        "device": "3156479238",
+        "file": "37999121856649510"
+      },
+      "sourceBranch": "main",
+      "sourceBaseCommit": "82c03a92d807b5b014a10ba17a4d4abb0187e0cb",
+      "fingerprint": "7ab0ab348531f31d",
+      "capturedAt": "2026-08-05T19:35:07.311Z"
+    },
+    "projection": {
+      "eventSequence": 17,
+      "lifecycle": "failed",
+      "repositorySnapshotId": "sha256:dae3e7168f28b07fad38a8fcdc56f87946b4200bc430bfa2973f4091d841e197",
+      "failureReason": "no_safe_candidate: root: Invalid input; root: Unrecognized key(s) in object: 'type', 'unit'; root: Invalid input; root: Unrecognized key(s) in object: 'type', 'unit'; root: Invalid input; root: Unrecognized key(s) in object: 'type', 'unit'; root: Invalid input; root: Unrecognized key(s) in object: 'type', 'unit'; root: Invalid input; seams.0.interface: Expected object, received string; seams.1.interface: Expected object, received string; repositoryEvidence.0: Expected object, received string; repositoryEvidence.1: Expected object, received string; repositoryEvidence.2: Expected object, received string; repositoryEvidence.3: Expected object, received string; uncertainties.0: Expected object, received string; uncertainties.1: Expected object, received string; uncertainties.2: Expected object, received string; questions.0: Expected object, received string; questions.1: Expected object, received string; questions.2: Expected object, received string; root: Invalid input; root: Unrecognized key(s) in object: 'type', 'unit'; root: Invalid input; root: Unrecognized key(s) in object: 'type', 'unit'; root: Invalid input; root: Unrecognized key(s) in object: 'type', 'unit'; root: Invalid input; root: Unrecognized key(s) in object: 'type', 'unit'; root: Invalid input; seams.0.interface: Expected object, received string; seams.1.interface: Expected object, received string; repositoryEvidence.0.kind: Required; repositoryEvidence.0.reference: Required; repositoryEvidence.0.observation: Required; repositoryEvidence.0.confidence: Required; repositoryEvidence.0: Unrecognized key(s) in object: 'path', 'description'; repositoryEvidence.1.kind: Required; repositoryEvidence.1.reference: Required; repositoryEvidence.1.observation: Required; repositoryEvidence.1.confidence: Required; repositoryEvidence.1: Unrecognized key(s) in object: 'description'; repositoryEvidence.2.kind: Required; repositoryEvidence.2.reference: Required; repositoryEvidence.2.observation: Required; repositoryEvidence.2.confidence: Required; repositoryEvidence.2: Unrecognized key(s) in object: 'description'; repositoryEvidence.3.kind: Required; repositoryEvidence.3.reference: Required; repositoryEvidence.3.observation: Required; repositoryEvidence.3.confidence: Required; repositoryEvidence.3: Unrecognized key(s) in object: 'path', 'description'; uncertainties.0: Expected object, received string; uncertainties.1: Expected object, received string; uncertainties.2: Expected object, received string; questions.0: Expected object, received string; questions.1: Expected object, received string; root: Invalid input; root: Unrecognized key(s) in object: 'type', 'unit'; root: Invalid input; root: Unrecognized key(s) in object: 'type', 'unit'; root: Invalid input; root: Unrecognized key(s) in object: 'type', 'unit'; root: Invalid input; root: Unrecognized key(s) in object: 'type', 'unit'; root: Invalid input; seams.0.interface.promise: Required; seams.0.interface.compatibility: Required; seams.0.interface.verification: Required; seams.0.interface: Unrecognized key(s) in object: 'description'; seams.1.interface.promise: Required; seams.1.interface.compatibility: Required; seams.1.interface.verification: Required; seams.1.interface: Unrecognized key(s) in object: 'description'; repositoryEvidence.0.reference: Required; repositoryEvidence.0.observation: Required; repositoryEvidence.0.confidence: Required; repositoryEvidence.0: Unrecognized key(s) in object: 'summary'; repositoryEvidence.1.reference: Required; repositoryEvidence.1.observation: Required; repositoryEvidence.1.confidence: Required; repositoryEvidence.1: Unrecognized key(s) in object: 'summary'; repositoryEvidence.2.reference: Required; repositoryEvidence.2.observation: Required; repositoryEvidence.2.confidence: Required; repositoryEvidence.2: Unrecognized key(s) in object: 'summary'; repositoryEvidence.3.reference: Required; repositoryEvidence.3.observation: Required; repositoryEvidence.3.confidence: Required; repositoryEvidence.3: Unrecognized key(s) in object: 'summary'; uncertainties.0: Expected object, received string; uncertainties.1: Expected object, received string; uncertainties.2: Expected object, received string; uncertainties.3: Expected object, received string; questions.0: Expected object, received string; questions.1: Expected object, received string; questions.2: Expected object, received string",
+      "updatedAt": "2026-08-05T19:40:23.127Z"
+    },
+    "version": 81,
+    "mutationFence": 2,
+    "createdAt": "2026-08-05T19:35:07.311Z",
+    "updatedAt": "2026-08-05T19:40:23.144Z",
+    "heartbeatAt": "2026-08-05T19:40:19.971Z"
+  }
+}
