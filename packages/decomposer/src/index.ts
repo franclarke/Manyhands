@@ -1572,6 +1572,7 @@ export type {
 export { PlanningModule } from "./planner/planning-module.js";
 export * from "./planner/recursive-planner.js";
 export * from "./planner/derived-relations.js";
+export * from "./planner/semantic-plan-projection.js";
 export type {
   SemanticPlanningProgressUnit,
   SemanticPlanningObserver,

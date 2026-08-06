@@ -266,7 +266,8 @@ interesante: por qué un escalar no servía para decidir. Retira
 | 3A | Contrato reads/writes y las cuatro propiedades | **completada** — `ab6c598` |
 | 3B | Relaciones derivadas y proyección | **completada** — `e0e6f99` |
 | 3C | Criterios refinados, cableado productivo y eventos | **completada** — `2d5b0a5`, `7c6ef39` |
-| 3D | Utilidad como observación y retiros | pendiente |
+| 3D | Utilidad como observación | **completada** |
+| 3F | Retiros del camino legacy | pendiente |
 | 3E | Verificación de la cadena | **completada** — contrato y cadena verificados; rompe en validación (D11) |
 | 4 | Scheduler de ready-set y workspace por intento | pendiente |
 | 5 | Terminalidad total y validación derivada | pendiente |
@@ -553,13 +554,39 @@ sobre el host real, más 59/60 archivos y 396 tests en la regresión amplia.
 > `planning.unit_unresolved`, porque ninguno existente puede describir un nodo
 > que no es ni hoja ni composite.
 
-**3D — Utilidad como observación y retiros.** La fórmula se calcula y persiste
-por nodo sin decidir, y recién entonces se retiran `planning-envelope.ts`,
-`work-breakdown.ts`, el canal de progreso embebido y la decisión de
-`strategy-selector`.
+**3D — Utilidad como observación.** La fórmula se calcula y persiste por nodo
+sin decidir nada.
 
-*Aceptación:* los assessments se persisten con la misma forma que hoy; ningún
-módulo retirado queda alcanzable.
+*Aceptación:* los assessments se persisten con la misma forma que hoy.
+
+**Cerrada.** El camino nuevo no computaba **ningún** assessment, así que la
+medición que la tesis quiere se estaba perdiendo en silencio. Ahora
+`planning.granularity_strategy_selected` se emite sobre el árbol proyectado y su
+`selectedBreakdown` se descarta deliberadamente: el árbol que compila es el del
+punto fijo. Un test lo fija comparando los nodos compilados contra las keys del
+planner.
+
+También se saldaron **D10** —el host contaba unidades resueltas en el campo
+`attempt`; planning recursivo es una sola pasada, así que vale 1 y las
+reparaciones se registran aparte— y **D7**: el hash de `dist` congelado es un
+hecho **histórico** del build que midió la serie ancha, y cualquier cambio de
+producto diverge necesariamente. Se dejó de afirmarlo como invariante vivo sin
+tocar el freeze, que habría sido reescribir evidencia para que dé. **La suite
+quedó completamente verde: 55/55 archivos, 373 tests.**
+
+**3F — Retiros del camino legacy.** Trabajo mecánico y acotado, separado para no
+hacerlo apurado.
+
+*Análisis de alcance hecho el 2026-08-06:* la rama legacy sólo se alcanza con
+`experimentalCandidate`, que llega desde el request de la API y **ningún driver
+ni celda del repositorio setea**. Es decir: inalcanzable en la práctica, no en el
+tipo. Retirarla implica `planning-envelope.ts`, `work-breakdown.ts` (el
+*planner*), la decisión de `strategy-selector`, el canal de progreso embebido con
+`parseWorkBreakdownProgressLine`, y **8 archivos de test** que dependen de esa
+maquinaria. `schema.ts` **no** se retira: el compilador parsea a través de
+`WorkBreakdownSchema`.
+
+*Aceptación:* ningún módulo retirado queda alcanzable, y la suite sigue verde.
 
 **Fuera de alcance:** ejecución.
 

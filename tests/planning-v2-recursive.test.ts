@@ -114,6 +114,37 @@ describe("productive planning with the recursive planner", () => {
     expect(types).toContain("planning.completed");
   });
 
+  /**
+   * Stage 3D. The utility formula keeps being measured — it is what lets the
+   * thesis say why a scalar could not decide granularity — but it no longer
+   * decides anything. The tree that compiles is the one the fixpoint produced.
+   */
+  it("persists a granularity assessment without letting it change the plan", async () => {
+    const paths = snapshotPaths();
+    const { journal, types } = await planWith("run-recursive-observed", {
+      root: {
+        rationale: "Domain and its exposure are separately verifiable",
+        children: [
+          { key: "domain", objective: "Cancel in the domain", criterion: "The domain cancels", reads: [paths[0]!], writes: ["test/domain-cancel.test.ts"] },
+          { key: "surface", objective: "Expose cancellation", criterion: "The surface exposes it", reads: [paths[1]!], writes: ["test/surface-cancel.test.ts"] }
+        ]
+      }
+    }, 2);
+
+    expect(types).toContain("planning.granularity_strategy_selected");
+    const assessed = journal.find((entry) => entry.type === "planning.granularity_strategy_selected")!
+      .payload as { assessments: { unitKey: string }[]; policyVersion: string };
+    expect(assessed.policyVersion).toContain("adaptive-utility");
+    expect(assessed.assessments.map((item) => item.unitKey).sort()).toEqual(["domain", "root", "surface"]);
+
+    // The compiled graph is the fixpoint's tree, whatever the formula scored:
+    // node ids are derived from the planner's keys.
+    const compiled = journal.find((entry) => entry.type === "graph.compiled")!.payload as {
+      graph: { nodes: Record<string, unknown> };
+    };
+    expect(Object.keys(compiled.graph.nodes).sort()).toEqual(["node-domain", "node-root", "node-surface"]);
+  });
+
   it("records the repair diagnostics the validator produced, verbatim", async () => {
     const paths = snapshotPaths();
     const { journal, seen } = await planWith("run-recursive-repair", {

@@ -2,7 +2,7 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { CandidatePlan, CandidatePlanDiagnostic, CandidatePlanSelection, CompiledGraphRevision, GoalCriterion, GranularityStrategyResult, GraphCompilerInput, PlanningEnvelope, RecursivePlanner, SemanticPlan, WorkBreakdown, WorkBreakdownPlannerInput, WorkBreakdownPlanningObserver, WorkUnit } from "@manyhands/decomposer";
 import type { RepositorySnapshot } from "@manyhands/repository-index";
-import { PLAN_CRITIC_KINDS, PILOT_UTILITY_POLICY, buildGranularityPlanningBrief, canonicalRepositorySnapshotId, createSemanticPlan, projectPlannedTree, candidateBreakdownHash, createPlanningEnvelope, repositorySnapshotIdsMatch, resolveGranularityCondition, selectGranularityStrategy, selectPlannerCandidate, validatePlannerCandidateSet } from "@manyhands/decomposer";
+import { PLAN_CRITIC_KINDS, PILOT_UTILITY_POLICY, buildGranularityPlanningBrief, canonicalRepositorySnapshotId, createSemanticPlan, projectPlannedTree, projectSemanticPlanForLegacyCompiler, candidateBreakdownHash, createPlanningEnvelope, repositorySnapshotIdsMatch, resolveGranularityCondition, selectGranularityStrategy, selectPlannerCandidate, validatePlannerCandidateSet } from "@manyhands/decomposer";
 import { foldRun, supersededDecisionIds, type RunEventInput, type RunProjection } from "@manyhands/run-coordinator";
 import type { FencingAuthority, JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
 import {
@@ -120,7 +120,6 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
     if (input.experimentalCandidate === undefined && dependencies.recursivePlanner !== undefined) {
       const evidence = repositoryEvidence(repositorySnapshot);
       const criteria = goalCriteria(input);
-      let attempt = 0;
       const plan = await dependencies.recursivePlanner.plan({
         root: {
           key: "root",
@@ -136,13 +135,16 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
           // already records, so the redesigned path reuses it rather than
           // introducing a second way to say the same thing.
           onUnitResolved: async ({ unit, kind, position }) => {
-            attempt += 1;
             events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [{
               eventId: `planning:${input.runId}:unit:${unit.key}`,
               occurredAt: dependencies.now(),
               type: "planning.node_discovered",
               payload: {
-                attempt,
+                // Recursive planning is a single pass over the tree; a unit's
+                // own repairs are recorded separately as attempt failures.
+                // Counting resolved units here would make the journal claim to
+                // measure attempts while measuring something else.
+                attempt: 1,
                 node: {
                   nodeId: nodeIdFor(unit.key),
                   parentNodeId: position.parentKey === null ? null : nodeIdFor(position.parentKey),
@@ -210,7 +212,21 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
           constraints: input.constraints ?? []
         }
       });
-      const drafts = semanticSuccessEvents(input.runId, semanticPlan, compiled, dependencies.now);
+      // Stage 3D: the utility formula keeps being measured because it is what
+      // lets the thesis say why a scalar could not decide granularity — but the
+      // tree that compiles is the one the fixpoint produced. Its
+      // `selectedBreakdown` is deliberately discarded.
+      const observedBreakdown = projectSemanticPlanForLegacyCompiler(semanticPlan).breakdown;
+      const observed = selectGranularityStrategy({
+        condition: resolveGranularityCondition(input.granularityCondition),
+        breakdown: observedBreakdown,
+        repositorySnapshot,
+        config: PILOT_UTILITY_POLICY
+      });
+      const drafts = [
+        ...semanticSuccessEvents(input.runId, semanticPlan, compiled, dependencies.now),
+        strategySelectedEvent(input.runId, observed, observedBreakdown, nodeIdFor, dependencies.now)
+      ];
       events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, drafts)];
       state = foldRun(events);
       await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, events.at(-1)!.eventId);
