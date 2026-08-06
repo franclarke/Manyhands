@@ -265,7 +265,7 @@ interesante: por qué un escalar no servía para decidir. Retira
 | 2 | Contrato mínimo y descomposición recursiva | **completada** — `d111bd1`, `25be9c7` |
 | 3A | Contrato reads/writes y las cuatro propiedades | **completada** — `ab6c598` |
 | 3B | Relaciones derivadas y proyección | **completada** — `e0e6f99` |
-| 3C | Criterios refinados, cableado productivo y eventos | **parcial** — criterios en `2d5b0a5`; falta cablear el host |
+| 3C | Criterios refinados, cableado productivo y eventos | **completada** — `2d5b0a5`, `7c6ef39` |
 | 3D | Utilidad como observación y retiros | pendiente |
 | 4 | Scheduler de ready-set y workspace por intento | pendiente |
 | 5 | Terminalidad total y validación derivada | pendiente |
@@ -541,6 +541,17 @@ embebido y la decisión de `strategy-selector`.
 registra nodo resuelto, corte propuesto, reparación intentada y nodo sin
 resolver.
 
+**Cerrada en `2d5b0a5` y `7c6ef39`.** 4/4 en `planning-v2-recursive.test.ts`
+sobre el host real, más 59/60 archivos y 396 tests en la regresión amplia.
+
+> **Decisión de eventos: se reusan los que ya existen.** Una unidad resuelta *es*
+> el hecho durable que `planning.node_discovered` ya describe, y un corte
+> rechazado *es* `planning.attempt_failed` con el diagnóstico del validador
+> textual. Inventar eventos paralelos para decir lo mismo habría repetido el
+> error que este rediseño existe para corregir. El único evento nuevo es
+> `planning.unit_unresolved`, porque ninguno existente puede describir un nodo
+> que no es ni hoja ni composite.
+
 **3D — Utilidad como observación y retiros.** La fórmula se calcula y persiste
 por nodo sin decidir, y recién entonces se retiran `planning-envelope.ts`,
 `work-breakdown.ts`, el canal de progreso embebido y la decisión de
@@ -659,7 +670,7 @@ Se anota acá a medida que aparece, para que todo se cierre dentro de este plan.
 
 | # | Deuda | Dónde se salda |
 |---|---|---|
-| D1 | El host productivo todavía planifica con `PlanningModule`; falta cablear `RecursivePlanner` y emitir sus eventos durables. | resto de 3C |
+| ~~D1~~ | ~~El host productivo todavía planifica con `PlanningModule`.~~ Saldada en `7c6ef39`. | — |
 | D2 | La fórmula de utilidad todavía decide en `strategy-selector`. | 3D |
 | D3 | `planning-envelope.ts`, `work-breakdown.ts` y el canal de progreso embebido siguen alcanzables. | 3D |
 | D4 | Las caracterizaciones `it.fails` del camino viejo en `planning-harness.test.ts` se borran junto con ese camino. | 3D |
