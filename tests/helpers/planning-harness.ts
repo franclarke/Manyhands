@@ -18,10 +18,16 @@ import { promisify } from "node:util";
 import {
   PILOT_UTILITY_POLICY,
   PlanningModule,
+  RecursivePlanner,
   buildGranularityPlanningBrief,
   compileGraphRevision,
+  createSemanticPlan,
+  projectPlannedTree,
   type CompiledGraphRevision,
+  type CutModel,
   type PlanningOutcome,
+  type ProjectedPlan,
+  type RecursivePlanResult,
   type SemanticPlanningModel,
   type SemanticPlanningModelRequest
 } from "@manyhands/decomposer";
@@ -198,6 +204,87 @@ export async function runPlanning(input: RunPlanningInput): Promise<PlanningRun>
     await cleanup();
     throw error;
   }
+}
+
+export interface RecursiveRunInput {
+  fixture: PlanningFixture;
+  goal: string;
+  criteria: readonly { id: string; description: string; required: boolean }[];
+  model: CutModel;
+  budget?: number;
+  maxAttemptsPerUnit?: number;
+}
+
+export interface RecursiveRun {
+  snapshot: Awaited<ReturnType<typeof buildFastRepositorySnapshot>>;
+  plan: RecursivePlanResult;
+  projected?: ProjectedPlan;
+  compiled?: CompiledGraphRevision;
+  error?: string;
+}
+
+/**
+ * Drives the redesigned path: recursive cuts to a fixpoint, relations derived
+ * from reads and writes, projection onto the existing plan shape, compilation.
+ * Same fixture and same snapshot as `runPlanning`, so the two paths are
+ * compared on identical ground.
+ */
+export async function runRecursivePlanning(input: RecursiveRunInput): Promise<RecursiveRun> {
+  const fixture = await sharedFixture(input.fixture);
+  const snapshot = await buildFastRepositorySnapshot({
+    rootPath: fixture.root,
+    targetFingerprint: fingerprint(input.fixture),
+    baseCommit: fixture.commit
+  });
+  const evidence = repositoryEvidence(snapshot);
+  const planner = new RecursivePlanner({
+    model: input.model,
+    budget: { maxScopePaths: input.budget ?? 4 },
+    maxAttemptsPerUnit: input.maxAttemptsPerUnit ?? 2
+  });
+  const plan = await planner.plan({
+    root: {
+      key: "root",
+      objective: input.goal,
+      criterionIds: input.criteria.map((criterion) => criterion.id),
+      reads: evidence.filter((item) => item.kind === "path").map((item) => item.reference),
+      writes: []
+    },
+    criteria: input.criteria,
+    evidence
+  });
+
+  const run: RecursiveRun = { snapshot, plan };
+  try {
+    run.projected = projectPlannedTree({
+      tree: plan.root,
+      goal: input.goal,
+      criteria: input.criteria,
+      evidence,
+      repositorySnapshotId: snapshot.snapshotId
+    });
+    const semanticPlan = createSemanticPlan({
+      goal: input.goal,
+      repositorySnapshotId: snapshot.snapshotId,
+      criteria: [...run.projected.criteria],
+      draft: run.projected.draft
+    });
+    run.compiled = compileGraphRevision(
+      {
+        semanticPlan,
+        repositorySnapshot: snapshot,
+        sourceContract: {
+          goal: input.goal,
+          acceptanceCriteria: input.criteria.map((criterion) => criterion.description),
+          constraints: []
+        }
+      },
+      { idFor: stableId, now: () => "2026-01-01T00:00:00.000Z" }
+    );
+  } catch (error) {
+    run.error = error instanceof Error ? error.message : String(error);
+  }
+  return run;
 }
 
 /**

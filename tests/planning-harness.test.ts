@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { buildFastRepositorySnapshot } from "@manyhands/repository-index";
 import { warehouseSlice, warehouseSliceMjs } from "./fixtures/planning/warehouse-slice";
-import { releaseFixtures, runPlanning, sharedFixture, stubModel, type PlanningRun } from "./helpers/planning-harness";
+import { releaseFixtures, runPlanning, runRecursivePlanning, sharedFixture, stubModel, type PlanningRun } from "./helpers/planning-harness";
 
 /**
  * Stage 1 of `docs/plans/2026-08-05-robust-graph-execution-redesign.md`.
@@ -144,7 +144,117 @@ describe("in-process planning harness", () => {
   });
 });
 
-describe("historical defects the redesign must eliminate", () => {
+describe("the redesigned path on the same fixture", () => {
+  const RECURSIVE_CRITERIA = [
+    { id: "criterion-1", description: "The domain records a positive backorder", required: true },
+    { id: "criterion-2", description: "The API exposes the current backorders", required: true }
+  ];
+
+  /** A cut the model could plausibly return, with no relational metadata at all. */
+  function backorderCut() {
+    return JSON.stringify({
+      rationale: "The domain rule and its exposure are separately verifiable",
+      children: [
+        {
+          key: "domain-backorders",
+          objective: "Record a positive backorder instead of rejecting the order",
+          criterionIds: ["criterion-1"],
+          reads: ["src/domain/orders.js"],
+          writes: ["src/domain/backorders.js", "test/domain-backorders.test.js"]
+        },
+        {
+          key: "api-backorders",
+          objective: "Expose the recorded backorders",
+          criterionIds: ["criterion-2"],
+          reads: ["src/domain/backorders.js", "src/api/warehouse-api.js"],
+          writes: ["test/api-backorders.test.js"]
+        }
+      ]
+    });
+  }
+
+  function run(response: string) {
+    return runRecursivePlanning({
+      fixture: warehouseSlice,
+      goal: "Record a backorder when an order exceeds available stock and expose it through the API.",
+      criteria: RECURSIVE_CRITERIA,
+      model: { async proposeCut() { return response; } },
+      budget: 3
+    });
+  }
+
+  it("plans, derives its relations and compiles a graph", async () => {
+    const result = await run(backorderCut());
+
+    expect(result.error).toBeUndefined();
+    expect(result.plan.unresolved).toHaveLength(0);
+    expect(Object.keys(result.compiled?.graph.nodes ?? {}).length).toBeGreaterThanOrEqual(3);
+  });
+
+  // SP2: six of six candidates died on `interface`, a field the old prompt named
+  // and never shaped. The model is no longer asked for it, so the seam carries a
+  // complete interface no matter what the model says.
+  it("SP2 — the seam interface is derived, so the model cannot get it wrong", async () => {
+    const result = await run(backorderCut());
+    const seams = result.projected?.draft.seams ?? [];
+
+    expect(seams).toHaveLength(1);
+    expect(seams[0]!.interface).toMatchObject({
+      materialization: "files",
+      kind: "type"
+    });
+    expect(seams[0]!.interface.verification.references.length).toBeGreaterThan(0);
+    expect(JSON.stringify(result.plan)).not.toContain("interface");
+  });
+
+  // SP1q: a runtime dependency modelled as a logical seam, then rejected by the
+  // strict scope guard. `logical` is now unreachable: the relation is files.
+  it("SP1q — no derived relation can be logical", async () => {
+    const result = await run(backorderCut());
+
+    expect(result.projected?.relations.map((relation) => relation.materialization)).toEqual(["files"]);
+    expect(JSON.stringify(result.projected?.draft.seams)).not.toContain("logical");
+  });
+
+  // contested-planned-output: sibling leaves claiming the same file compiled into
+  // conflict constraints that review then accepted as a remedy. P2 rejects the
+  // cut instead, so a contested output never reaches the graph.
+  it("contested output — P2 rejects the cut and nothing contested reaches the graph", async () => {
+    const contested = JSON.stringify({
+      rationale: "Both children own the same test",
+      children: [
+        {
+          key: "domain-backorders",
+          objective: "Record the backorder",
+          criterionIds: ["criterion-1"],
+          reads: ["src/domain/orders.js"],
+          writes: ["test/shared.test.js"]
+        },
+        {
+          key: "api-backorders",
+          objective: "Expose the backorders",
+          criterionIds: ["criterion-2"],
+          reads: ["src/api/warehouse-api.js"],
+          writes: ["test/shared.test.js"]
+        }
+      ]
+    });
+    const result = await run(contested);
+
+    expect(result.plan.unresolved.map((node) => node.unit.key)).toEqual(["root"]);
+    expect(result.plan.unresolved[0]!.diagnostics.join(" ")).toContain("P2");
+    expect(result.compiled?.graph.conflictConstraints ?? []).toHaveLength(0);
+    expect(result.error).toMatch(/unresolved/iu);
+  });
+});
+
+/**
+ * Characterization of the LEGACY one-shot path, which stage 3C retires. Each
+ * case states the behaviour the redesigned path above already delivers; they
+ * pass here only because the legacy path is still broken, and they are deleted
+ * together with it.
+ */
+describe("legacy one-shot path — retired in stage 3C", () => {
   // Found by this harness: the fast indexer's SOURCE_EXTENSIONS is
   // { .ts, .tsx, .js }. The SP2 target template is entirely .mjs, so its
   // planner received zero path evidence and could only ever declare planned
