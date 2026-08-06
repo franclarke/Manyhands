@@ -141,6 +141,18 @@ export const RunEventSchema = z.discriminatedUnion("type", [
     }).strict()
   }).strict()),
   event("planning.attempt_failed", z.object({ attempt: z.number().int().positive(), reason: NonEmptyStringSchema }).strict()),
+  /**
+   * A unit the planner could not cut. Recorded in place so one failure does not
+   * discard the units that already resolved above and beside it, and so the
+   * exact property that blocked it survives in the journal.
+   */
+  event("planning.unit_unresolved", z.object({
+    nodeId: EntityIdSchema,
+    key: EntityIdSchema,
+    parentKey: EntityIdSchema.nullable(),
+    depth: z.number().int().nonnegative(),
+    diagnostics: z.array(NonEmptyStringSchema).min(1)
+  }).strict()),
   event("planning.granularity_assessed", z.object({
     formulaVersion: NonEmptyStringSchema,
     weights: z.object({

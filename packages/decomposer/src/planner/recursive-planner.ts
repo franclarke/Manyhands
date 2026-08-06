@@ -119,11 +119,18 @@ export interface UnresolvedUnit {
 
 export type PlannedUnit = PlannedLeaf | PlannedComposite | UnresolvedUnit;
 
+/** Where a unit sits, which is exactly what a durable planning event records. */
+export interface UnitPosition {
+  parentKey: string | null;
+  siblingIndex: number;
+  siblingCount: number;
+}
+
 export interface RecursivePlanObserver {
-  onUnitResolved?(event: { unit: UnitProposal; kind: "leaf" | "composite"; depth: number }): void | Promise<void>;
+  onUnitResolved?(event: { unit: UnitProposal; kind: "leaf" | "composite"; depth: number; position: UnitPosition }): void | Promise<void>;
   onCutProposed?(event: { unit: UnitProposal; rationale: string; childKeys: string[]; depth: number }): void | Promise<void>;
   onRepairAttempted?(event: { unit: UnitProposal; attempt: number; diagnostics: string[]; depth: number }): void | Promise<void>;
-  onUnitUnresolved?(event: { unit: UnitProposal; diagnostics: string[]; depth: number }): void | Promise<void>;
+  onUnitUnresolved?(event: { unit: UnitProposal; diagnostics: string[]; depth: number; position: UnitPosition }): void | Promise<void>;
 }
 
 export interface ExecutionBudget {
@@ -161,6 +168,8 @@ export function isConventionalTestPath(candidate: string): boolean {
     /(?:^|\/)tests?\//u.test(normalized);
 }
 
+const ROOT_POSITION: UnitPosition = { parentKey: null, siblingIndex: 0, siblingCount: 1 };
+
 export class RecursivePlanner {
   private readonly model: CutModel;
   private readonly budget: ExecutionBudget;
@@ -179,24 +188,25 @@ export class RecursivePlanner {
   async plan(input: RecursivePlanInput): Promise<RecursivePlanResult> {
     const unresolved: UnresolvedUnit[] = [];
     const snapshotPaths = snapshotPathSet(input.evidence);
-    const root = await this.resolve(UnitProposalSchema.parse(input.root), 0, input, snapshotPaths, unresolved);
+    const root = await this.resolve(UnitProposalSchema.parse(input.root), 0, ROOT_POSITION, input, snapshotPaths, unresolved);
     return { root, unresolved };
   }
 
   private async resolve(
     unit: UnitProposal,
     depth: number,
+    position: UnitPosition,
     input: RecursivePlanInput,
     snapshotPaths: ReadonlySet<string>,
     unresolved: UnresolvedUnit[]
   ): Promise<PlannedUnit> {
     if (this.fitsBudget(unit) || depth >= this.maxDepth) {
-      await input.observer?.onUnitResolved?.({ unit, kind: "leaf", depth });
+      await input.observer?.onUnitResolved?.({ unit, kind: "leaf", depth, position });
       return { kind: "leaf", unit, depth };
     }
 
     const cut = await this.requestCut(unit, depth, input, snapshotPaths);
-    if (cut.kind === "failed") return this.giveUp(unit, depth, input, unresolved, cut.diagnostics);
+    if (cut.kind === "failed") return this.giveUp(unit, depth, position, input, unresolved, cut.diagnostics);
 
     await input.observer?.onCutProposed?.({
       unit,
@@ -204,24 +214,33 @@ export class RecursivePlanner {
       childKeys: cut.proposal.children.map((child) => child.key),
       depth
     });
+    await input.observer?.onUnitResolved?.({ unit, kind: "composite", depth, position });
     const children: PlannedUnit[] = [];
-    for (const child of cut.proposal.children) {
-      children.push(await this.resolve(asUnit(child), depth + 1, input, snapshotPaths, unresolved));
+    const siblingCount = cut.proposal.children.length;
+    for (const [siblingIndex, child] of cut.proposal.children.entries()) {
+      children.push(await this.resolve(
+        asUnit(child),
+        depth + 1,
+        { parentKey: unit.key, siblingIndex, siblingCount },
+        input,
+        snapshotPaths,
+        unresolved
+      ));
     }
-    await input.observer?.onUnitResolved?.({ unit, kind: "composite", depth });
     return { kind: "composite", unit, rationale: cut.proposal.rationale, children, depth };
   }
 
   private async giveUp(
     unit: UnitProposal,
     depth: number,
+    position: UnitPosition,
     input: RecursivePlanInput,
     unresolved: UnresolvedUnit[],
     diagnostics: string[]
   ): Promise<UnresolvedUnit> {
     const node: UnresolvedUnit = { kind: "unresolved", unit, depth, diagnostics };
     unresolved.push(node);
-    await input.observer?.onUnitUnresolved?.({ unit, diagnostics, depth });
+    await input.observer?.onUnitUnresolved?.({ unit, diagnostics, depth, position });
     return node;
   }
 

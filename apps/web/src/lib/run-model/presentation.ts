@@ -123,6 +123,7 @@ export function eventPresentation(type: string): { label: string; diagnostic: bo
     "planning.node_discovered": "Nodo identificado",
     "planning.critic_recorded": "Revisión del plan registrada",
     "planning.attempt_failed": "Intento de planificación descartado",
+    "planning.unit_unresolved": "Unidad sin resolver",
     "planning.failed": "Planificación fallida",
     "planning.completed": "Trabajo desglosado",
     "planning.granularity_strategy_selected": "Estrategia de granularidad seleccionada",

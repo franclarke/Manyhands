@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { ChildProcess } from "node:child_process";
 import { buildAgentEnvironment } from "@manyhands/execution-core";
-import { NonRetryablePlanningError, PlanningCapacityError, PlanningModule, WorkBreakdownPlanner, compileGraphRevision, parseWorkBreakdownProgressLine, type SemanticPlanningModelRequest, type WorkBreakdownModelRequest } from "@manyhands/decomposer";
+import { NonRetryablePlanningError, PILOT_UTILITY_POLICY, PlanningCapacityError, RecursivePlanner, WorkBreakdownPlanner, compileGraphRevision, parseWorkBreakdownProgressLine, type SemanticPlanningModelRequest, type WorkBreakdownModelRequest } from "@manyhands/decomposer";
 import { foldRun } from "@manyhands/run-coordinator";
 import { buildFastRepositorySnapshot } from "@manyhands/repository-index";
 import { EventStoreCompactor, JsonlRunEventStore, RunSnapshotStore, verifyAndRecoverRunStore } from "@manyhands/run-store";
@@ -85,11 +85,28 @@ export async function runPlanningV2Pipeline(runId: string): Promise<void> {
           ? { maxAttempts: run.executionConfig.maxPlanningAttempts }
           : { maxAttempts: 3 })
       });
-      const planningModule = new PlanningModule({
-        model: planningModel,
-        ...(run.executionConfig.maxPlanningAttempts !== undefined
-          ? { maxAttempts: run.executionConfig.maxPlanningAttempts }
-          : { maxAttempts: 3 })
+      // The redesigned path cuts one unit at a time. The CLI still answers with
+      // a string; the progress channel is unused because a resolved unit is a
+      // whole model call, not a line inside one.
+      const recursivePlanner = new RecursivePlanner({
+        model: {
+          proposeCut: (request) => invokeSelectedPlanningCli(
+            runId,
+            repoPath,
+            stage,
+            lease.operationId,
+            planningSignal,
+            {
+              system: request.system,
+              user: request.user,
+              attempt: request.attempt,
+              repairIssues: [...request.repairIssues],
+              onProgress: async () => {}
+            }
+          )
+        },
+        budget: { maxScopePaths: PILOT_UTILITY_POLICY.maxLeafScopePaths },
+        maxAttemptsPerUnit: run.executionConfig.maxPlanningAttempts ?? 2
       });
       const state = await runPlanningV2({
         runId,
@@ -111,7 +128,7 @@ export async function runPlanningV2Pipeline(runId: string): Promise<void> {
         inspect: (input) => buildFastRepositorySnapshot({ rootPath: input.repoPath, targetFingerprint: input.targetFingerprint, baseCommit: input.baseCommit }),
         plan: (input, observer) => planner.plan(input, observer),
         planCandidates: (input, envelope, count, observer) => planner.planCandidates(input, envelope, count, observer),
-        planningModule,
+        recursivePlanner,
         compile: (input) => compileGraphRevision(input, { idFor: stableId, now: () => new Date().toISOString() }),
         nodeIdFor: (key) => stableId("node", key),
         now: () => new Date().toISOString()
