@@ -263,9 +263,9 @@ interesante: por qué un escalar no servía para decidir. Retira
 |---|---|---|
 | 1 | Arnés de planning en proceso | **completada** — `d508b7b` |
 | 2 | Contrato mínimo y descomposición recursiva | **completada** — `d111bd1`, `25be9c7` |
-| 3A | Contrato reads/writes y las cuatro propiedades | en curso |
-| 3B | Relaciones derivadas y proyección | pendiente |
-| 3C | Cableado productivo y retiros | pendiente |
+| 3A | Contrato reads/writes y las cuatro propiedades | **completada** — `ab6c598` |
+| 3B | Relaciones derivadas y proyección | **completada** — `e0e6f99` |
+| 3C | Cableado productivo, utilidad como observación y retiros | pendiente |
 | 4 | Scheduler de ready-set y workspace por intento | pendiente |
 | 5 | Terminalidad total y validación derivada | pendiente |
 | 6 | UI: dos layouts | pendiente |
@@ -467,8 +467,36 @@ padre se rechaza; cada rechazo nombra la propiedad y la hija.
 utilidad pasa a observación.
 
 *Aceptación:* los tres `it.fails` del arnés se ponen rojos y se convierten en
-tests normales; `logical` no aparece nunca en la salida derivada; los
-assessments de utilidad se siguen persistiendo con la misma forma.
+tests normales; `logical` no aparece nunca en la salida derivada.
+
+**3A cerrada en `ab6c598`** — 9/9 en `cut-properties.test.ts` y 9/9 en
+`recursive-planner.test.ts`.
+
+> **Hallazgo de 3A: el presupuesto mínimo realista es 4 rutas.** Una hoja honesta
+> lee un archivo, escribe su fuente y escribe su test: eso ya cuesta tres. Con un
+> presupuesto de dos, la cobertura de `writes` del padre y P1 se vuelven
+> incompatibles y ninguna hoja es satisfacible. El valor no se ajustó a un
+> resultado: salió de construir el primer árbol de profundidad cuatro.
+
+> **Hallazgo de 3A: la granularidad alcanzable está acotada por la granularidad
+> de los criterios.** Una unidad sobre presupuesto que posee un solo criterio no
+> se puede particionar. Se reporta `unresolved` con ese diagnóstico exacto, en
+> vez de inventar un corte para satisfacer el presupuesto. Es un resultado real
+> del método y es accionable: el objetivo debe declarar criterios más finos.
+
+**3B cerrada en `e0e6f99`** — 9/9 en `derived-relations.test.ts`, 12/12 en el
+arnés, y regresión amplia de 67/68 archivos y 495 tests. El único rojo sigue
+siendo el hash de `dist` congelado, preexistente.
+
+> **Decisión de 3B: se deriva un criterio de integración por composite.** Todo
+> nodo necesita al menos un outcome y todo criterio necesita exactamente un
+> dueño; si un composite tomara prestado un criterio que un descendiente ya
+> prueba, quedaría poseído dos veces. El criterio derivado hace explícita la
+> obligación real del composite, que es integrar.
+
+**Movido a 3C:** *la fórmula de utilidad como observación.* Necesita los perfiles
+de contexto del repositorio que arma el host, así que se cablea junto con el
+planner en vez de duplicar esa construcción en el paquete.
 
 > Nota de diseño: se **reusa** `compileGraphRevision` en vez de escribir un
 > compilador nuevo. Sus doce invariantes dejan de ser loterías y pasan a
