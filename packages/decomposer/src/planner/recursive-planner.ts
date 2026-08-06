@@ -7,7 +7,7 @@ import type { GoalCriterion } from "./semantic-plan.js";
 import type { RepositoryEvidence } from "./schema.js";
 
 /**
- * Recursive decomposition (redesign stage 2).
+ * Recursive decomposition to a fixpoint (redesign stages 2-3A).
  *
  * One model call per unit that needs a cut, parent-first. The contract per
  * child is five fields; everything relational is derived later, never asked
@@ -15,16 +15,19 @@ import type { RepositoryEvidence } from "./schema.js";
  * die on a single nested field the prompt never defined, and what made a
  * failure at depth 3 discard depths 0-2.
  *
- * The model never decides leaf vs composite. That is the policy's job — here
- * P4 alone (scope against the executor budget); stage 3 adds P1-P3.
+ * The model never decides leaf vs composite. P4 — scope against the executor
+ * budget — governs recursion, and P1-P3 are invariants of a cut repaired
+ * through the same diagnostics channel.
  */
 
 export const UnitProposalSchema = z.object({
   key: EntityIdSchema,
   objective: NonEmptyStringSchema,
   criterionIds: z.array(EntityIdSchema).min(1),
-  existingPaths: z.array(RepoRelativePathSchema).default([]),
-  plannedPaths: z.array(RepoRelativePathSchema).default([])
+  /** Files the unit reads and does not change. */
+  reads: z.array(RepoRelativePathSchema).default([]),
+  /** Files the unit creates or modifies. Creating and modifying are one promise. */
+  writes: z.array(RepoRelativePathSchema).default([])
 }).strict();
 
 export type UnitProposal = z.infer<typeof UnitProposalSchema>;
@@ -94,7 +97,7 @@ export interface RecursivePlanObserver {
 }
 
 export interface ExecutionBudget {
-  /** Existing plus planned paths a single unit may own. */
+  /** Read plus written paths a single unit may own. */
   maxScopePaths: number;
 }
 
@@ -105,6 +108,8 @@ export interface RecursivePlannerOptions {
   maxAttemptsPerUnit?: number;
   /** Hard stop against a model that keeps proposing cuts that never shrink. */
   maxDepth?: number;
+  /** Recognizes a path that proves behaviour. Defaults to the usual conventions. */
+  isTestPath?(path: string): boolean;
 }
 
 export interface RecursivePlanInput {
@@ -119,22 +124,32 @@ export interface RecursivePlanResult {
   unresolved: UnresolvedUnit[];
 }
 
+/** `test/x.test.js`, `src/x.spec.tsx`, anything under `test/` or `tests/`. */
+export function isConventionalTestPath(candidate: string): boolean {
+  const normalized = candidate.replaceAll("\\", "/").toLowerCase();
+  return /\.(?:test|spec)\.[cm]?[tj]sx?$/u.test(normalized) ||
+    /(?:^|\/)tests?\//u.test(normalized);
+}
+
 export class RecursivePlanner {
   private readonly model: CutModel;
   private readonly budget: ExecutionBudget;
   private readonly maxAttempts: number;
   private readonly maxDepth: number;
+  private readonly isTestPath: (path: string) => boolean;
 
   constructor(options: RecursivePlannerOptions) {
     this.model = options.model;
     this.budget = options.budget;
     this.maxAttempts = positive(options.maxAttemptsPerUnit ?? 2, "maxAttemptsPerUnit");
     this.maxDepth = positive(options.maxDepth ?? 8, "maxDepth");
+    this.isTestPath = options.isTestPath ?? isConventionalTestPath;
   }
 
   async plan(input: RecursivePlanInput): Promise<RecursivePlanResult> {
     const unresolved: UnresolvedUnit[] = [];
-    const root = await this.resolve(UnitProposalSchema.parse(input.root), 0, input, unresolved);
+    const snapshotPaths = snapshotPathSet(input.evidence);
+    const root = await this.resolve(UnitProposalSchema.parse(input.root), 0, input, snapshotPaths, unresolved);
     return { root, unresolved };
   }
 
@@ -142,20 +157,25 @@ export class RecursivePlanner {
     unit: UnitProposal,
     depth: number,
     input: RecursivePlanInput,
+    snapshotPaths: ReadonlySet<string>,
     unresolved: UnresolvedUnit[]
   ): Promise<PlannedUnit> {
-    if (!this.needsCut(unit) || depth >= this.maxDepth) {
+    if (this.fitsBudget(unit) || depth >= this.maxDepth) {
       await input.observer?.onUnitResolved?.({ unit, kind: "leaf", depth });
       return { kind: "leaf", unit, depth };
     }
 
-    const cut = await this.requestCut(unit, depth, input);
-    if (cut.kind === "failed") {
-      const node: UnresolvedUnit = { kind: "unresolved", unit, depth, diagnostics: cut.diagnostics };
-      unresolved.push(node);
-      await input.observer?.onUnitUnresolved?.({ unit, diagnostics: cut.diagnostics, depth });
-      return node;
+    // A unit with a single criterion has nothing to partition. The honest
+    // answer is that the goal's criteria are coarser than the executor budget,
+    // not a cut invented to satisfy the budget.
+    if (unit.criterionIds.length < 2) {
+      return this.giveUp(unit, depth, input, unresolved, [
+        `P4 ${unit.key}: scope of ${scopeSize(unit)} paths exceeds the budget of ${this.budget.maxScopePaths}, but the unit owns a single criterion and cannot be partitioned. Declare finer acceptance criteria for this goal.`
+      ]);
     }
+
+    const cut = await this.requestCut(unit, depth, input, snapshotPaths);
+    if (cut.kind === "failed") return this.giveUp(unit, depth, input, unresolved, cut.diagnostics);
 
     await input.observer?.onCutProposed?.({
       unit,
@@ -165,21 +185,35 @@ export class RecursivePlanner {
     });
     const children: PlannedUnit[] = [];
     for (const child of cut.proposal.children) {
-      children.push(await this.resolve(child, depth + 1, input, unresolved));
+      children.push(await this.resolve(child, depth + 1, input, snapshotPaths, unresolved));
     }
     await input.observer?.onUnitResolved?.({ unit, kind: "composite", depth });
     return { kind: "composite", unit, rationale: cut.proposal.rationale, children, depth };
   }
 
-  /** P4 only in this stage: a unit that fits the executor budget is a leaf. */
-  private needsCut(unit: UnitProposal): boolean {
-    return unit.existingPaths.length + unit.plannedPaths.length > this.budget.maxScopePaths;
+  private async giveUp(
+    unit: UnitProposal,
+    depth: number,
+    input: RecursivePlanInput,
+    unresolved: UnresolvedUnit[],
+    diagnostics: string[]
+  ): Promise<UnresolvedUnit> {
+    const node: UnresolvedUnit = { kind: "unresolved", unit, depth, diagnostics };
+    unresolved.push(node);
+    await input.observer?.onUnitUnresolved?.({ unit, diagnostics, depth });
+    return node;
+  }
+
+  /** P4. Reads and writes both cost the executor context, so both count. */
+  private fitsBudget(unit: UnitProposal): boolean {
+    return scopeSize(unit) <= this.budget.maxScopePaths;
   }
 
   private async requestCut(
     unit: UnitProposal,
     depth: number,
-    input: RecursivePlanInput
+    input: RecursivePlanInput,
+    snapshotPaths: ReadonlySet<string>
   ): Promise<{ kind: "ok"; proposal: CutProposal } | { kind: "failed"; diagnostics: string[] }> {
     let repairIssues: string[] = [];
     for (let attempt = 1; attempt <= this.maxAttempts; attempt += 1) {
@@ -202,21 +236,17 @@ export class RecursivePlanner {
         repairIssues = [error instanceof Error ? error.message : String(error)];
         continue;
       }
-      const parsed = this.validate(raw, unit, input.evidence);
+      const parsed = this.validate(raw, unit, snapshotPaths);
       if (parsed.kind === "ok") return parsed;
       repairIssues = parsed.diagnostics;
     }
     return { kind: "failed", diagnostics: repairIssues };
   }
 
-  /**
-   * Schema first, then the two facts only the parent knows: a cut partitions
-   * its parent's criteria, and an existing path must exist in the snapshot.
-   */
   private validate(
     raw: unknown,
     parent: UnitProposal,
-    evidence: readonly RepositoryEvidence[]
+    snapshotPaths: ReadonlySet<string>
   ): { kind: "ok"; proposal: CutProposal } | { kind: "failed"; diagnostics: string[] } {
     const candidates = objectCandidates(raw);
     if (candidates.kind === "failed") return candidates;
@@ -228,15 +258,109 @@ export class RecursivePlanner {
         failures.push(...parsed.error.issues.map((issue) => `${issue.path.join(".") || "root"}: ${issue.message}`));
         continue;
       }
-      const semantic = semanticIssues(parsed.data, parent, evidence);
-      if (semantic.length > 0) {
-        failures.push(...semantic);
+      const violations = this.cutViolations(parsed.data, parent, snapshotPaths);
+      if (violations.length > 0) {
+        failures.push(...violations);
         continue;
       }
       return { kind: "ok", proposal: parsed.data };
     }
     return { kind: "failed", diagnostics: unique(failures) };
   }
+
+  /**
+   * Every property a cut must satisfy, reported together. One round trip per
+   * violated property would burn the repair budget on the first one found.
+   */
+  private cutViolations(
+    proposal: CutProposal,
+    parent: UnitProposal,
+    snapshotPaths: ReadonlySet<string>
+  ): string[] {
+    const issues: string[] = [];
+    const children = proposal.children;
+    const owned = new Set(parent.criterionIds);
+    const inherited = new Set(parent.reads.map(normalize));
+    const producedBySibling = new Map<string, string[]>();
+    const keys = new Set<string>();
+
+    for (const child of children) {
+      for (const written of child.writes) {
+        const path = normalize(written);
+        producedBySibling.set(path, [...(producedBySibling.get(path) ?? []), child.key]);
+      }
+    }
+
+    for (const child of children) {
+      if (keys.has(child.key)) issues.push(`children: duplicate unit key ${child.key}`);
+      keys.add(child.key);
+      if (child.key === parent.key) issues.push(`children: ${child.key} repeats its parent's key`);
+
+      // P1 — a child that already fits the budget will be a leaf, and a leaf
+      // proves itself. A composite proves by integration over the merged tree.
+      if (this.fitsBudget(child) && !child.writes.some((path) => this.isTestPath(path))) {
+        issues.push(`P1 ${child.key}: a leaf must write at least one test file that proves its criteria; none of ${format(child.writes)} is a test path.`);
+      }
+
+      // P3 — a read must be satisfiable where the child runs.
+      for (const read of child.reads) {
+        const path = normalize(read);
+        if (snapshotPaths.has(path) || producedBySibling.has(path) || inherited.has(path)) continue;
+        issues.push(`P3 ${child.key}.reads: ${read} is not in the repository snapshot, is not written by a sibling, and is not inherited from ${parent.key}.`);
+      }
+
+      for (const criterionId of child.criterionIds) {
+        if (!owned.has(criterionId)) {
+          issues.push(`children.${child.key}.criterionIds: ${criterionId} is not owned by ${parent.key}`);
+        }
+      }
+    }
+
+    // P2 — siblings never write the same file.
+    for (const [path, writers] of producedBySibling) {
+      if (writers.length > 1) {
+        issues.push(`P2 ${writers.join(" and ")}: both write ${path}. Give the file one owner and let the others read it.`);
+      }
+    }
+
+    // Coverage — a cut cannot drop what the parent promised to produce.
+    for (const promised of parent.writes) {
+      if (!producedBySibling.has(normalize(promised))) {
+        issues.push(`writes: the parent ${parent.key} promised ${promised} and no child produces it.`);
+      }
+    }
+
+    // Partition — every criterion keeps exactly one owner.
+    const claimed = new Map<string, number>();
+    for (const child of children) {
+      for (const criterionId of child.criterionIds) {
+        claimed.set(criterionId, (claimed.get(criterionId) ?? 0) + 1);
+      }
+    }
+    for (const criterionId of owned) {
+      const count = claimed.get(criterionId) ?? 0;
+      if (count === 0) issues.push(`children: criterion ${criterionId} lost its owner in this cut`);
+      if (count > 1) issues.push(`children: criterion ${criterionId} is claimed by ${count} children`);
+    }
+
+    return unique(issues);
+  }
+}
+
+function scopeSize(unit: UnitProposal): number {
+  return unit.reads.length + unit.writes.length;
+}
+
+function snapshotPathSet(evidence: readonly RepositoryEvidence[]): ReadonlySet<string> {
+  return new Set(evidence.filter((item) => item.kind === "path").map((item) => normalize(item.reference)));
+}
+
+function normalize(candidate: string): string {
+  return candidate.replaceAll("\\", "/").toLowerCase();
+}
+
+function format(paths: readonly string[]): string {
+  return paths.length === 0 ? "an empty write set" : paths.join(", ");
 }
 
 function objectCandidates(raw: unknown): { kind: "ok"; values: unknown[] } | { kind: "failed"; diagnostics: string[] } {
@@ -244,46 +368,6 @@ function objectCandidates(raw: unknown): { kind: "ok"; values: unknown[] } | { k
   const parsed = parseJsonObjectCandidates(raw);
   if (!parsed.ok) return { kind: "failed", diagnostics: [parsed.message] };
   return { kind: "ok", values: parsed.candidates.map((candidate) => candidate.value) };
-}
-
-function semanticIssues(
-  proposal: CutProposal,
-  parent: UnitProposal,
-  evidence: readonly RepositoryEvidence[]
-): string[] {
-  const issues: string[] = [];
-  const owned = new Set(parent.criterionIds);
-  const claimed = new Map<string, number>();
-  const keys = new Set<string>();
-
-  for (const child of proposal.children) {
-    if (keys.has(child.key)) issues.push(`children: duplicate unit key ${child.key}`);
-    keys.add(child.key);
-    if (child.key === parent.key) issues.push(`children: ${child.key} repeats its parent's key`);
-    for (const criterionId of child.criterionIds) {
-      if (!owned.has(criterionId)) {
-        issues.push(`children.${child.key}.criterionIds: ${criterionId} is not owned by ${parent.key}`);
-      }
-      claimed.set(criterionId, (claimed.get(criterionId) ?? 0) + 1);
-    }
-    for (const existing of child.existingPaths) {
-      if (!referenced(evidence, existing)) {
-        issues.push(`children.${child.key}.existingPaths: ${existing} is not in the repository snapshot`);
-      }
-    }
-  }
-
-  for (const criterionId of owned) {
-    const count = claimed.get(criterionId) ?? 0;
-    if (count === 0) issues.push(`children: criterion ${criterionId} lost its owner in this cut`);
-    if (count > 1) issues.push(`children: criterion ${criterionId} is claimed by ${count} children`);
-  }
-  return unique(issues);
-}
-
-function referenced(evidence: readonly RepositoryEvidence[], candidate: string): boolean {
-  const normalized = candidate.replaceAll("\\", "/").toLowerCase();
-  return evidence.some((item) => item.reference.replaceAll("\\", "/").toLowerCase() === normalized);
 }
 
 export interface CutPromptInput {
@@ -315,11 +399,12 @@ export function buildCutPrompt(input: CutPromptInput): { system: string; user: s
       CUT_OUTPUT_SHAPE,
       "",
       "Rules:",
-      "- Propose at least two children. If the unit cannot be cut, return the same shape with the two most cohesive halves you can defend.",
+      "- `writes` are the files a child creates or modifies. `reads` are files it needs to read and will not change.",
+      "- No two children may write the same path. If they both need it, one owns it and the others read it.",
+      "- A child small enough to implement in one step must write at least one test file that proves its criteria.",
+      "- Every `read` must already exist in the repository evidence below, be written by a sibling, or be one the parent already reads.",
+      "- Together the children must write every path the parent promised to write.",
       "- The children partition the parent's criteria: every criterion belongs to exactly one child, and none may be dropped or invented.",
-      "- `existingPaths` may only contain paths listed in the repository evidence below.",
-      "- `plannedPaths` are files that do not exist yet and that this child will create.",
-      "- No two children may write the same path.",
       "- `rationale` states the boundary that justifies this cut in one sentence.",
       "- Do not describe interfaces, dependencies, ordering or tests between children. Those are derived, not declared."
     ].join("\n"),
@@ -327,7 +412,8 @@ export function buildCutPrompt(input: CutPromptInput): { system: string; user: s
       `Unit: ${input.unit.key}`,
       `Objective: ${input.unit.objective}`,
       `Criteria this unit owns:\n${criteria || "- none"}`,
-      `Paths this unit owns:\n${[...input.unit.existingPaths, ...input.unit.plannedPaths].map((item) => `- ${item}`).join("\n") || "- none"}`,
+      `Files this unit writes:\n${bullets(input.unit.writes)}`,
+      `Files this unit reads:\n${bullets(input.unit.reads)}`,
       `Repository evidence:\n${evidence || "- none"}`,
       ...(input.repairIssues.length === 0
         ? []
@@ -343,11 +429,15 @@ const CUT_OUTPUT_SHAPE = `{
       "key": "kebab-case-unit-key",
       "objective": "the observable outcome this child owns",
       "criterionIds": ["criterion-1"],
-      "existingPaths": ["src/domain/orders.js"],
-      "plannedPaths": ["test/orders.test.js"]
+      "reads": ["src/domain/orders.js"],
+      "writes": ["src/domain/backorders.js", "test/backorders.test.js"]
     }
   ]
 }`;
+
+function bullets(paths: readonly string[]): string {
+  return paths.length === 0 ? "- none" : paths.map((item) => `- ${item}`).join("\n");
+}
 
 function unique(values: readonly string[]): string[] {
   return [...new Set(values)];
