@@ -188,8 +188,13 @@ export class RecursivePlanner {
   async plan(input: RecursivePlanInput): Promise<RecursivePlanResult> {
     const unresolved: UnresolvedUnit[] = [];
     const snapshotPaths = snapshotPathSet(input.evidence);
-    const root = await this.resolve(UnitProposalSchema.parse(input.root), 0, ROOT_POSITION, input, snapshotPaths, unresolved);
-    return { root, unresolved };
+    const root = UnitProposalSchema.parse(input.root);
+    // Keys identify nodes and derive criterion ids, so two units sharing one
+    // key collapse into a single node and silently merge their scopes. A cut
+    // only sees its own siblings, so uniqueness has to be tracked for the tree.
+    const claimedKeys = new Set<string>([root.key]);
+    const resolved = await this.resolve(root, 0, ROOT_POSITION, input, snapshotPaths, unresolved, claimedKeys);
+    return { root: resolved, unresolved };
   }
 
   private async resolve(
@@ -198,14 +203,23 @@ export class RecursivePlanner {
     position: UnitPosition,
     input: RecursivePlanInput,
     snapshotPaths: ReadonlySet<string>,
-    unresolved: UnresolvedUnit[]
+    unresolved: UnresolvedUnit[],
+    claimedKeys: Set<string>
   ): Promise<PlannedUnit> {
-    if (this.fitsBudget(unit) || depth >= this.maxDepth) {
+    // A leaf is a unit that can prove something. Fitting the budget is not
+    // enough: the root arrives with reads and no writes, and accepting it would
+    // produce a plan whose only unit promises no output at all.
+    if (this.isExecutableLeaf(unit)) {
       await input.observer?.onUnitResolved?.({ unit, kind: "leaf", depth, position });
       return { kind: "leaf", unit, depth };
     }
+    if (depth >= this.maxDepth) {
+      return this.giveUp(unit, depth, position, input, unresolved, [
+        `depth ${unit.key}: the depth limit of ${this.maxDepth} stopped this unit before it could be cut, so nothing checked that it is implementable or provable.`
+      ]);
+    }
 
-    const cut = await this.requestCut(unit, depth, input, snapshotPaths);
+    const cut = await this.requestCut(unit, depth, input, snapshotPaths, claimedKeys);
     if (cut.kind === "failed") return this.giveUp(unit, depth, position, input, unresolved, cut.diagnostics);
 
     await input.observer?.onCutProposed?.({
@@ -217,6 +231,7 @@ export class RecursivePlanner {
     await input.observer?.onUnitResolved?.({ unit, kind: "composite", depth, position });
     const children: PlannedUnit[] = [];
     const siblingCount = cut.proposal.children.length;
+    for (const child of cut.proposal.children) claimedKeys.add(child.key);
     for (const [siblingIndex, child] of cut.proposal.children.entries()) {
       children.push(await this.resolve(
         asUnit(child),
@@ -224,7 +239,8 @@ export class RecursivePlanner {
         { parentKey: unit.key, siblingIndex, siblingCount },
         input,
         snapshotPaths,
-        unresolved
+        unresolved,
+        claimedKeys
       ));
     }
     return { kind: "composite", unit, rationale: cut.proposal.rationale, children, depth };
@@ -249,11 +265,17 @@ export class RecursivePlanner {
     return scopeSize(unit) <= this.budget.maxScopePaths;
   }
 
+  /** P4 and P1 together: small enough to implement, and able to prove itself. */
+  private isExecutableLeaf(unit: UnitProposal): boolean {
+    return this.fitsBudget(unit) && unit.writes.some((item) => this.isTestPath(item));
+  }
+
   private async requestCut(
     unit: UnitProposal,
     depth: number,
     input: RecursivePlanInput,
-    snapshotPaths: ReadonlySet<string>
+    snapshotPaths: ReadonlySet<string>,
+    claimedKeys: ReadonlySet<string>
   ): Promise<{ kind: "ok"; proposal: CutProposal } | { kind: "failed"; diagnostics: string[] }> {
     let repairIssues: string[] = [];
     for (let attempt = 1; attempt <= this.maxAttempts; attempt += 1) {
@@ -276,7 +298,7 @@ export class RecursivePlanner {
         repairIssues = [error instanceof Error ? error.message : String(error)];
         continue;
       }
-      const parsed = this.validate(raw, unit, snapshotPaths);
+      const parsed = this.validate(raw, unit, snapshotPaths, claimedKeys);
       if (parsed.kind === "ok") return parsed;
       repairIssues = parsed.diagnostics;
     }
@@ -286,7 +308,8 @@ export class RecursivePlanner {
   private validate(
     raw: unknown,
     parent: UnitProposal,
-    snapshotPaths: ReadonlySet<string>
+    snapshotPaths: ReadonlySet<string>,
+    claimedKeys: ReadonlySet<string>
   ): { kind: "ok"; proposal: CutProposal } | { kind: "failed"; diagnostics: string[] } {
     const candidates = objectCandidates(raw);
     if (candidates.kind === "failed") return candidates;
@@ -298,7 +321,7 @@ export class RecursivePlanner {
         failures.push(...parsed.error.issues.map((issue) => `${issue.path.join(".") || "root"}: ${issue.message}`));
         continue;
       }
-      const violations = this.cutViolations(parsed.data, parent, snapshotPaths);
+      const violations = this.cutViolations(parsed.data, parent, snapshotPaths, claimedKeys);
       if (violations.length > 0) {
         failures.push(...violations);
         continue;
@@ -315,7 +338,8 @@ export class RecursivePlanner {
   private cutViolations(
     proposal: CutProposal,
     parent: UnitProposal,
-    snapshotPaths: ReadonlySet<string>
+    snapshotPaths: ReadonlySet<string>,
+    claimedKeys: ReadonlySet<string>
   ): string[] {
     const issues: string[] = [];
     const children = proposal.children;
@@ -334,6 +358,9 @@ export class RecursivePlanner {
       if (keys.has(child.key)) issues.push(`children: duplicate unit key ${child.key}`);
       keys.add(child.key);
       if (child.key === parent.key) issues.push(`children: ${child.key} repeats its parent's key`);
+      else if (claimedKeys.has(child.key)) {
+        issues.push(`children: the key ${child.key} is already used by another unit in this plan; every unit needs its own key.`);
+      }
 
       // P1 — a child that already fits the budget will be a leaf, and a leaf
       // proves itself. A composite proves by integration over the merged tree.
@@ -348,9 +375,13 @@ export class RecursivePlanner {
         issues.push(`P3 ${child.key}.reads: ${read} is not in the repository snapshot, is not written by a sibling, and is not inherited from ${parent.key}.`);
       }
 
-      // Termination: without this a cut can hand a child everything the parent
-      // had and recurse forever. It is also what "cut" means.
-      if (scopeSize(child) >= scopeSize(parent)) {
+      // Termination for a cut driven by P4: without this a cut can hand a child
+      // everything the parent had and recurse forever. A cut driven by P1
+      // instead — the unit fits but proves nothing — is bounded by P1 itself,
+      // because every child that fits must bring a test and becomes a leaf.
+      // Demanding shrinkage there would make the cut unsatisfiable: a leaf that
+      // reads one file and writes its test already costs what the parent cost.
+      if (!this.fitsBudget(parent) && scopeSize(child) >= scopeSize(parent)) {
         issues.push(`scope ${child.key}: a cut must shrink its children; ${child.key} carries ${scopeSize(child)} paths and ${parent.key} carries ${scopeSize(parent)}.`);
       }
     }

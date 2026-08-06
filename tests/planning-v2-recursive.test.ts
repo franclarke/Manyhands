@@ -91,11 +91,26 @@ describe("productive planning with the recursive planner", () => {
     expect(discovered[1]).toMatchObject({ kind: "leaf", parentKey: "root" });
   });
 
-  it("keeps the root a leaf and never calls the model when the goal already fits", async () => {
-    const { state, seen, types } = await planWith("run-recursive-leaf", {}, 500);
+  /**
+   * The root arrives with reads and no writes, so it proves nothing on its own
+   * no matter how generous the budget is. Accepting it as a leaf would compile
+   * a plan whose single unit promises no output, and the run could only end in
+   * "leaf produced no diff".
+   */
+  it("cuts the root even under a budget it fits, because the root proves nothing", async () => {
+    const paths = snapshotPaths();
+    const { state, seen, types } = await planWith("run-recursive-generous-budget", {
+      root: {
+        rationale: "The goal still needs units that can prove it",
+        children: [
+          { key: "domain", objective: "Cancel in the domain", criterion: "The domain cancels", reads: [paths[0]!], writes: ["test/domain-cancel.test.ts"] },
+          { key: "surface", objective: "Expose cancellation", criterion: "The surface exposes it", reads: [paths[1]!], writes: ["test/surface-cancel.test.ts"] }
+        ]
+      }
+    }, 500);
 
     expect(state).not.toBeInstanceOf(Error);
-    expect(seen).toHaveLength(0);
+    expect(seen.map((request) => request.unit.key)).toEqual(["root"]);
     expect(types).toContain("planning.completed");
   });
 

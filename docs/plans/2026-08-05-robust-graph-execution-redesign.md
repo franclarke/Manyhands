@@ -588,6 +588,38 @@ módulo retirado queda alcanzable.
 Grabar de nuevo:
 `MANYHANDS_HARNESS_LIVE=1 pnpm vitest run tests/planning-cut-transcript.test.ts`
 
+**Revisión crítica de lo implementado — 2026-08-06.** Encontró tres defectos
+reales en `RecursivePlanner`, los tres corregidos con regresión roja previa:
+
+1. **La raíz podía quedar como hoja sin escribir nada.** El host la construye
+   con lecturas y `writes: []`; si entraba en el presupuesto se aceptaba como
+   hoja, y el plan compilaba con una única unidad que no prometía ninguna
+   salida — un run que sólo podía terminar en «leaf produced no diff». Ahora una
+   hoja es `fitsBudget && escribe un test`, así que la raíz siempre se corta.
+   **Un test propio certificaba el defecto** y fue reescrito.
+2. **El límite de profundidad devolvía una hoja en silencio.** `depth >= maxDepth`
+   aceptaba como hoja una unidad sobre presupuesto, violando P4 y P1 sin decirlo.
+   Ahora es `unresolved` con su diagnóstico.
+3. **Las keys sólo eran únicas dentro de un corte.** Dos primos con la misma key
+   colapsan en un nodo y fusionan sus scopes. Ahora la unicidad se sigue en todo
+   el árbol.
+
+El primer fix destapó una tensión que el propio rediseño había introducido: la
+regla de achicamiento estricto hace insatisfacible un corte motivado por P1,
+porque una hoja que lee un archivo y escribe su test ya cuesta lo mismo que el
+padre. El achicamiento ahora se exige **sólo cuando el corte lo motiva P4**; el
+corte motivado por P1 termina por P1 misma, porque toda hija que entra debe
+traer un test y queda hoja.
+
+**Verificado además:** las dependencias derivadas **sí** gobiernan la ejecución.
+`semantic-plan-projection.ts:24` convierte cada seam no-`logical` en
+`candidateArtifact`, y de ahí sale un `artifactRequirement` con
+`requiredFor: "execution"` que `getExecutableReadinessV2` exige. Sobre la
+transcripción real quedó la cadena `domain -> service -> api`. Funciona
+**porque** la materialización es siempre `files`: un `logical` habría sido
+filtrado ahí y el orden se habría perdido en silencio, que es exactamente la
+clase de defecto de SP1q.
+
 **Supuesto 2 — ¿un plan del camino nuevo es ejecutable?** Abierto. La corrida
 end-to-end sobre el target SP2 es el próximo paso. Su objetivo no es medir: es
 encontrar dónde se rompe la costura entre planning nuevo y ejecución vieja.
@@ -603,6 +635,10 @@ leer la corrida: el paralelismo va a estar serializado por una razón conocida.
 
 - Scheduler de despacho continuo (§2.5): ready-set topológico, límite de
   concurrencia configurable, recálculo tras cada nodo terminado.
+- **El modelo de conflicto se reemplaza junto con el scheduler que lo consume**
+  (D9): sólo los escritores conflictúan, así que bajo P2 el conjunto de
+  conflictos es siempre vacío y las hermanas corren en paralelo por
+  construcción. Se retira el `it.fails` de `planning-cut-transcript.test.ts`.
 - Un solo tipo de tarea: hoja y composite en el mismo scheduler.
 - Workspace por intento: se crea fresco desde el commit base, se usa, se
   destruye. Caché de dependencias desacoplada del estado git.
@@ -681,7 +717,7 @@ leer la corrida: el paralelismo va a estar serializado por una razón conocida.
 ## 4. Qué se borra y qué se preserva
 
 **Se borra del producto:** `planning-envelope.ts` (600), `work-breakdown.ts`
-(579) y su mitad de `schema.ts`, `worktree-pool.ts` + `fenced-lease.ts` +
+(579) —el planner, no el schema—, `worktree-pool.ts` + `fenced-lease.ts` +
 `topology-lease.ts` (~1.600), la capa de integración separada, el parser del
 canal de progreso embebido, y la mayor parte del fencing. Estimado: 4.000–5.000
 líneas menos, de 30 compuertas pre-ejecución a 4 propiedades, y de 10 mecanismos
@@ -708,6 +744,7 @@ Se anota acá a medida que aparece, para que todo se cierre dentro de este plan.
 | D6 | **Un run no puede declarar criterios de aceptación.** `runPlanningV2` sólo los recibe desde un candidato experimental, así que el objetivo entra como un único criterio implícito. Funciona con refinamiento, pero el objetivo real queda sin enunciar. | 3D o etapa 7 |
 | D7 | `wide-graph-oracle-contract` compara el hash de `dist` contra un freeze histórico y queda rojo con cualquier cambio de producto. Hay que decidir si se declara oráculo histórico y se retira del suite. | 3D |
 | D8 | El presupuesto de scope (`maxScopePaths`) es un parámetro sin anclar, igual que `minimumAdvantage` lo era. Debe salir de una medición del ejecutor, no de un número elegido. | etapa 7 |
+| D10 | El host cuenta unidades resueltas en el campo `attempt` de `planning.node_discovered`, que semánticamente es un número de intento. No rompe nada, pero el journal miente sobre qué mide. | 3D |
 | D9 | **El compilador declara conflicto entre unidades que sólo *leen* el mismo archivo.** `compileScopeConflicts` cruza el scope completo, así que el corte real de Haiku produjo 2 conflict constraints con escrituras disjuntas, y `wave-selector-v2` **impide seleccionar dos nodos en la misma wave** cuando hay un constraint entre ellos: los lectores compartidos se serializan. Bajo P2 sólo los escritores pueden conflictuar, así que el número correcto es siempre cero. Se intentó el retrofit y **no es expresable en el compilador viejo**: un `plannedPath` no puede nombrar un archivo existente, y su review *exige* un conflict constraint por cada solapamiento de scope. No tiene forma de decir «modifico este archivo existente» distinto de «lo leo» — la misma ambigüedad que la corrección 1 encontró en el contrato del planner. Marcado `it.fails` en `planning-cut-transcript.test.ts`. | etapa 4, junto con el scheduler que lo consume |
 
 ---

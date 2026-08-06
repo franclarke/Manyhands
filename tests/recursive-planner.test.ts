@@ -186,6 +186,66 @@ describe("recursive planner", () => {
     expect(result.root.kind).toBe("composite");
   });
 
+  /**
+   * The root arrives from the host with reads and no writes. Accepting it as a
+   * leaf because it happens to fit the budget produces a plan whose only unit
+   * promises no output at all — a run that can only end in "leaf produced no
+   * diff". A leaf is a unit that can prove something, so it must write a test.
+   */
+  it("cuts a unit that fits the budget but writes no test, instead of calling it a leaf", async () => {
+    const { model, result } = await planDeep(
+      {
+        small: cut("Split the goal into provable work", [
+          child("alpha", [D], ["test/alpha.test.js"]),
+          child("beta", [S], ["test/beta.test.js"])
+        ])
+      },
+      { key: "small", objective: "A goal that already fits", criteria: GOAL_CRITERIA, reads: [D, S], writes: [] }
+    );
+
+    expect(model.seen.map((request) => request.unit.key)).toEqual(["small"]);
+    expect(result.root.kind).toBe("composite");
+    expect(leafKeys(result.root)).toEqual(["alpha", "beta"]);
+  });
+
+  it("reports a unit stopped by the depth limit instead of accepting it as a leaf", async () => {
+    const model = scriptedModel(DEEP_TREE);
+    const result = await new RecursivePlanner({
+      model,
+      budget: { maxScopePaths: BUDGET },
+      maxAttemptsPerUnit: 2,
+      maxDepth: 1
+    }).plan({ root: ROOT, criteria: GOAL_CRITERIA, evidence: EVIDENCE });
+
+    // `backend` sits at depth 1, over budget, and the limit stops it. It is not
+    // a leaf: nothing checked that it can be implemented or proven.
+    expect(result.unresolved.map((node) => node.unit.key)).toEqual(["backend"]);
+    expect(result.unresolved[0]!.diagnostics.join(" ")).toContain("depth");
+  });
+
+  it("rejects a cut that reuses a unit key from another branch", async () => {
+    const { model, result } = await planDeep({
+      root: cut("Split by layer", [
+        child("backend", [D, S, A, H, C]),
+        child("frontend", [U], ["test/frontend.test.js"])
+      ]),
+      backend: [
+        // `frontend` already exists in the other branch: two units with one key
+        // collapse into one node and silently merge their scopes.
+        cut("Reuses a cousin's key", [
+          child("frontend", [D, S], [BACKORDERS, "test/core.test.js"]),
+          child("edge", [A], ["test/edge.test.js"])
+        ]),
+        DEEP_TREE.backend
+      ],
+      core: DEEP_TREE.core
+    });
+
+    const repair = model.seen.find((request) => request.unit.key === "backend" && request.attempt === 2);
+    expect(repair?.repairIssues.join(" ")).toContain("frontend");
+    expect(result.unresolved).toHaveLength(0);
+  });
+
   it("states the exact JSON shape in the prompt it sends", async () => {
     const { model } = await planDeep(DEEP_TREE);
 
