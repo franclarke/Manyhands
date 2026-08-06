@@ -267,6 +267,7 @@ interesante: por qué un escalar no servía para decidir. Retira
 | 3B | Relaciones derivadas y proyección | **completada** — `e0e6f99` |
 | 3C | Criterios refinados, cableado productivo y eventos | **completada** — `2d5b0a5`, `7c6ef39` |
 | 3D | Utilidad como observación y retiros | pendiente |
+| 3E | Verificación de la cadena | **parcial** — contrato verificado; falta la corrida end-to-end |
 | 4 | Scheduler de ready-set y workspace por intento | pendiente |
 | 5 | Terminalidad total y validación derivada | pendiente |
 | 6 | UI: dos layouts | pendiente |
@@ -567,6 +568,35 @@ módulo retirado queda alcanzable.
 
 ---
 
+### Etapa 3E — Verificación de la cadena
+
+> Insertada el 2026-08-06. Después de 3C había mucho construido sobre dos
+> supuestos no verificados, y seguir a la etapa 4 sin comprobarlos repetía el
+> patrón que produjo trece freezes: construir, congelar, descubrir al final.
+
+**Supuesto 1 — ¿un modelo real contesta el contrato de cinco campos?**
+**VERIFICADO.** El arnés gana modelos live, grabador y replay para el
+`CutModel`, y el suite reproduce offline una transcripción real de Claude Haiku.
+
+> Haiku contestó **al primer intento, sin ninguna reparación**, con un corte de
+> tres hojas domain → service → API, cada una con su criterio, escrituras
+> disjuntas y su propio test. De ahí se derivaron tres dependencias, las tres
+> `files`. Sobre el mismo modelo y el mismo target, SP2 había fallado 6/6
+> candidatos con el contrato viejo. El argumento central del rediseño deja de
+> ser hipótesis.
+
+Grabar de nuevo:
+`MANYHANDS_HARNESS_LIVE=1 pnpm vitest run tests/planning-cut-transcript.test.ts`
+
+**Supuesto 2 — ¿un plan del camino nuevo es ejecutable?** Abierto. La corrida
+end-to-end sobre el target SP2 es el próximo paso. Su objetivo no es medir: es
+encontrar dónde se rompe la costura entre planning nuevo y ejecución vieja.
+
+Esa primera transcripción real ya destapó **D9**, que hay que tener presente al
+leer la corrida: el paralelismo va a estar serializado por una razón conocida.
+
+---
+
 ### Etapa 4 — Scheduler de ready-set y workspace por intento
 
 **Qué se construye**
@@ -678,7 +708,7 @@ Se anota acá a medida que aparece, para que todo se cierre dentro de este plan.
 | D6 | **Un run no puede declarar criterios de aceptación.** `runPlanningV2` sólo los recibe desde un candidato experimental, así que el objetivo entra como un único criterio implícito. Funciona con refinamiento, pero el objetivo real queda sin enunciar. | 3D o etapa 7 |
 | D7 | `wide-graph-oracle-contract` compara el hash de `dist` contra un freeze histórico y queda rojo con cualquier cambio de producto. Hay que decidir si se declara oráculo histórico y se retira del suite. | 3D |
 | D8 | El presupuesto de scope (`maxScopePaths`) es un parámetro sin anclar, igual que `minimumAdvantage` lo era. Debe salir de una medición del ejecutor, no de un número elegido. | etapa 7 |
-| D9 | **El compilador declara conflicto entre unidades que sólo *leen* el mismo archivo.** `compileScopeConflicts` cruza el scope completo —lecturas incluidas— así que el corte real de Haiku produjo 2 conflict constraints pese a tener escrituras disjuntas. Y `wave-selector-v2` **impide seleccionar dos nodos en la misma wave** cuando hay un constraint entre ellos: los lectores compartidos se serializan. Bajo P2 sólo los escritores pueden conflictuar, así que el número correcto es siempre cero. **Bloquea el paralelismo de la etapa 4.** | etapa 4 |
+| D9 | **El compilador declara conflicto entre unidades que sólo *leen* el mismo archivo.** `compileScopeConflicts` cruza el scope completo, así que el corte real de Haiku produjo 2 conflict constraints con escrituras disjuntas, y `wave-selector-v2` **impide seleccionar dos nodos en la misma wave** cuando hay un constraint entre ellos: los lectores compartidos se serializan. Bajo P2 sólo los escritores pueden conflictuar, así que el número correcto es siempre cero. Se intentó el retrofit y **no es expresable en el compilador viejo**: un `plannedPath` no puede nombrar un archivo existente, y su review *exige* un conflict constraint por cada solapamiento de scope. No tiene forma de decir «modifico este archivo existente» distinto de «lo leo» — la misma ambigüedad que la corrección 1 encontró en el contrato del planner. Marcado `it.fails` en `planning-cut-transcript.test.ts`. | etapa 4, junto con el scheduler que lo consume |
 
 ---
 

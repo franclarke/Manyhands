@@ -72,4 +72,40 @@ describe("the cut contract against a real model", () => {
     expect(result.error).toBeUndefined();
     expect(Object.keys(result.compiled?.graph.nodes ?? {}).length).toBeGreaterThanOrEqual(3);
   });
+
+  /**
+   * D9, resolved in stage 4. P2 guarantees siblings never write the same file,
+   * so the graph a real cut compiles to should carry no conflict at all, and
+   * `wave-selector-v2` refuses to select two constrained nodes together — a
+   * conflict invented from a shared READ serializes work that is provably safe.
+   *
+   * The legacy compiler cannot express this today: `plannedPaths` may not name
+   * a file that already exists, and its review REQUIRES a conflict constraint
+   * for every scope overlap. So it has no way to say "modifies this existing
+   * file" as distinct from "reads it" — the very ambiguity correction 1 found
+   * in the planner contract. Retrofitting six files in a layer stage 3D
+   * retires would be a half-migration; stage 4 replaces the conflict model
+   * together with the scheduler that consumes it.
+   */
+  it.fails("derives no conflict from units that merely read the same file", async () => {
+    const calls = await readCutTranscript(NAME);
+    if (calls === undefined) return;
+
+    const result = await runRecursivePlanning({
+      fixture: warehouseSlice,
+      goal: GOAL,
+      criteria: CRITERIA,
+      model: replayCutModel(calls),
+      budget: 4
+    });
+
+    const writesByUnit = result.projected?.draft.root.kind === "composite"
+      ? result.projected.draft.root.children.map((child) => child.plannedPaths ?? [])
+      : [];
+    const everyWrite = writesByUnit.flat();
+    // The premise: the cut really is disjoint on writes.
+    expect(new Set(everyWrite).size).toBe(everyWrite.length);
+    // Therefore nothing may conflict.
+    expect(result.compiled?.graph.conflictConstraints).toEqual([]);
+  });
 });
