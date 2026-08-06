@@ -265,7 +265,7 @@ interesante: por qué un escalar no servía para decidir. Retira
 | 2 | Contrato mínimo y descomposición recursiva | **completada** — `d111bd1`, `25be9c7` |
 | 3A | Contrato reads/writes y las cuatro propiedades | **completada** — `ab6c598` |
 | 3B | Relaciones derivadas y proyección | **completada** — `e0e6f99` |
-| 3C | Criterios refinados, cableado productivo y eventos | en curso |
+| 3C | Criterios refinados, cableado productivo y eventos | **parcial** — criterios en `2d5b0a5`; falta cablear el host |
 | 3D | Utilidad como observación y retiros | pendiente |
 | 4 | Scheduler de ready-set y workspace por intento | pendiente |
 | 5 | Terminalidad total y validación derivada | pendiente |
@@ -650,6 +650,23 @@ de coordinación a 2.
 series SP1, SP2, G6, G7 y `retry-*` quedan como evidencia cerrada del proceso de
 descubrimiento de estos defectos. No se reinterpretan, no se reejecutan, no se
 borran. La fórmula de utilidad se conserva en el código como observación.
+
+---
+
+## 4.1 Deuda técnica registrada
+
+Se anota acá a medida que aparece, para que todo se cierre dentro de este plan.
+
+| # | Deuda | Dónde se salda |
+|---|---|---|
+| D1 | El host productivo todavía planifica con `PlanningModule`; falta cablear `RecursivePlanner` y emitir sus eventos durables. | resto de 3C |
+| D2 | La fórmula de utilidad todavía decide en `strategy-selector`. | 3D |
+| D3 | `planning-envelope.ts`, `work-breakdown.ts` y el canal de progreso embebido siguen alcanzables. | 3D |
+| D4 | Las caracterizaciones `it.fails` del camino viejo en `planning-harness.test.ts` se borran junto con ese camino. | 3D |
+| D5 | **La raíz lee todo el snapshot.** Hoy el arnés arma la raíz con *todas* las rutas indexadas. En un repo grande eso es ilimitado y hace que el primer corte se decida sobre ruido. Hace falta una estrategia de grounding que acote las lecturas de la raíz a lo relevante para el objetivo. | etapa nueva antes de 7 |
+| D6 | **Un run no puede declarar criterios de aceptación.** `runPlanningV2` sólo los recibe desde un candidato experimental, así que el objetivo entra como un único criterio implícito. Funciona con refinamiento, pero el objetivo real queda sin enunciar. | 3D o etapa 7 |
+| D7 | `wide-graph-oracle-contract` compara el hash de `dist` contra un freeze histórico y queda rojo con cualquier cambio de producto. Hay que decidir si se declara oráculo histórico y se retira del suite. | 3D |
+| D8 | El presupuesto de scope (`maxScopePaths`) es un parámetro sin anclar, igual que `minimumAdvantage` lo era. Debe salir de una medición del ejecutor, no de un número elegido. | etapa 7 |
 
 ---
 
