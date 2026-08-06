@@ -1,78 +1,72 @@
 import { describe, expect, it } from "vitest";
 import {
   RecursivePlanner,
+  criterionIdFor,
   type CutRequest,
   type PlannedUnit,
   type UnitProposal
 } from "@manyhands/decomposer";
 
 /**
- * Stages 2 and 3A of `docs/plans/2026-08-05-robust-graph-execution-redesign.md`.
+ * Stages 2 and 3 of `docs/plans/2026-08-05-robust-graph-execution-redesign.md`.
  *
- * One model call per unit, parent-first, with a five-field contract per child.
- * The model never decides leaf vs composite — P4 does.
+ * One model call per unit, parent-first, five fields per child. The model never
+ * decides leaf vs composite — P4 does — and never declares a relation.
  *
- * The budget here is four paths, which is the smallest realistic one: a leaf
- * that reads a file, writes a source file and writes its test already costs
- * three. A budget of two would make every honest leaf unsatisfiable.
+ * The budget is three paths: a leaf that reads one file and writes both a
+ * source file and its test already costs three.
  */
 
-const BUDGET = 4;
+const BUDGET = 3;
 
-const CRITERIA = [
-  { id: "criterion-1", description: "Domain records the backorder", required: true },
-  { id: "criterion-2", description: "Application emits the event", required: true },
-  { id: "criterion-3", description: "API exposes the backorders", required: true },
-  { id: "criterion-4", description: "Presentation renders them", required: true }
-];
+const D = "src/domain/orders.js";
+const S = "src/application/service.js";
+const A = "src/api/server.js";
+const U = "src/ui/tower.js";
+const H = "src/shared/util.js";
+const C = "src/config/app.js";
+const BACKORDERS = "src/domain/backorders.js";
 
-const EVIDENCE = [
-  { id: "path-0", kind: "path" as const, reference: "src/domain/orders.js", observation: "domain", confidence: 1 },
-  { id: "path-1", kind: "path" as const, reference: "src/application/service.js", observation: "application", confidence: 1 },
-  { id: "path-2", kind: "path" as const, reference: "src/api/server.js", observation: "api", confidence: 1 },
-  { id: "path-3", kind: "path" as const, reference: "src/ui/tower.js", observation: "ui", confidence: 1 },
-  { id: "path-4", kind: "path" as const, reference: "src/shared/util.js", observation: "shared", confidence: 1 }
-];
+const EVIDENCE = [D, S, A, U, H, C].map((reference, index) => ({
+  id: `path-${index}`,
+  kind: "path" as const,
+  reference,
+  observation: "source file",
+  confidence: 1
+}));
 
-function unit(key: string, criterionIds: string[], reads: string[], writes: string[] = []): UnitProposal {
-  return { key, objective: `Implement ${key}`, criterionIds, reads, writes };
+const GOAL_CRITERIA = [{ id: "criterion-goal", description: "Backorders work end to end", required: true }];
+
+function root(reads: string[]): UnitProposal {
+  return { key: "root", objective: "Add backorders across the stack", criteria: GOAL_CRITERIA, reads, writes: [] };
 }
 
-const ROOT = unit(
-  "root",
-  ["criterion-1", "criterion-2", "criterion-3", "criterion-4"],
-  ["src/domain/orders.js", "src/application/service.js", "src/api/server.js", "src/ui/tower.js", "src/shared/util.js"]
-);
+function child(key: string, reads: string[], writes: string[] = []) {
+  return { key, objective: `Implement ${key}`, criterion: `${key} works`, reads, writes };
+}
 
-function cut(rationale: string, children: UnitProposal[]): string {
+function cut(rationale: string, children: ReturnType<typeof child>[]): string {
   return JSON.stringify({ rationale, children });
 }
 
-const BACKEND = unit(
-  "backend",
-  ["criterion-1", "criterion-2", "criterion-3"],
-  ["src/domain/orders.js", "src/application/service.js", "src/api/server.js"],
-  ["src/domain/backorders.js", "src/application/emit.js"]
-);
-const FRONTEND = unit("frontend", ["criterion-4"], ["src/ui/tower.js"], ["test/frontend.test.js"]);
-const CORE = unit(
-  "core",
-  ["criterion-1", "criterion-2"],
-  ["src/domain/orders.js", "src/application/service.js"],
-  ["src/domain/backorders.js", "src/application/emit.js", "test/core.test.js"]
-);
-const EDGE = unit("edge", ["criterion-3"], ["src/api/server.js"], ["test/edge.test.js"]);
-const DOMAIN = unit("domain", ["criterion-1"], ["src/domain/orders.js"], ["src/domain/backorders.js", "test/domain.test.js"]);
-const APPLICATION = unit("application", ["criterion-2"], ["src/application/service.js"], ["src/application/emit.js", "test/core.test.js"]);
+const ROOT = root([D, S, A, U, H, C]);
 
-/** The tree every structural test below drives, four levels deep. */
+/** Four levels: root -> backend -> core -> {domain, application}. */
 const DEEP_TREE = {
-  root: cut("Split backend from presentation", [BACKEND, FRONTEND]),
-  backend: cut("Split the cohesive core from its edge", [CORE, EDGE]),
-  core: cut("Domain and application are separately verifiable", [DOMAIN, APPLICATION])
+  root: cut("Split backend from presentation", [
+    child("backend", [D, S, A, H, C]),
+    child("frontend", [U], ["test/frontend.test.js"])
+  ]),
+  backend: cut("Split the cohesive core from its edge", [
+    child("core", [D, S], [BACKORDERS, "test/core.test.js"]),
+    child("edge", [A], ["test/edge.test.js"])
+  ]),
+  core: cut("Domain and application are separately verifiable", [
+    child("domain", [D], [BACKORDERS, "test/domain.test.js"]),
+    child("application", [S], ["test/core.test.js"])
+  ])
 };
 
-/** Answers per unit key, so a stub can drive an arbitrary tree shape. */
 function scriptedModel(script: Record<string, string | string[]>) {
   const seen: CutRequest[] = [];
   return {
@@ -87,14 +81,10 @@ function scriptedModel(script: Record<string, string | string[]>) {
   };
 }
 
-function plannerFor(model: { proposeCut(request: CutRequest): Promise<unknown> }) {
-  return new RecursivePlanner({ model, budget: { maxScopePaths: BUDGET }, maxAttemptsPerUnit: 2 });
-}
-
-function planDeep(script: Record<string, string | string[]>, root: UnitProposal = ROOT) {
+function planDeep(script: Record<string, string | string[]>, start: UnitProposal = ROOT) {
   const model = scriptedModel(script);
-  return plannerFor(model)
-    .plan({ root, criteria: CRITERIA, evidence: EVIDENCE })
+  return new RecursivePlanner({ model, budget: { maxScopePaths: BUDGET }, maxAttemptsPerUnit: 2 })
+    .plan({ root: start, criteria: GOAL_CRITERIA, evidence: EVIDENCE })
     .then((result) => ({ model, result }));
 }
 
@@ -107,15 +97,15 @@ function depthOf(node: PlannedUnit): number {
 }
 
 function leafKeys(node: PlannedUnit): string[] {
-  return flatten(node).filter((child) => child.kind === "leaf").map((child) => child.unit.key).sort();
+  return flatten(node).filter((unit) => unit.kind === "leaf").map((unit) => unit.unit.key).sort();
 }
 
 describe("recursive planner", () => {
   it("keeps a unit inside the budget as a leaf without ever calling the model", async () => {
     const model = scriptedModel({});
-    const result = await plannerFor(model).plan({
-      root: unit("small", ["criterion-1"], ["src/domain/orders.js"], ["test/small.test.js"]),
-      criteria: [CRITERIA[0]!],
+    const result = await new RecursivePlanner({ model, budget: { maxScopePaths: BUDGET } }).plan({
+      root: { key: "small", objective: "small", criteria: GOAL_CRITERIA, reads: [D], writes: ["test/small.test.js"] },
+      criteria: GOAL_CRITERIA,
       evidence: EVIDENCE
     });
 
@@ -136,6 +126,16 @@ describe("recursive planner", () => {
 
     expect(model.seen.map((request) => request.unit.key)).toEqual(["root", "backend", "core"]);
     expect(model.seen.map((request) => request.depth)).toEqual([0, 1, 2]);
+  });
+
+  it("gives every child its own derived criterion instead of repeating the parent's", async () => {
+    const { result } = await planDeep(DEEP_TREE);
+    const domain = flatten(result.root).find((node) => node.unit.key === "domain")!;
+
+    expect(domain.unit.criteria).toEqual([
+      { id: criterionIdFor("domain"), description: "domain works", required: true }
+    ]);
+    expect(result.root.unit.criteria).toEqual(GOAL_CRITERIA);
   });
 
   it("records the rationale that justifies every level of depth", async () => {
@@ -173,38 +173,24 @@ describe("recursive planner", () => {
     expect(leafKeys(result.root)).toEqual(["edge", "frontend"]);
   });
 
-  it("rejects a cut whose children claim criteria their parent does not own", async () => {
+  it("rejects a cut that hands a child everything the parent had", async () => {
     const { model, result } = await planDeep({
       ...DEEP_TREE,
       root: [
-        cut("Invents a criterion", [
-          { ...BACKEND, criterionIds: ["criterion-9"] },
-          FRONTEND
-        ]),
+        cut("No shrinking at all", [child("backend", [D, S, A, U, H, C]), child("frontend", [U], ["test/frontend.test.js"])]),
         DEEP_TREE.root
       ]
     });
 
-    expect(model.seen[1]!.repairIssues.join(" ")).toContain("criterion-9");
+    expect(model.seen[1]!.repairIssues.join(" ")).toContain("must shrink");
     expect(result.root.kind).toBe("composite");
-  });
-
-  it("reports a unit it cannot partition instead of inventing a cut", async () => {
-    const { model, result } = await planDeep(
-      {},
-      unit("monolith", ["criterion-1"], EVIDENCE.map((item) => item.reference))
-    );
-
-    expect(model.seen).toHaveLength(0);
-    expect(result.unresolved.map((node) => node.unit.key)).toEqual(["monolith"]);
-    expect(result.unresolved[0]!.diagnostics.join(" ")).toContain("single criterion");
   });
 
   it("states the exact JSON shape in the prompt it sends", async () => {
     const { model } = await planDeep(DEEP_TREE);
 
     const prompt = `${model.seen[0]!.system}\n${model.seen[0]!.user}`;
-    for (const field of ["rationale", "children", "key", "objective", "criterionIds", "reads", "writes"]) {
+    for (const field of ["rationale", "children", "key", "objective", "criterion", "reads", "writes"]) {
       expect(prompt).toContain(field);
     }
     // The SP2 lesson: a field named but never shaped is the field the model gets wrong.

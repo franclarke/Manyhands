@@ -72,7 +72,7 @@ export interface ProjectionInput {
 
 export interface ProjectedPlan {
   draft: SemanticPlanDraft;
-  /** The declared criteria plus one derived integration criterion per composite. */
+  /** Every criterion in the tree: the goal's at the root, one per child below. */
   criteria: GoalCriterion[];
   relations: DerivedRelation[];
 }
@@ -98,16 +98,9 @@ export function projectPlannedTree(input: ProjectionInput): ProjectedPlan {
   const testPathsByKey = new Map(leavesOf(input.tree)
     .map((leaf) => [leaf.unit.key, leaf.unit.writes.filter(isTestPath)] as const));
 
-  // A composite's own obligation is integration, and it must own a criterion to
-  // carry an outcome. Deriving one makes that obligation explicit instead of
-  // borrowing a criterion a descendant already proves.
-  const derivedCriteria: GoalCriterion[] = flattenPlannedUnits(input.tree)
-    .filter((unit) => unit.kind === "composite")
-    .map((unit) => ({
-      id: `integration:${unit.unit.key}`,
-      description: `The children of ${unit.unit.key} agree end to end.`,
-      required: true
-    }));
+  // Every unit owns its own criteria, so the plan's criteria are simply the
+  // union over the tree. No id can collide: a child's id comes from its key.
+  const criteria: GoalCriterion[] = flattenPlannedUnits(input.tree).flatMap((unit) => unit.unit.criteria);
 
   const root = projectUnit(input.tree, evidenceIdByPath, testPathsByKey);
   // The plan must carry the evidence its units cite; a reference to an item the
@@ -134,7 +127,7 @@ export function projectPlannedTree(input: ProjectionInput): ProjectedPlan {
     questions: []
   };
 
-  return { draft, criteria: [...input.criteria, ...derivedCriteria], relations };
+  return { draft, criteria, relations };
 }
 
 function collectEvidenceIds(node: SemanticPlanDraft["root"]): string[] {
@@ -165,12 +158,13 @@ function projectUnit(
     return {
       ...common,
       kind: "composite" as const,
-      outcomes: [{
-        id: `outcome-integration-${unit.key}`,
-        description: `The children of ${unit.key} agree end to end.`,
-        criterionIds: [`integration:${unit.key}`],
+      // A composite proves its own claims by integrating its children.
+      outcomes: unit.criteria.map((criterion) => ({
+        id: `outcome-${unit.key}-${slug(criterion.id)}`,
+        description: `${criterion.description} (proven by integrating ${unit.key})`,
+        criterionIds: [criterion.id],
         verification: { kind: "existing" as const, references: ["repository validation"] }
-      }],
+      })),
       cut: {
         criterion: cutCriterionFor(node),
         rationale: node.rationale
@@ -183,10 +177,10 @@ function projectUnit(
   return {
     ...common,
     kind: "leaf" as const,
-    outcomes: unit.criterionIds.map((criterionId) => ({
-      id: `outcome-${unit.key}-${criterionId}`,
-      description: `${unit.objective} (${criterionId})`,
-      criterionIds: [criterionId],
+    outcomes: unit.criteria.map((criterion) => ({
+      id: `outcome-${unit.key}-${slug(criterion.id)}`,
+      description: criterion.description,
+      criterionIds: [criterion.id],
       verification: verificationFor(testPaths)
     }))
   };
@@ -229,6 +223,11 @@ function concernsFor(unit: UnitProposal): string[] {
 
 function titleFor(unit: UnitProposal): string {
   return unit.key.split(/[-_]/u).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ") || unit.key;
+}
+
+/** Entity ids reject most punctuation, so a derived id becomes a safe suffix. */
+function slug(candidate: string): string {
+  return candidate.replace(/[^A-Za-z0-9._-]/gu, "-");
 }
 
 function normalize(candidate: string): string {

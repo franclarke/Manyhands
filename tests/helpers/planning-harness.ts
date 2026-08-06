@@ -246,7 +246,7 @@ export async function runRecursivePlanning(input: RecursiveRunInput): Promise<Re
     root: {
       key: "root",
       objective: input.goal,
-      criterionIds: input.criteria.map((criterion) => criterion.id),
+      criteria: [...input.criteria],
       reads: evidence.filter((item) => item.kind === "path").map((item) => item.reference),
       writes: []
     },

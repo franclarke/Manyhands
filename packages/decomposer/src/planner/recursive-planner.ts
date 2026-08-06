@@ -3,7 +3,7 @@ import { EntityIdSchema, NonEmptyStringSchema } from "@manyhands/shared";
 import { z } from "zod";
 
 import { parseJsonObjectCandidates } from "../llm/recursive/json.js";
-import type { GoalCriterion } from "./semantic-plan.js";
+import { GoalCriterionSchema, type GoalCriterion } from "./semantic-plan.js";
 import type { RepositoryEvidence } from "./schema.js";
 
 /**
@@ -23,7 +23,8 @@ import type { RepositoryEvidence } from "./schema.js";
 export const UnitProposalSchema = z.object({
   key: EntityIdSchema,
   objective: NonEmptyStringSchema,
-  criterionIds: z.array(EntityIdSchema).min(1),
+  /** What this unit claims. A composite proves its own by integrating children. */
+  criteria: z.array(GoalCriterionSchema).min(1),
   /** Files the unit reads and does not change. */
   reads: z.array(RepoRelativePathSchema).default([]),
   /** Files the unit creates or modifies. Creating and modifying are one promise. */
@@ -33,12 +34,41 @@ export const UnitProposalSchema = z.object({
 export type UnitProposal = z.infer<typeof UnitProposalSchema>;
 
 /**
+ * What the model actually answers, per child. Decomposing the work and
+ * decomposing the acceptance are the same operation, so a child states its own
+ * claim in one sentence; its id is derived from its key and can never collide.
+ */
+export const ChildProposalSchema = z.object({
+  key: EntityIdSchema,
+  objective: NonEmptyStringSchema,
+  criterion: NonEmptyStringSchema,
+  reads: z.array(RepoRelativePathSchema).default([]),
+  writes: z.array(RepoRelativePathSchema).default([])
+}).strict();
+
+export type ChildProposal = z.infer<typeof ChildProposalSchema>;
+
+export function criterionIdFor(unitKey: string): string {
+  return `criterion:${unitKey}`;
+}
+
+function asUnit(child: ChildProposal): UnitProposal {
+  return {
+    key: child.key,
+    objective: child.objective,
+    criteria: [{ id: criterionIdFor(child.key), description: child.criterion, required: true }],
+    reads: child.reads,
+    writes: child.writes
+  };
+}
+
+/**
  * `rationale` is one string and it is what makes depth defensible: every level
  * of the tree can say which boundary justified it.
  */
 export const CutProposalSchema = z.object({
   rationale: NonEmptyStringSchema,
-  children: z.array(UnitProposalSchema).min(2)
+  children: z.array(ChildProposalSchema).min(2)
 }).strict();
 
 export type CutProposal = z.infer<typeof CutProposalSchema>;
@@ -165,15 +195,6 @@ export class RecursivePlanner {
       return { kind: "leaf", unit, depth };
     }
 
-    // A unit with a single criterion has nothing to partition. The honest
-    // answer is that the goal's criteria are coarser than the executor budget,
-    // not a cut invented to satisfy the budget.
-    if (unit.criterionIds.length < 2) {
-      return this.giveUp(unit, depth, input, unresolved, [
-        `P4 ${unit.key}: scope of ${scopeSize(unit)} paths exceeds the budget of ${this.budget.maxScopePaths}, but the unit owns a single criterion and cannot be partitioned. Declare finer acceptance criteria for this goal.`
-      ]);
-    }
-
     const cut = await this.requestCut(unit, depth, input, snapshotPaths);
     if (cut.kind === "failed") return this.giveUp(unit, depth, input, unresolved, cut.diagnostics);
 
@@ -185,7 +206,7 @@ export class RecursivePlanner {
     });
     const children: PlannedUnit[] = [];
     for (const child of cut.proposal.children) {
-      children.push(await this.resolve(child, depth + 1, input, snapshotPaths, unresolved));
+      children.push(await this.resolve(asUnit(child), depth + 1, input, snapshotPaths, unresolved));
     }
     await input.observer?.onUnitResolved?.({ unit, kind: "composite", depth });
     return { kind: "composite", unit, rationale: cut.proposal.rationale, children, depth };
@@ -205,7 +226,7 @@ export class RecursivePlanner {
   }
 
   /** P4. Reads and writes both cost the executor context, so both count. */
-  private fitsBudget(unit: UnitProposal): boolean {
+  private fitsBudget(unit: PathScope): boolean {
     return scopeSize(unit) <= this.budget.maxScopePaths;
   }
 
@@ -279,7 +300,6 @@ export class RecursivePlanner {
   ): string[] {
     const issues: string[] = [];
     const children = proposal.children;
-    const owned = new Set(parent.criterionIds);
     const inherited = new Set(parent.reads.map(normalize));
     const producedBySibling = new Map<string, string[]>();
     const keys = new Set<string>();
@@ -309,10 +329,10 @@ export class RecursivePlanner {
         issues.push(`P3 ${child.key}.reads: ${read} is not in the repository snapshot, is not written by a sibling, and is not inherited from ${parent.key}.`);
       }
 
-      for (const criterionId of child.criterionIds) {
-        if (!owned.has(criterionId)) {
-          issues.push(`children.${child.key}.criterionIds: ${criterionId} is not owned by ${parent.key}`);
-        }
+      // Termination: without this a cut can hand a child everything the parent
+      // had and recurse forever. It is also what "cut" means.
+      if (scopeSize(child) >= scopeSize(parent)) {
+        issues.push(`scope ${child.key}: a cut must shrink its children; ${child.key} carries ${scopeSize(child)} paths and ${parent.key} carries ${scopeSize(parent)}.`);
       }
     }
 
@@ -330,24 +350,13 @@ export class RecursivePlanner {
       }
     }
 
-    // Partition — every criterion keeps exactly one owner.
-    const claimed = new Map<string, number>();
-    for (const child of children) {
-      for (const criterionId of child.criterionIds) {
-        claimed.set(criterionId, (claimed.get(criterionId) ?? 0) + 1);
-      }
-    }
-    for (const criterionId of owned) {
-      const count = claimed.get(criterionId) ?? 0;
-      if (count === 0) issues.push(`children: criterion ${criterionId} lost its owner in this cut`);
-      if (count > 1) issues.push(`children: criterion ${criterionId} is claimed by ${count} children`);
-    }
-
     return unique(issues);
   }
 }
 
-function scopeSize(unit: UnitProposal): number {
+interface PathScope { reads: readonly string[]; writes: readonly string[] }
+
+function scopeSize(unit: PathScope): number {
   return unit.reads.length + unit.writes.length;
 }
 
@@ -383,9 +392,8 @@ export interface CutPromptInput {
  * here as an example value.
  */
 export function buildCutPrompt(input: CutPromptInput): { system: string; user: string } {
-  const criteria = input.criteria
-    .filter((criterion) => input.unit.criterionIds.includes(criterion.id))
-    .map((criterion) => `- ${criterion.id}: ${criterion.description}`)
+  const criteria = input.unit.criteria
+    .map((criterion) => `- ${criterion.description}`)
     .join("\n");
   const evidence = input.evidence
     .map((item) => `- ${item.reference} [${item.kind}] ${item.observation}`)
@@ -404,7 +412,8 @@ export function buildCutPrompt(input: CutPromptInput): { system: string; user: s
       "- A child small enough to implement in one step must write at least one test file that proves its criteria.",
       "- Every `read` must already exist in the repository evidence below, be written by a sibling, or be one the parent already reads.",
       "- Together the children must write every path the parent promised to write.",
-      "- The children partition the parent's criteria: every criterion belongs to exactly one child, and none may be dropped or invented.",
+      "- Every child must carry strictly fewer paths than this unit; a cut that does not shrink is not a cut.",
+      "- `criterion` is what that child alone claims, in one sentence. Do not repeat this unit's claim: this unit proves it by integrating its children.",
       "- `rationale` states the boundary that justifies this cut in one sentence.",
       "- Do not describe interfaces, dependencies, ordering or tests between children. Those are derived, not declared."
     ].join("\n"),
@@ -428,7 +437,7 @@ const CUT_OUTPUT_SHAPE = `{
     {
       "key": "kebab-case-unit-key",
       "objective": "the observable outcome this child owns",
-      "criterionIds": ["criterion-1"],
+      "criterion": "the single claim this child proves on its own",
       "reads": ["src/domain/orders.js"],
       "writes": ["src/domain/backorders.js", "test/backorders.test.js"]
     }

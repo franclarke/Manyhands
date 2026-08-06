@@ -158,14 +158,14 @@ describe("the redesigned path on the same fixture", () => {
         {
           key: "domain-backorders",
           objective: "Record a positive backorder instead of rejecting the order",
-          criterionIds: ["criterion-1"],
+          criterion: "The domain records a positive backorder",
           reads: ["src/domain/orders.js"],
           writes: ["src/domain/backorders.js", "test/domain-backorders.test.js"]
         },
         {
           key: "api-backorders",
           objective: "Expose the recorded backorders",
-          criterionIds: ["criterion-2"],
+          criterion: "The API exposes the current backorders",
           reads: ["src/domain/backorders.js", "src/api/warehouse-api.js"],
           writes: ["test/api-backorders.test.js"]
         }
@@ -226,14 +226,14 @@ describe("the redesigned path on the same fixture", () => {
         {
           key: "domain-backorders",
           objective: "Record the backorder",
-          criterionIds: ["criterion-1"],
+          criterion: "The domain records a positive backorder",
           reads: ["src/domain/orders.js"],
           writes: ["test/shared.test.js"]
         },
         {
           key: "api-backorders",
           objective: "Expose the backorders",
-          criterionIds: ["criterion-2"],
+          criterion: "The API exposes the current backorders",
           reads: ["src/api/warehouse-api.js"],
           writes: ["test/shared.test.js"]
         }
