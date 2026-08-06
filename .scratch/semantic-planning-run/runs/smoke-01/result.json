@@ -1,0 +1,13 @@
+{
+  "cellId": "smoke-01",
+  "condition": "redesign-smoke",
+  "taskId": "SMOKE",
+  "runId": "b7dc07d6-ed5c-4b10-902a-b5ae7ea79f54",
+  "started": "2026-08-06T19:02:35.788Z",
+  "finished": "2026-08-06T19:06:09.611Z",
+  "outcome": {
+    "lifecycle": "waiting_for_input",
+    "receipt": null,
+    "reason": "run parked on resolve_conflict"
+  }
+}

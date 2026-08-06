@@ -267,7 +267,7 @@ interesante: por qué un escalar no servía para decidir. Retira
 | 3B | Relaciones derivadas y proyección | **completada** — `e0e6f99` |
 | 3C | Criterios refinados, cableado productivo y eventos | **completada** — `2d5b0a5`, `7c6ef39` |
 | 3D | Utilidad como observación y retiros | pendiente |
-| 3E | Verificación de la cadena | **parcial** — contrato verificado; falta la corrida end-to-end |
+| 3E | Verificación de la cadena | **completada** — contrato y cadena verificados; rompe en validación (D11) |
 | 4 | Scheduler de ready-set y workspace por intento | pendiente |
 | 5 | Terminalidad total y validación derivada | pendiente |
 | 6 | UI: dos layouts | pendiente |
@@ -620,12 +620,38 @@ transcripción real quedó la cadena `domain -> service -> api`. Funciona
 filtrado ahí y el orden se habría perdido en silencio, que es exactamente la
 clase de defecto de SP1q.
 
-**Supuesto 2 — ¿un plan del camino nuevo es ejecutable?** Abierto. La corrida
-end-to-end sobre el target SP2 es el próximo paso. Su objetivo no es medir: es
-encontrar dónde se rompe la costura entre planning nuevo y ejecución vieja.
+**Supuesto 2 — ¿un plan del camino nuevo es ejecutable?** **VERIFICADO HASTA
+VALIDACIÓN.** Corrida diagnóstica `smoke-01`, run
+`b7dc07d6-ed5c-4b10-902a-b5ae7ea79f54`, sobre un target propio
+`sp2-smoke-01` para no tocar los de SP2, que quedaron intactos.
 
-Esa primera transcripción real ya destapó **D9**, que hay que tener presente al
-leer la corrida: el paralelismo va a estar serializado por una razón conocida.
+Lo que funcionó, en producción y de punta a punta:
+
+| Paso | Resultado |
+|---|---|
+| Planning con el camino nuevo | 4 unidades: root + domain + application + api, en 30 s |
+| Compilación y revisión | 8 críticos, revisión propuesta y aprobada |
+| **Orden derivado** | `readiness.observed` dejó listo **sólo** `domain`; los otros dos esperando la dependencia derivada |
+| Ejecución de la hoja | candidato real `31ef9e36`, 3 archivos, test nuevo incluido, USD 0,147 |
+
+**Dónde se rompe: la validación no ejecutó ningún comando.** La matriz quedó
+`outcome: "unverified"` con `observations: []` y la única obligación
+`uncovered` — «No acceptable evidence is linked to this obligation» — y el run
+parkeó en `resolve_conflict`.
+
+Causa exacta: `capabilities.ts:133`, `if (packageManager === undefined) return
+[]`. El target declara `"test": "node --test test/*.test.mjs"` en sus scripts,
+pero **no tiene lockfile**, así que no se detecta package manager y
+`baselineCommands` queda vacío. Sin comando base, la obligación de validación no
+tiene nada que correr y **todo candidato es `unverified` por construcción**.
+
+> **Implicación retrospectiva:** el template de SP2 es dependency-free a
+> propósito, para no tocar la red. Eso lo vuelve **estructuralmente
+> inverificable** para ManyHands. SP2 no podría haber entregado ni aunque
+> planning hubiera funcionado.
+
+El paralelismo no se midió y no se puede leer de esta corrida: D9 lo serializa
+por una razón ya conocida, y además sólo una hoja llegó a ejecutarse.
 
 ---
 
@@ -667,7 +693,9 @@ leer la corrida: el paralelismo va a estar serializado por una razón conocida.
 
 - Supervisor de liveness dentro del producto: heartbeat vencido + proceso
   ausente ⇒ transición terminal.
-- Derivación de comandos de validación desde los scripts del target.
+- Derivación de comandos de validación desde los scripts del target, **sin
+  exigir un package manager** (D11): si el script existe, se ejecuta con el
+  runtime que corresponda.
 - Taxonomía de fallo cerrada y total: cada fallo mapea a exactamente una causa
   con recuperación definida.
 - **Retiro:** la detección de dueño muerto sale del driver del experimento.
@@ -744,6 +772,7 @@ Se anota acá a medida que aparece, para que todo se cierre dentro de este plan.
 | D6 | **Un run no puede declarar criterios de aceptación.** `runPlanningV2` sólo los recibe desde un candidato experimental, así que el objetivo entra como un único criterio implícito. Funciona con refinamiento, pero el objetivo real queda sin enunciar. | 3D o etapa 7 |
 | D7 | `wide-graph-oracle-contract` compara el hash de `dist` contra un freeze histórico y queda rojo con cualquier cambio de producto. Hay que decidir si se declara oráculo histórico y se retira del suite. | 3D |
 | D8 | El presupuesto de scope (`maxScopePaths`) es un parámetro sin anclar, igual que `minimumAdvantage` lo era. Debe salir de una medición del ejecutor, no de un número elegido. | etapa 7 |
+| D11 | **`baselineCommands` exige un package manager.** Un repo que declara `test` en sus scripts pero no tiene lockfile obtiene cero comandos base, así que la validación no corre nada y **todo candidato queda `unverified`**. Un proyecto Node con `node --test` no necesita package manager para validarse. Encontrado por la corrida `smoke-01`; vuelve inverificable al propio template de SP2. | etapa 5 |
 | D10 | El host cuenta unidades resueltas en el campo `attempt` de `planning.node_discovered`, que semánticamente es un número de intento. No rompe nada, pero el journal miente sobre qué mide. | 3D |
 | D9 | **El compilador declara conflicto entre unidades que sólo *leen* el mismo archivo.** `compileScopeConflicts` cruza el scope completo, así que el corte real de Haiku produjo 2 conflict constraints con escrituras disjuntas, y `wave-selector-v2` **impide seleccionar dos nodos en la misma wave** cuando hay un constraint entre ellos: los lectores compartidos se serializan. Bajo P2 sólo los escritores pueden conflictuar, así que el número correcto es siempre cero. Se intentó el retrofit y **no es expresable en el compilador viejo**: un `plannedPath` no puede nombrar un archivo existente, y su review *exige* un conflict constraint por cada solapamiento de scope. No tiene forma de decir «modifico este archivo existente» distinto de «lo leo» — la misma ambigüedad que la corrección 1 encontró en el contrato del planner. Marcado `it.fails` en `planning-cut-transcript.test.ts`. | etapa 4, junto con el scheduler que lo consume |
 

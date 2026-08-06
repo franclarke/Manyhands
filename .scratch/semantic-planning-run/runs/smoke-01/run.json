@@ -1,0 +1,62 @@
+{
+  "version": 2,
+  "run": {
+    "runId": "b7dc07d6-ed5c-4b10-902a-b5ae7ea79f54",
+    "workspaceId": "42670fbd-8fcd-42f5-b5cf-f9280792edb2",
+    "userPrompt": "Record a backorder when an order exceeds available stock and expose it through the API. An order that exceeds available stock must remain cancellable, record a positive backorder, emit one application event, and be observable through the API. Preserve existing behavior. Add focused tests beside the modified code.",
+    "title": "Record a backorder when an order exceeds available stock and expose it through the API. An order that exceeds available ",
+    "planningSelection": {
+      "executorId": "claude-code-cli",
+      "model": "haiku"
+    },
+    "executionSelection": {
+      "executorId": "claude-code-cli",
+      "model": "haiku"
+    },
+    "repairSelection": {
+      "executorId": "claude-code-cli",
+      "model": "haiku"
+    },
+    "executionConfig": {
+      "maxParallel": 2,
+      "scopePolicy": "strict",
+      "leafTimeoutMs": 900000,
+      "integrationTimeoutMs": 900000,
+      "maxOutputBytes": 65536,
+      "maxValidationCommands": 20,
+      "installTimeoutMs": 300000,
+      "maxPlanningAttempts": 2,
+      "unexpectedCommitPolicy": "reject",
+      "routing": "fixed",
+      "maxCostUsd": 8,
+      "automaticRetryBudget": 0
+    },
+    "targetContext": {
+      "sourceRealPath": "C:\\Users\\franc\\Documents\\Proyectos\\sp2-smoke-01",
+      "gitCommonDir": "C:\\Users\\franc\\Documents\\Proyectos\\sp2-smoke-01\\.git",
+      "physicalIdentity": {
+        "version": 1,
+        "device": "3156479238",
+        "file": "14355223812535162"
+      },
+      "sourceBranch": "main",
+      "sourceBaseCommit": "4d5ae2e5822ca68df8e5d99e53033d4cfb25c116",
+      "fingerprint": "729bac6a11c155b6",
+      "capturedAt": "2026-08-06T19:02:37.973Z"
+    },
+    "projection": {
+      "eventSequence": 27,
+      "lifecycle": "waiting_for_input",
+      "graphId": "graph-semantic-29a0383e20fd213e3125e358-aec6ce736d",
+      "graphRevision": 1,
+      "approvedGraphRevision": 1,
+      "repositorySnapshotId": "sha256:33a6ad621b503821d36d4737233c267bc199ae84a5b366b5db1d65b4324138cc",
+      "updatedAt": "2026-08-06T19:05:06.441Z"
+    },
+    "version": 43,
+    "mutationFence": 4,
+    "createdAt": "2026-08-06T19:02:37.973Z",
+    "updatedAt": "2026-08-06T19:05:06.793Z",
+    "heartbeatAt": "2026-08-06T19:05:05.661Z"
+  }
+}

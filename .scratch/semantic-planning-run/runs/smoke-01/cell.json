@@ -1,0 +1,32 @@
+{
+  "cellId": "smoke-01",
+  "position": 1,
+  "taskId": "SMOKE",
+  "taskLabel": "end-to-end smoke run for the redesigned planning path",
+  "condition": "redesign-smoke",
+  "repetition": 1,
+  "seriesKind": "diagnostic",
+  "note": "Not a measurement cell. Stage 3E of docs/plans/2026-08-05-robust-graph-execution-redesign.md: find where the seam between the new planner and the old execution layer breaks. Its target is independent of the preserved SP2 targets, and its result is a diagnostic, never evidence.",
+  "workspaceName": "sp2-smoke-01",
+  "baseUrl": "http://127.0.0.1:3200",
+  "targetRepo": "C:\\Users\\franc\\Documents\\Proyectos\\sp2-smoke-01",
+  "baseSha": "4d5ae2e5822ca68df8e5d99e53033d4cfb25c116",
+  "goal": "Record a backorder when an order exceeds available stock and expose it through the API. An order that exceeds available stock must remain cancellable, record a positive backorder, emit one application event, and be observable through the API. Preserve existing behavior. Add focused tests beside the modified code.",
+  "planningSelection": { "executorId": "claude-code-cli", "model": "haiku" },
+  "executionSelection": { "executorId": "claude-code-cli", "model": "haiku" },
+  "repairSelection": { "executorId": "claude-code-cli", "model": "haiku" },
+  "executionConfig": {
+    "maxParallel": 2,
+    "scopePolicy": "strict",
+    "leafTimeoutMs": 900000,
+    "integrationTimeoutMs": 900000,
+    "maxPlanningAttempts": 2,
+    "automaticRetryBudget": 0,
+    "maxCostUsd": 8,
+    "unexpectedCommitPolicy": "reject"
+  },
+  "runsDir": "C:\\Users\\franc\\Documents\\Proyectos\\manyhands-sp2-runtime\\runs",
+  "pollIntervalMs": 10000,
+  "wallClockLimitMs": 2700000,
+  "ownerHeartbeatStaleMs": 120000
+}
