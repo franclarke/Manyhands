@@ -287,6 +287,81 @@ export async function runRecursivePlanning(input: RecursiveRunInput): Promise<Re
   return run;
 }
 
+export interface CutTranscriptEntry {
+  unitKey: string;
+  attempt: number;
+  repairIssues: string[];
+  system: string;
+  user: string;
+  response: string;
+}
+
+export interface RecordingCutModel extends CutModel {
+  readonly calls: CutTranscriptEntry[];
+}
+
+/**
+ * Spawns the real Claude Code CLI for one cut. Guarded by
+ * MANYHANDS_HARNESS_LIVE so a normal suite run never reaches the network; only
+ * transcript recording does.
+ */
+export function liveCutModel(model = "haiku"): RecordingCutModel {
+  const calls: CutTranscriptEntry[] = [];
+  return {
+    calls,
+    async proposeCut(request) {
+      if (process.env.MANYHANDS_HARNESS_LIVE !== "1") {
+        throw new Error("liveCutModel requires MANYHANDS_HARNESS_LIVE=1; the suite must not reach the network.");
+      }
+      const { stdout } = await exec(
+        process.env.MANYHANDS_CLAUDE_BIN ?? "claude",
+        ["-p", `${request.system}\n\n${request.user}`, "--model", model, "--output-format", "json", "--permission-mode", "plan"],
+        { maxBuffer: 32 * 1024 * 1024, windowsHide: true }
+      );
+      const envelope: unknown = JSON.parse(stdout);
+      const response = isRecord(envelope) && typeof envelope.result === "string" ? envelope.result : stdout;
+      calls.push({
+        unitKey: request.unit.key,
+        attempt: request.attempt,
+        repairIssues: [...request.repairIssues],
+        system: request.system,
+        user: request.user,
+        response
+      });
+      return response;
+    }
+  };
+}
+
+/** Persists what a real model answered so the suite can replay it offline. */
+export async function writeCutTranscript(name: string, calls: readonly CutTranscriptEntry[]): Promise<string> {
+  await mkdir(TRANSCRIPTS, { recursive: true });
+  const target = path.join(TRANSCRIPTS, `${name}.cuts.json`);
+  await writeFile(target, `${JSON.stringify({ name, recordedWith: "claude-code-cli", calls }, null, 2)}\n`, "utf8");
+  return target;
+}
+
+export async function readCutTranscript(name: string): Promise<CutTranscriptEntry[] | undefined> {
+  const raw = await readFile(path.join(TRANSCRIPTS, `${name}.cuts.json`), "utf8").catch(() => undefined);
+  return raw === undefined ? undefined : (JSON.parse(raw) as { calls: CutTranscriptEntry[] }).calls;
+}
+
+/**
+ * Replays a recorded transcript, matched by unit and attempt. Transcripts are
+ * never edited by hand: a hand-tuned answer proves nothing about the executor.
+ */
+export function replayCutModel(calls: readonly CutTranscriptEntry[]): CutModel {
+  return {
+    async proposeCut(request) {
+      const match = calls.find((call) => call.unitKey === request.unit.key && call.attempt === request.attempt);
+      if (match === undefined) {
+        throw new Error(`Transcript has no answer for ${request.unit.key} attempt ${request.attempt}.`);
+      }
+      return match.response;
+    }
+  };
+}
+
 /**
  * Answers with scripted responses, in order, reusing the last one once the
  * script is exhausted. A function receives the request so a test can react to
