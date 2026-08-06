@@ -265,7 +265,8 @@ interesante: por qué un escalar no servía para decidir. Retira
 | 2 | Contrato mínimo y descomposición recursiva | **completada** — `d111bd1`, `25be9c7` |
 | 3A | Contrato reads/writes y las cuatro propiedades | **completada** — `ab6c598` |
 | 3B | Relaciones derivadas y proyección | **completada** — `e0e6f99` |
-| 3C | Cableado productivo, utilidad como observación y retiros | pendiente |
+| 3C | Criterios refinados, cableado productivo y eventos | en curso |
+| 3D | Utilidad como observación y retiros | pendiente |
 | 4 | Scheduler de ready-set y workspace por intento | pendiente |
 | 5 | Terminalidad total y validación derivada | pendiente |
 | 6 | UI: dos layouts | pendiente |
@@ -506,6 +507,31 @@ planner en vez de duplicar esa construcción en el paquete.
 > también el argumento de la tesis: **el mismo invariante que antes rechazaba
 > planes ahora es un teorema del método de construcción.**
 
+#### Corrección 3 — los criterios se refinan, no se particionan
+
+Descubierta al cablear 3C. `runPlanningV2` recibe `acceptanceCriteria` sólo
+desde un candidato experimental; **un run productivo normal no declara
+ninguno**, así que la raíz queda con un único criterio derivado del objetivo. Con
+la regla de partición de 3A, toda raíz sobre presupuesto sería `unresolved`. El
+camino nuevo estaría muerto al nacer.
+
+La corrección es la que el diseño ya pedía sin haberlo dicho: **descomponer el
+trabajo y descomponer la aceptación son la misma operación**.
+
+- Cada hija declara **su propio criterio**, una frase, con id derivado de su key.
+- Los criterios del padre **se quedan con el padre**, y son exactamente lo que su
+  outcome de integración prueba sobre el árbol fusionado.
+- Se retira la regla de partición: no había nada que partir.
+
+Sigue habiendo cinco campos por hija — `criterionIds` se reemplaza por
+`criterion`. Y las tres garantías se conservan: toda unidad posee al menos un
+criterio, cada criterio tiene exactamente un dueño porque su id sale de una key
+única, y el objetivo se prueba en la raíz por integración de todo el árbol.
+
+Es también más honesto: que las hijas cubran el criterio del padre no es algo
+que un validador pueda afirmar de antemano; lo prueba la integración, que es
+donde el diseño ya decidió mover la validación.
+
 **3C — Cableado productivo y eventos durables.** Reemplazar la rama de
 `PlanningModule` en el host, emitir los eventos de journal, y **recién entonces**
 retirar `planning-envelope.ts`, `work-breakdown.ts`, el canal de progreso
@@ -513,7 +539,15 @@ embebido y la decisión de `strategy-selector`.
 
 *Aceptación:* un run productivo planifica con el camino nuevo; el journal
 registra nodo resuelto, corte propuesto, reparación intentada y nodo sin
-resolver; ningún módulo retirado queda alcanzable.
+resolver.
+
+**3D — Utilidad como observación y retiros.** La fórmula se calcula y persiste
+por nodo sin decidir, y recién entonces se retiran `planning-envelope.ts`,
+`work-breakdown.ts`, el canal de progreso embebido y la decisión de
+`strategy-selector`.
+
+*Aceptación:* los assessments se persisten con la misma forma que hoy; ningún
+módulo retirado queda alcanzable.
 
 **Fuera de alcance:** ejecución.
 
