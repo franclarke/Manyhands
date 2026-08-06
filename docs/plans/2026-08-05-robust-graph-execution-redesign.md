@@ -117,10 +117,13 @@ Una unidad es **hoja ejecutable** si y solo si:
 
 | | Propiedad | Qué previene |
 |---|---|---|
-| **P1** | posee ≥1 criterio de aceptación y existe un comando dentro de su propio scope que lo prueba | validación fantasma, criterios huérfanos |
-| **P2** | su write-set es disjunto del de todas sus hermanas | outputs disputados, conflictos de integración |
-| **P3** | todo archivo que lee y otra unidad escribe llega materializado como archivos en su base | `artifact_empty`, seams `logical` |
+| **P1** | posee ≥1 criterio, y si es hoja declara un archivo de test entre sus `writes` | validación fantasma, criterios huérfanos |
+| **P2** | sus `writes` son disjuntos de los de todas sus hermanas | outputs disputados, conflictos de integración |
+| **P3** | todo `read` está en el snapshot, en los `writes` de una hermana, o en los `reads` del padre | `artifact_empty`, seams `logical` |
 | **P4** | su scope entra en el presupuesto observado del ejecutor | hojas infactibles |
+
+Ver la etapa 3 para la formulación precisa: P4 gobierna la recursión, P1–P3 son
+invariantes del corte y se reparan por el mismo canal.
 
 **Regla de decisión:** dividir ⟺ alguna propiedad falla **y** el modelo propone
 un corte cuyos hijos la reparan. Si ninguna falla, es hoja. Si P4 falla y no hay
@@ -144,7 +147,7 @@ Una llamada por unidad. Al modelo se le pide **solo esto**, por hijo:
 
 ```json
 { "key": "...", "objective": "...", "criterionIds": ["..."],
-  "existingPaths": ["..."], "plannedPaths": ["..."] }
+  "reads": ["..."], "writes": ["..."] }
 ```
 
 Cinco campos. Sin seams, sin interfaces, sin objetos de verificación, sin
@@ -260,7 +263,9 @@ interesante: por qué un escalar no servía para decidir. Retira
 |---|---|---|
 | 1 | Arnés de planning en proceso | **completada** — `d508b7b` |
 | 2 | Contrato mínimo y descomposición recursiva | **completada** — `d111bd1`, `25be9c7` |
-| 3 | Punto fijo P1–P4 y relaciones derivadas | pendiente |
+| 3A | Contrato reads/writes y las cuatro propiedades | en curso |
+| 3B | Relaciones derivadas y proyección | pendiente |
+| 3C | Cableado productivo y retiros | pendiente |
 | 4 | Scheduler de ready-set y workspace por intento | pendiente |
 | 5 | Terminalidad total y validación derivada | pendiente |
 | 6 | UI: dos layouts | pendiente |
@@ -394,34 +399,98 @@ produce el árbol que el modelo propone, nodo a nodo.
 
 ### Etapa 3 — Punto fijo P1–P4 y relaciones derivadas
 
-**Qué se construye**
+> Planificada en detalle el 2026-08-05. Al diseñarla aparecieron **dos
+> correcciones al contrato de la etapa 2** que se aplican acá.
 
-- Evaluador de P1–P4 por unidad, determinista, con diagnóstico por propiedad.
-- El bucle de punto fijo: dividir mientras alguna propiedad falle y exista corte
-  que la repare; hoja si ninguna falla; fallo reportable si P4 falla sin corte.
-- Derivación de relaciones (§2.4) desde write-sets y read-sets.
-- La fórmula de utilidad pasa a observación: se calcula y persiste por nodo y no
-  participa de ninguna decisión.
-- **Cableado productivo del `RecursivePlanner`** en el host de planning, con sus
-  eventos durables de journal: nodo resuelto, corte propuesto, reparación
-  intentada y nodo sin resolver.
-- **Retiros:** `planning-envelope.ts`, `work-breakdown.ts` y la mitad de
-  `schema.ts` que los sostiene; `strategy-selector` deja de decidir; el canal de
-  progreso embebido y `parseWorkBreakdownProgressLine`, que quedan sin
-  consumidor una vez retirada la ruta vieja.
+#### Corrección 1 — `reads` y `writes` en vez de `existingPaths` y `plannedPaths`
 
-**Aceptación**
+La etapa 2 heredó del sistema viejo la partición «rutas que existen» contra
+«rutas que voy a crear». Esa partición **no distingue leer de escribir**: un
+archivo existente que la unidad va a modificar y otro que solo necesita mirar
+caen los dos en `existingPaths`.
 
-- Un fixture con un corte que solapa write-sets **no** produce conflict
-  constraints: produce un re-corte local o una hoja más grande.
-- Una dependencia ejecutable no puede representarse como `logical`: no existe el
-  valor en el tipo derivado.
-- La profundidad del árbol resultante varía con el fixture, y cada nivel tiene un
-  diagnóstico de qué propiedad lo motivó.
-- Los assessments de utilidad siguen persistiéndose con la misma forma que hoy,
-  para no perder comparabilidad de la medición.
+Con esa ambigüedad P2 y P3 son incomputables. El contrato pasa a ser:
+
+- `writes` — archivos que la unidad **crea o modifica**;
+- `reads` — archivos que la unidad **necesita leer y no cambia**.
+
+Siguen siendo cinco campos por hijo, y las dos preguntas son más naturales para
+el modelo que la distinción existe/no existe. Que un `write` exista o no en el
+snapshot deja de importar: crear y modificar son el mismo compromiso.
+
+#### Corrección 2 — las propiedades son invariantes del corte, no un evaluador aparte
+
+Al escribir los remedios se ve que **cada propiedad violada pide una acción
+distinta**, y que tres de las cuatro son propiedades de un *conjunto de
+hermanas*, no de una unidad aislada:
+
+| | Propiedad | Nivel | Remedio |
+|---|---|---|---|
+| **P1** | toda hija que entra en el presupuesto declara al menos un archivo de test entre sus `writes` | corte | reparar el corte |
+| **P2** | los `writes` de las hijas son disjuntos de a pares | corte | reparar el corte |
+| **P3** | todo `read` de una hija está en el snapshot, o en los `writes` de una hermana, o en los `reads` del padre | corte | reparar el corte |
+| **P4** | el scope de la unidad entra en el presupuesto del ejecutor | unidad | **cortar** esa unidad |
+
+Es decir: **P4 gobierna la recursión y P1–P3 gobiernan la validez del corte**,
+por el mismo canal de reparación que ya existe. No hace falta un evaluador
+separado ni un segundo bucle.
+
+**P1 distingue hoja de composite:** una hoja debe traer su test porque se prueba
+sola; un composite prueba por integración sobre el árbol fusionado, así que le
+alcanza con poseer un criterio. Una hija se sabe hoja en el momento del corte,
+porque eso es P4 sobre su propia declaración.
+
+**P3 es inductivo y por eso es local.** Caso base: los `reads` de la raíz están
+en el snapshot, porque no existe otra cosa. Paso: si los `reads` de `U` son
+satisfacibles, y cada hija lee solo del snapshot, de los `writes` de una hermana
+o de los `reads` de `U`, entonces toda hija es satisfacible. Se verifica mirando
+únicamente a las hermanas: no hace falta el árbol completo.
+
+**Además:** la unión de los `writes` de las hijas debe **cubrir** los `writes`
+del padre. Un corte no puede perder por el camino un archivo que el padre se
+comprometió a producir.
+
+#### Sub-etapas
+
+**3A — Contrato de lecturas/escrituras y las cuatro propiedades.** Migrar el
+contrato, implementar P1–P3 como invariantes del corte con diagnóstico por
+propiedad, y P4 como gobierno de la recursión. Sin producción todavía.
+
+*Aceptación:* un corte con `writes` solapados se rechaza y se repara, y nunca
+llega a compilarse; un `read` colgado se rechaza con el archivo exacto; una hija
+dentro del presupuesto sin test se rechaza; un corte que pierde un `write` del
+padre se rechaza; cada rechazo nombra la propiedad y la hija.
+
+**3B — Relaciones derivadas y proyección.** Derivar las dependencias de
+`reads ∩ writes`, con materialización `files` por construcción. Proyectar el
+árbol a `SemanticPlan` y compilar con el compilador existente. La fórmula de
+utilidad pasa a observación.
+
+*Aceptación:* los tres `it.fails` del arnés se ponen rojos y se convierten en
+tests normales; `logical` no aparece nunca en la salida derivada; los
+assessments de utilidad se siguen persistiendo con la misma forma.
+
+> Nota de diseño: se **reusa** `compileGraphRevision` en vez de escribir un
+> compilador nuevo. Sus doce invariantes dejan de ser loterías y pasan a
+> cumplirse por construcción — los criterios están poseídos exactamente una vez
+> porque el corte particiona, las seams tienen productor y consumidor porque se
+> derivan, y la materialización ejecutable es `files` porque son archivos. Es
+> también el argumento de la tesis: **el mismo invariante que antes rechazaba
+> planes ahora es un teorema del método de construcción.**
+
+**3C — Cableado productivo y eventos durables.** Reemplazar la rama de
+`PlanningModule` en el host, emitir los eventos de journal, y **recién entonces**
+retirar `planning-envelope.ts`, `work-breakdown.ts`, el canal de progreso
+embebido y la decisión de `strategy-selector`.
+
+*Aceptación:* un run productivo planifica con el camino nuevo; el journal
+registra nodo resuelto, corte propuesto, reparación intentada y nodo sin
+resolver; ningún módulo retirado queda alcanzable.
 
 **Fuera de alcance:** ejecución.
+
+> **Regla de retiro:** no se borra código todavía alcanzable. Los retiros de 3C
+> ocurren después de que el camino nuevo esté probado en producción, nunca antes.
 
 ---
 
