@@ -776,11 +776,32 @@ por una razón ya conocida, y además sólo una hoja llegó a ejecutarse.
   workspace: un commit alcanzable sólo desde un worktree eliminado es
   inalcanzable, así que el orden es la garantía.
 
-  *Pendiente:* los worktrees de hoja siguen viniendo de `WorktreeManager`, que
-  direcciona por `taskId` y no por intento, así que dos intentos de una misma
-  tarea no pueden coexistir. Migrarlo es lo que habilita retirar `worktree-pool`,
-  `fenced-lease` y `topology-lease`. La caché de dependencias sigue acoplada al
-  estado git.
+  *Corrección del 2026-08-07 sobre lo que quedaba pendiente.* La nota anterior
+  decía que los worktrees de hoja seguían viniendo de `WorktreeManager` con
+  direccionamiento por `taskId`. **Es incorrecto y lo verifiqué después:**
+  `ExecutionBaseBuilder` prefiere el `workspaceProvider` cuando existe
+  (`execution-base-builder.ts:78`), y el pipeline V2 ahora le pasa el efímero,
+  así que **la hoja y su base ya son frescas por intento**. El
+  `worktreeManager.create` de esa línea es el fallback de cuando no hay provider.
+
+  Lo que realmente queda usando `WorktreeManager` en el camino productivo:
+
+  - `GitCandidateSandboxFactory` (`candidate-validator.ts:61`), que ya es
+    create/dispose por uso y direcciona por commit candidato — efímero en forma,
+    sólo que a través del manager y por lo tanto de su topology lease.
+  - `gcRun` al cerrar el run.
+
+  `recordFor` —el único punto que recomputa la ruta desde `taskId` y que sí
+  bloquearía el direccionamiento por intento— lo usa **sólo `RunExecutor`, que
+  no tiene ningún sitio de construcción productivo** (`new RunExecutor` no
+  aparece en `apps/` ni en `packages/*/src`). Es legacy, como lo era
+  `PlanningModule`.
+
+  *Entonces:* migrar el manager es más chico de lo que decía la nota anterior, y
+  el orden correcto es (1) mover el sandbox del validador al provider efímero,
+  (2) reemplazar el topology lease por el turnstile en proceso, (3) retirar
+  `worktree-pool`, `fenced-lease` y `topology-lease`. La caché de dependencias
+  sigue acoplada al estado git.
 - Lock de dueño por run con PID y toma si el dueño murió.
 - **Retiros:** `worktree-pool.ts`, `fenced-lease.ts`, `topology-lease.ts`,
   repository lease, takeover receipts, `mutationFence`, abort registry
