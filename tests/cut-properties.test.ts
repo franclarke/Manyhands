@@ -125,7 +125,60 @@ describe("P2 — siblings never write the same file", () => {
     expect(rejection).toContain("application");
     expect(result.root.kind).toBe("composite");
   });
+
+  /**
+   * Stage 4. A cut only sees its own siblings, so per-cut disjointness leaves
+   * cousins free to claim the same file: coverage only requires a child's
+   * subtree to write *at least* what its parent promised, never exactly that.
+   *
+   * The whole point of P2 is that two concurrent nodes never touch one file, so
+   * the scheduler can run them without a conflict model. Enforced per cut, that
+   * guarantee is local and the compiler has to rediscover collisions it should
+   * have been able to assume away — which is what D9 is. It has to hold for the
+   * tree, the same way key uniqueness does.
+   */
+  it("rejects a write already claimed by a unit in another branch", async () => {
+    const model = modelByKey({
+      // Two over-budget branches, cut independently. `api` sits under `backend`
+      // and `tower` under `frontend`, so they are never siblings and no single
+      // cut ever sees both.
+      root: cut([
+        child("backend", [D, S, A], [BACKORDERS]),
+        child("frontend", [U, H, S], ["test/tower.test.js"])
+      ]),
+      backend: cut([
+        child("domain", [D], [BACKORDERS, "test/domain.test.js"]),
+        child("api", [A], ["test/contested.test.js"])
+      ]),
+      frontend: cut([
+        child("tower", [U], ["test/tower.test.js"]),
+        child("shared", [H], ["test/contested.test.js"])
+      ])
+    });
+    const result = await new RecursivePlanner({
+      model,
+      budget: { maxScopePaths: BUDGET },
+      maxAttemptsPerUnit: 1
+    }).plan({ root: parentUnit([D, S, A, U, H]), criteria: GOAL, evidence: EVIDENCE });
+
+    const writes = leafWrites(result.root);
+    expect(writes.length).toBe(new Set(writes).size);
+    // ...and for the right reason: the contested cut was rejected naming the
+    // property, the file and the branch that already owns it. Without this the
+    // test would also pass if planning had merely collapsed to fewer leaves.
+    const rejection = result.unresolved.flatMap((unit) => unit.diagnostics).join("\n");
+    expect(rejection).toContain("P2");
+    expect(rejection).toContain("test/contested.test.js");
+    expect(rejection).toContain("api");
+  });
 });
+
+/** Every path written by a leaf in the resolved tree, in traversal order. */
+function leafWrites(node: { kind: string; unit: { writes: readonly string[] }; children?: unknown[] }): string[] {
+  if (node.kind === "leaf") return [...node.unit.writes];
+  if (node.kind !== "composite") return [];
+  return (node.children as Parameters<typeof leafWrites>[0][]).flatMap(leafWrites);
+}
 
 describe("P3 — every read is satisfiable where the unit runs", () => {
   it("rejects a read that is neither in the snapshot nor written by a sibling", async () => {

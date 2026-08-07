@@ -35,6 +35,8 @@ const WorkUnitCommonShape = {
   acceptanceIntentIds: z.array(EntityIdSchema).min(1),
   evidenceIds: z.array(EntityIdSchema),
   plannedPaths: z.array(RepoRelativePathSchema).optional(),
+  /** Every file the unit writes, existing or not. See SemanticWorkUnit. */
+  writePaths: z.array(RepoRelativePathSchema).optional(),
   complexitySignals: ComplexitySignalsSchema.optional()
 };
 
@@ -48,6 +50,7 @@ export interface WorkUnitLeaf {
   acceptanceIntentIds: string[];
   evidenceIds: string[];
   plannedPaths?: string[] | undefined;
+  writePaths?: string[] | undefined;
   complexitySignals?: ComplexitySignals | undefined;
 }
 
@@ -61,6 +64,7 @@ export interface WorkUnitComposite {
   acceptanceIntentIds: string[];
   evidenceIds: string[];
   plannedPaths?: string[] | undefined;
+  writePaths?: string[] | undefined;
   complexitySignals?: ComplexitySignals | undefined;
   cut: z.infer<typeof SemanticCutSchema>;
   children: WorkUnit[];

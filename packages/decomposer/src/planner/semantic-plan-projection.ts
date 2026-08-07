@@ -121,6 +121,7 @@ function projectUnit(unit: SemanticWorkUnit): WorkUnit {
     acceptanceIntentIds: unit.outcomes.flatMap((outcome) => outcome.criterionIds),
     evidenceIds: unit.evidenceIds,
     ...(unit.plannedPaths === undefined ? {} : { plannedPaths: unit.plannedPaths }),
+    ...(unit.writePaths === undefined ? {} : { writePaths: unit.writePaths }),
     ...(unit.complexitySignals === undefined ? {} : { complexitySignals: unit.complexitySignals })
   };
   return unit.kind === "leaf"

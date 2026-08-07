@@ -151,7 +151,11 @@ function projectUnit(
     objective: unit.objective,
     concerns: concernsFor(unit),
     evidenceIds,
-    ...(plannedPaths.length > 0 ? { plannedPaths } : {})
+    ...(plannedPaths.length > 0 ? { plannedPaths } : {}),
+    // The full write set, which `plannedPaths` cannot express: it drops the
+    // files that already exist, and those are exactly the ones a shared-read
+    // conflict used to be invented from.
+    ...(unit.writes.length > 0 ? { writePaths: [...unit.writes] } : {})
   };
 
   if (node.kind === "composite") {

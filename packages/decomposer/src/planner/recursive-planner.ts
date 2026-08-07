@@ -193,7 +193,13 @@ export class RecursivePlanner {
     // key collapse into a single node and silently merge their scopes. A cut
     // only sees its own siblings, so uniqueness has to be tracked for the tree.
     const claimedKeys = new Set<string>([root.key]);
-    const resolved = await this.resolve(root, 0, ROOT_POSITION, input, snapshotPaths, unresolved, claimedKeys);
+    // P2 has to hold for the tree, not for one cut. A cut sees only its own
+    // siblings, and coverage lets a subtree write more than its parent
+    // promised, so cousins were free to claim the same file — and the compiler
+    // had to rediscover collisions the scheduler should have been able to
+    // assume away (D9). Ownership is tracked the same way keys are.
+    const claimedWrites = new Map<string, string>();
+    const resolved = await this.resolve(root, 0, ROOT_POSITION, input, snapshotPaths, unresolved, claimedKeys, claimedWrites);
     return { root: resolved, unresolved };
   }
 
@@ -204,12 +210,24 @@ export class RecursivePlanner {
     input: RecursivePlanInput,
     snapshotPaths: ReadonlySet<string>,
     unresolved: UnresolvedUnit[],
-    claimedKeys: Set<string>
+    claimedKeys: Set<string>,
+    claimedWrites: Map<string, string>
   ): Promise<PlannedUnit> {
     // A leaf is a unit that can prove something. Fitting the budget is not
     // enough: the root arrives with reads and no writes, and accepting it would
     // produce a plan whose only unit promises no output at all.
     if (this.isExecutableLeaf(unit)) {
+      // The backstop that makes tree-wide P2 total. A leaf is never cut, so the
+      // cut-time check below cannot see it: a composite sibling resolved
+      // earlier may already have claimed one of these paths deeper down.
+      const contested = unit.writes
+        .map((written) => ({ written, owner: claimedWrites.get(normalize(written)) }))
+        .filter((item) => item.owner !== undefined && item.owner !== unit.key);
+      if (contested.length > 0) {
+        return this.giveUp(unit, depth, position, input, unresolved, contested.map((item) =>
+          `P2 ${unit.key}: ${item.written} is already written by ${item.owner}. Two units that write one file cannot run concurrently; give the file one owner.`));
+      }
+      for (const written of unit.writes) claimedWrites.set(normalize(written), unit.key);
       await input.observer?.onUnitResolved?.({ unit, kind: "leaf", depth, position });
       return { kind: "leaf", unit, depth };
     }
@@ -219,7 +237,7 @@ export class RecursivePlanner {
       ]);
     }
 
-    const cut = await this.requestCut(unit, depth, input, snapshotPaths, claimedKeys);
+    const cut = await this.requestCut(unit, depth, input, snapshotPaths, claimedKeys, claimedWrites);
     if (cut.kind === "failed") return this.giveUp(unit, depth, position, input, unresolved, cut.diagnostics);
 
     await input.observer?.onCutProposed?.({
@@ -240,7 +258,8 @@ export class RecursivePlanner {
         input,
         snapshotPaths,
         unresolved,
-        claimedKeys
+        claimedKeys,
+        claimedWrites
       ));
     }
     return { kind: "composite", unit, rationale: cut.proposal.rationale, children, depth };
@@ -275,7 +294,8 @@ export class RecursivePlanner {
     depth: number,
     input: RecursivePlanInput,
     snapshotPaths: ReadonlySet<string>,
-    claimedKeys: ReadonlySet<string>
+    claimedKeys: ReadonlySet<string>,
+    claimedWrites: ReadonlyMap<string, string>
   ): Promise<{ kind: "ok"; proposal: CutProposal } | { kind: "failed"; diagnostics: string[] }> {
     let repairIssues: string[] = [];
     for (let attempt = 1; attempt <= this.maxAttempts; attempt += 1) {
@@ -298,7 +318,7 @@ export class RecursivePlanner {
         repairIssues = [error instanceof Error ? error.message : String(error)];
         continue;
       }
-      const parsed = this.validate(raw, unit, snapshotPaths, claimedKeys);
+      const parsed = this.validate(raw, unit, snapshotPaths, claimedKeys, claimedWrites);
       if (parsed.kind === "ok") return parsed;
       repairIssues = parsed.diagnostics;
     }
@@ -309,7 +329,8 @@ export class RecursivePlanner {
     raw: unknown,
     parent: UnitProposal,
     snapshotPaths: ReadonlySet<string>,
-    claimedKeys: ReadonlySet<string>
+    claimedKeys: ReadonlySet<string>,
+    claimedWrites: ReadonlyMap<string, string>
   ): { kind: "ok"; proposal: CutProposal } | { kind: "failed"; diagnostics: string[] } {
     const candidates = objectCandidates(raw);
     if (candidates.kind === "failed") return candidates;
@@ -321,7 +342,7 @@ export class RecursivePlanner {
         failures.push(...parsed.error.issues.map((issue) => `${issue.path.join(".") || "root"}: ${issue.message}`));
         continue;
       }
-      const violations = this.cutViolations(parsed.data, parent, snapshotPaths, claimedKeys);
+      const violations = this.cutViolations(parsed.data, parent, snapshotPaths, claimedKeys, claimedWrites);
       if (violations.length > 0) {
         failures.push(...violations);
         continue;
@@ -339,7 +360,8 @@ export class RecursivePlanner {
     proposal: CutProposal,
     parent: UnitProposal,
     snapshotPaths: ReadonlySet<string>,
-    claimedKeys: ReadonlySet<string>
+    claimedKeys: ReadonlySet<string>,
+    claimedWrites: ReadonlyMap<string, string>
   ): string[] {
     const issues: string[] = [];
     const children = proposal.children;
@@ -386,11 +408,21 @@ export class RecursivePlanner {
       }
     }
 
-    // P2 — siblings never write the same file.
+    // P2 — siblings never write the same file...
     for (const [path, writers] of producedBySibling) {
       if (writers.length > 1) {
         issues.push(`P2 ${writers.join(" and ")}: both write ${path}. Give the file one owner and let the others read it.`);
       }
+    }
+
+    // ...and neither does a unit in any other branch. The parent's own promised
+    // writes are excluded: coverage *requires* a child to reproduce them, so
+    // re-claiming what this branch already owns is the contract, not a clash.
+    const inheritedWrites = new Set(parent.writes.map(normalize));
+    for (const [path, writers] of producedBySibling) {
+      const owner = claimedWrites.get(path);
+      if (owner === undefined || inheritedWrites.has(path) || writers.includes(owner)) continue;
+      issues.push(`P2 ${writers.join(" and ")}: ${path} is already written by ${owner} in another branch. Two units that write one file cannot run concurrently; give the file one owner and let the others read it.`);
     }
 
     // Coverage — a cut cannot drop what the parent promised to produce.

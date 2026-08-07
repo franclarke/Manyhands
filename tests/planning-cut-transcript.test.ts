@@ -79,15 +79,14 @@ describe("the cut contract against a real model", () => {
    * `wave-selector-v2` refuses to select two constrained nodes together — a
    * conflict invented from a shared READ serializes work that is provably safe.
    *
-   * The legacy compiler cannot express this today: `plannedPaths` may not name
-   * a file that already exists, and its review REQUIRES a conflict constraint
-   * for every scope overlap. So it has no way to say "modifies this existing
-   * file" as distinct from "reads it" — the very ambiguity correction 1 found
-   * in the planner contract. Retrofitting six files in a layer stage 3D
-   * retires would be a half-migration; stage 4 replaces the conflict model
-   * together with the scheduler that consumes it.
+   * Closed in stage 4. The compiler could not express it while `plannedPaths`
+   * was the only write signal — it cannot name a file that already exists, so
+   * "modifies this" was indistinguishable from "reads this". Units now carry an
+   * explicit `writePaths`, conflicts are compiled from writes alone, and
+   * tree-wide P2 makes the write sets of distinct branches disjoint, so on this
+   * recorded cut the count is zero rather than two.
    */
-  it.fails("derives no conflict from units that merely read the same file", async () => {
+  it("derives no conflict from units that merely read the same file", async () => {
     const calls = await readCutTranscript(NAME);
     if (calls === undefined) return;
 

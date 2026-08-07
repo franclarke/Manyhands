@@ -30,6 +30,12 @@ export interface ContractCompilationResult {
   nodeOutputArtifactContracts: ArtifactContract[];
   seamContracts: SeamContract[];
   scopePathsByNodeId: Record<string, string[]>;
+  /**
+   * Paths each node *writes*, rolled up the tree. Distinct from the scope,
+   * which also contains everything the node merely reads: only writers can
+   * conflict, so this is what the conflict model is allowed to look at.
+   */
+  writePathsByNodeId: Record<string, string[]>;
   acceptanceOwnerByIntentId: Record<string, string>;
 }
 
@@ -56,6 +62,13 @@ export function compileContractBundles(input: {
         .concat((unit.plannedPaths ?? []).map((path) => normalizeRepositoryPath(path, repositoryRoot)))
     : (explicitScopes.get(unit.key) ?? []).map((path) => normalizeRepositoryPath(path, repositoryRoot))]));
   populateScopePaths(input.breakdown.root, input.nodeIdByUnitKey, directPaths, scopePathsByNodeId);
+  const writePathsByNodeId: Record<string, string[]> = {};
+  // A unit that predates stage 4 carries no `writePaths`; its planned paths are
+  // the only writes it ever declared, so they stand in. That is narrower than
+  // the truth for such a plan, never wider, so it cannot invent a conflict.
+  const directWrites = new Map(units.map((unit) => [unit.key,
+    (unit.writePaths ?? unit.plannedPaths ?? []).map((path) => normalizeRepositoryPath(path, repositoryRoot))]));
+  populateWritePaths(input.breakdown.root, input.nodeIdByUnitKey, directWrites, writePathsByNodeId);
 
   const artifactContracts = input.breakdown.candidateArtifacts.map((candidate) => {
     const producerNodeId = requireNodeId(input.nodeIdByUnitKey, candidate.producerUnitKey);
@@ -205,6 +218,7 @@ export function compileContractBundles(input: {
     nodeOutputArtifactContracts,
     seamContracts,
     scopePathsByNodeId,
+    writePathsByNodeId,
     acceptanceOwnerByIntentId
   };
 }
@@ -285,6 +299,21 @@ function normalizeRepositoryPath(value: string, repositoryRoot: string): string 
   if (normalizedLower === rootLower) return "";
   if (normalizedLower.startsWith(`${rootLower}/`)) return normalized.slice(root.length + 1);
   return normalized;
+}
+
+/** Same roll-up as the scope, but a node with no writes is legitimate. */
+function populateWritePaths(
+  unit: WorkUnit,
+  nodeIdByUnitKey: Record<string, string>,
+  directWrites: ReadonlyMap<string, string[]>,
+  output: Record<string, string[]>
+): string[] {
+  const descendants = unit.kind === "composite"
+    ? unit.children.flatMap((child) => populateWritePaths(child, nodeIdByUnitKey, directWrites, output))
+    : [];
+  const paths = [...new Set([...(directWrites.get(unit.key) ?? []), ...descendants])].sort();
+  output[requireNodeId(nodeIdByUnitKey, unit.key)] = paths;
+  return paths;
 }
 
 function populateScopePaths(

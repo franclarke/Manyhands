@@ -33,6 +33,17 @@ const SemanticWorkUnitCommonShape = {
   concerns: z.array(NonEmptyStringSchema).min(1),
   evidenceIds: z.array(EntityIdSchema),
   plannedPaths: z.array(RepoRelativePathSchema).optional(),
+  /**
+   * Every file the unit writes, whether or not it already exists.
+   *
+   * `plannedPaths` only names files that do *not* exist yet, and `evidenceIds`
+   * folds a modified file in with the ones merely read, so between them there
+   * was no way to say "I change this existing file" as distinct from "I read
+   * it". The compiler then had to treat any shared path as a conflict and
+   * serialize units that were provably safe to run together (D9). Optional
+   * because plans persisted before stage 4 do not carry it.
+   */
+  writePaths: z.array(RepoRelativePathSchema).optional(),
   complexitySignals: ComplexitySignalsSchema.optional(),
   outcomes: z.array(SemanticOutcomeSchema).min(1)
 };
@@ -45,6 +56,7 @@ export interface SemanticWorkLeaf {
   concerns: string[];
   evidenceIds: string[];
   plannedPaths?: string[] | undefined;
+  writePaths?: string[] | undefined;
   complexitySignals?: ComplexitySignals | undefined;
   outcomes: SemanticOutcome[];
 }
@@ -57,6 +69,7 @@ export interface SemanticWorkComposite {
   concerns: string[];
   evidenceIds: string[];
   plannedPaths?: string[] | undefined;
+  writePaths?: string[] | undefined;
   complexitySignals?: ComplexitySignals | undefined;
   outcomes: SemanticOutcome[];
   cut: z.infer<typeof SemanticCutSchema>;

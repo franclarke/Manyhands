@@ -39,6 +39,12 @@ export interface CompiledPlanReviewInput {
   repositorySnapshot: RepositorySnapshot;
   graph: GraphRevision;
   contracts: TaskContractBundle[];
+  /**
+   * Paths each node writes. Absent for a caller that has no write model, in
+   * which case the overlap rule falls back to the node's whole scope — the
+   * historical, over-strict behaviour, never a silently weaker check.
+   */
+  writePathsByNodeId?: Record<string, string[]>;
 }
 
 export function reviewCompiledPlan(input: CompiledPlanReviewInput): PlanReview {
@@ -127,7 +133,10 @@ function reviewScopes(input: CompiledPlanReviewInput, findings: PlanFinding[]): 
   const parentByUnitKey = buildParentByUnitKey(input.breakdown.root);
   const unitsPerPlannedPath = new Map<string, string[]>();
   for (const unit of flattenUnits(input.breakdown.root)) {
-    for (const path of new Set((unit.plannedPaths ?? []).map(normalizePath))) {
+    // `writePaths` covers files the unit modifies as well as ones it creates;
+    // two units contesting an EXISTING file is the same defect and used to slip
+    // through, because `plannedPaths` cannot name a file that already exists.
+    for (const path of new Set((unit.writePaths ?? unit.plannedPaths ?? []).map(normalizePath))) {
       unitsPerPlannedPath.set(path, [...(unitsPerPlannedPath.get(path) ?? []), unit.key]);
     }
   }
@@ -151,11 +160,23 @@ function reviewScopes(input: CompiledPlanReviewInput, findings: PlanFinding[]): 
       const left = input.contracts[leftIndex]!;
       const right = input.contracts[rightIndex]!;
       if (isAncestor(input, left.task.nodeId, right.task.nodeId) || isAncestor(input, right.task.nodeId, left.task.nodeId)) continue;
-      const rightNormalized = new Set(right.scope.allowedPaths.map(normalizePath));
-      const overlap = left.scope.allowedPaths.filter((path) => rightNormalized.has(normalizePath(path)));
+      // Only writers can race. Two nodes that merely READ one file are safe to
+      // run together, and calling that a conflict is what serialized provably
+      // parallel work (D9). A writer and a reader of the same file are ordered
+      // by the derived dependency between them, so they are never concurrent.
+      const comparingWrites = input.writePathsByNodeId !== undefined;
+      const leftPaths = input.writePathsByNodeId?.[left.task.nodeId] ?? left.scope.allowedPaths;
+      const rightPaths = input.writePathsByNodeId?.[right.task.nodeId] ?? right.scope.allowedPaths;
+      const rightNormalized = new Set(rightPaths.map(normalizePath));
+      const overlap = leftPaths.filter((path) => rightNormalized.has(normalizePath(path)));
       if (overlap.length === 0) continue;
       const constrained = input.graph.conflictConstraints.some((constraint) => new Set([constraint.leftNodeId, constraint.rightNodeId]).size === 2 && [constraint.leftNodeId, constraint.rightNodeId].includes(left.task.nodeId) && [constraint.leftNodeId, constraint.rightNodeId].includes(right.task.nodeId));
-      if (!constrained) findings.push(finding("scope_isolation", "error", "unmodeled_scope_overlap", `${left.task.nodeId} and ${right.task.nodeId} overlap on ${overlap.join(", ")} without a conflict constraint.`, "Add a scheduling conflict constraint or redraw scopes.", [], left.task.nodeId));
+      // The message names what was actually compared: claiming "both write"
+      // about a scope comparison would be a lie in the fallback case.
+      const reason = comparingWrites
+        ? `both write ${overlap.join(", ")}`
+        : `overlap on ${overlap.join(", ")}`;
+      if (!constrained) findings.push(finding("scope_isolation", "error", "unmodeled_scope_overlap", `${left.task.nodeId} and ${right.task.nodeId} ${reason} without a conflict constraint.`, "Add a scheduling conflict constraint or redraw scopes.", [], left.task.nodeId));
     }
   }
 }

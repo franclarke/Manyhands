@@ -134,7 +134,7 @@ export function compileGraphRevision(
     trace.push({ sourceType: "candidate_seam", sourceId: candidate.id, compiledRelationIds: relationIds, evidenceIds: [...candidate.evidenceIds] });
   }
 
-  const conflictConstraints = compileScopeConflicts(contractResult.scopePathsByNodeId, nodes, dependencies, trace);
+  const conflictConstraints = compileWriteConflicts(contractResult.writePathsByNodeId, nodes, dependencies, trace);
   const graph = GraphRevisionSchema.parse({
     schemaVersion: 2,
     graphId: dependencies.idFor("graph", breakdown.breakdownId),
@@ -149,7 +149,7 @@ export function compileGraphRevision(
     legacyOrderingConstraints: [],
     createdAt: dependencies.now()
   });
-  const review = reviewCompiledPlan({ breakdown, repositorySnapshot, graph, contracts: contractResult.bundles });
+  const review = reviewCompiledPlan({ breakdown, repositorySnapshot, graph, contracts: contractResult.bundles, writePathsByNodeId: contractResult.writePathsByNodeId });
   assertPlanReview(review);
   return {
     graph,
@@ -208,7 +208,17 @@ function compileNodes(root: WorkUnit, nodeIdByUnitKey: Record<string, string>): 
   return nodes;
 }
 
-function compileScopeConflicts(
+/**
+ * Only writers conflict.
+ *
+ * This used to cross the whole scope, so two units that merely READ one file
+ * were declared in conflict and the wave selector refused to run them together
+ * — provably safe work, serialized (D9). Under tree-wide P2 the write sets of
+ * distinct branches are disjoint, so for a plan this planner produced the
+ * result is always empty. It is still computed rather than assumed: the
+ * compiler does not get to trust its input.
+ */
+function compileWriteConflicts(
   scopes: Record<string, string[]>,
   nodes: Record<string, TaskNodeV2>,
   dependencies: GraphCompilerDependencies,
@@ -224,7 +234,7 @@ function compileScopeConflicts(
       const overlap = leftPaths.filter((path) => rightPaths.includes(path));
       if (overlap.length === 0) continue;
       const id = dependencies.idFor("conflict-constraint", `${leftNodeId}-${rightNodeId}`);
-      constraints.push({ id, leftNodeId, rightNodeId, reason: `Scopes overlap on ${overlap.join(", ")}.`, risk: "high" });
+      constraints.push({ id, leftNodeId, rightNodeId, reason: `Both write ${overlap.join(", ")}.`, risk: "high" });
       trace.push({ sourceType: "scope_overlap", sourceId: `${leftNodeId}:${rightNodeId}`, compiledRelationIds: [id], evidenceIds: overlap });
     }
   }
