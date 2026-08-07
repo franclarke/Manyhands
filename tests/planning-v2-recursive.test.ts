@@ -52,8 +52,6 @@ async function planWith(runId: string, script: Record<string, unknown>, budget: 
   const state = await runPlanningV2({ ...BASE, runId, goal: "Add booking cancellation" }, {
     events, snapshots,
     inspect: async () => bookingSnapshot(),
-    plan: async () => { throw new Error("the legacy planner must not be reached"); },
-    planCandidates: async () => { throw new Error("the legacy candidate path must not be reached"); },
     recursivePlanner: planner,
     compile: (input) => compileGraphRevision(input, compilerDependencies),
     now: () => "2026-07-17T01:00:00.000Z"

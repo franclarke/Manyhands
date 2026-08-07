@@ -10,6 +10,13 @@ import {
 import { RUN_USER_PROMPT_MAX_LENGTH } from "@/lib/run-limits";
 import { makeRunRecordV2 } from "./helpers/run-v2-record";
 
+const CANONICAL_CREATE = {
+  workspaceId: "workspace-v2",
+  userPrompt: "Build notes",
+  planningSelection: { executorId: "claude-code-cli", model: "sonnet" },
+  executionSelection: { executorId: "codex-cli", model: "gpt-5.5", effort: "medium" }
+};
+
 describe("V2 run-record schema", () => {
   it("accepts the minimal canonical record and rejects V1 dual-truth fields", () => {
     expect(RunRecordSchema.safeParse(makeRunRecordV2()).success).toBe(true);
@@ -35,13 +42,8 @@ describe("V2 run-record schema", () => {
   });
 
   it("accepts canonical create input and rejects removed V1 fields", () => {
-    const canonical = {
-      workspaceId: "workspace-v2",
-      userPrompt: "Build notes",
-      planningSelection: { executorId: "claude-code-cli", model: "sonnet" },
-      executionSelection: { executorId: "codex-cli", model: "gpt-5.5", effort: "medium" }
-    };
-    expect(RunCreateRequestSchema.safeParse(canonical).success).toBe(true);
+    expect(RunCreateRequestSchema.safeParse(CANONICAL_CREATE).success).toBe(true);
+    const canonical = CANONICAL_CREATE;
     expect(RunCreateRequestSchema.safeParse({ ...canonical, granularity: "balanced" }).success).toBe(false);
     for (const granularityCondition of ["A", "B", "C"]) {
       expect(RunCreateRequestSchema.safeParse({ ...canonical, granularityCondition }).success).toBe(true);
@@ -50,5 +52,22 @@ describe("V2 run-record schema", () => {
       expect(RunCreateRequestSchema.safeParse({ ...canonical, granularityCondition }).success).toBe(false);
       expect(RunRecordSchema.safeParse({ ...makeRunRecordV2(), granularityCondition }).success).toBe(true);
     }
+  });
+
+  /**
+   * Stage 3F of `docs/plans/2026-08-05-robust-graph-execution-redesign.md`.
+   *
+   * The legacy one-shot planner is retired. Its only two entry points were a
+   * pre-computed candidate handed to the API and a candidate-set budget; a run
+   * that still named either would be asking for machinery that no longer
+   * exists, so the request must be rejected rather than silently ignored.
+   */
+  it("rejects the retired legacy planning entry points", () => {
+    expect(RunCreateRequestSchema.safeParse({
+      ...CANONICAL_CREATE,
+      experimentalCandidate: { sourceHash: "sha256:0", repositorySnapshotId: "snapshot", goal: "Build notes", acceptanceCriteria: [], breakdown: {} }
+    }).success).toBe(false);
+    expect(RunCreateRequestSchema.safeParse({ ...CANONICAL_CREATE, candidateCount: 2 }).success).toBe(false);
+    expect(RunRecordSchema.safeParse({ ...makeRunRecordV2(), candidateCount: 2 }).success).toBe(false);
   });
 });

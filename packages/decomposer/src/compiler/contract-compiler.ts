@@ -13,7 +13,7 @@ import {
 } from "@manyhands/contracts";
 import type { RepositorySnapshot } from "@manyhands/repository-index";
 import type { WorkBreakdown, WorkUnit } from "../planner/schema.js";
-import type { CandidatePlan } from "../planner/planning-envelope.js";
+import type { CandidatePlan } from "../planner/candidate-plan.js";
 import { allocateAcceptanceIntents } from "./acceptance-allocation.js";
 import {
   compileAcceptanceCriterion,

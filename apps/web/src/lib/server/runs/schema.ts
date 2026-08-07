@@ -1,5 +1,5 @@
 import { EXECUTOR_IDS, ExecutionConfigSchema, ReasoningEffortSchema } from "@manyhands/execution-core";
-import { GRANULARITY_CONDITIONS, WorkBreakdownSchema } from "@manyhands/decomposer";
+import { GRANULARITY_CONDITIONS } from "@manyhands/decomposer";
 import { RunLifecycleSchema } from "@manyhands/run-coordinator";
 import { z } from "zod";
 
@@ -9,14 +9,6 @@ export const RUN_FILE_VERSION = 2;
 
 export const GranularityConditionSchema = z.enum(GRANULARITY_CONDITIONS);
 const StoredGranularityConditionSchema = z.enum(["A", "B", "C", "C1", "C2"]);
-
-export const ExperimentalPlanningCandidateSchema = z.object({
-  sourceHash: z.string().min(1),
-  repositorySnapshotId: z.string().min(1),
-  goal: z.string().trim().min(1),
-  acceptanceCriteria: z.array(z.string().trim().min(1)),
-  breakdown: WorkBreakdownSchema
-}).strict();
 
 export const StageSelectionSchema = z.object({
   executorId: z.enum(EXECUTOR_IDS),
@@ -105,14 +97,12 @@ export const RunRecordSchema = z.object({
   executionSelection: StageSelectionSchema,
   repairSelection: StageSelectionSchema,
   executionConfig: ExecutionConfigSchema,
-  candidateCount: z.number().int().min(2).max(3).optional(),
   /**
    * Granularity condition for the comparative study. Absent means the
    * productive adaptive policy; a run that names one is self-describing about
    * the policy that shaped its plan.
    */
   granularityCondition: StoredGranularityConditionSchema.optional(),
-  experimentalCandidate: ExperimentalPlanningCandidateSchema.optional(),
   targetContext: RunTargetContextSchema,
   projection: RunProjectionCacheSchema,
   version: z.number().int().nonnegative().default(0),
@@ -143,9 +133,7 @@ export const RunCreateRequestSchema = z.object({
   executionSelection: StageSelectionSchema.optional(),
   repairSelection: StageSelectionSchema.optional(),
   granularityCondition: GranularityConditionSchema.optional(),
-  experimentalCandidate: ExperimentalPlanningCandidateSchema.optional(),
-  executionConfig: ExecutionConfigSchema.partial().omit({ routing: true }).strict().optional(),
-  candidateCount: z.number().int().min(2).max(3).optional()
+  executionConfig: ExecutionConfigSchema.partial().omit({ routing: true }).strict().optional()
 }).strict();
 
 export type RunCreateRequest = z.infer<typeof RunCreateRequestSchema>;

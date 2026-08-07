@@ -10,7 +10,7 @@ import {
 } from "@manyhands/task-graph";
 import { assertPlanReview, reviewCompiledPlan, type PlanReview } from "../critics/review.js";
 import { WorkBreakdownSchema, type WorkBreakdown, type WorkUnit } from "../planner/schema.js";
-import { CandidatePlanSchema, PlanningEnvelopeSchema, validateCandidatePlan, type CandidatePlan, type PlanningEnvelope } from "../planner/planning-envelope.js";
+import type { CandidatePlan } from "../planner/candidate-plan.js";
 import { compileContractBundles } from "./contract-compiler.js";
 import { repositorySnapshotIdsMatch } from "../planner/repository-snapshot-id.js";
 import { projectSemanticPlanForLegacyCompiler } from "../planner/semantic-plan-projection.js";
@@ -23,7 +23,6 @@ export interface GraphCompilerInput {
   semanticPlan?: SemanticPlan;
   repositorySnapshot: RepositorySnapshot;
   sourceContract?: SourceContract;
-  planningEnvelope?: PlanningEnvelope;
   candidatePlan?: CandidatePlan;
 }
 
@@ -60,21 +59,6 @@ export function compileGraphRevision(
   const semanticProjection = semanticPlan === undefined ? undefined : projectSemanticPlanForLegacyCompiler(semanticPlan);
   const breakdown = WorkBreakdownSchema.parse(semanticProjection?.breakdown ?? rawInput.breakdown!);
   const candidatePlan = semanticProjection?.candidatePlan ?? rawInput.candidatePlan;
-  const hasEnvelope = rawInput.planningEnvelope !== undefined;
-  const hasCandidate = candidatePlan !== undefined;
-  if (!hasSemanticPlan && hasEnvelope !== hasCandidate) throw new Error("Graph compilation requires planningEnvelope and candidatePlan together.");
-  if (hasSemanticPlan && hasEnvelope) throw new Error("SemanticPlan compilation does not accept a legacy PlanningEnvelope.");
-  if (!hasSemanticPlan && hasEnvelope && hasCandidate) {
-    const planningEnvelope = PlanningEnvelopeSchema.parse(rawInput.planningEnvelope);
-    const candidatePlan = CandidatePlanSchema.parse(rawInput.candidatePlan);
-    const diagnostics = validateCandidatePlan({ envelope: planningEnvelope, candidate: candidatePlan });
-    if (diagnostics.length > 0) {
-      throw new Error(`Selected CandidatePlan failed compiler validation: ${diagnostics.map((diagnostic) => `${diagnostic.code}: ${diagnostic.message}`).join("; ")}`);
-    }
-    if (JSON.stringify(candidatePlan.breakdown) !== JSON.stringify(breakdown)) {
-      throw new Error("Graph Compiler received a breakdown that differs from the selected immutable CandidatePlan.");
-    }
-  }
   RepositorySnapshotSchema.parse(rawInput.repositorySnapshot);
   const repositorySnapshot = rawInput.repositorySnapshot;
   if (!repositorySnapshotIdsMatch(breakdown.repositorySnapshotId, repositorySnapshot.snapshotId)) {

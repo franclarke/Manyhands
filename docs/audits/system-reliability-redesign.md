@@ -1,5 +1,12 @@
 # Auditoría de fiabilidad y rediseño del sistema
 
+> **Documento histórico.** Describe el protocolo de candidatos
+> (`PlanningEnvelope`, `CandidatePlan`, `planCandidates`, `WorkBreakdownPlanner`),
+> **retirado el 2026-08-06** en la etapa 3F de
+> [`docs/plans/2026-08-05-robust-graph-execution-redesign.md`](../plans/2026-08-05-robust-graph-execution-redesign.md).
+> Los módulos que nombra ya no existen. Se conserva como registro de por qué
+> se construyó y por qué se retiró; no es guía del sistema actual.
+
 Fecha: 2026-08-02. Alcance: ruta V2 productiva. Esta auditoría no reinterpreta
 G6 ni modifica sus freezes, resultados, umbrales u oráculos.
 

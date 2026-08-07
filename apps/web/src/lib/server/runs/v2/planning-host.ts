@@ -1,8 +1,8 @@
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { CandidatePlan, CandidatePlanDiagnostic, CandidatePlanSelection, CompiledGraphRevision, GoalCriterion, GranularityStrategyResult, GraphCompilerInput, PlanningEnvelope, RecursivePlanner, SemanticPlan, WorkBreakdown, WorkBreakdownPlannerInput, WorkBreakdownPlanningObserver, WorkUnit } from "@manyhands/decomposer";
+import type { CompiledGraphRevision, GoalCriterion, GranularityStrategyResult, GraphCompilerInput, RecursivePlanner, SemanticPlan, WorkBreakdown, WorkUnit } from "@manyhands/decomposer";
 import type { RepositorySnapshot } from "@manyhands/repository-index";
-import { PLAN_CRITIC_KINDS, PILOT_UTILITY_POLICY, buildGranularityPlanningBrief, canonicalRepositorySnapshotId, createSemanticPlan, projectPlannedTree, projectSemanticPlanForLegacyCompiler, candidateBreakdownHash, createPlanningEnvelope, repositorySnapshotIdsMatch, resolveGranularityCondition, selectGranularityStrategy, selectPlannerCandidate, validatePlannerCandidateSet } from "@manyhands/decomposer";
+import { PLAN_CRITIC_KINDS, PILOT_UTILITY_POLICY, createSemanticPlan, projectPlannedTree, projectSemanticPlanForLegacyCompiler, resolveGranularityCondition, selectGranularityStrategy } from "@manyhands/decomposer";
 import { foldRun, supersededDecisionIds, type RunEventInput, type RunProjection } from "@manyhands/run-coordinator";
 import type { FencingAuthority, JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
 import {
@@ -23,30 +23,26 @@ export interface PlanningV2Input {
   questionAnswers?: Record<string, string>;
   /** G5 condition label; absent means the productive adaptive policy. */
   granularityCondition?: string;
-  /** Compact comparative runs may request the contractual minimum of two candidates. */
-  candidateCount?: number;
-  /** Frozen typed alternatives for deterministic policy replay without an LLM call. */
-  frozenCandidates?: CandidatePlan[];
-  experimentalCandidate?: {
-    sourceHash: string;
-    repositorySnapshotId: string;
-    goal: string;
-    acceptanceCriteria: string[];
-    breakdown: WorkBreakdown;
-  };
 }
 
-export interface PlanningV2Dependencies {
+/**
+ * What approving or editing an already compiled revision needs: the journal and
+ * a clock. It used to be the full planning surface with throwing stubs for the
+ * parts approval never reaches, which said nothing except that the interface
+ * was too wide.
+ */
+export interface PlanningV2JournalDependencies {
   events: JsonlRunEventStore;
   snapshots: RunSnapshotStore;
+  now(): string;
+}
+
+export interface PlanningV2Dependencies extends PlanningV2JournalDependencies {
   inspect(input: Pick<PlanningV2Input, "repoPath" | "targetFingerprint" | "baseCommit">): Promise<RepositorySnapshot>;
-  plan(input: WorkBreakdownPlannerInput, observer: WorkBreakdownPlanningObserver): Promise<WorkBreakdown>;
-  planCandidates(input: WorkBreakdownPlannerInput, envelope: PlanningEnvelope, count: number, observer: WorkBreakdownPlanningObserver): Promise<CandidatePlan[]>;
-  /** Product planning cuts one unit at a time. Legacy callbacks remain only for historical replay. */
-  recursivePlanner?: RecursivePlanner;
+  /** Product planning cuts one unit at a time. */
+  recursivePlanner: RecursivePlanner;
   compile(input: GraphCompilerInput): CompiledGraphRevision;
   nodeIdFor?(key: string): string;
-  now(): string;
 }
 
 export async function runPlanningV2(input: PlanningV2Input, dependencies: PlanningV2Dependencies): Promise<RunProjection> {
@@ -81,259 +77,119 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
       payload: { snapshotId: repositorySnapshot.snapshotId, disposition: repositorySnapshot.inspectionDisposition, snapshot: asRecord(repositorySnapshot) }
     }])];
     const nodeIdFor = dependencies.nodeIdFor ?? defaultNodeIdFor;
-    const planningObserverFor = (attemptOffset: number): WorkBreakdownPlanningObserver => ({
-      onAttemptStarted: async ({ attempt }) => {
-        const globalAttempt = attemptOffset + attempt;
-        events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [{
-          eventId: `planning:${input.runId}:attempt:${globalAttempt}:started`,
-          occurredAt: dependencies.now(),
-          type: "planning.attempt_started",
-          payload: { attempt: globalAttempt }
-        }])];
-      },
-      onUnitDiscovered: async ({ attempt, unit }) => {
-        const globalAttempt = attemptOffset + attempt;
-        events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [{
-          eventId: `planning:${input.runId}:attempt:${globalAttempt}:node:${unit.key}`,
-          occurredAt: dependencies.now(),
-          type: "planning.node_discovered",
-          payload: {
-            attempt: globalAttempt,
-            node: {
-              ...unit,
-              nodeId: nodeIdFor(unit.key),
-              parentNodeId: unit.parentKey === null ? null : nodeIdFor(unit.parentKey)
-            }
-          }
-        }])];
-      },
-      onAttemptFailed: async ({ attempt, reason }) => {
-        const globalAttempt = attemptOffset + attempt;
-        events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [{
-          eventId: `planning:${input.runId}:attempt:${globalAttempt}:failed`,
-          occurredAt: dependencies.now(),
-          type: "planning.attempt_failed",
-          payload: { attempt: globalAttempt, reason }
-        }])];
-      }
-    });
-    if (input.experimentalCandidate === undefined && dependencies.recursivePlanner !== undefined) {
-      const evidence = repositoryEvidence(repositorySnapshot);
-      const criteria = goalCriteria(input);
-      const plan = await dependencies.recursivePlanner.plan({
-        root: {
-          key: "root",
-          objective: input.goal,
-          criteria,
-          reads: evidence.filter((item) => item.kind === "path").map((item) => item.reference),
-          writes: []
-        },
+    const evidence = repositoryEvidence(repositorySnapshot);
+    const criteria = goalCriteria(input);
+    const plan = await dependencies.recursivePlanner.plan({
+      root: {
+        key: "root",
+        objective: input.goal,
         criteria,
-        evidence,
-        observer: {
-          // A resolved unit is exactly the durable node fact the journal
-          // already records, so the redesigned path reuses it rather than
-          // introducing a second way to say the same thing.
-          onUnitResolved: async ({ unit, kind, position }) => {
-            events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [{
-              eventId: `planning:${input.runId}:unit:${unit.key}`,
-              occurredAt: dependencies.now(),
-              type: "planning.node_discovered",
-              payload: {
-                // Recursive planning is a single pass over the tree; a unit's
-                // own repairs are recorded separately as attempt failures.
-                // Counting resolved units here would make the journal claim to
-                // measure attempts while measuring something else.
-                attempt: 1,
-                node: {
-                  nodeId: nodeIdFor(unit.key),
-                  parentNodeId: position.parentKey === null ? null : nodeIdFor(position.parentKey),
-                  key: unit.key,
-                  parentKey: position.parentKey,
-                  kind,
-                  title: unit.key,
-                  objective: unit.objective,
-                  siblingIndex: position.siblingIndex,
-                  siblingCount: position.siblingCount
-                }
-              }
-            }])];
-          },
-          onRepairAttempted: async ({ unit, attempt: unitAttempt, diagnostics }) => {
-            events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [{
-              eventId: `planning:${input.runId}:unit:${unit.key}:repair:${unitAttempt}`,
-              occurredAt: dependencies.now(),
-              type: "planning.attempt_failed",
-              payload: { attempt: unitAttempt, reason: diagnostics.join("; ") || "The cut was rejected." }
-            }])];
-          },
-          onUnitUnresolved: async ({ unit, diagnostics, depth, position }) => {
-            events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [{
-              eventId: `planning:${input.runId}:unit:${unit.key}:unresolved`,
-              occurredAt: dependencies.now(),
-              type: "planning.unit_unresolved",
-              payload: {
+        reads: evidence.filter((item) => item.kind === "path").map((item) => item.reference),
+        writes: []
+      },
+      criteria,
+      evidence,
+      observer: {
+        // A resolved unit is exactly the durable node fact the journal
+        // already records, so the redesigned path reuses it rather than
+        // introducing a second way to say the same thing.
+        onUnitResolved: async ({ unit, kind, position }) => {
+          events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [{
+            eventId: `planning:${input.runId}:unit:${unit.key}`,
+            occurredAt: dependencies.now(),
+            type: "planning.node_discovered",
+            payload: {
+              // Recursive planning is a single pass over the tree; a unit's
+              // own repairs are recorded separately as attempt failures.
+              // Counting resolved units here would make the journal claim to
+              // measure attempts while measuring something else.
+              attempt: 1,
+              node: {
                 nodeId: nodeIdFor(unit.key),
+                parentNodeId: position.parentKey === null ? null : nodeIdFor(position.parentKey),
                 key: unit.key,
                 parentKey: position.parentKey,
-                depth,
-                diagnostics: diagnostics.length > 0 ? diagnostics : ["The cut was rejected."]
+                kind,
+                title: unit.key,
+                objective: unit.objective,
+                siblingIndex: position.siblingIndex,
+                siblingCount: position.siblingCount
               }
-            }])];
-          }
+            }
+          }])];
+        },
+        onRepairAttempted: async ({ unit, attempt: unitAttempt, diagnostics }) => {
+          events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [{
+            eventId: `planning:${input.runId}:unit:${unit.key}:repair:${unitAttempt}`,
+            occurredAt: dependencies.now(),
+            type: "planning.attempt_failed",
+            payload: { attempt: unitAttempt, reason: diagnostics.join("; ") || "The cut was rejected." }
+          }])];
+        },
+        onUnitUnresolved: async ({ unit, diagnostics, depth, position }) => {
+          events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [{
+            eventId: `planning:${input.runId}:unit:${unit.key}:unresolved`,
+            occurredAt: dependencies.now(),
+            type: "planning.unit_unresolved",
+            payload: {
+              nodeId: nodeIdFor(unit.key),
+              key: unit.key,
+              parentKey: position.parentKey,
+              depth,
+              diagnostics: diagnostics.length > 0 ? diagnostics : ["The cut was rejected."]
+            }
+          }])];
         }
-      });
-
-      if (plan.unresolved.length > 0) {
-        throw new Error(`no_safe_cut: ${plan.unresolved
-          .map((node) => `${node.unit.key}: ${node.diagnostics.join("; ")}`)
-          .join(" | ")}`);
       }
-
-      const projected = projectPlannedTree({
-        tree: plan.root,
-        goal: input.goal,
-        criteria,
-        evidence,
-        repositorySnapshotId: repositorySnapshot.snapshotId
-      });
-      const semanticPlan = createSemanticPlan({
-        goal: input.goal,
-        repositorySnapshotId: repositorySnapshot.snapshotId,
-        criteria: [...projected.criteria],
-        draft: projected.draft
-      });
-      const compiled = dependencies.compile({
-        semanticPlan,
-        repositorySnapshot,
-        sourceContract: {
-          goal: input.goal,
-          acceptanceCriteria: criteria.map((criterion) => criterion.description),
-          constraints: input.constraints ?? []
-        }
-      });
-      // Stage 3D: the utility formula keeps being measured because it is what
-      // lets the thesis say why a scalar could not decide granularity — but the
-      // tree that compiles is the one the fixpoint produced. Its
-      // `selectedBreakdown` is deliberately discarded.
-      const observedBreakdown = projectSemanticPlanForLegacyCompiler(semanticPlan).breakdown;
-      const observed = selectGranularityStrategy({
-        condition: resolveGranularityCondition(input.granularityCondition),
-        breakdown: observedBreakdown,
-        repositorySnapshot,
-        config: PILOT_UTILITY_POLICY
-      });
-      const drafts = [
-        ...semanticSuccessEvents(input.runId, semanticPlan, compiled, dependencies.now),
-        strategySelectedEvent(input.runId, observed, observedBreakdown, nodeIdFor, dependencies.now)
-      ];
-      events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, drafts)];
-      state = foldRun(events);
-      await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, events.at(-1)!.eventId);
-      return state;
-    }
-    const plannerInput: WorkBreakdownPlannerInput = {
-      goal: input.goal,
-      acceptanceCriteria: input.acceptanceCriteria ?? [],
-      constraints: input.constraints ?? [],
-      repositorySnapshot: {
-        snapshotId: repositorySnapshot.snapshotId,
-        inspectionDisposition: repositorySnapshot.inspectionDisposition,
-        evidence: repositoryEvidence(repositorySnapshot)
-      },
-      granularityBrief: buildGranularityPlanningBrief({
-        repositorySnapshot,
-        config: PILOT_UTILITY_POLICY,
-        ...(input.candidateCount !== undefined ? { candidateCount: input.candidateCount } : {})
-      }),
-      ...(input.questionAnswers !== undefined ? { questionAnswers: input.questionAnswers } : {})
-    };
-    const envelope = createPlanningEnvelope({
-      policyVersion: PILOT_UTILITY_POLICY.policyVersion,
-      goal: input.goal,
-      repositorySnapshot,
-      maxLeafContextTokens: PILOT_UTILITY_POLICY.maxLeafContextTokens,
-      maxLeafScopePaths: PILOT_UTILITY_POLICY.maxLeafScopePaths,
-      ...(input.candidateCount !== undefined ? { maxCandidatePlans: input.candidateCount } : {})
     });
-    events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [{
-      eventId: `planning:${input.runId}:envelope:${events.length + 1}`,
-      occurredAt: dependencies.now(),
-      type: "planning.envelope_created",
-      payload: envelope
-    }])];
-    const condition = resolveGranularityCondition(input.granularityCondition);
-    let breakdown: WorkBreakdown;
-    let strategy: GranularityStrategyResult;
-    let selectedCandidate: CandidatePlan | undefined;
-    if (input.experimentalCandidate !== undefined) {
-      breakdown = validateExperimentalCandidate(input, repositorySnapshot);
-      strategy = selectGranularityStrategy({ condition, breakdown, repositorySnapshot, config: PILOT_UTILITY_POLICY });
-      if (strategy.requiresSemanticReplan) {
-        throw new Error("The blocked candidate requires semantic replan and cannot be changed during experimental replay.");
-      }
-    } else {
-      const plannerCandidates = input.frozenCandidates ?? await dependencies.planCandidates(
-          plannerInput,
-          envelope,
-          envelope.candidateBudget.maximum,
-          planningObserverFor(latestPlanningAttempt(events))
-        );
-      const evaluation = evaluatePlannerCandidates({ envelope, candidates: plannerCandidates, condition, repositorySnapshot });
-      events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [
-        candidatesEvaluatedEvent(input.runId, envelope, plannerCandidates, evaluation, condition, dependencies.now)
-      ])];
-      if (evaluation.selection.kind === "replan_required") {
-        state = foldRun(events);
-        await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, events.at(-1)!.eventId);
-        return state;
-      }
-      breakdown = evaluation.selection.candidate.breakdown;
-      selectedCandidate = evaluation.selection.candidate;
-      strategy = evaluation.strategies.get(evaluation.selection.candidate.candidateId)!;
-      if (strategy.requiresSemanticReplan) {
-        state = foldRun(events);
-        await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, events.at(-1)!.eventId);
-        return state;
-      }
+
+    if (plan.unresolved.length > 0) {
+      throw new Error(`no_safe_cut: ${plan.unresolved
+        .map((node) => `${node.unit.key}: ${node.diagnostics.join("; ")}`)
+        .join(" | ")}`);
     }
-    breakdown = canonicalizeRepositorySnapshotReference(breakdown, repositorySnapshot.snapshotId);
-    if (requiresClarification(breakdown)) {
-      const drafts = clarificationEvents(breakdown, nodeIdFor, dependencies.now, events.length);
-      events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, drafts)];
-      state = foldRun(events);
-      await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, events.at(-1)!.eventId);
-      return state;
-    }
-    if (input.experimentalCandidate !== undefined) {
-      const strategyEvent = strategySelectedEvent(
-        input.runId,
-        strategy,
-        breakdown,
-        nodeIdFor,
-        dependencies.now,
-        input.experimentalCandidate.sourceHash
-      );
-      events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [strategyEvent])];
-    }
+
+    const projected = projectPlannedTree({
+      tree: plan.root,
+      goal: input.goal,
+      criteria,
+      evidence,
+      repositorySnapshotId: repositorySnapshot.snapshotId
+    });
+    const semanticPlan = createSemanticPlan({
+      goal: input.goal,
+      repositorySnapshotId: repositorySnapshot.snapshotId,
+      criteria: [...projected.criteria],
+      draft: projected.draft
+    });
     const compiled = dependencies.compile({
-      breakdown,
+      semanticPlan,
       repositorySnapshot,
-      ...(input.experimentalCandidate === undefined ? {
-        planningEnvelope: envelope,
-        candidatePlan: selectedCandidate!
-      } : {}),
       sourceContract: {
         goal: input.goal,
-        acceptanceCriteria: input.acceptanceCriteria ?? [],
+        acceptanceCriteria: criteria.map((criterion) => criterion.description),
         constraints: input.constraints ?? []
       }
     });
-    const drafts = strategySuccessEvents(input.runId, breakdown, compiled, dependencies.now);
+    // Stage 3D: the utility formula keeps being measured because it is what
+    // lets the thesis say why a scalar could not decide granularity — but the
+    // tree that compiles is the one the fixpoint produced. Its
+    // `selectedBreakdown` is deliberately discarded.
+    const observedBreakdown = projectSemanticPlanForLegacyCompiler(semanticPlan).breakdown;
+    const observed = selectGranularityStrategy({
+      condition: resolveGranularityCondition(input.granularityCondition),
+      breakdown: observedBreakdown,
+      repositorySnapshot,
+      config: PILOT_UTILITY_POLICY
+    });
+    const drafts = [
+      ...semanticSuccessEvents(input.runId, semanticPlan, compiled, dependencies.now),
+      strategySelectedEvent(input.runId, observed, observedBreakdown, nodeIdFor, dependencies.now)
+    ];
     events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, drafts)];
     state = foldRun(events);
     await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, events.at(-1)!.eventId);
-    await writeStrategyDiagnostics(dependencies, input.runId, strategy, breakdown, input.experimentalCandidate?.sourceHash);
+    await writeStrategyDiagnostics(dependencies, input.runId, observed, observedBreakdown);
     return state;
   } catch (error) {
     let recordedState: RunProjection | undefined;
@@ -364,7 +220,7 @@ export async function approvePlanningV2(
   authority: FencingAuthority,
   revision: number,
   expectedSequence: number,
-  dependencies: PlanningV2Dependencies
+  dependencies: PlanningV2JournalDependencies
 ): Promise<RunProjection> {
   const current = await dependencies.events.load(runId);
   const state = foldRun(current);
@@ -393,7 +249,7 @@ export async function revisePlanningV2(
   expectedRevision: number,
   expectedSequence: number,
   compiled: CompiledGraphRevision,
-  dependencies: PlanningV2Dependencies
+  dependencies: PlanningV2JournalDependencies
 ): Promise<RunProjection> {
   const current = await dependencies.events.load(runId);
   const state = foldRun(current);
@@ -407,166 +263,12 @@ export async function revisePlanningV2(
   return next;
 }
 
-interface PlannerCandidateEvaluation {
-  validation: ReturnType<typeof validatePlannerCandidateSet>;
-  strategies: Map<string, GranularityStrategyResult>;
-  scores: Map<string, number>;
-  selection: CandidatePlanSelection;
-}
-
-function evaluatePlannerCandidates(input: {
-  envelope: PlanningEnvelope;
-  candidates: readonly CandidatePlan[];
-  condition: ReturnType<typeof resolveGranularityCondition>;
-  repositorySnapshot: RepositorySnapshot;
-}): PlannerCandidateEvaluation {
-  const validation = validatePlannerCandidateSet({ envelope: input.envelope, candidates: input.candidates });
-  const strategies = new Map<string, GranularityStrategyResult>();
-  const scores = new Map<string, number>();
-  for (const candidate of validation.validCandidates) {
-    const strategy = selectGranularityStrategy({
-      condition: input.condition,
-      breakdown: candidate.breakdown,
-      repositorySnapshot: input.repositorySnapshot,
-      config: PILOT_UTILITY_POLICY
-    });
-    strategies.set(candidate.candidateId, strategy);
-    const root = strategy.assessments[candidate.breakdown.root.key];
-    if (root === undefined) throw new Error(`Candidate ${candidate.candidateId} has no root policy assessment.`);
-    scores.set(candidate.candidateId, root.selected === "leaf" ? -root.splitAdvantage : root.splitAdvantage);
-  }
-  const viable = validation.validCandidates.filter((candidate) => !strategies.get(candidate.candidateId)!.requiresSemanticReplan);
-  const selection = viable.length < input.envelope.candidateBudget.minimum
-    ? replanForInsufficientCandidates(input.envelope, input.candidates, validation.diagnostics, viable.length)
-    : selectPlannerCandidate({
-        envelope: input.envelope,
-        candidates: viable,
-        score: (candidate) => scores.get(candidate.candidateId)!
-      });
-  return { validation, strategies, scores, selection };
-}
-
-function replanForInsufficientCandidates(
-  envelope: PlanningEnvelope,
-  candidates: readonly CandidatePlan[],
-  diagnostics: CandidatePlanDiagnostic[],
-  viableCount: number
-): CandidatePlanSelection {
-  const budgetDiagnostic: CandidatePlanDiagnostic = {
-    code: "candidate_budget_not_met",
-    message: `Candidate set has ${viableCount} viable plans but the envelope requires ${envelope.candidateBudget.minimum}..${envelope.candidateBudget.maximum}.`,
-    refs: []
-  };
-  return {
-    kind: "replan_required",
-    diagnosis: {
-      code: "no_structurally_valid_candidate",
-      message: "The bounded candidate set did not contain enough structurally valid, policy-viable alternatives.",
-      rejectedCandidateIds: candidates.map((candidate) => candidate.candidateId).sort(),
-      diagnostics: [...diagnostics, budgetDiagnostic]
-    }
-  };
-}
-
-function candidatesEvaluatedEvent(
-  runId: string,
-  envelope: PlanningEnvelope,
-  candidates: readonly CandidatePlan[],
-  evaluation: PlannerCandidateEvaluation,
-  condition: ReturnType<typeof resolveGranularityCondition>,
-  now: () => string
-): RunEventInput {
-  const validIds = new Set(evaluation.validation.validCandidates.map((candidate) => candidate.candidateId));
-  const evaluations = candidates.map((candidate) => {
-    const strategy = evaluation.strategies.get(candidate.candidateId);
-    const diagnostics: Array<{ code: string; message: string; refs: string[] }> = evaluation.validation.diagnostics
-      .filter((diagnostic) => diagnostic.candidateId === undefined || diagnostic.candidateId === candidate.candidateId)
-      .map(({ code, message, refs }) => ({ code, message, refs }));
-    if (strategy?.requiresSemanticReplan === true) {
-      const root = strategy.assessments[candidate.breakdown.root.key];
-      diagnostics.push({
-        code: "semantic_replan_required",
-        message: root?.rationale ?? "The policy could not identify a viable semantic cut.",
-        refs: root?.evidenceRefs ?? []
-      });
-    }
-    return {
-      candidateId: candidate.candidateId,
-      candidateHash: candidate.candidateHash,
-      candidate: asRecord(candidate),
-      valid: validIds.has(candidate.candidateId) && strategy?.requiresSemanticReplan === false,
-      ...(evaluation.scores.has(candidate.candidateId) ? { score: evaluation.scores.get(candidate.candidateId)! } : {}),
-      gates: candidateGateResults(diagnostics, strategy),
-      diagnostics
-    };
-  });
-  const selection = evaluation.selection.kind === "selected"
-    ? {
-        kind: "selected" as const,
-        candidateId: evaluation.selection.candidate.candidateId,
-        score: evaluation.selection.score,
-        rejectedCandidateIds: evaluation.selection.rejectedCandidateIds,
-        tieBreak: candidateTieBreak(evaluation)
-      }
-    : {
-        kind: "replan_required" as const,
-        reason: evaluation.selection.diagnosis.message,
-        rejectedCandidateIds: evaluation.selection.diagnosis.rejectedCandidateIds,
-        diagnostics: evaluation.selection.diagnosis.diagnostics.map(({ code, message, refs }) => ({ code, message, refs }))
-      };
-  return {
-    eventId: `planning:${runId}:candidates:${evaluations.map((item) => item.candidateHash).sort().join(":")}`,
-    occurredAt: now(),
-    type: "planning.candidates_evaluated",
-    payload: {
-      schemaVersion: 1,
-      envelope: asRecord(envelope),
-      policy: { version: envelope.policyVersion, condition, scoreBasis: "root_split_advantage" },
-      candidates: evaluations,
-      selection
-    }
-  };
-}
-
-function candidateGateResults(
-  diagnostics: Array<{ code: string; message: string; refs: string[] }>,
-  strategy: GranularityStrategyResult | undefined
-): Array<{ gate: string; passed: boolean; diagnosticCodes: string[] }> {
-  const gateCodes: Record<string, string[]> = {
-    identity: ["candidate_not_typed", "candidate_hash_mismatch", "snapshot_mismatch", "goal_digest_mismatch"],
-    scope: ["scope_declaration_incomplete", "scope_outside_grounding", "unknown_scope_unit"],
-    acceptance: ["acceptance_criteria_incomplete", "acceptance_ownership_incomplete", "acceptance_role_mismatch", "unknown_acceptance_intent", "unknown_acceptance_owner", "duplicate_acceptance_owner", "global_owner_must_integrate", "local_owner_must_be_leaf", "leaf_without_local_acceptance"],
-    seams: ["missing_seam_specification", "orphan_seam_specification", "semantic_dependency_without_seam"],
-    obligations: ["contract_obligation_incomplete"],
-    validation: ["leaf_validation_incomplete"],
-    policy_viability: ["semantic_replan_required"]
-  };
-  return Object.entries(gateCodes).map(([gate, codes]) => {
-    const diagnosticCodes = diagnostics.map((diagnostic) => diagnostic.code).filter((code) => codes.includes(code));
-    if (gate === "policy_viability" && strategy?.requiresSemanticReplan === true && !diagnosticCodes.includes("semantic_replan_required")) {
-      diagnosticCodes.push("semantic_replan_required");
-    }
-    return { gate, passed: diagnosticCodes.length === 0, diagnosticCodes };
-  });
-}
-
-function candidateTieBreak(evaluation: PlannerCandidateEvaluation): { kind: "candidate_id"; applied: boolean; contenders: string[] } {
-  if (evaluation.selection.kind !== "selected") return { kind: "candidate_id", applied: false, contenders: [] };
-  const selectedScore = evaluation.selection.score;
-  const contenders = [...evaluation.scores.entries()]
-    .filter(([candidateId, score]) => score === selectedScore && evaluation.strategies.get(candidateId)?.requiresSemanticReplan === false)
-    .map(([candidateId]) => candidateId)
-    .sort();
-  return { kind: "candidate_id", applied: contenders.length > 1, contenders };
-}
-
 function strategySelectedEvent(
   runId: string,
   strategy: GranularityStrategyResult,
   candidateBreakdown: WorkBreakdown,
   nodeIdFor: (key: string) => string,
-  now: () => string,
-  candidateSourceHash?: string
+  now: () => string
 ): RunEventInput {
   const breakdown = strategy.selectedBreakdown;
   return {
@@ -582,7 +284,6 @@ function strategySelectedEvent(
         candidateArtifacts: candidateBreakdown.candidateArtifacts.map(asRecord),
         candidateSeams: candidateBreakdown.candidateSeams.map(asRecord)
       },
-      ...(candidateSourceHash === undefined ? {} : { candidateSourceHash }),
       config: {
         minimumAdvantage: strategy.config.minimumAdvantage,
         maxLeafContextTokens: strategy.config.maxLeafContextTokens,
@@ -608,18 +309,6 @@ function strategySelectedEvent(
   };
 }
 
-function strategySuccessEvents(
-  runId: string,
-  breakdown: WorkBreakdown,
-  compiled: CompiledGraphRevision,
-  now: () => string
-): RunEventInput[] {
-  return [
-    { eventId: `planning:${breakdown.breakdownId}:completed:${runId}`, occurredAt: now(), type: "planning.completed", payload: { breakdownId: breakdown.breakdownId, breakdown: asRecord(breakdown) } },
-    ...compiledEvents(compiled, now)
-  ];
-}
-
 function semanticSuccessEvents(
   runId: string,
   plan: SemanticPlan,
@@ -632,30 +321,29 @@ function semanticSuccessEvents(
   ];
 }
 
-function validateExperimentalCandidate(
-  input: PlanningV2Input,
-  repositorySnapshot: RepositorySnapshot
-): WorkBreakdown {
-  const candidate = input.experimentalCandidate;
-  if (candidate === undefined) throw new Error("Missing experimental planning candidate.");
-  if (!repositorySnapshotIdsMatch(candidate.repositorySnapshotId, repositorySnapshot.snapshotId)
-    || !repositorySnapshotIdsMatch(candidate.breakdown.repositorySnapshotId, repositorySnapshot.snapshotId)) {
-    throw new Error("Experimental candidate snapshot does not match the inspected repository snapshot.");
-  }
-  if (candidate.goal !== input.goal) throw new Error("Experimental candidate goal does not match the run goal.");
-  if (JSON.stringify(candidate.acceptanceCriteria) !== JSON.stringify(input.acceptanceCriteria ?? [])) {
-    throw new Error("Experimental candidate acceptance input does not match the run acceptance input.");
-  }
-  const actualHash = candidateBreakdownHash(candidate.breakdown);
-  if (candidate.sourceHash !== actualHash) throw new Error(`Experimental candidate source hash mismatch: expected ${candidate.sourceHash}, measured ${actualHash}.`);
-  return canonicalizeRepositorySnapshotReference(candidate.breakdown, repositorySnapshot.snapshotId);
-}
-
-function canonicalizeRepositorySnapshotReference(breakdown: WorkBreakdown, canonicalSnapshotId: string): WorkBreakdown {
-  const repositorySnapshotId = canonicalRepositorySnapshotId(breakdown.repositorySnapshotId, canonicalSnapshotId);
-  return repositorySnapshotId === breakdown.repositorySnapshotId
-    ? breakdown
-    : { ...breakdown, repositorySnapshotId };
+/**
+ * A per-run diagnostic artifact carrying the structural measurement, alongside
+ * the journal event. It is written after the state is durable: a measurement
+ * that is not evidence must never be able to fail a run.
+ */
+async function writeStrategyDiagnostics(
+  dependencies: PlanningV2JournalDependencies,
+  runId: string,
+  strategy: GranularityStrategyResult,
+  measuredBreakdown: WorkBreakdown
+): Promise<void> {
+  const artifact = {
+    runId,
+    policyVersion: strategy.policyVersion,
+    condition: strategy.condition,
+    candidateTreeHash: strategy.candidateTreeHash,
+    config: strategy.config,
+    metrics: structuralMetrics(measuredBreakdown.root),
+    generatedAt: dependencies.now()
+  };
+  const target = path.join(dependencies.events.directory, `${runId.replace(/[^A-Za-z0-9._-]/gu, "_")}.granularity-metrics.json`);
+  await writeFile(target, `${JSON.stringify(artifact, null, 2)}
+`, "utf8");
 }
 
 function structuralMetrics(root: WorkUnit): {
@@ -675,164 +363,8 @@ function structuralMetrics(root: WorkUnit): {
   };
 }
 
-async function writeStrategyDiagnostics(
-  dependencies: PlanningV2Dependencies,
-  runId: string,
-  strategy: GranularityStrategyResult,
-  selectedCandidateBreakdown: WorkBreakdown,
-  candidateSourceHash?: string
-): Promise<void> {
-  const artifact = {
-    runId,
-    policyVersion: strategy.policyVersion,
-    condition: strategy.condition,
-    candidateTreeHash: strategy.candidateTreeHash,
-    ...(candidateSourceHash === undefined ? {} : { candidateSourceHash }),
-    config: strategy.config,
-    metrics: structuralMetrics(selectedCandidateBreakdown.root),
-    generatedAt: new Date().toISOString()
-  };
-  const target = path.join(dependencies.events.directory, `${runId.replace(/[^A-Za-z0-9._-]/gu, "_")}.granularity-metrics.json`);
-  await writeFile(target, `${JSON.stringify(artifact, null, 2)}\n`, "utf8");
-}
-
-function requiresClarification(breakdown: WorkBreakdown): boolean {
-  return breakdown.questions.length > 0 || breakdown.uncertainties.some((uncertainty) => uncertainty.requiresHumanDecision);
-}
-
-function clarificationEvents(
-  breakdown: WorkBreakdown,
-  nodeIdFor: (key: string) => string,
-  now: () => string,
-  sequenceOffset: number
-): RunEventInput[] {
-  const completion: RunEventInput = {
-    eventId: `planning:${breakdown.breakdownId}:clarification:${sequenceOffset + 1}`,
-    occurredAt: now(),
-    type: "planning.completed",
-    payload: { breakdownId: breakdown.breakdownId, breakdown: asRecord(breakdown) }
-  };
-  const questions = breakdown.questions.length > 0
-    ? breakdown.questions.map((question) => ({
-      id: `planning-question-${question.id}`,
-      question: question.question,
-      options: question.options,
-      impact: question.impact,
-      evidenceIds: question.evidenceIds,
-      sourceRef: `work-question:${question.id}`
-    }))
-    : breakdown.uncertainties
-      .filter((uncertainty) => uncertainty.requiresHumanDecision)
-      .map((uncertainty) => ({
-        id: `planning-uncertainty-${uncertainty.id}`,
-        question: `How should this uncertainty be resolved? ${uncertainty.description}`,
-        options: ["Provide direction", "Stop this run"],
-        impact: "risk" as const,
-        evidenceIds: uncertainty.evidenceIds,
-        sourceRef: `work-uncertainty:${uncertainty.id}`
-      }));
-  return [
-    completion,
-    ...questions.map((question) => ({
-      eventId: question.id,
-      occurredAt: now(),
-      type: "decision.raised" as const,
-      payload: {
-        decision: {
-          id: question.id,
-          kind: "clarify_goal" as const,
-          question: question.question,
-          options: question.options.map((label, index) => ({ id: `option-${index + 1}`, label })),
-          affectedNodeIds: affectedNodeIds(breakdown.root, question.evidenceIds, nodeIdFor),
-          evidenceRefs: [question.sourceRef, ...question.evidenceIds],
-          impact: question.impact
-        }
-      }
-    }))
-  ];
-}
-
-function semanticClarificationEvents(
-  plan: SemanticPlan,
-  nodeIdFor: (key: string) => string,
-  now: () => string,
-  sequenceOffset: number
-): RunEventInput[] {
-  const completion: RunEventInput = {
-    eventId: `planning:${plan.planId}:clarification:${sequenceOffset + 1}`,
-    occurredAt: now(),
-    type: "planning.completed",
-    payload: { breakdownId: plan.planId, breakdown: asRecord(plan) }
-  };
-  const questions = plan.questions.length > 0
-    ? plan.questions.map((question) => ({
-        id: question.id,
-        question: question.question,
-        options: question.options,
-        impact: question.impact,
-        evidenceIds: question.evidenceIds,
-        sourceRef: `semantic-question:${question.id}`
-      }))
-    : plan.uncertainties
-        .filter((uncertainty) => uncertainty.requiresHumanDecision)
-        .map((uncertainty) => ({
-          id: uncertainty.id,
-          question: uncertainty.description,
-          options: ["Provide direction", "Stop this run"],
-          impact: "risk" as const,
-          evidenceIds: uncertainty.evidenceIds,
-          sourceRef: `semantic-uncertainty:${uncertainty.id}`
-        }));
-  return [
-    completion,
-    ...questions.map((question) => ({
-      eventId: question.id,
-      occurredAt: now(),
-      type: "decision.raised" as const,
-      payload: {
-        decision: {
-          id: question.id,
-          kind: "clarify_goal" as const,
-          question: question.question,
-          options: question.options.map((label, index) => ({ id: `option-${index + 1}`, label })),
-          affectedNodeIds: affectedSemanticNodeIds(plan.root, question.evidenceIds, nodeIdFor),
-          evidenceRefs: [question.sourceRef, ...question.evidenceIds],
-          impact: question.impact
-        }
-      }
-    }))
-  ];
-}
-
-function affectedSemanticNodeIds(root: SemanticPlan["root"], evidenceIds: readonly string[], nodeIdFor: (key: string) => string): string[] {
-  const units = root.kind === "leaf" ? [root] : [root, ...root.children.flatMap((child) => flattenSemanticUnits(child))];
-  if (evidenceIds.length === 0) return [nodeIdFor(root.key)];
-  const matches = units.filter((unit) => unit.evidenceIds.some((id) => evidenceIds.includes(id))).map((unit) => nodeIdFor(unit.key));
-  return matches.length > 0 ? [...new Set(matches)] : [nodeIdFor(root.key)];
-}
-
-function flattenSemanticUnits(unit: SemanticPlan["root"]): SemanticPlan["root"][] {
-  return unit.kind === "leaf" ? [unit] : [unit, ...unit.children.flatMap(flattenSemanticUnits)];
-}
-
-function affectedNodeIds(root: WorkUnit, evidenceIds: readonly string[], nodeIdFor: (key: string) => string): string[] {
-  if (evidenceIds.length === 0) return [nodeIdFor(root.key)];
-  const matches = flattenUnits(root)
-    .filter((unit) => unit.evidenceIds.some((id) => evidenceIds.includes(id)))
-    .map((unit) => nodeIdFor(unit.key));
-  return matches.length > 0 ? [...new Set(matches)] : [nodeIdFor(root.key)];
-}
-
 function flattenUnits(root: WorkUnit): WorkUnit[] {
   return root.kind === "leaf" ? [root] : [root, ...root.children.flatMap(flattenUnits)];
-}
-
-function latestPlanningAttempt(events: readonly { type: string; payload: Record<string, unknown> }[]): number {
-  return events.reduce((latest, event) => {
-    if (!event.type.startsWith("planning.attempt_")) return latest;
-    const attempt = event.payload.attempt;
-    return typeof attempt === "number" && Number.isInteger(attempt) ? Math.max(latest, attempt) : latest;
-  }, 0);
 }
 
 function compiledEvents(compiled: CompiledGraphRevision, now: () => string): RunEventInput[] {
@@ -848,13 +380,13 @@ function compiledEvents(compiled: CompiledGraphRevision, now: () => string): Run
 
 function approvalDecisionId(graphId: string, revision: number): string { return `approve-plan:${graphId}:r${revision}`; }
 
-async function append(dependencies: PlanningV2Dependencies, runId: string, authority: FencingAuthority, expected: number, events: RunEventInput[]) {
+async function append(dependencies: PlanningV2JournalDependencies, runId: string, authority: FencingAuthority, expected: number, events: RunEventInput[]) {
   return dependencies.events.appendFenced(runId, expected, authority, events);
 }
 
 async function recordPlanningFailure(
   input: Pick<PlanningV2Input, "runId" | "authority">,
-  dependencies: PlanningV2Dependencies,
+  dependencies: PlanningV2JournalDependencies,
   reason: string
 ): Promise<RunProjection> {
   const current = await dependencies.events.load(input.runId);

@@ -1,5 +1,12 @@
 # Handoff para continuar el rediseño de fiabilidad de ManyHands
 
+> **Documento histórico.** Describe el protocolo de candidatos
+> (`PlanningEnvelope`, `CandidatePlan`, `planCandidates`, `WorkBreakdownPlanner`),
+> **retirado el 2026-08-06** en la etapa 3F de
+> [`docs/plans/2026-08-05-robust-graph-execution-redesign.md`](../plans/2026-08-05-robust-graph-execution-redesign.md).
+> Los módulos que nombra ya no existen. Se conserva como registro de por qué
+> se construyó y por qué se retiró; no es guía del sistema actual.
+
 Fecha de corte: 2026-08-02
 Rama: `codex/system-reliability-redesign`
 HEAD al iniciar este handoff: `e181acc`
