@@ -10,11 +10,11 @@ import {
   ExecutionBaseBuilder,
   ExecutionConfigSchema,
   FinalCandidatePreparer,
-  PooledExecutionWorkspaceProvider,
+  EphemeralExecutionWorkspaceProvider,
   SimpleGitRunner,
   V2NodeExecutor,
   WorktreeManager,
-  WorktreePool,
+  NativeWorktreePoolGit,
   execWarn,
   safeGitArgs,
   getExecutorDescriptor,
@@ -136,7 +136,6 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
   const stopHeartbeat = startHeartbeat(runId, lease);
   const abort = createRunAbort(runId, lease.operationId);
   let worktrees: WorktreeManager | undefined;
-  let worktreePool: WorktreePool | undefined;
   try {
     const repoRoot = await resolveRunTargetPath(run);
     if (repoRoot === undefined || run.targetContext === undefined) {
@@ -176,13 +175,16 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
     const git = new SimpleGitRunner();
     await git.revParse(repoRoot, `${prepared.graph.baseCommit}^{commit}`);
     worktrees = new WorktreeManager({ git, repoRoot });
-    worktreePool = new WorktreePool({
-      repoRoot,
-      size: config.maxParallel
-    });
+    // One workspace per attempt, created from the base commit and destroyed
+    // after use. The recycling pool it replaces needed a fenced lease per slot
+    // precisely because slots were shared; nothing here is.
     const baseBuilder = new ExecutionBaseBuilder({
       git,
-      workspaceProvider: new PooledExecutionWorkspaceProvider({ pool: worktreePool })
+      workspaceProvider: new EphemeralExecutionWorkspaceProvider({
+        repoRoot,
+        worktreesRoot: `${repoRoot}/.manyhands/worktrees`,
+        git: new NativeWorktreePoolGit()
+      })
     });
     const traceStore = new JsonlTraceStore({ runId, directory });
     const nodeExecutor = new V2NodeExecutor({
@@ -298,14 +300,6 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
     }
     throw error;
   } finally {
-    if (worktreePool !== undefined) {
-      await worktreePool.dispose().catch((error) => {
-        execWarn("execution-v2", "worktree pool disposal failed", {
-          runId,
-          cause: error instanceof Error ? error.message : String(error)
-        });
-      });
-    }
     if (worktrees !== undefined) {
       await worktrees.gcRun(runId).catch((error) => {
         execWarn("execution-v2", "run worktree garbage collection failed", {

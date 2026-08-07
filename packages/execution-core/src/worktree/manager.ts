@@ -21,6 +21,7 @@ export * from "./worktree-pool";
 export * from "./layout";
 export * from "./fenced-lease";
 export * from "./execution-workspace";
+export * from "./ephemeral-workspace";
 
 export interface WorktreeManagerDeps {
   git: GitRunner;

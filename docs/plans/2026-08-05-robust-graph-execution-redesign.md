@@ -760,8 +760,27 @@ por una razón ya conocida, y además sólo una hoja llegó a ejecutarse.
   propiedad del árbol y no de cada corte — sin eso, «el conjunto de conflictos
   es siempre vacío» no era cierto. `it.fails` retirado.
 - Un solo tipo de tarea: hoja y composite en el mismo scheduler.
-- Workspace por intento: se crea fresco desde el commit base, se usa, se
-  destruye. Caché de dependencias desacoplada del estado git.
+- **Workspace por intento** (`EphemeralExecutionWorkspaceProvider`): se crea
+  fresco desde el commit base, se usa, se destruye. **Hecho el 2026-08-07 para
+  el base builder**, que era el consumidor de `ExecutionWorkspaceProvider`.
+  Reutiliza `runWorktreesRootFor`, la regla de layout que reubica los workspaces
+  bajo temp cuando la ruta excedería el presupuesto de git en Windows — inventar
+  un esquema propio habría reintroducido un fallo que esta capa ya aprendió.
+
+  La coordinación que queda es **un turnstile en proceso** para `add`/`remove`,
+  que sí mutan metadata compartida del repositorio. No hace falta más: el run
+  tiene un único proceso dueño por construcción. El pool necesitaba un lease
+  con fencing por slot sólo porque los slots se compartían.
+
+  El commit candidato se ancla con `update-ref` **antes** de destruir el
+  workspace: un commit alcanzable sólo desde un worktree eliminado es
+  inalcanzable, así que el orden es la garantía.
+
+  *Pendiente:* los worktrees de hoja siguen viniendo de `WorktreeManager`, que
+  direcciona por `taskId` y no por intento, así que dos intentos de una misma
+  tarea no pueden coexistir. Migrarlo es lo que habilita retirar `worktree-pool`,
+  `fenced-lease` y `topology-lease`. La caché de dependencias sigue acoplada al
+  estado git.
 - Lock de dueño por run con PID y toma si el dueño murió.
 - **Retiros:** `worktree-pool.ts`, `fenced-lease.ts`, `topology-lease.ts`,
   repository lease, takeover receipts, `mutationFence`, abort registry

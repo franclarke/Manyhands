@@ -470,7 +470,7 @@ export class WorktreePool {
 
 export { WorktreePool as WorktreeRecyclingPool };
 
-class NativeWorktreePoolGit implements WorktreePoolGit {
+export class NativeWorktreePoolGit implements WorktreePoolGit {
   private readonly gitPath: string;
 
   constructor(gitPath = "git") {
