@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { ChildProcess } from "node:child_process";
 import { buildAgentEnvironment } from "@manyhands/execution-core";
-import { NonRetryablePlanningError, PILOT_UTILITY_POLICY, PlanningCapacityError, RecursivePlanner, WorkBreakdownPlanner, compileGraphRevision, parseWorkBreakdownProgressLine, type SemanticPlanningModelRequest, type WorkBreakdownModelRequest } from "@manyhands/decomposer";
+import { NonRetryablePlanningError, PILOT_UTILITY_POLICY, PlanningCapacityError, RecursivePlanner, compileGraphRevision, type CutRequest } from "@manyhands/decomposer";
 import { foldRun } from "@manyhands/run-coordinator";
 import { buildFastRepositorySnapshot } from "@manyhands/repository-index";
 import { EventStoreCompactor, JsonlRunEventStore, RunSnapshotStore, verifyAndRecoverRunStore } from "@manyhands/run-store";
@@ -69,25 +69,8 @@ export async function runPlanningV2Pipeline(runId: string): Promise<void> {
       const existingEvents = await events.load(runId);
       const questionAnswers = resolvedPlanningAnswers(existingEvents.length === 0 ? undefined : foldRun(existingEvents));
       const stage = planningSelection(run);
-      const planningModel = {
-        generate: (request: WorkBreakdownModelRequest | SemanticPlanningModelRequest) => invokeSelectedPlanningCli(
-          runId,
-          repoPath,
-          stage,
-          lease.operationId,
-          planningSignal,
-          request
-        )
-      };
-      const planner = new WorkBreakdownPlanner({
-        model: planningModel,
-        ...(run.executionConfig.maxPlanningAttempts !== undefined
-          ? { maxAttempts: run.executionConfig.maxPlanningAttempts }
-          : { maxAttempts: 3 })
-      });
-      // The redesigned path cuts one unit at a time. The CLI still answers with
-      // a string; the progress channel is unused because a resolved unit is a
-      // whole model call, not a line inside one.
+      // Planning cuts one unit at a time: a resolved unit is a whole model call,
+      // so the CLI is invoked per cut and answers with that cut's JSON.
       const recursivePlanner = new RecursivePlanner({
         model: {
           proposeCut: (request) => invokeSelectedPlanningCli(
@@ -96,13 +79,7 @@ export async function runPlanningV2Pipeline(runId: string): Promise<void> {
             stage,
             lease.operationId,
             planningSignal,
-            {
-              system: request.system,
-              user: request.user,
-              attempt: request.attempt,
-              repairIssues: [...request.repairIssues],
-              onProgress: async () => {}
-            }
+            request
           )
         },
         budget: { maxScopePaths: PILOT_UTILITY_POLICY.maxLeafScopePaths },
@@ -116,18 +93,11 @@ export async function runPlanningV2Pipeline(runId: string): Promise<void> {
         baseCommit: run.targetContext.sourceBaseCommit,
         authority,
         ...(Object.keys(questionAnswers).length > 0 ? { questionAnswers } : {}),
-        ...(run.granularityCondition !== undefined ? { granularityCondition: run.granularityCondition } : {}),
-        ...(run.candidateCount !== undefined ? { candidateCount: run.candidateCount } : {}),
-        ...(run.experimentalCandidate !== undefined ? {
-          acceptanceCriteria: run.experimentalCandidate.acceptanceCriteria,
-          experimentalCandidate: run.experimentalCandidate
-        } : {})
+        ...(run.granularityCondition !== undefined ? { granularityCondition: run.granularityCondition } : {})
       }, {
         events,
         snapshots,
         inspect: (input) => buildFastRepositorySnapshot({ rootPath: input.repoPath, targetFingerprint: input.targetFingerprint, baseCommit: input.baseCommit }),
-        plan: (input, observer) => planner.plan(input, observer),
-        planCandidates: (input, envelope, count, observer) => planner.planCandidates(input, envelope, count, observer),
         recursivePlanner,
         compile: (input) => compileGraphRevision(input, { idFor: stableId, now: () => new Date().toISOString() }),
         nodeIdFor: (key) => stableId("node", key),
@@ -159,10 +129,6 @@ export async function approvePlanningV2Pipeline(runId: string, revision: number)
     const state = await approvePlanningV2(runId, authority, revision, current.length, {
       events,
       snapshots,
-      inspect: async () => { throw new Error("Inspection is not part of approval."); },
-      plan: async () => { throw new Error("Planning is not part of approval."); },
-      planCandidates: async () => { throw new Error("Candidate planning is not part of approval."); },
-      compile: () => { throw new Error("Compilation is not part of approval."); },
       now: () => new Date().toISOString()
     });
     const persistedEvents = await events.load(runId);
@@ -183,7 +149,7 @@ async function invokeSelectedPlanningCli(
   stage: { executorId: string; model: string; effort?: string },
   operationId: string,
   signal: AbortSignal,
-  request: WorkBreakdownModelRequest | SemanticPlanningModelRequest
+  request: Pick<CutRequest, "system" | "user" | "attempt" | "repairIssues">
 ): Promise<string> {
   const repair = request.repairIssues.length === 0
     ? ""
@@ -210,8 +176,6 @@ async function invokeSelectedPlanningCli(
     let terminalError: string | undefined;
     let receivedClaudeDelta = false;
     const observedEnvelopeTypes = new Set<string>();
-    let progressBuffer = "";
-    let progressQueue = Promise.resolve();
     let settled = false;
     const timeoutMs = resolvePlanningStepTimeoutMs(process.env.MANYHANDS_PLANNING_STEP_TIMEOUT_MS);
     const timer = setTimeout(() => {
@@ -223,16 +187,8 @@ async function invokeSelectedPlanningCli(
       clearTimeout(timer);
       complete();
     };
-    const enqueueProgress = (line: string) => {
-      const unit = parseWorkBreakdownProgressLine(line.trim());
-      if (unit !== undefined) progressQueue = progressQueue.then(() => request.onProgress(unit));
-    };
     const consumeAssistantText = (text: string) => {
       assistantText += text;
-      progressBuffer += text;
-      const lines = progressBuffer.split(/\r?\n/u);
-      progressBuffer = lines.pop() ?? "";
-      for (const line of lines) enqueueProgress(line);
     };
     const consumeClaudeLine = (line: string) => {
       const decoded = decodeClaudePlanningStreamLine(line);
@@ -263,47 +219,43 @@ async function invokeSelectedPlanningCli(
     child.once("error", (error) => finish(() => reject(error)));
     child.once("close", (code) => {
       if (!isCodex) consumeClaudeLine(cliBuffer);
-      enqueueProgress(progressBuffer);
-      void progressQueue.then(
-        () => finish(() => {
-          if (code !== 0) {
-            const diagnostics = formatPlanningCliDiagnostics({
-              observedEnvelopeTypes,
-              stdoutBytes,
-              stderrTail,
-              outputTail: resultText ?? assistantText
-            });
-            // Capacity is decided by what the CLI SAID, not by which envelopes
-            // it emitted: a direct probe showed `rate_limit_event` present in
-            // successful calls too, so keying on the envelope type would have
-            // relabelled every non-zero exit as throttling and retried genuine
-            // planning failures without ever spending an attempt.
-            if (PROVIDER_CAPACITY_PATTERN.test(`${stderrTail}\n${terminalError ?? ""}`)) {
-              reject(new PlanningCapacityError(`${stage.executorId} was throttled by the provider (${diagnostics}).`));
-              return;
-            }
-            reject(new Error(`${stage.executorId} planning failed with exit code ${code} (${diagnostics}).`));
+      finish(() => {
+        if (code !== 0) {
+          const diagnostics = formatPlanningCliDiagnostics({
+            observedEnvelopeTypes,
+            stdoutBytes,
+            stderrTail,
+            outputTail: resultText ?? assistantText
+          });
+          // Capacity is decided by what the CLI SAID, not by which envelopes
+          // it emitted: a direct probe showed `rate_limit_event` present in
+          // successful calls too, so keying on the envelope type would have
+          // relabelled every non-zero exit as throttling and retried genuine
+          // planning failures without ever spending an attempt.
+          if (PROVIDER_CAPACITY_PATTERN.test(`${stderrTail}\n${terminalError ?? ""}`)) {
+            reject(new PlanningCapacityError(`${stage.executorId} was throttled by the provider (${diagnostics}).`));
             return;
           }
-          if (isCodex) {
-            resolve(assistantText);
-            return;
-          }
-          try {
-            resolve(completeClaudePlanningStream({
-              resultText,
-              terminalError,
-              observedEnvelopeTypes,
-              stdoutBytes,
-              stderrTail,
-              outputTail: assistantText
-            }));
-          } catch (error) {
-            reject(error);
-          }
-        }),
-        (error) => finish(() => reject(error))
-      );
+          reject(new Error(`${stage.executorId} planning failed with exit code ${code} (${diagnostics}).`));
+          return;
+        }
+        if (isCodex) {
+          resolve(assistantText);
+          return;
+        }
+        try {
+          resolve(completeClaudePlanningStream({
+            resultText,
+            terminalError,
+            observedEnvelopeTypes,
+            stdoutBytes,
+            stderrTail,
+            outputTail: assistantText
+          }));
+        } catch (error) {
+          reject(error);
+        }
+      });
     });
     child.stdin?.end(prompt);
   });

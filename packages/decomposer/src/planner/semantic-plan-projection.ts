@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { CandidatePlan } from "./planning-envelope.js";
+import type { CandidatePlan } from "./candidate-plan.js";
 import { WorkBreakdownSchema, type WorkBreakdown, type WorkUnit } from "./schema.js";
 import { flattenSemanticWorkUnits, type SemanticPlan, type SemanticWorkUnit } from "./semantic-plan.js";
 
