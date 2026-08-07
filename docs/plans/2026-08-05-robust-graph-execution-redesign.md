@@ -818,9 +818,35 @@ por una razón ya conocida, y además sólo una hoja llegó a ejecutarse.
   —`run/executor.ts`, `run/amendments-engine.ts`— es legacy sin sitio de
   construcción productivo.
 
-  *Falta:* (2) reemplazar el topology lease por el turnstile en proceso, ahora
-  que casi nadie lo toma, y (3) retirar `worktree-pool`, `fenced-lease` y
-  `topology-lease`. La caché de dependencias sigue acoplada al estado git.
+  *Pasos (2) y (3) hechos el 2026-08-07.* El topology lease —filesystem, con
+  fencing token, entre procesos— era **redundante con el repository lease**, que
+  admite exactamente un dueño por git common dir y envuelve toda la ejecución.
+  Un lock distribuido debajo de uno exclusivo, y con dientes: podía quedar stale
+  y bloquear un run que era dueño del repositorio.
+
+  Lo reemplaza `withRepositoryTopology`, **keyed por repositorio y no por
+  instancia**. Esa distinción no es cosmética: un turnstile por instancia hace
+  que la garantía dependa de que cada caller recuerde compartir el objeto —
+  corrección por convención, que deja de valer el día que alguien construye un
+  segundo. Un test lo fija sobre dos providers distintos.
+
+  **Antes de sacar el lock hubo que arreglar un orden mal puesto:** `gcRun`
+  corría en el `finally` externo, **fuera** del repository lease. Podar worktrees
+  ahí, sin el lock cruzado, habría permitido que otro proceso ya dueño del
+  repositorio estuviera creando worktrees mientras este los borraba. Ahora corre
+  dentro del lease, y **se saltea si el lease se perdió** (`repositorySignal`
+  abortada): dejar los worktrees es el fallo seguro, el gc del próximo dueño los
+  recolecta.
+
+  *Retirado:* `worktree-pool.ts` (716), `fenced-lease.ts` (344),
+  `topology-lease.ts` (35) y su test (517) — **1612 líneas**. Sobreviven, en su
+  propio lugar, las dos cosas que el pool tenía y el producto usa: el adaptador
+  de git (`NativeWorktreeGit`, con la superficie reducida a add/remove/updateRef,
+  sin el `resetAndClean`/`validate` que sólo existían para probar que un slot
+  reciclado estaba limpio) y `WorktreeReleaseOutcome`, que es del contrato del
+  workspace.
+
+  La caché de dependencias sigue acoplada al estado git.
 - Lock de dueño por run con PID y toma si el dueño murió.
 - **Retiros:** `worktree-pool.ts`, `fenced-lease.ts`, `topology-lease.ts`,
   repository lease, takeover receipts, `mutationFence`, abort registry

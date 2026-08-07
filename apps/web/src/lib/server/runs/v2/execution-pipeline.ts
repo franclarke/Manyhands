@@ -14,7 +14,7 @@ import {
   SimpleGitRunner,
   V2NodeExecutor,
   WorktreeManager,
-  NativeWorktreePoolGit,
+  NativeWorktreeGit,
   execWarn,
   safeGitArgs,
   getExecutorDescriptor,
@@ -185,7 +185,7 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
     const workspaces = new EphemeralExecutionWorkspaceProvider({
       repoRoot,
       worktreesRoot: `${repoRoot}/.manyhands/worktrees`,
-      git: new NativeWorktreePoolGit()
+      git: new NativeWorktreeGit()
     });
     const baseBuilder = new ExecutionBaseBuilder({ git, workspaceProvider: workspaces });
     const traceStore = new JsonlTraceStore({ runId, directory });
@@ -251,7 +251,8 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
     const state = await withRepositoryLease({ repoRoot, runId }, async (_repositoryLease, repositorySignal) => {
       await events.assertAuthority(runId, authority);
       executionSignal = AbortSignal.any([abort.signal, repositorySignal]);
-      return runWithProcessSupervision({
+      try {
+        return await runWithProcessSupervision({
         runId,
         operationId: lease.operationId,
         label: "execution-v2",
@@ -278,7 +279,29 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
             targetBranch: run.targetContext!.sourceBranch,
             targetHead: run.targetContext!.sourceBaseCommit
           }
-        }));
+          }));
+      } finally {
+        // Garbage collection mutates the repository's worktree metadata, so it
+        // belongs under the same lease as the work that created those
+        // worktrees. It used to run in the outer `finally`, after the lease was
+        // released: another process could already hold the repository and be
+        // adding worktrees while this one pruned them.
+        //
+        // A lost lease aborts this signal, and then the repository belongs to
+        // someone else: pruning it would be the very thing the lease exists to
+        // prevent. Leaving the worktrees behind is the safe failure — the next
+        // owner's gc reclaims them.
+        if (repositorySignal.aborted) {
+          execWarn("execution-v2", "skipped run worktree garbage collection: repository lease lost", { runId });
+        } else {
+          await worktrees?.gcRun(runId).catch((error) => {
+            execWarn("execution-v2", "run worktree garbage collection failed", {
+              runId,
+              cause: error instanceof Error ? error.message : String(error)
+            });
+          });
+        }
+      }
     });
     const persistedEvents = await events.load(runId);
     await snapshots.write(runId, authority, state, state.sequence, persistedEvents.at(-1)!.eventId);
@@ -302,14 +325,6 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
     }
     throw error;
   } finally {
-    if (worktrees !== undefined) {
-      await worktrees.gcRun(runId).catch((error) => {
-        execWarn("execution-v2", "run worktree garbage collection failed", {
-          runId,
-          cause: error instanceof Error ? error.message : String(error)
-        });
-      });
-    }
     disposeRunAbort(runId, lease.operationId);
     markRunnerInactive(runId, lease.operationId);
     stopHeartbeat();

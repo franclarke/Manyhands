@@ -4,12 +4,14 @@ import { nowIso } from "@manyhands/shared";
 
 import { WorktreeRecordSchema } from "../types.js";
 import { runWorktreesRootFor, safeWorktreeSegment } from "./layout.js";
+import { withRepositoryTopology } from "./topology.js";
 import type { CreateWorktreeParams } from "./manager.js";
 import type {
   ExecutionWorkspaceHandle,
-  ExecutionWorkspaceProvider
+  ExecutionWorkspaceProvider,
+  WorktreeReleaseOutcome
 } from "./execution-workspace.js";
-import type { WorktreeReleaseOutcome } from "./worktree-pool.js";
+
 
 /**
  * A workspace per attempt: created fresh from the base commit, used once,
@@ -24,9 +26,10 @@ import type { WorktreeReleaseOutcome } from "./worktree-pool.js";
  * `git worktree add`.
  *
  * What genuinely is shared is the repository's worktree metadata, which
- * `add` and `remove` both mutate. The run has one owner process by
- * construction, so an in-process turnstile is the whole coordination needed
- * here; no cross-process lease, no fencing token.
+ * `add` and `remove` both mutate. That is serialized by `withRepositoryTopology`
+ * — keyed by repository rather than held per instance, so the guarantee does
+ * not depend on callers remembering to share one provider. The run has one
+ * owner process by construction, so no cross-process lease is needed.
  */
 
 export interface EphemeralWorkspaceGit {
@@ -52,8 +55,6 @@ export class EphemeralExecutionWorkspaceProvider implements ExecutionWorkspacePr
   private readonly now: () => string;
   private readonly platform: NodeJS.Platform | undefined;
   private readonly tmpdir: (() => string) | undefined;
-  /** Serializes every mutation of the repository's worktree metadata. */
-  private topology: Promise<unknown> = Promise.resolve();
 
   constructor(options: EphemeralExecutionWorkspaceProviderOptions) {
     this.repoRoot = options.repoRoot;
@@ -118,11 +119,7 @@ export class EphemeralExecutionWorkspaceProvider implements ExecutionWorkspacePr
   }
 
   private serialize<T>(operation: () => Promise<T>): Promise<T> {
-    const next = this.topology.then(operation, operation);
-    // The chain must survive a failed operation, or one error would deadlock
-    // every later mutation behind a rejected promise.
-    this.topology = next.catch(() => undefined);
-    return next;
+    return withRepositoryTopology(this.repoRoot, operation);
   }
 }
 

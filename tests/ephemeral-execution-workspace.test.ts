@@ -104,6 +104,32 @@ describe("ephemeral execution workspace", () => {
     expect(git.calls.filter((call) => call.op === "remove")).toHaveLength(1);
   });
 
+
+  /**
+   * Keyed by repository, not held per instance. A per-instance turnstile would
+   * make the guarantee depend on every caller remembering to share one
+   * provider — correctness by convention, which is how it silently stops
+   * holding the day someone constructs a second one.
+   */
+  it("serializes across separate providers over the same repository", async () => {
+    let concurrent = 0;
+    let peak = 0;
+    const enter = async () => {
+      concurrent += 1;
+      peak = Math.max(peak, concurrent);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      concurrent -= 1;
+    };
+    const git = fakeGit({ add: enter });
+    const [first, second] = await Promise.all([
+      providerWith(git).acquire(params("task-a")),
+      providerWith(git).acquire(params("task-b"))
+    ]);
+
+    expect(peak).toBe(1);
+    await Promise.all([first.release(), second.release()]);
+  });
+
   /**
    * `git worktree add` and `remove` mutate metadata shared by the whole
    * repository. The run has a single owner process by construction, so an

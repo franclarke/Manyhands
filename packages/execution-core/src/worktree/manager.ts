@@ -1,5 +1,5 @@
-import { randomUUID } from "node:crypto";
 import { readdir, rm } from "node:fs/promises";
+import { withRepositoryTopology } from "./topology.js";
 import { join } from "node:path";
 
 import { nowIso } from "@manyhands/shared";
@@ -15,13 +15,12 @@ import {
   worktreePathFor,
   type WorktreeRootParams
 } from "./layout";
-import { acquireWorktreeTopologyLease } from "./topology-lease.js";
 
-export * from "./worktree-pool";
 export * from "./layout";
-export * from "./fenced-lease";
 export * from "./execution-workspace";
+export * from "./topology";
 export * from "./ephemeral-workspace";
+export * from "./native-git";
 
 export interface WorktreeManagerDeps {
   git: GitRunner;
@@ -63,7 +62,6 @@ export class WorktreeManager {
   private readonly platform: NodeJS.Platform | undefined;
   private readonly tmpdir: (() => string) | undefined;
   private readonly removePath: (worktreePath: string) => Promise<void>;
-  private readonly topologyOwnerId = `worktree-manager-${process.pid}-${randomUUID()}`;
 
   constructor(deps: WorktreeManagerDeps) {
     this.git = deps.git;
@@ -322,17 +320,9 @@ export class WorktreeManager {
     return { removed, failed };
   }
 
+  /** See `withRepositoryTopology` for why this is keyed by repository. */
   private async withTopologyLease<T>(operation: () => Promise<T>): Promise<T> {
-    const lease = await acquireWorktreeTopologyLease(
-      this.repoRoot,
-      this.topologyOwnerId,
-      this.tmpdir === undefined ? {} : { tmpdir: this.tmpdir }
-    );
-    try {
-      return await operation();
-    } finally {
-      await lease.release();
-    }
+    return withRepositoryTopology(this.repoRoot, operation);
   }
 
   /**

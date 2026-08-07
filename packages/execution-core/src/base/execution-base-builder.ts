@@ -8,7 +8,7 @@ import type {
   ExecutionWorkspaceHandle,
   ExecutionWorkspaceProvider
 } from "../worktree/execution-workspace";
-import type { WorktreeReleaseOutcome } from "../worktree/worktree-pool";
+import type { WorktreeReleaseOutcome } from "../worktree/execution-workspace";
 import { ArtifactMaterializer } from "./artifact-materializer";
 import {
   ExecutionArtifactInputSchema,
