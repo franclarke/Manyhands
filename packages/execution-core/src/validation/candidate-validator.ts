@@ -5,7 +5,7 @@ import { buildEvidenceMatrix, type EvidenceMatrix, type ValidationEvidenceObserv
 import type { ValidationRecipe, ValidationRecipeAttribution, ValidationRecipeStep } from "./recipe-compiler";
 import { compareBaselineResult } from "./baseline";
 import type { GitRunner } from "../git/runner";
-import type { WorktreeManager } from "../worktree/manager";
+import type { ExecutionWorkspaceProvider } from "../worktree/execution-workspace";
 import { TEST_INTEGRITY_DETECTOR_VERSION, type TestIntegrityFinding } from "./test-integrity";
 
 export interface CandidateSandbox {
@@ -50,27 +50,46 @@ export interface CandidateValidatorDependencies {
   cache?: EvidenceValidationCache;
 }
 
+/**
+ * A validation sandbox is a workspace like any other: a checkout of one exact
+ * commit, used once, thrown away.
+ *
+ * It used to come from `WorktreeManager`, which meant every sandbox took the
+ * cross-process topology lease for a worktree nobody else could want, and filed
+ * it under a synthesised run id that `gcRun` would never walk — so a crash
+ * mid-validation orphaned it permanently. Going through the shared provider
+ * fixes both, and leaves the manager with no productive caller.
+ *
+ * The provider instance must be shared with the rest of the run: its serialised
+ * access to the repository's worktree metadata only holds across the callers
+ * that share it.
+ */
 export class GitCandidateSandboxFactory {
   constructor(
     private readonly git: GitRunner,
-    private readonly worktrees: WorktreeManager,
-    private readonly runId: string
+    private readonly workspaces: ExecutionWorkspaceProvider,
+    private readonly runId: string,
+    /** Distinguishes concurrent sandboxes of one run in paths and traces. */
+    private readonly purpose: string = "validation"
   ) {}
 
   async create(input: { candidateCommit: string }): Promise<CandidateSandbox> {
-    const record = await this.worktrees.create({
-      taskId: `validation-${input.candidateCommit.slice(0, 12)}`,
+    const handle = await this.workspaces.acquire({
+      taskId: `${this.purpose}-${input.candidateCommit.slice(0, 12)}`,
       runId: this.runId,
       kind: "integration",
       baseCommit: input.candidateCommit
     });
-    const headCommit = await this.git.head(record.path);
-    const clean = (await this.git.statusPorcelain(record.path)).length === 0;
+    const worktreePath = handle.worktree.path;
+    const headCommit = await this.git.head(worktreePath);
+    const clean = (await this.git.statusPorcelain(worktreePath)).length === 0;
     return {
-      worktreePath: record.path,
+      worktreePath,
       headCommit,
       clean,
-      dispose: async () => { await this.worktrees.clean(record); }
+      // Always a discard: a sandbox proves things about a commit that already
+      // exists, so it never has a candidate of its own to anchor.
+      dispose: async () => { await handle.release({ kind: "discard" }); }
     };
   }
 }

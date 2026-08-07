@@ -11,12 +11,18 @@ import type { EvidenceMatrix } from "../validation/evidence-matrix";
 import { compileValidationRecipe } from "../validation/recipe-compiler";
 import { ChildProcessValidationRunner, type ValidationRunner } from "../validation/runner";
 import { detectTestIntegrityFindings, isTestDiscoveryConfigurationPath, isTestFilePath } from "../validation/test-integrity";
-import type { WorktreeManager } from "../worktree/manager";
+import type { ExecutionWorkspaceProvider } from "../worktree/execution-workspace";
 import type { V2ExecutionEvidenceMatrix, V2NodeValidationPort } from "./node-executor";
 
 export interface ExactCandidateValidatorV2Options {
   git: GitRunner;
-  worktrees: WorktreeManager;
+  /**
+   * Shared with the rest of the run. A provider built per validation would keep
+   * its own turnstile, so concurrent validations would stop serialising their
+   * git worktree mutations against each other — the guarantee would look
+   * present and not hold.
+   */
+  workspaces: ExecutionWorkspaceProvider;
   repoRoot: string;
   repositorySnapshot: RepositorySnapshot;
   runner?: ValidationRunner;
@@ -65,10 +71,14 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
       candidateCommit: input.candidateCommit,
       baselineCommit: input.baselineCommit
     });
+    // The run id is the real one so `gcRun` can reclaim an orphaned sandbox;
+    // what distinguishes concurrent sandboxes is the purpose and the provider's
+    // own per-acquisition identity, not a synthesised run.
     const candidateSandbox = new GitCandidateSandboxFactory(
       this.options.git,
-      this.options.worktrees,
-      `${input.runId}-${input.attemptId}-candidate`
+      this.options.workspaces,
+      input.runId,
+      `${input.attemptId}-candidate`
     );
     const supervision = {
       runId: input.runId,
@@ -92,8 +102,9 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
       // by the orchestrator, rather than a fresh worktree per obligation.
       createBaselineSandbox: async (baselineCommit) => new GitCandidateSandboxFactory(
         this.options.git,
-        this.options.worktrees,
-        `${input.runId}-${input.attemptId}-baseline`
+        this.options.workspaces,
+        input.runId,
+        `${input.attemptId}-baseline`
       ).create({ candidateCommit: baselineCommit }),
       runBaseline: async (step, baselineSandbox) => this.runner.run([step.command], {
         worktreePath: baselineSandbox.worktreePath,
@@ -299,8 +310,9 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
   }): Promise<{ detectedFailure: boolean; output: string }> {
     const sandbox = await new GitCandidateSandboxFactory(
       this.options.git,
-      this.options.worktrees,
-      `${input.runId}-${input.attemptId}-negative-${input.obligationId}`
+      this.options.workspaces,
+      input.runId,
+      `${input.attemptId}-negative-${input.obligationId}`
     ).create({ candidateCommit: input.baselineCommit });
     try {
       for (const [file, contents] of Object.entries(input.candidateTestContents).sort(([left], [right]) => left.localeCompare(right))) {

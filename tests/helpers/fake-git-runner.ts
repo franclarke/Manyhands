@@ -1,4 +1,5 @@
 import type { CherryPickOutcome, GitRunner, GitShowOptions } from "@manyhands/execution-core";
+import { EphemeralExecutionWorkspaceProvider } from "@manyhands/execution-core";
 
 export interface FakeGitCall {
   op: string;
@@ -274,4 +275,29 @@ export class FakeGitRunner implements GitRunner {
     }
     return content;
   }
+}
+
+/**
+ * A workspace provider over a fake `GitRunner`, for tests that used to build a
+ * `WorktreeManager`.
+ *
+ * `updateRef` throws on purpose: a validation sandbox proves things about a
+ * commit that already exists, so it always discards. If anchoring ever starts
+ * happening on this path, the test says so instead of passing quietly.
+ */
+export function fakeWorkspaceProvider(git: GitRunner, repoRoot = "C:/repo/booking"): EphemeralExecutionWorkspaceProvider {
+  return new EphemeralExecutionWorkspaceProvider({
+    repoRoot,
+    worktreesRoot: `${repoRoot}/.manyhands/worktrees`,
+    platform: "linux",
+    git: {
+      add: ({ repoRoot: root, worktreePath, baseCommit }) =>
+        git.worktreeAdd({ repoRoot: root, worktreePath, branch: `mh/${worktreePath.split("/").pop()}`, baseCommit }),
+      remove: ({ repoRoot: root, worktreePath }) =>
+        git.worktreeRemove({ repoRoot: root, worktreePath, force: true }),
+      updateRef: async () => {
+        throw new Error("A validation sandbox never anchors a candidate.");
+      }
+    }
+  });
 }

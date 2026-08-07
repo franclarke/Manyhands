@@ -178,14 +178,16 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
     // One workspace per attempt, created from the base commit and destroyed
     // after use. The recycling pool it replaces needed a fenced lease per slot
     // precisely because slots were shared; nothing here is.
-    const baseBuilder = new ExecutionBaseBuilder({
-      git,
-      workspaceProvider: new EphemeralExecutionWorkspaceProvider({
-        repoRoot,
-        worktreesRoot: `${repoRoot}/.manyhands/worktrees`,
-        git: new NativeWorktreePoolGit()
-      })
+    //
+    // A single instance for the whole run, deliberately: the provider
+    // serialises the git worktree mutations of everyone who shares it, and a
+    // second instance would quietly opt its callers out of that.
+    const workspaces = new EphemeralExecutionWorkspaceProvider({
+      repoRoot,
+      worktreesRoot: `${repoRoot}/.manyhands/worktrees`,
+      git: new NativeWorktreePoolGit()
     });
+    const baseBuilder = new ExecutionBaseBuilder({ git, workspaceProvider: workspaces });
     const traceStore = new JsonlTraceStore({ runId, directory });
     const nodeExecutor = new V2NodeExecutor({
       git,
@@ -196,7 +198,7 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
       executorFactory: new DefaultAgentExecutorFactory(),
       validator: new ExactCandidateValidatorV2({
         git,
-        worktrees,
+        workspaces,
         repoRoot,
         repositorySnapshot: prepared.repositorySnapshot,
         operationId: lease.operationId

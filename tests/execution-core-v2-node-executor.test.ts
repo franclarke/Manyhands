@@ -20,7 +20,7 @@ import {
 } from "@manyhands/execution-core";
 import { InMemoryTraceStore } from "@manyhands/trace-store";
 import { bookingBreakdown, bookingSnapshot, compilerDependencies } from "./helpers/target-planning-fixtures";
-import { FakeGitRunner } from "./helpers/fake-git-runner";
+import { FakeGitRunner, fakeWorkspaceProvider } from "./helpers/fake-git-runner";
 
 const at = "2026-07-17T12:00:00.000Z";
 
@@ -645,10 +645,9 @@ describe("ExactCandidateValidatorV2", () => {
     const contract = compiled.contracts.find((bundle) => bundle.task.nodeId === "node-api")!;
     const candidate = "9".repeat(40);
     const git = new FakeGitRunner();
-    const worktrees = new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at });
     const validator = new ExactCandidateValidatorV2({
       git,
-      worktrees,
+      workspaces: fakeWorkspaceProvider(git),
       repoRoot: "C:/repo/booking",
       repositorySnapshot: bookingSnapshot(),
       runner: { run: async () => ({ passed: true, output: "passed", exitCode: 0 }) }
@@ -704,7 +703,7 @@ describe("ExactCandidateValidatorV2", () => {
     });
     const validator = new ExactCandidateValidatorV2({
       git,
-      worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }),
+      workspaces: fakeWorkspaceProvider(git),
       repoRoot: "C:/repo/booking",
       repositorySnapshot: snapshot,
       runner: { run: async () => ({ passed: true, output: "remaining suite passed", exitCode: 0 }) }
@@ -748,7 +747,7 @@ describe("ExactCandidateValidatorV2", () => {
     });
     const validator = new ExactCandidateValidatorV2({
       git,
-      worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }),
+      workspaces: fakeWorkspaceProvider(git),
       repoRoot: "C:/repo/booking",
       repositorySnapshot: snapshot,
       runner: { run: async () => ({ passed: true, output: "narrow suite passed", exitCode: 0 }) }
@@ -776,7 +775,7 @@ describe("ExactCandidateValidatorV2", () => {
     const git = new FakeGitRunner({ diffRangeNameOnly: ["vitest.config.ts"] });
     const validator = new ExactCandidateValidatorV2({
       git,
-      worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }),
+      workspaces: fakeWorkspaceProvider(git),
       repoRoot: "C:/repo/booking",
       repositorySnapshot: snapshot,
       runner: { run: async () => ({ passed: true, output: "smoke-only suite passed", exitCode: 0 }) }
@@ -885,7 +884,7 @@ describe("ExactCandidateValidatorV2", () => {
       [compiled.graph.baseCommit]: fixture.baseline,
       [candidate]: fixture.candidate
     } });
-    const validator = new ExactCandidateValidatorV2({ git, worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }), repoRoot: "C:/repo/booking", repositorySnapshot: snapshot, runner: { run: async () => ({ passed: true, output: "narrow passed", exitCode: 0 }) } });
+    const validator = new ExactCandidateValidatorV2({ git, workspaces: fakeWorkspaceProvider(git), repoRoot: "C:/repo/booking", repositorySnapshot: snapshot, runner: { run: async () => ({ passed: true, output: "narrow passed", exitCode: 0 }) } });
     const evidence = await validator.validate({ runId: "run-input", attemptId: "attempt-input", contract: compiled.contracts.find((bundle) => bundle.task.nodeId === "node-api")!, candidateCommit: candidate, baselineCommit: compiled.graph.baseCommit });
     expect(evidence.outcome).toBe("failed");
     expect(evidence.integrityFindings).toContainEqual(expect.objectContaining({ path: fixture.expectedPath }));
@@ -903,7 +902,7 @@ describe("ExactCandidateValidatorV2", () => {
         [candidate]: { "package.json": JSON.stringify({ scripts: { test: "vitest run", dev: "node scripts/dev.mjs" } }), "scripts/dev.mjs": 'import "./dev-renderer.mjs";', "scripts/dev-renderer.mjs": "renderSafely();" }
       }
     });
-    const validator = new ExactCandidateValidatorV2({ git, worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }), repoRoot: "C:/repo/booking", repositorySnapshot: snapshot, runner: { run: async () => ({ passed: true, output: "passed", exitCode: 0 }) } });
+    const validator = new ExactCandidateValidatorV2({ git, workspaces: fakeWorkspaceProvider(git), repoRoot: "C:/repo/booking", repositorySnapshot: snapshot, runner: { run: async () => ({ passed: true, output: "passed", exitCode: 0 }) } });
     const evidence = await validator.validate({ runId: "run-dev", attemptId: "attempt-dev", contract: compiled.contracts.find((bundle) => bundle.task.nodeId === "node-api")!, candidateCommit: candidate, baselineCommit: baseline });
     expect(evidence.outcome).toBe("verified");
     expect(evidence.integrityFindings).toEqual([]);
@@ -917,7 +916,7 @@ describe("ExactCandidateValidatorV2", () => {
     const manifest = JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } });
     const wrapper = "const selector = process.env.TEST_SELECTOR; await import(selector);";
     const git = new FakeGitRunner({ diffRangeNameOnly: ["src/feature.ts"], showFileByRef: { [baseline]: { "package.json": manifest, "scripts/run-tests.mjs": wrapper, "src/feature.ts": "old();" }, [candidate]: { "package.json": manifest, "scripts/run-tests.mjs": wrapper, "src/feature.ts": "fixed();" } } });
-    const validator = new ExactCandidateValidatorV2({ git, worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }), repoRoot: "C:/repo/booking", repositorySnapshot: snapshot, runner: { run: async () => ({ passed: true, output: "passed", exitCode: 0 }) } });
+    const validator = new ExactCandidateValidatorV2({ git, workspaces: fakeWorkspaceProvider(git), repoRoot: "C:/repo/booking", repositorySnapshot: snapshot, runner: { run: async () => ({ passed: true, output: "passed", exitCode: 0 }) } });
     const evidence = await validator.validate({ runId: "run-opaque-product", attemptId: "attempt-opaque-product", contract: compiled.contracts.find((bundle) => bundle.task.nodeId === "node-api")!, candidateCommit: candidate, baselineCommit: baseline });
     expect(evidence.outcome).toBe("verified");
   });
@@ -944,7 +943,7 @@ describe("ExactCandidateValidatorV2", () => {
     const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: snapshot }, compilerDependencies);
     const candidate = "a".repeat(40);
     const git = new FakeGitRunner({ diffRangeNameOnly: [...changedFiles], showFileByRef: { [compiled.graph.baseCommit]: fixture.baseline, [candidate]: fixture.candidate } });
-    const validator = new ExactCandidateValidatorV2({ git, worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }), repoRoot: "C:/repo/booking", repositorySnapshot: snapshot, runner: { run: async () => ({ passed: true, output: "passed", exitCode: 0 }) } });
+    const validator = new ExactCandidateValidatorV2({ git, workspaces: fakeWorkspaceProvider(git), repoRoot: "C:/repo/booking", repositorySnapshot: snapshot, runner: { run: async () => ({ passed: true, output: "passed", exitCode: 0 }) } });
     const evidence = await validator.validate({ runId: "run-scope", attemptId: "attempt-scope", contract: compiled.contracts.find((bundle) => bundle.task.nodeId === "node-api")!, candidateCommit: candidate, baselineCommit: compiled.graph.baseCommit });
     expect(evidence.outcome).toBe("verified");
   });
@@ -959,7 +958,7 @@ describe("ExactCandidateValidatorV2", () => {
     const path = "tests/oversized.test.ts";
     const large = `it("works", () => { expect(true).toBe(true); });\n/*${"x".repeat(1_048_576)}*/`;
     const git = new FakeGitRunner({ diffRangeNameOnly: [path], showFileByRef: { [baseline]: { [path]: large }, [candidate]: { [path]: `${large} ` } } });
-    const validator = new ExactCandidateValidatorV2({ git, worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }), repoRoot: "C:/repo/booking", repositorySnapshot: snapshot, runner: { run: async () => ({ passed: true, output: "passed", exitCode: 0 }) } });
+    const validator = new ExactCandidateValidatorV2({ git, workspaces: fakeWorkspaceProvider(git), repoRoot: "C:/repo/booking", repositorySnapshot: snapshot, runner: { run: async () => ({ passed: true, output: "passed", exitCode: 0 }) } });
     const evidence = await validator.validate({ runId: "run-budget", attemptId: "attempt-budget", contract, candidateCommit: candidate, baselineCommit: baseline });
     expect(evidence.outcome).toBe("failed");
     expect(evidence.integrityFindings).toContainEqual(expect.objectContaining({ code: "test_configuration_changed", path }));
@@ -989,15 +988,9 @@ describe("ExactCandidateValidatorV2", () => {
         diffRangeNameOnly: [addedTest],
         showFileByRef: { [candidate]: { [addedTest]: candidateSource } }
       });
-      const worktrees = new WorktreeManager({
-        git,
-        repoRoot: tempRoot,
-        worktreesRoot: path.join(tempRoot, "worktrees"),
-        now: () => at
-      });
       const validator = new ExactCandidateValidatorV2({
         git,
-        worktrees,
+        workspaces: fakeWorkspaceProvider(git, tempRoot),
         repoRoot: tempRoot,
         repositorySnapshot: snapshot,
         runner: {

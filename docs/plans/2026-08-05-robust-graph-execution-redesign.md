@@ -797,11 +797,30 @@ por una razón ya conocida, y además sólo una hoja llegó a ejecutarse.
   aparece en `apps/` ni en `packages/*/src`). Es legacy, como lo era
   `PlanningModule`.
 
-  *Entonces:* migrar el manager es más chico de lo que decía la nota anterior, y
-  el orden correcto es (1) mover el sandbox del validador al provider efímero,
-  (2) reemplazar el topology lease por el turnstile en proceso, (3) retirar
-  `worktree-pool`, `fenced-lease` y `topology-lease`. La caché de dependencias
-  sigue acoplada al estado git.
+  *Paso (1) hecho el 2026-08-07.* `GitCandidateSandboxFactory` toma un
+  `ExecutionWorkspaceProvider` en vez del `WorktreeManager`, y
+  `ExactCandidateValidatorV2` recibe `workspaces` — **una sola instancia
+  compartida con el base builder**. Esto último es requisito de corrección, no
+  estética: el provider serializa las mutaciones de metadata de git entre
+  quienes lo comparten, así que un provider por validación habría dejado la
+  garantía presente en el código y ausente en los hechos, justo cuando el
+  despacho continuo hace que varias validaciones coincidan.
+
+  Se saldó además una fuga latente: el sandbox se archivaba bajo un runId
+  sintético (`${runId}-${attemptId}-candidate`), y `gcRun` recorre la raíz del
+  runId **real** — así que un crash a mitad de validación dejaba un worktree que
+  nada iba a recolectar nunca. Ahora usa el runId real y el propósito distingue
+  los sandboxes concurrentes.
+
+  *Estado del manager tras el paso (1):* en el camino productivo V2 le quedan
+  `gcRun` (que sí sirve) y un fallback en `V2NodeExecutor` que el pipeline nunca
+  usa porque siempre inyecta el base builder. Todo el resto de sus llamadores
+  —`run/executor.ts`, `run/amendments-engine.ts`— es legacy sin sitio de
+  construcción productivo.
+
+  *Falta:* (2) reemplazar el topology lease por el turnstile en proceso, ahora
+  que casi nadie lo toma, y (3) retirar `worktree-pool`, `fenced-lease` y
+  `topology-lease`. La caché de dependencias sigue acoplada al estado git.
 - Lock de dueño por run con PID y toma si el dueño murió.
 - **Retiros:** `worktree-pool.ts`, `fenced-lease.ts`, `topology-lease.ts`,
   repository lease, takeover receipts, `mutationFence`, abort registry
