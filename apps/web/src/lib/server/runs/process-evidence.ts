@@ -472,3 +472,70 @@ function safeName(value: string): string {
 function isErrno(value: unknown): value is { code?: string } {
   return typeof value === "object" && value !== null && "code" in value;
 }
+
+export interface RunProcessPresenceDeps {
+  journal?: Pick<JsonRunProcessJournal, "listOpen">;
+  inspector?: ProcessInspector;
+  isAlive?: (pid: number) => boolean;
+  /** Clock-skew tolerance for the creation-time identity check. */
+  skewMs?: number;
+}
+
+/**
+ * Whether a process of this run is still plausibly alive — the read-only twin
+ * of `killRunProcessesVerified`, for the liveness supervisor.
+ *
+ * Its errors are asymmetric, and the direction matters more than the accuracy.
+ * A false "present" leaves an abandoned run hanging until the next sweep; a
+ * false "absent" ends a run whose executor is mid-flight and destroys the work.
+ * So every uncertain case answers present, and only positive evidence of
+ * absence — no record, no pid in the table, a recycled pid, or a pid the OS
+ * says is gone — answers absent.
+ *
+ * The identity rule is the kill path's, deliberately: a pid whose creation time
+ * postdates our registration is somebody else's process, and treating it as
+ * ours would keep an abandoned run alive forever on the strength of an
+ * unrelated program.
+ */
+export async function hasLiveRunProcesses(
+  runId: string,
+  deps: RunProcessPresenceDeps = {}
+): Promise<boolean> {
+  const journal = deps.journal ?? new JsonRunProcessJournal();
+  const inspector = deps.inspector ?? { snapshot: () => snapshotProcessTable() };
+  const isAlive = deps.isAlive ?? isProcessAlive;
+  const skewMs = deps.skewMs ?? 5_000;
+
+  const open = await journal.listOpen(runId);
+  const candidates = open.filter((record): record is typeof record & { pid: number } => record.pid !== undefined);
+  // No durable candidate is genuine absence: evidence is written as soon as a
+  // process identity is known, so a run that spawned anything has a record.
+  if (candidates.length === 0) return false;
+
+  let snapshot: ProcessSnapshot | undefined;
+  try {
+    snapshot = await inspector.snapshot();
+  } catch {
+    snapshot = undefined;
+  }
+
+  return candidates.some((record) => {
+    if (snapshot === undefined) {
+      // No table, so identity cannot be confirmed. A pid that is gone is still
+      // provably gone; one that answers is unidentifiable, and unidentifiable
+      // resolves to present.
+      return isAlive(record.pid);
+    }
+    const entry = snapshot.get(record.pid);
+    if (entry === undefined) return false;
+    const registeredAtMs = Date.parse(record.registeredAt);
+    if (
+      entry.createdAtMs !== undefined &&
+      Number.isFinite(registeredAtMs) &&
+      entry.createdAtMs > registeredAtMs + skewMs
+    ) {
+      return false;
+    }
+    return true;
+  });
+}

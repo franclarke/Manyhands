@@ -8,7 +8,15 @@ export const FailureClassSchema = z.enum([
   "undeclared_artifact",
   "scope_unexpected_commit",
   "integration",
-  "shared_infrastructure"
+  "shared_infrastructure",
+  /**
+   * The classifier could not attribute this failure. It is a named outcome, not
+   * a default: the alternative was to fall through to `code_test`, which claims
+   * the agent's code was wrong and sends the run into `repair_code` — burning an
+   * attempt repairing something that was never broken, and corrupting the
+   * failure statistics with a cause that was never observed.
+   */
+  "unclassified"
 ]);
 export type FailureClass = z.infer<typeof FailureClassSchema>;
 
@@ -34,5 +42,9 @@ export function classifyFailure(raw: FailureObservation): FailureClass {
   if (observation.source === "planning" || (observation.code !== undefined && CONTRACT_CODES.has(observation.code))) return "contract_decomposition";
   if (observation.source === "executor" && (observation.timedOut === true || observation.code === "transient" || observation.code === "network")) return "transient";
   if (observation.code !== undefined && ENVIRONMENT_CODES.has(observation.code)) return "environment_auth_executor";
-  return "code_test";
+  // Validation is the one source whose unmodelled failures ARE about the code:
+  // a check ran against the candidate and did not pass. Everywhere else an
+  // unrecognised failure is exactly that, and says so.
+  if (observation.source === "validation") return "code_test";
+  return observation.code === undefined && observation.source === "executor" ? "code_test" : "unclassified";
 }

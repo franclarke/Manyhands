@@ -27,7 +27,14 @@ const POLICIES: Record<FailureClass, Omit<RecoveryPolicy, "failureClass">> = {
   undeclared_artifact: { actions: ["propose_artifact_requirement"], automaticRetryBudget: 0, discardCandidate: true, requiresEvidence: true },
   scope_unexpected_commit: { actions: ["discard_candidate", "raise_local_decision"], automaticRetryBudget: 0, discardCandidate: true, requiresEvidence: true },
   integration: { actions: ["repair_integration", "propose_graph_amendment"], automaticRetryBudget: 1, discardCandidate: true, requiresEvidence: true },
-  shared_infrastructure: { actions: ["raise_local_decision"], automaticRetryBudget: 0, discardCandidate: true, requiresEvidence: true }
+  shared_infrastructure: { actions: ["raise_local_decision"], automaticRetryBudget: 0, discardCandidate: true, requiresEvidence: true },
+  // One retry, then a human. Repairing code is off the table — nobody
+  // established the code was wrong — but a single retry is evidence gathering
+  // rather than blind hope: a failure that reproduces identically is
+  // persistent, and one that does not was transient. Refusing to retry at all
+  // would stop a hands-off run on every unmodelled CLI crash, which is the most
+  // common failure there is.
+  unclassified: { actions: ["retry_attempt", "raise_local_decision"], automaticRetryBudget: 1, discardCandidate: true, requiresEvidence: true }
 };
 
 export function recoveryPolicyFor(failureClass: FailureClass): RecoveryPolicy {

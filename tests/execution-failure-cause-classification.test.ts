@@ -29,12 +29,18 @@ describe("leafFailureObservation", () => {
     expect(classifyFailure(observation)).toBe("scope_unexpected_commit");
   });
 
-  it("falls back to a generic executor failure when the cause is not encoded", () => {
+  /**
+   * A CLI that crashed says nothing about the agent's code. This used to
+   * classify as `code_test`, which sent the run into `repair_code` — burning an
+   * attempt repairing something never shown to be broken, and recording a cause
+   * that was never observed. It is now named as what it is.
+   */
+  it("names an unencoded executor failure rather than blaming the code", () => {
     const observation = leafFailureObservation({ reason: "the CLI crashed while writing the patch" });
 
     expect(observation.source).toBe("executor");
     expect(observation.code).toBe("execution_failed");
-    expect(classifyFailure(observation)).toBe("code_test");
+    expect(classifyFailure(observation)).toBe("unclassified");
   });
 
   it("keeps an unavailable worktree pool in infrastructure recovery", () => {

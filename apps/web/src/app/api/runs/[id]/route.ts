@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { RunLifecycleError, RunValidationError, getRunRepository } from "@/lib/server/runs";
+import { reconcileRunLiveness } from "@/lib/server/runs/liveness-supervisor";
 import { toCanonicalRunResponse } from "@/lib/server/runs/presenter";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
 
@@ -11,7 +12,9 @@ interface RouteContext { params: Promise<{ id: string }>; }
 
 export async function GET(_request: Request, context: RouteContext): Promise<NextResponse> {
   try {
-    return NextResponse.json(await toCanonicalRunResponse(await getRunRepository().get((await context.params).id)));
+    const run = await getRunRepository().get((await context.params).id);
+    // Opening a run is when a stalled one has to stop pretending it is working.
+    return NextResponse.json(await toCanonicalRunResponse(await reconcileRunLiveness(run)));
   } catch (error) {
     return runErrorResponse(error);
   }

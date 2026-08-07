@@ -271,7 +271,7 @@ interesante: por qué un escalar no servía para decidir. Retira
 | 3E | Verificación de la cadena | **completada** — contrato y cadena verificados; la rotura en validación (D11) quedó saldada el 2026-08-06 |
 | 4 | Scheduler de ready-set y workspace por intento | **completada con alcance recortado** — 2026-08-07. Despacho continuo, D9, workspace por intento, 1612 líneas retiradas y nivel topológico inerte. **Diferido:** ver «4R» |
 | 4R | Retiro del fencing del run record | **diferido el 2026-08-07** — no es borrado, es reestructuración; ver abajo |
-| 5 | Terminalidad total y validación derivada | **en curso** |
+| 5 | Terminalidad total y validación derivada | **completada** — 2026-08-07 |
 | 6 | UI: dos layouts | pendiente |
 | 7 | Celdas de medición | pendiente |
 
@@ -959,15 +959,59 @@ fuera del lock de dueño. Hoy se llama en cuatro lugares que sí lo hacen.
   lifecycle**, no contra una lista copiada al lado, así que un estado nuevo no
   puede empezar a declararse abandonado el día que se agrega.
 
-  *Falta:* cablearlo (evidencia de proceso durable como `ownerProcessPresent`, y
-  el registro del evento terminal), y con eso la aceptación end-to-end.
+  **Cableado el 2026-08-07.** `hasLiveRunProcesses` es el gemelo de sólo lectura
+  de `killRunProcessesVerified` y reusa **su misma regla de identidad**: un pid
+  cuyo tiempo de creación es posterior a nuestro registro es de otro proceso, y
+  tratarlo como nuestro mantendría vivo para siempre un run abandonado por culpa
+  de un programa ajeno. Sus errores son asimétricos y la dirección importa más
+  que la precisión: un «presente» falso deja el run colgado un rato más, un
+  «ausente» falso destruye trabajo en vuelo. Todo caso incierto responde
+  presente.
+
+  `superviseRunLiveness` termina el run por **la misma cancelación verificada**
+  que dispararía una persona, no por una segunda vía de terminar un run. Y sólo
+  consulta la tabla de procesos cuando el heartbeat venció: un heartbeat fresco
+  ya es prueba de vida, y mirar la tabla cuesta un subproceso.
+
+  Se conecta en el **detalle** del run, no en el listado: el listado es camino
+  caliente y sondear la tabla por cada run sería justo el barrido que se
+  optimizó para evitar. La supervisión **nunca hace fallar la lectura**: un
+  detalle que no renderiza es peor que un heartbeat viejo de más, y la lectura
+  siguiente reintenta.
 - ~~Derivación de comandos de validación desde los scripts del target, **sin
   exigir un package manager** (D11).~~ **Adelantada y cerrada el 2026-08-06**,
   antes de la etapa 4, porque sin ella ningún run podía demostrar que terminó
   bien y la aceptación de la 4 no era verificable end-to-end.
 - Taxonomía de fallo cerrada y total: cada fallo mapea a exactamente una causa
-  con recuperación definida.
+  con recuperación definida. **Hecho el 2026-08-07.** La taxonomía ya era
+  cerrada; **el clasificador no era total**: terminaba en `return "code_test"`,
+  así que todo fallo no reconocido se atribuía al código del agente. Para un
+  ejecutor que murió de forma no modelada eso no es un default sino una
+  afirmación falsa — y manda el run a `repair_code`, quemando un intento
+  reparando algo que nadie mostró roto, además de contaminar con una causa nunca
+  observada las estadísticas que la tesis reporta.
+
+  Ahora existe `unclassified`, que **se nombra en vez de defaultearse**.
+  `validation` conserva `code_test` para sus fallos no modelados —ahí sí corrió
+  una verificación contra el candidato— y el resto dice lo que es.
+
+  Su política: **un reintento y después una persona**. Reparar código está
+  descartado porque nadie estableció que el código estuviera mal, pero un
+  reintento es recolección de evidencia y no fe ciega: un fallo que se reproduce
+  es persistente y uno que no era transitorio. Con cero reintentos, cada crash
+  no modelado del CLI —el fallo más común— frenaría un run hands-off.
 - **Retiro:** la detección de dueño muerto sale del driver del experimento.
+  **Verificado el 2026-08-07:** los drivers `run-experiment.mjs` con
+  `stalledOwner`/`cancelAbandonedRun` ya no existen en el repositorio, así que no
+  hay nada que borrar. Lo que faltaba era el reemplazo dentro del producto, que
+  es lo que entrega esta etapa.
+
+**Estado: completada el 2026-08-07.** Las tres cláusulas de aceptación tienen
+test propio: la terminalidad sin driver
+(`tests/run-liveness-supervisor.test.ts`), el target sin comandos
+(`tests/validation-without-commands.test.ts`, que confirma `unverified` y no
+`verified` silencioso ni comando inventado) y la ausencia de cajón genérico
+(`tests/failure-taxonomy-totality.test.ts`).
 
 **Aceptación**
 
