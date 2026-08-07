@@ -379,6 +379,113 @@ describe("V2ExecutionDriver - Concurrency", () => {
   });
 });
 
+/**
+ * Stage 4 of `docs/plans/2026-08-05-robust-graph-execution-redesign.md`.
+ *
+ * A wave is a barrier. `fast` and `slow` are dispatched together; `dependent`
+ * needs only what `fast` produces, so the moment `fast` finishes there is a
+ * free slot and a satisfied dependency. Under wave scheduling it still waits
+ * for `slow`, because the driver awaits the whole batch before it may select
+ * again — wall-clock spent on nothing, which is exactly what "waves die as a
+ * mechanism" means. Dispatch has to be continuous over the ready set.
+ */
+describe("V2ExecutionDriver - continuous dispatch", () => {
+  it("dispatches a node as soon as its own dependency lands, not when the wave drains", async () => {
+    const nodes = ["fast", "slow", "dependent"];
+    const graph: any = {
+      ...mockGraph,
+      nodes: Object.fromEntries(nodes.map((id) => [id, { id, parentId: null, kind: "leaf", title: id, goal: id }])),
+      // `dependent` consumes what `fast` produces, and nothing of `slow`'s.
+      artifactRequirements: [{
+        id: "req-fast-dependent",
+        artifactContract: { id: "artifact:fast", revision: "artifact-r1" },
+        producerNodeId: "fast",
+        consumerNodeId: "dependent",
+        requiredFor: "execution"
+      }]
+    };
+
+    let adopted: Record<string, any> = {};
+    const state = () => mockState({ adoptedArtifacts: adopted });
+    const coordinator = {
+      load: vi.fn().mockImplementation(() => Promise.resolve(state())),
+      execute: vi.fn().mockImplementation(() => Promise.resolve(state())),
+      record: vi.fn().mockImplementation((_runId, facts) => {
+        for (const fact of facts) {
+          const nodeId = fact.payload?.nodeId ?? fact.nodeId;
+          if (nodeId !== undefined && (fact.type.includes("candidate_created") || fact.type.includes("completed"))) {
+            adopted[nodeId] = {
+              schemaVersion: 1,
+              artifactId: `artifact:${nodeId}`,
+              runId: "run1",
+              nodeId,
+              digest: "digest",
+              producerAttemptId: `attempt:${nodeId}`,
+              contract: { id: `artifact:${nodeId}`, revision: "artifact-r1" },
+              kind: "files",
+              location: "loc",
+              adoptedAt: "2026-07-22T00:00:00.000Z"
+            };
+          }
+        }
+        return Promise.resolve(state());
+      })
+    };
+
+    const dispatched: string[] = [];
+    let releaseSlow!: () => void;
+    const slowFinished = new Promise<void>((resolve) => { releaseSlow = resolve; });
+    const succeed = (nodeId: string) => ({
+      kind: "success",
+      candidateCommit: "c1",
+      outputDigest: "d1",
+      changedFiles: ["src/app.ts"],
+      evidenceMatrix: {
+        matrixId: `m-${nodeId}`,
+        outcome: "verified",
+        candidateCommit: "c1",
+        validationContract: { id: `validation:${nodeId}`, revision: "validation-r1" }
+      },
+      artifactLocation: "loc"
+    });
+    const execute = vi.fn().mockImplementation(async (invocation: any) => {
+      const nodeId = invocation.node.id;
+      dispatched.push(nodeId);
+      if (nodeId === "slow") await slowFinished;
+      return succeed(nodeId);
+    });
+
+    const input: V2ExecutionRunInput = {
+      runId: "run1",
+      graph,
+      contracts: nodes.map((id) => makeValidBundle(id)) as any,
+      repositoryContextDigest: "digest",
+      executorProfile: { id: "ex", revision: "1" },
+      // Two slots: `fast` and `slow` fill them, and `dependent` needs one to free.
+      effectiveConfig: { maxParallel: 2 },
+      materializableNodeIds: nodes,
+      availableExecutorNodeIds: nodes,
+      conflictConstraints: [],
+      target: { sourceTargetFingerprint: "fp", targetBranch: "main", targetHead: "head" }
+    };
+    const driver = new V2ExecutionDriver({
+      coordinator: withDerivedRecording(coordinator),
+      execute,
+      loadCurrentInputs: async () => freshness(input),
+      now: () => "2026-07-22T00:00:00Z"
+    } as any);
+
+    const running = driver.run(input);
+    await vi.waitFor(() => {
+      expect(dispatched).toContain("dependent");
+    }, { timeout: 2000, interval: 10 });
+    // Proven while `slow` is still running: the dependent did not wait for it.
+    expect(dispatched).not.toContain("__never__");
+    releaseSlow();
+    await running;
+  });
+});
+
 function withDerivedRecording<T extends {
   load(...args: any[]): Promise<any>;
   record?: (...args: any[]) => Promise<any>;

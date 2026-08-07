@@ -186,14 +186,20 @@ export class V2ExecutionDriver {
   ): Promise<{ dispatched: boolean; state: RunProjection }> {
     const readinessState = buildReadinessState(input, current, runtime);
     const effectiveConfig = schedulerConfigFor(input.effectiveConfig);
+    // Concurrency is a property of the run, not of a batch: nodes already
+    // running occupy slots, so only what is left may be dispatched now.
+    const freeSlots = Math.max(0, effectiveConfig.maxParallel - runtime.inFlight.size);
     const selection = selectReadyWaveV2({
       graph: input.graph,
       nodeIds: Object.keys(input.graph.nodes).sort(),
       state: readinessState,
-      effectiveConfig,
+      // The selector demands a positive cap; when nothing is free we discard
+      // its choice below rather than let it believe it had room.
+      effectiveConfig: { ...effectiveConfig, maxParallel: Math.max(1, freeSlots) },
       conflictConstraints: input.conflictConstraints,
       now: input.evaluatedAt ?? this.options.now()
     });
+    if (freeSlots === 0) selection.nodeIds = [];
     const pendingDecisionIds = Object.values(current.decisions)
       .filter((decision) => decision.status === "pending")
       .map((decision) => decision.id)
@@ -219,6 +225,13 @@ export class V2ExecutionDriver {
       });
     let state = await observeReadiness(pendingDecisionIds);
     if (state.lifecycle !== "running" || selection.nodeIds.length === 0) {
+      // Work already running may still unblock more, so a run with attempts in
+      // flight is never idle and never blocked. Deciding otherwise here would
+      // raise a scheduler decision about an executor that is busy, not stuck,
+      // and park the run at `waiting_for_input` while its own leaves finish.
+      if (state.lifecycle === "running" && runtime.inFlight.size > 0) {
+        return { dispatched: true, state: await this.settleOne(input, runtime) };
+      }
       if (state.lifecycle === "running" && selection.nodeIds.length === 0 && pendingSchedulerDecision(selection.explanations)) {
         const decisionId = `${input.runId}:scheduler:${state.selectedWaves.length + 1}`;
         state = await this.options.coordinator.execute(input.runId, {
@@ -243,6 +256,9 @@ export class V2ExecutionDriver {
         // and parks it, instead of returning a `running` run with no way forward.
         state = await observeReadiness([...pendingDecisionIds, decisionId].sort());
       }
+      // A lifecycle that stopped being `running` still has to drain: its
+      // attempts hold real processes and their outcomes are facts.
+      if (runtime.inFlight.size > 0) return { dispatched: true, state: await this.settleOne(input, runtime) };
       return { dispatched: false, state };
     }
 
@@ -265,38 +281,48 @@ export class V2ExecutionDriver {
       attempts.map((attempt) => attempt.startedEvent)
     );
 
-    let latestState = state;
-    let recordQueue = Promise.resolve();
-    await Promise.all(attempts.map(async (attempt) => {
-      const outcome = await this.options.execute(attempt.executionInput);
-
-      let resolveEnqueued!: () => void;
-      let rejectEnqueued!: (err: unknown) => void;
-      const enqueued = new Promise<void>((resolve, reject) => {
-        resolveEnqueued = resolve;
-        rejectEnqueued = reject;
+    // Dispatch is fire-and-track: the batch is started, then exactly one
+    // completion is settled. A wave used to be a barrier — every node waited
+    // for the slowest of its batch even when its own dependencies had long
+    // landed — and that barrier is the wall-clock the redesign is reclaiming.
+    for (const attempt of attempts) {
+      runtime.inFlight.set(attempt.nodeId, {
+        attempt,
+        settled: this.options.execute(attempt.executionInput).then(
+          (outcome) => ({ nodeId: attempt.nodeId, outcome }),
+          (error: unknown) => ({ nodeId: attempt.nodeId, error })
+        )
       });
+    }
+    return { dispatched: true, state: await this.settleOne(input, runtime) };
+  }
 
-      const previousQueue = recordQueue;
-      recordQueue = previousQueue.catch(() => {}).then(async () => {
-        try {
-          applyRuntimeRecovery(runtime, input, attempt, outcome);
-          latestState = await this.options.coordinator.recordDerived(input.runId, async (current) => {
-            const currentFingerprint = outcome.kind === "success"
-              ? await this.currentFingerprint(input, attempt, current)
-              : attempt.executionInput.inputFingerprint;
-            return this.factsForOutcome(input, attempt, outcome, currentFingerprint, current);
-          });
-          resolveEnqueued();
-        } catch (err) {
-          rejectEnqueued(err);
-        }
-      });
-
-      await enqueued;
-    }));
-    state = latestState;
-    return { dispatched: true, state };
+  /**
+   * Awaits the first attempt to finish and records it.
+   *
+   * Settling one at a time is what makes the record path serial without a
+   * queue: the losers of the race stay pending and are settled by a later call.
+   * Their promises never reject — a failure travels as a value — so a loser
+   * that fails while another is being recorded cannot become an unhandled
+   * rejection.
+   */
+  private async settleOne(
+    input: PreparedExecutionRunInput,
+    runtime: RuntimeReadinessState
+  ): Promise<RunProjection> {
+    const finished = await Promise.race([...runtime.inFlight.values()].map((entry) => entry.settled));
+    const entry = runtime.inFlight.get(finished.nodeId);
+    if (entry === undefined) throw new Error(`Settled attempt for ${finished.nodeId} is not in flight.`);
+    runtime.inFlight.delete(finished.nodeId);
+    if (finished.error !== undefined) throw finished.error;
+    const outcome = finished.outcome!;
+    applyRuntimeRecovery(runtime, input, entry.attempt, outcome);
+    return this.options.coordinator.recordDerived(input.runId, async (current) => {
+      const currentFingerprint = outcome.kind === "success"
+        ? await this.currentFingerprint(input, entry.attempt, current)
+        : entry.attempt.executionInput.inputFingerprint;
+      return this.factsForOutcome(input, entry.attempt, outcome, currentFingerprint, current);
+    });
   }
 
   private factsForOutcome(
@@ -530,13 +556,21 @@ interface PreparedAttempt {
   executionInput: V2NodeExecutionInput;
 }
 
+interface InFlightAttempt {
+  attempt: PreparedAttempt;
+  /** Never rejects: a failure is carried so the loser of a race stays safe. */
+  settled: Promise<{ nodeId: string; outcome?: V2NodeExecutionOutcome; error?: unknown }>;
+}
+
 interface RuntimeReadinessState {
   suspendedNodeIds: Set<string>;
   openCircuitBreakerNodeIds: Set<string>;
+  /** Attempts dispatched and not yet settled, keyed by node. */
+  inFlight: Map<string, InFlightAttempt>;
 }
 
 function createRuntimeState(): RuntimeReadinessState {
-  return { suspendedNodeIds: new Set(), openCircuitBreakerNodeIds: new Set() };
+  return { suspendedNodeIds: new Set(), openCircuitBreakerNodeIds: new Set(), inFlight: new Map() };
 }
 
 function prepare(input: V2ExecutionRunInput): PreparedExecutionRunInput {
@@ -577,7 +611,13 @@ function buildReadinessState(input: PreparedExecutionRunInput, state: RunProject
     materializableNodeIds: [...input.materializableNodeIds],
     activeResourceNodeIds: [...new Set([
       ...(input.activeResourceNodeIds ?? []),
-      ...Object.values(state.attempts).filter((attempt) => attempt.status === "running").map((attempt) => attempt.nodeId)
+      ...Object.values(state.attempts).filter((attempt) => attempt.status === "running").map((attempt) => attempt.nodeId),
+      // An attempt the driver dispatched and has not settled is running,
+      // whatever the projection says. Under wave scheduling the distinction
+      // never surfaced — the batch was awaited before readiness was consulted
+      // again — but with continuous dispatch a projection that lags by one
+      // event would hand back a node that is running and start it twice.
+      ...runtime.inFlight.keys()
     ])],
     budgetAvailable: input.budgetAvailable !== false && budgetAvailableFor(input, state),
     openCircuitBreakerNodeIds: [...new Set([

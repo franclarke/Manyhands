@@ -732,8 +732,28 @@ por una razón ya conocida, y además sólo una hoja llegó a ejecutarse.
 
 **Qué se construye**
 
-- Scheduler de despacho continuo (§2.5): ready-set topológico, límite de
-  concurrencia configurable, recálculo tras cada nodo terminado.
+- ~~Scheduler de despacho continuo (§2.5): ready-set topológico, límite de
+  concurrencia configurable, recálculo tras cada nodo terminado.~~ **Hecho el
+  2026-08-07.** `V2ExecutionDriver.advance` despachaba una wave y esperaba
+  `Promise.all` del lote entero; ahora llena los slots libres y **liquida una
+  sola terminación** (`settleOne`), así que el caller recalcula readiness
+  después de cada nodo. La concurrencia pasó a ser propiedad del run y no del
+  lote: `maxParallel - inFlight.size`.
+
+  Dos defectos que sólo existen con despacho continuo, encontrados al hacerlo:
+  1. **Readiness confiaba en la proyección** para saber qué estaba corriendo.
+     Con waves la distinción nunca aparecía —el lote se drenaba antes de volver
+     a consultar—, pero ahora una proyección atrasada por un evento devolvía un
+     nodo en vuelo y lo arrancaba dos veces. El set en vuelo del driver es
+     autoridad de primera mano y entra en `activeResourceNodeIds`.
+  2. **La decisión de scheduler se levantaba con trabajo en vuelo.** «Nada
+     listo» dejó de significar «bloqueado»: un run con intentos corriendo nunca
+     está bloqueado, y levantarla parqueaba el run en `waiting_for_input`
+     mientras sus propias hojas terminaban.
+
+  Las promesas en vuelo **nunca rechazan** —el fallo viaja como valor— porque el
+  perdedor de un `Promise.race` queda pendiente y un rechazo tardío sería una
+  unhandled rejection.
 - ~~**El modelo de conflicto se reemplaza junto con el scheduler que lo
   consume** (D9).~~ **Hecho el 2026-08-06, antes del scheduler**, porque resultó
   separable: sólo los escritores conflictúan. Requirió además volver P2 una
