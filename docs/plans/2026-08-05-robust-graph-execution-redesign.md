@@ -848,9 +848,32 @@ por una razón ya conocida, y además sólo una hoja llegó a ejecutarse.
 
   La caché de dependencias sigue acoplada al estado git.
 - Lock de dueño por run con PID y toma si el dueño murió.
-- **Retiros:** `worktree-pool.ts`, `fenced-lease.ts`, `topology-lease.ts`,
-  repository lease, takeover receipts, `mutationFence`, abort registry
-  versionado, y la capa de integración separada.
+- **Retiros hechos:** `worktree-pool.ts`, `fenced-lease.ts`, `topology-lease.ts`
+  (1612 líneas, 2026-08-07).
+- **Retiros NO ejecutables por borrado — corregido el 2026-08-07.** El plan
+  listaba `mutationFence`, los takeover receipts, el abort registry y el
+  repository lease junto al pool, como si fueran del mismo tipo. **No lo son:**
+  los tres primeros están vivos y sostienen seguridad hoy. Medido:
+
+  | Mecanismo | Qué protege | Evidencia |
+  |---|---|---|
+  | `mutationFence` | Es el **piso monótono que sobrevive al `release()`**. `release` borra `activeOperation` pero deja el fence; el claim siguiente pide `max(mutationFence, superseded)`, así que ningún lease nuevo puede reusar un token ya emitido. Sin él, una escritura demorada de una operación ya liberada pasa `assertLease`. | `run-operation-lease.ts:131,157,199-205,372` |
+  | Takeover receipts | Habilitan que un runner nuevo se marque activo sobre un marcador existente (`tryMarkRunnerActive(..., verifiedTakeover)`). Sin el receipt verificado —`allDead` y `repositoryQuiescent`— el segundo runner se rechaza. Es lo que impide dos runners sobre un run. | `execution-pipeline.ts:131-135` |
+  | Abort registry | Es el camino de cancelación productivo, usado por el pipeline y el command host. | `execution-pipeline.ts:43`, `command-host.ts:26` |
+
+  **La premisa del §2.6 no se sostiene con la estructura actual.** Decía que un
+  solo lock de dueño vuelve innecesario el fencing; eso vale sólo si *toda*
+  mutación pasa por ese lock, y hoy no pasa: `updateRunForOperation` se llama
+  **fuera** del `withRepositoryLease` (`execution-pipeline.ts:309`,
+  `run-coordinator-host.ts:110,135`, `command-host.ts:250`). Además el
+  repository lease es **por repositorio** y el run record es **por run**: no son
+  el mismo recurso ni pueden sustituirse.
+
+  *Qué haría falta para que sea seguro retirarlos* — y es trabajo aparte, con
+  riesgo real de dos escritores sobre un journal: mover toda mutación del run
+  record adentro del lock de dueño, y recién entonces demostrar que el fence es
+  redundante. **No se borra fencing vivo para cumplir un checklist.**
+- La capa de integración separada: sin analizar todavía.
 
 **Aceptación**
 
