@@ -67,6 +67,12 @@ unknown.
   escritos por el perfil `franc_rgy` cuyo ACL excluye a `franc`, así que
   `pnpm install` aborta con `EPERM`. Instalar con
   `--store-dir <store propio>` en vez de tocar ACLs.
+- `FastRepositoryIndexer` cachea `index` **y** `capabilityResult` por
+  `(rootPath, repositoryId, baseCommit)`, con un checksum del payload — nunca
+  del código que lo derivó. Cambiar `discoverRepositoryCapabilities` o el parser
+  no invalida nada: todo target ya indexado sigue devolviendo lo viejo. Bumpear
+  `INDEXER_PROFILE` es el único lever. Verificar el arreglo contra un target real
+  ya indexado, no sólo contra un fixture nuevo, que siempre cachea en frío.
 - `pnpm web:build` falla en esta máquina con `Cannot find native binding` desde
   `@tailwindcss/oxide`: falta el paquete nativo win32 en el árbol instalado y
   `pnpm install` responde «Already up to date». Es una laguna de instalación
