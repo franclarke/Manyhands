@@ -272,7 +272,7 @@ interesante: por qué un escalar no servía para decidir. Retira
 | 4 | Scheduler de ready-set y workspace por intento | **completada con alcance recortado** — 2026-08-07. Despacho continuo, D9, workspace por intento, 1612 líneas retiradas y nivel topológico inerte. **Diferido:** ver «4R» |
 | 4R | Retiro del fencing del run record | **diferido el 2026-08-07** — no es borrado, es reestructuración; ver abajo |
 | 5 | Terminalidad total y validación derivada | **completada** — 2026-08-07 |
-| 6 | UI: dos layouts | pendiente |
+| 6 | UI: dos layouts | **completada** — 2026-08-07 |
 | 7 | Celdas de medición | pendiente |
 
 ---
@@ -1024,17 +1024,91 @@ test propio: la terminalidad sin driver
 
 ### Etapa 6 — UI: dos layouts
 
+#### Diseño — 2026-08-07
+
+**El sistema visual ya existe** («Ember sobre Grafito», tokens en `globals.css`,
+reglas en `docs/design/08-cockpit-ui-interaction-model.md`). Esta etapa no
+inventa paleta ni tipografía: diseña **el mecanismo de las dos disposiciones**
+dentro de ese lenguaje.
+
+**Las dos disposiciones responden preguntas distintas**, y por eso el toggle se
+nombra por la pregunta y no por la forma. «Árbol / Grafo» nombraría el dibujo;
+lo que el operador elige es qué quiere saber:
+
+| Disposición | Pregunta que responde | Geometría |
+|---|---|---|
+| **Pertenencia** | ¿De qué está hecho el objetivo? | Árbol: el padre arriba, sus hijos debajo |
+| **Flujo** | ¿Qué puede ejecutarse a la vez? | Bandas por nivel topológico |
+
+**La banda es el elemento con carga semántica.** No es «una wave»: la wave fue
+un mecanismo que se retiró, y volver a nombrarla en la UI reintroduciría en la
+cabeza del operador la barrera que sacamos del runtime. Una banda es *el
+conjunto de unidades que pasaron a ser elegibles a la misma profundidad*. Su
+rótulo dice eso —«sin dependencias» en la banda 0, «tras N dependencias» abajo—
+y **nunca dice tiempo**: dos nodos de una banda no corren simultáneamente, se
+volvieron elegibles a la misma distancia del inicio.
+
+**Las posiciones son función pura de la estructura, jamás del estado del run.**
+Si la posición dependiera del estado, un nodo saltaría al verificarse — el mismo
+defecto de clase que el auto-`fitView`, por otra vía. El orden dentro de una
+banda es estable (ruta de pertenencia, luego id) para que un nodo no se
+desplace horizontalmente entre renders.
+
+**Anclaje del viewport al cambiar de disposición.** Las posiciones cambian entre
+disposiciones, así que sin nada el nodo que el operador estaba mirando se le va
+de pantalla. La cámara se **traslada** —sin zoom, sin encuadre— de modo que el
+nodo ancla quede en el mismo punto de la pantalla: lo que estabas mirando sigue
+donde estaba. El ancla es el nodo seleccionado; si no hay, el más cercano al
+centro del viewport. Esto **no viola el invariante 5**, que prohíbe mover la
+cámara ante **eventos del servidor**; acá el movimiento lo origina una acción
+manual del operador y su efecto es *preservar* su marco de referencia, no
+sobrescribirlo. Con `prefers-reduced-motion` la traslación es instantánea.
+
+**Accesibilidad.** El toggle usa el mismo patrón de `aria-pressed` que las
+lentes, agrupado y rotulado. Las bandas son decoración para el lector de
+pantalla (`aria-hidden`), y su información viaja donde sí sirve: en el nombre
+accesible de cada nodo, que en flujo incluye su nivel. Sin color como único
+portador de significado, y sólo tokens existentes.
+
 **Qué se construye**
 
 - Layout de pertenencia y layout de flujo sobre el mismo grafo y las mismas
   identidades de nodo, con toggle de usuario.
 - Bandas por nivel topológico en el layout de flujo.
 
-**Aceptación**
+**Aceptación — verificada en el navegador el 2026-08-07**
 
 - Cambiar de layout preserva selección y estado; no hay estado duplicado.
-- I8 se mantiene: ningún evento del run recentra, enfoca ni hace fit.
-- WCAG 2.2 AA y `prefers-reduced-motion`.
+  *Comprobado:* el nodo seleccionado conserva su anillo tras cuatro cambios
+  seguidos, y la posición del ancla es idéntica en las cuatro (`stable: true`).
+- I8 se mantiene: ningún evento del run recentra, enfoca ni hace fit. *La cámara
+  no se toca en absoluto:* la corrección se aplica al **layout**, no al
+  viewport.
+- WCAG 2.2 AA y `prefers-reduced-motion`. *Medido pintando el color real:*
+  bandas 7.23:1, toggle activo 7.49:1, inactivo 8.73:1.
+
+**Tres defectos que sólo aparecieron al mirarlo, no al diseñarlo ni al testearlo**
+
+1. **Los diez nodos cayeron en una sola banda «sin dependencias».** El fixture no
+   trae `topologicalLevel` y mi fallback afirmaba algo falso sobre un grafo que
+   sí tiene dependencias. Ahora los niveles se **derivan del grafo** en la UI con
+   la misma función que los compila, así que el flujo es correcto para cualquier
+   revisión, vieja o nueva, y no puede divergir del valor persistido.
+2. **`setViewport` no aplicaba nunca.** El re-render que vuelve a posicionar los
+   nodos descartaba la escritura de cámara en el mismo tick. Moverlo a un
+   `requestAnimationFrame` tampoco alcanzó. La solución no fue insistir con la
+   API imperativa sino **desplazar el layout**: puro, determinista y demostrable
+   sin navegador.
+3. **La fórmula del offset acumulaba de más.** `before` es la posición
+   *renderizada* y ya contiene el offset vigente, así que sumarlo lo cuenta dos
+   veces — y el error **se esconde hasta el segundo cambio**, porque el primero
+   se ve perfecto. Mi test codificaba la misma premisa equivocada y pasaba en
+   verde; lo reescribí para fijar el viaje de ida y vuelta.
+
+También rompí el guard de escala tipográfica con arbitrarios `text-[26px]` y
+`text-[10px]` —este último por debajo del piso de 11px del sistema—, y usé el
+token `faint` en rótulos de 11px: **3.89:1**, por debajo de AA. Ambos corregidos
+y vueltos a medir en vivo.
 
 ---
 

@@ -73,11 +73,21 @@ unknown.
   no invalida nada: todo target ya indexado sigue devolviendo lo viejo. Bumpear
   `INDEXER_PROFILE` es el único lever. Verificar el arreglo contra un target real
   ya indexado, no sólo contra un fixture nuevo, que siempre cachea en frío.
-- `pnpm web:build` falla en esta máquina con `Cannot find native binding` desde
-  `@tailwindcss/oxide`: falta el paquete nativo win32 en el árbol instalado y
-  `pnpm install` responde «Already up to date». Es una laguna de instalación
-  —hermana del `EPERM` del store compartido—, no un fallo de código. No buscarlo
-  en el fuente ni tocar el lockfile para saldarlo; declarar el gate bloqueado.
+- El árbol instalado puede quedarse sin el paquete nativo win32 de
+  `@tailwindcss/oxide` mientras `pnpm install` responde «Already up to date»;
+  entonces **el dev server y `pnpm web:build` fallan igual** con `Cannot find
+  native binding`, y no se puede verificar nada de UI. Es una laguna de
+  instalación, no un fallo de código: no buscarlo en el fuente. Se repara sin
+  tocar el lockfile, bajando el tarball de la plataforma y extrayéndolo dentro
+  de `node_modules`:
+
+  ```bash
+  npm pack @tailwindcss/oxide-win32-x64-msvc@<misma versión que oxide>
+  tar -xzf <tgz> -C "node_modules/.pnpm/@tailwindcss+oxide@<v>/node_modules/@tailwindcss/oxide-win32-x64-msvc" --strip-components=1
+  ```
+
+  Verificar con `require` sobre el `index.js` de oxide; hacerlo desde la raíz
+  del repo da un falso negativo porque ahí no es dependencia directa.
 - No marcar un ticket `closed` sin haber corrido `pnpm test` **completo sobre su
   commit exacto**. Cerrar 23–26 con gates focales dejó 12 tests rojos que nadie
   vio hasta el freeze siguiente, incluidos tres defectos productivos reales.
@@ -134,6 +144,18 @@ componentes globales como la barra lateral: `pnpm web:build`, arrancar el
 preview `web-prod` de `.claude/launch.json` y abrir `/runs/<runId>` (~10 s).
 Ahí la barra lateral monta colapsada: expandirla con el botón
 `aria-label="Expandir barra lateral"` antes de leer el DOM.
+
+Para el **canvas del grafo** no hace falta un run real: `/runs/proto/<fixture>`
+(hoy `golden-password-recovery`) monta el mismo modelo desde un fixture, sin
+backend, y su control de reproducción permite saltar al evento final para tener
+el grafo compilado entero. El dev server escucha en `127.0.0.1`, no en
+`localhost`; navegar a `localhost` falla.
+
+El panel del navegador puede no estar visible y entonces `screenshot` da timeout.
+No es un bloqueo para verificar: `javascript_tool` mide lo que de verdad importa
+—posiciones, `aria-*`, y contraste real pintando el color en un canvas de 1×1—.
+Parsear un color con regex **no** sirve: los tokens resuelven a `oklch` y un
+parser ingenuo devuelve un ratio inventado.
 
 ## Agent skills
 

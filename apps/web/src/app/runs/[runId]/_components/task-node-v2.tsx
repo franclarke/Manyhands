@@ -13,17 +13,29 @@ export interface TaskNodeV2Data extends Record<string, unknown> {
   dimmed: boolean;
   blocked: boolean;
   decisionIds: readonly string[];
+  /**
+   * Topological level, present only in the flow arrangement. The band rail is
+   * `aria-hidden`, so this is where the level reaches assistive tech — attached
+   * to the node it describes rather than announced between every pair of nodes.
+   */
+  bandLevel?: number | undefined;
   onOpenDecision: (decisionId: string) => void;
 }
 
 export type TaskNodeV2FlowNode = Node<TaskNodeV2Data, "taskNodeV2">;
 
 export function TaskNodeV2({ data }: NodeProps<TaskNodeV2FlowNode>): React.ReactElement {
-  const { node, medal, selected, dimmed, blocked, decisionIds, onOpenDecision } = data;
+  const { node, medal, selected, dimmed, blocked, decisionIds, bandLevel, onOpenDecision } = data;
   const visual = medalVisual(medal.state);
   return (
     <article
-      aria-label={`${node.title}. ${medal.badge || fallbackStatus(node.status)}`}
+      aria-label={[
+        node.title,
+        medal.badge || fallbackStatus(node.status),
+        bandLevel === undefined
+          ? undefined
+          : bandLevel === 0 ? "Nivel 0, sin dependencias" : `Nivel ${bandLevel}, tras ${bandLevel === 1 ? "1 dependencia" : `${bandLevel} dependencias`}`
+      ].filter(Boolean).join(". ")}
       className={[
         "relative w-[246px] rounded-xl border-2 bg-[var(--color-surface-raised)] px-4 py-3 shadow-sm",
         "transition-[border-color,box-shadow,opacity,transform] duration-200 motion-reduce:transition-none",
