@@ -269,8 +269,9 @@ interesante: por qué un escalar no servía para decidir. Retira
 | 3D | Utilidad como observación | **completada** |
 | 3F | Retiros del camino legacy | **completada** |
 | 3E | Verificación de la cadena | **completada** — contrato y cadena verificados; la rotura en validación (D11) quedó saldada el 2026-08-06 |
-| 4 | Scheduler de ready-set y workspace por intento | pendiente |
-| 5 | Terminalidad total y validación derivada | pendiente |
+| 4 | Scheduler de ready-set y workspace por intento | **completada con alcance recortado** — 2026-08-07. Despacho continuo, D9, workspace por intento, 1612 líneas retiradas y nivel topológico inerte. **Diferido:** ver «4R» |
+| 4R | Retiro del fencing del run record | **diferido el 2026-08-07** — no es borrado, es reestructuración; ver abajo |
+| 5 | Terminalidad total y validación derivada | **en curso** |
 | 6 | UI: dos layouts | pendiente |
 | 7 | Celdas de medición | pendiente |
 
@@ -875,6 +876,31 @@ por una razón ya conocida, y además sólo una hoja llegó a ejecutarse.
   redundante. **No se borra fencing vivo para cumplir un checklist.**
 - La capa de integración separada: sin analizar todavía.
 
+#### 4R — Retiro del fencing del run record (diferido)
+
+**Por qué se difiere, decidido el 2026-08-07.** El resto de la etapa 4 entregó
+su valor: paralelismo real, conflictos correctos, workspaces efímeros, 1612
+líneas de coordinación retiradas y la wave reducida a un dato inerte. Lo que
+queda —`mutationFence`, takeover receipts, abort registry— **no es código
+muerto**: los tres sostienen seguridad hoy, con la evidencia que está más
+abajo en esta misma etapa.
+
+Retirarlos no es un borrado sino una reestructuración: hay que llevar *toda*
+mutación del run record adentro del lock de dueño, y recién entonces demostrar
+que el fence es redundante. Es la pieza de mayor riesgo del plan —su modo de
+falla es **dos escritores sobre un journal**, o sea corrupción silenciosa, no
+un test rojo— y **no desbloquea nada aguas abajo**: ni la etapa 5, ni la 6, ni
+la 7 dependen de ella.
+
+La etapa 5 sí desbloquea: hoy el producto depende del driver experimental para
+no colgarse, y eso contamina cualquier medición de la etapa 7. Por eso se
+adelanta.
+
+*Precondición para retomar 4R:* que `updateRunForOperation` no se llame nunca
+fuera del lock de dueño. Hoy se llama en cuatro lugares que sí lo hacen.
+
+---
+
 **Aceptación**
 
 - Un grafo con N hojas independientes ejecuta con concurrencia real y termina
@@ -910,7 +936,31 @@ por una razón ya conocida, y además sólo una hoja llegó a ejecutarse.
 **Qué se construye**
 
 - Supervisor de liveness dentro del producto: heartbeat vencido + proceso
-  ausente ⇒ transición terminal.
+  ausente ⇒ transición terminal. **Núcleo hecho el 2026-08-07**
+  (`apps/web/src/lib/server/runs/liveness.ts`): `classifyRunLiveness`, función
+  pura con taxonomía cerrada de seis veredictos.
+
+  Las dos decisiones que la definen:
+
+  1. **Hacen falta las dos mitades.** Heartbeat vencido *y* proceso ausente. Un
+     heartbeat vencido solo significa un ejecutor ocupado que no escribió; darlo
+     por muerto destruiría trabajo en curso. `owner_silent` es reportable y
+     nunca terminal — invariante 8, sin certeza falsa.
+  2. **Un run parqueado no está abandonado.** `needs_approval`,
+     `waiting_for_input`, `paused` y `result_ready` no tienen dueño **por
+     diseño**: esperan a una persona. Leerlos como abandono terminaría
+     justamente los runs que se comportan bien, y es el falso positivo más caro
+     posible porque destruye trabajo que sólo esperaba aprobación. Lo encontré
+     al cubrir el enum entero, no al diseñar.
+
+  Un heartbeat en el futuro **falla** en vez de clamplearse: clamplear reportaría
+  un run colgado como fresco para siempre, que es exactamente el fallo que este
+  módulo existe para terminar. Y la totalidad se verifica **contra el enum de
+  lifecycle**, no contra una lista copiada al lado, así que un estado nuevo no
+  puede empezar a declararse abandonado el día que se agrega.
+
+  *Falta:* cablearlo (evidencia de proceso durable como `ownerProcessPresent`, y
+  el registro del evento terminal), y con eso la aceptación end-to-end.
 - ~~Derivación de comandos de validación desde los scripts del target, **sin
   exigir un package manager** (D11).~~ **Adelantada y cerrada el 2026-08-06**,
   antes de la etapa 4, porque sin ella ningún run podía demostrar que terminó
