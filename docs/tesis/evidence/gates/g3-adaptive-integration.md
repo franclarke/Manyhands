@@ -3,6 +3,12 @@
 > **Fecha:** 2026-07-23 (UTC) · **Etapa 3** · **Decisiones aplicadas:** D-2, D-7, D-8
 > **Toolchain:** pnpm 7.29.3 · Node v24.16.0 (local) · Node 22 (CI)
 
+> **Nota posterior (2026-08-06).** Los resultados de abajo son un hecho
+> histórico y no se tocan. La ruta que describen fue retirada en la etapa 3F
+> de [`docs/plans/2026-08-05-robust-graph-execution-redesign.md`](../../../plans/2026-08-05-robust-graph-execution-redesign.md):
+> hoy planning corta una unidad por vez y la fórmula adaptativa se mide pero
+> no decide.
+
 ## Qué cambió (ruta objetivo del roadmap §9)
 
 ```text

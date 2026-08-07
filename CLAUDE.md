@@ -67,6 +67,11 @@ unknown.
   escritos por el perfil `franc_rgy` cuyo ACL excluye a `franc`, así que
   `pnpm install` aborta con `EPERM`. Instalar con
   `--store-dir <store propio>` en vez de tocar ACLs.
+- `pnpm web:build` falla en esta máquina con `Cannot find native binding` desde
+  `@tailwindcss/oxide`: falta el paquete nativo win32 en el árbol instalado y
+  `pnpm install` responde «Already up to date». Es una laguna de instalación
+  —hermana del `EPERM` del store compartido—, no un fallo de código. No buscarlo
+  en el fuente ni tocar el lockfile para saldarlo; declarar el gate bloqueado.
 - No marcar un ticket `closed` sin haber corrido `pnpm test` **completo sobre su
   commit exacto**. Cerrar 23–26 con gates focales dejó 12 tests rojos que nadie
   vio hasta el freeze siguiente, incluidos tres defectos productivos reales.
