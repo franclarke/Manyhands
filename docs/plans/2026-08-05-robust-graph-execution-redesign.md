@@ -268,7 +268,7 @@ interesante: por qué un escalar no servía para decidir. Retira
 | 3C | Criterios refinados, cableado productivo y eventos | **completada** — `2d5b0a5`, `7c6ef39` |
 | 3D | Utilidad como observación | **completada** |
 | 3F | Retiros del camino legacy | **completada** |
-| 3E | Verificación de la cadena | **completada** — contrato y cadena verificados; rompe en validación (D11) |
+| 3E | Verificación de la cadena | **completada** — contrato y cadena verificados; la rotura en validación (D11) quedó saldada el 2026-08-06 |
 | 4 | Scheduler de ready-set y workspace por intento | pendiente |
 | 5 | Terminalidad total y validación derivada | pendiente |
 | 6 | UI: dos layouts | pendiente |
@@ -766,9 +766,10 @@ por una razón ya conocida, y además sólo una hoja llegó a ejecutarse.
 
 - Supervisor de liveness dentro del producto: heartbeat vencido + proceso
   ausente ⇒ transición terminal.
-- Derivación de comandos de validación desde los scripts del target, **sin
-  exigir un package manager** (D11): si el script existe, se ejecuta con el
-  runtime que corresponda.
+- ~~Derivación de comandos de validación desde los scripts del target, **sin
+  exigir un package manager** (D11).~~ **Adelantada y cerrada el 2026-08-06**,
+  antes de la etapa 4, porque sin ella ningún run podía demostrar que terminó
+  bien y la aceptación de la 4 no era verificable end-to-end.
 - Taxonomía de fallo cerrada y total: cada fallo mapea a exactamente una causa
   con recuperación definida.
 - **Retiro:** la detección de dueño muerto sale del driver del experimento.
@@ -845,7 +846,7 @@ Se anota acá a medida que aparece, para que todo se cierre dentro de este plan.
 | D6 | **Un run no puede declarar criterios de aceptación.** Desde 3F `runPlanningV2` ya no tiene *ninguna* vía para recibirlos —el candidato experimental era la única—, así que el objetivo entra siempre como un único criterio implícito. Funciona con refinamiento, pero el objetivo real queda sin enunciar. | etapa 7 |
 | D7 | `wide-graph-oracle-contract` compara el hash de `dist` contra un freeze histórico y queda rojo con cualquier cambio de producto. Hay que decidir si se declara oráculo histórico y se retira del suite. | 3D |
 | D8 | El presupuesto de scope (`maxScopePaths`) es un parámetro sin anclar, igual que `minimumAdvantage` lo era. Debe salir de una medición del ejecutor, no de un número elegido. | etapa 7 |
-| D11 | **`baselineCommands` exige un package manager.** Un repo que declara `test` en sus scripts pero no tiene lockfile obtiene cero comandos base, así que la validación no corre nada y **todo candidato queda `unverified`**. Un proyecto Node con `node --test` no necesita package manager para validarse. Encontrado por la corrida `smoke-01`; vuelve inverificable al propio template de SP2. | etapa 5 |
+| ~~D11~~ | ~~**`baselineCommands` exige un package manager.**~~ Saldada el 2026-08-06. El bloque `scripts` de un package.json **es** sintaxis de npm run-script, así que un `test` declarado se ejecuta haya o no lockfile; el guard producía cero comandos base y todo candidato quedaba `unverified`. **El fix tenía dos mitades:** la derivación y la invalidación de caché. `FastRepositoryIndexer` cachea el `capabilityResult` por commit, **no por el código que lo derivó**, así que el arreglo era invisible para todo target ya indexado — verificado contra el target real `smoke-01`, que siguió devolviendo la lista vacía hasta bumpear `INDEXER_PROFILE`. El lado de ejecución ya defaulteaba a npm, así que la cadena queda consistente. | — |
 | D10 | El host cuenta unidades resueltas en el campo `attempt` de `planning.node_discovered`, que semánticamente es un número de intento. No rompe nada, pero el journal miente sobre qué mide. | 3D |
 | D9 | **El compilador declara conflicto entre unidades que sólo *leen* el mismo archivo.** `compileScopeConflicts` cruza el scope completo, así que el corte real de Haiku produjo 2 conflict constraints con escrituras disjuntas, y `wave-selector-v2` **impide seleccionar dos nodos en la misma wave** cuando hay un constraint entre ellos: los lectores compartidos se serializan. Bajo P2 sólo los escritores pueden conflictuar, así que el número correcto es siempre cero. Se intentó el retrofit y **no es expresable en el compilador viejo**: un `plannedPath` no puede nombrar un archivo existente, y su review *exige* un conflict constraint por cada solapamiento de scope. No tiene forma de decir «modifico este archivo existente» distinto de «lo leo» — la misma ambigüedad que la corrección 1 encontró en el contrato del planner. Marcado `it.fails` en `planning-cut-transcript.test.ts`. | etapa 4, junto con el scheduler que lo consume |
 | D12 | **Planning ya no puede levantar una pregunta aclaratoria.** El contrato de corte no tiene campo de preguntas, así que desde 3C nada produce una decisión `clarify_goal`; 3F borró el productor muerto y lo dejó visible. La mitad receptora sigue en pie (`questionAnswers`, `resolvedPlanningAnswers`, el guard de decisión pendiente). Hay que decidir: devolverle al contrato de corte un canal de incertidumbre, o retirar también la mitad receptora. No dejarla como está. | etapa 5 |

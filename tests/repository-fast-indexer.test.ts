@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   FastRepositoryIndexer,
+  INDEXER_PROFILE,
   fastIndexCachePath
 } from "../packages/repository-index/src/fast-indexer";
 import { buildFastRepositorySnapshot } from "../packages/repository-index/src/index";
@@ -143,7 +144,12 @@ describe("FastRepositoryIndexer", () => {
     ).toMatchObject({
       schemaVersion: 2,
       baseCommit: headSha,
-      indexerProfile: "exports-only-v2-size-metrics",
+      // The envelope records the profile the indexer is *running*. Pinning its
+      // literal value here would make every legitimate bump fail this test,
+      // which is exactly the discouragement the invalidation mechanism cannot
+      // afford: the profile is the only lever that expires a payload whose
+      // deriving code changed.
+      indexerProfile: INDEXER_PROFILE,
       index: { files: first.index.files }
     });
   });
@@ -333,6 +339,67 @@ describe("FastRepositoryIndexer", () => {
 
     expect(rebuilt.cacheHit).toBe(false);
     expect(rebuilt.index.files[0]?.exportedSymbols).toEqual(["api"]);
+  });
+
+  /**
+   * The profile is the only thing that expires a cached payload whose deriving
+   * code changed — the envelope is otherwise keyed by commit, and the checksum
+   * covers the payload, not the code that produced it. D11's fix was invisible
+   * on the real smoke-01 target until its profile was bumped, so this guards
+   * the mechanism that made the bump work.
+   */
+  it("rebuilds a cache written under a different indexer profile", async () => {
+    const root = await createRepository();
+    await mkdir(path.join(root, "src"), { recursive: true });
+    await writeFile(path.join(root, "src", "api.ts"), "export const api = true;\n", "utf8");
+    const headSha = await commitAll(root, "profile fixture");
+    const indexer = new FastRepositoryIndexer();
+    await indexer.index({ rootPath: root, baseCommit: headSha });
+    const cachePath = fastIndexCachePath(root, headSha);
+    const stale = JSON.parse(await readFile(cachePath, "utf8")) as Record<string, unknown>;
+    stale.indexerProfile = "some-earlier-profile";
+    await writeFile(cachePath, JSON.stringify(stale), "utf8");
+
+    const rebuilt = await indexer.indexWithReceipt({ rootPath: root, baseCommit: headSha });
+
+    expect(rebuilt.cacheHit).toBe(false);
+    expect(JSON.parse(await readFile(cachePath, "utf8")).indexerProfile).toBe(INDEXER_PROFILE);
+  });
+
+  /**
+   * D11 of `docs/plans/2026-08-05-robust-graph-execution-redesign.md`, through
+   * the path production actually uses.
+   *
+   * The fixture-level regression in `repository-snapshot.test.ts` runs
+   * `RepositorySnapshotBuilder`; runs go through `buildFastRepositorySnapshot`,
+   * which reaches the same derivation via the indexer's cached capability
+   * result. Covering only the former left the productive answer unasserted —
+   * and the cache is keyed by commit, not by the deriving code, so a stale
+   * entry can outlive a fix to it.
+   */
+  it("derives baseline commands for a lockfile-less target on the productive snapshot path", async () => {
+    const root = await createRepository();
+    await mkdir(path.join(root, "test"), { recursive: true });
+    await writeFile(path.join(root, "package.json"), JSON.stringify({
+      name: "lockfile-less-target",
+      private: true,
+      type: "module",
+      scripts: { test: "node --test test/*.test.mjs" }
+    }), "utf8");
+    await writeFile(path.join(root, "src.mjs"), "export const orders = [];\n", "utf8");
+    const headSha = await commitAll(root, "target");
+
+    const snapshot = await buildFastRepositorySnapshot({
+      rootPath: root,
+      repositoryId: "lockfile-less-target",
+      targetFingerprint: "target-fingerprint",
+      baseCommit: headSha
+    });
+
+    expect(snapshot.capabilities.packageManager).toBeUndefined();
+    expect(snapshot.capabilities.baselineCommands).toEqual([
+      { kind: "test", command: "npm", args: ["test"], sourceScript: "test" }
+    ]);
   });
 });
 

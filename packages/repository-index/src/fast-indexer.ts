@@ -32,11 +32,18 @@ import type {
 } from "./index.js";
 
 const FAST_INDEX_CACHE_SCHEMA_VERSION = 2 as const;
-// Profile bump invalidates caches produced before RepositoryFileIndex carried
-// byteSize/lineCount. Historical payloads remain schema-readable, but current
-// snapshots must not silently reuse entries without the size measurements the
-// granularity policy reads.
-const INDEXER_PROFILE = "exports-only-v2-size-metrics" as const;
+// The cache is keyed by commit, not by the code that derived its payload, so a
+// change in that derivation is invisible to every target already indexed at
+// that commit. This constant is the only lever that invalidates them, and it
+// must be bumped whenever the derivation changes.
+//
+// - `size-metrics`: RepositoryFileIndex gained byteSize/lineCount, which the
+//   granularity policy reads.
+// - `baseline-without-pm`: baseline commands stopped requiring a detected
+//   package manager (D11). Without this bump the smoke-01 target kept
+//   answering with the empty command list cached before the fix, so validation
+//   would still have run nothing — verified against the real target.
+export const INDEXER_PROFILE = "exports-only-v2-size-metrics-baseline-without-pm" as const;
 const INDEXER_NAME = "ripgrep-native-v2";
 // Every extension the TypeScript parser can read. Omitting the ESM/CJS module
 // variants made an all-`.mjs` repository index as empty, so its planner saw no

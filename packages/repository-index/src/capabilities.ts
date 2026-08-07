@@ -130,13 +130,19 @@ function baselineCommands(
   scripts: Record<string, string>,
   packageManager: "pnpm" | "npm" | "yarn" | "bun" | undefined
 ): RepositoryCapabilities["baselineCommands"] {
-  if (packageManager === undefined) return [];
+  // A `scripts` block *is* npm run-script syntax, so a declared script is
+  // runnable whether or not a lockfile says which manager installed the tree.
+  // Requiring one yielded zero baseline commands, so validation ran nothing and
+  // every candidate came back `unverified` — the shape of the `smoke-01`
+  // target, which declares `test` and has no lockfile. A repository that
+  // declares no script still gets nothing: there is nothing to run.
+  const runner = packageManager ?? "npm";
   return (["test", "typecheck", "lint", "build"] as const)
     .filter((kind) => scripts[kind] !== undefined)
     .map((kind) => ({
       kind,
-      command: packageManager,
-      args: packageManager === "npm" && kind !== "test" ? ["run", kind] : [kind],
+      command: runner,
+      args: runner === "npm" && kind !== "test" ? ["run", kind] : [kind],
       sourceScript: kind
     }));
 }

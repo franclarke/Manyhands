@@ -69,6 +69,58 @@ describe("RepositorySnapshotBuilder", () => {
     expect(RepositorySnapshotSchema.safeParse(first).success).toBe(true);
   });
 
+  /**
+   * D11 of `docs/plans/2026-08-05-robust-graph-execution-redesign.md`.
+   *
+   * The `scripts` block of a package.json *is* npm run-script syntax, so a
+   * declared `test` is runnable whether or not a lockfile says which manager
+   * installed the tree. Requiring one produced zero baseline commands, so
+   * validation ran nothing and every candidate came back `unverified` — the
+   * exact shape of the `smoke-01` target, which has scripts and no lockfile.
+   */
+  it("derives baseline commands from declared scripts without requiring a package manager", async () => {
+    const root = await repository({
+      "package.json": JSON.stringify({
+        name: "manyhands-sp2-target",
+        private: true,
+        type: "module",
+        scripts: { test: "node --test test/*.test.mjs", typecheck: "tsc --noEmit" }
+      }),
+      "src/orders.mjs": "export const orders = [];"
+    });
+
+    const snapshot = await new RepositorySnapshotBuilder().build({
+      rootPath: root,
+      repositoryId: "sp2-target",
+      targetFingerprint: "target-fingerprint",
+      baseCommit: "1111111111111111111111111111111111111111",
+      capturedAt: "2026-07-17T00:00:00.000Z"
+    });
+
+    expect(snapshot.capabilities.baselineCommands).toEqual([
+      { kind: "test", command: "npm", args: ["test"], sourceScript: "test" },
+      { kind: "typecheck", command: "npm", args: ["run", "typecheck"], sourceScript: "typecheck" }
+    ]);
+    // No lockfile and no `packageManager` field means we do not know which
+    // manager installed the tree, and inventing one would be evidence we do not
+    // have. Running the scripts does not require knowing it.
+    expect(snapshot.capabilities.packageManager).toBeUndefined();
+  });
+
+  it("derives no baseline command when the repository declares no script to run", async () => {
+    const root = await repository({ "src/orders.mjs": "export const orders = [];" });
+
+    const snapshot = await new RepositorySnapshotBuilder().build({
+      rootPath: root,
+      repositoryId: "manifest-less",
+      targetFingerprint: "target-fingerprint",
+      baseCommit: "1111111111111111111111111111111111111111",
+      capturedAt: "2026-07-17T00:00:00.000Z"
+    });
+
+    expect(snapshot.capabilities.baselineCommands).toEqual([]);
+  });
+
   it("changes identity when the base commit or repository content changes", async () => {
     const root = await repository({
       "package.json": JSON.stringify({ name: "booking-app" }),
