@@ -1,11 +1,5 @@
 import { RepositorySnapshotSchema, type RepositorySnapshot } from "@manyhands/repository-index";
-import {
-  createCandidatePlan,
-  createPlanningEnvelope,
-  type CandidatePlan,
-  type PlanningEnvelope,
-  type WorkBreakdown
-} from "@manyhands/decomposer";
+import { RecursivePlanner, type CutRequest, type WorkBreakdown } from "@manyhands/decomposer";
 
 export function bookingBreakdown(): WorkBreakdown {
   return {
@@ -107,58 +101,46 @@ export function bookingSnapshot(): RepositorySnapshot {
   }) as RepositorySnapshot;
 }
 
-export function bookingCandidate(
-  envelope: PlanningEnvelope = createPlanningEnvelope({
-    policyVersion: "adaptive-utility-v1",
-    goal: "Build booking",
-    repositorySnapshot: bookingSnapshot()
-  }),
-  candidateId = "booking-candidate",
-  breakdown = bookingBreakdown()
-): CandidatePlan {
-  const units = flatten(breakdown.root);
-  const leaves = units.filter((unit) => unit.kind === "leaf");
-  const evidenceById = new Map(breakdown.repositoryEvidence.map((item) => [item.id, item.reference]));
-  return createCandidatePlan({
-    envelope,
-    candidateId,
-    breakdown,
-    scopes: leaves.map((unit) => ({
-      unitKey: unit.key,
-      paths: [...unit.evidenceIds.map((id) => evidenceById.get(id)).filter((item): item is string => item !== undefined), ...(unit.plannedPaths ?? [])]
-    })),
-    acceptanceCriteria: breakdown.acceptanceIntents.map((intent) => ({
-      intentId: intent.id,
-      kind: "leafAcceptance" as const,
-      description: intent.description
-    })),
-    acceptanceOwnership: breakdown.acceptanceIntents.map((intent) => {
-      const owner = leaves.find((unit) => unit.acceptanceIntentIds.includes(intent.id));
-      if (owner === undefined) throw new Error(`Fixture acceptance intent ${intent.id} has no leaf owner.`);
-      return { intentId: intent.id, ownerUnitKey: owner.key, role: "local" as const, rationale: "The leaf proves this observable outcome." };
-    }),
-    seamSpecifications: breakdown.candidateSeams.map((seam) => ({
-      seamId: seam.id,
-      producerUnitKey: seam.producerUnitKey,
-      consumerUnitKeys: seam.consumerUnitKeys,
-      compatibility: seam.specification,
-      materialization: "files" as const,
-      validation: "Focused integration validation exercises every producer-consumer pair."
-    })),
-    contractObligations: breakdown.candidateSeams.map((seam) => ({
-      obligationId: `${seam.id}-contract`,
-      kind: "cross_layer_contract" as const,
-      ownerUnitKey: seam.producerUnitKey,
-      producerUnitKey: seam.producerUnitKey,
-      consumerUnitKeys: seam.consumerUnitKeys,
-      validation: "Focused integration validation proves compatibility."
-    })),
-    leafValidations: leaves.map((unit) => ({
-      unitKey: unit.key,
-      command: `pnpm test --filter ${unit.key}`,
-      evidenceRefs: unit.evidenceIds
-    }))
+/**
+ * The cut a planner is expected to answer for the booking fixture: three leaves
+ * with disjoint writes, each proving its own criterion with its own test. Its
+ * shape is what makes the derived relations `files`, never `logical`.
+ */
+export function bookingCut(): Record<string, unknown> {
+  return {
+    root: {
+      rationale: "Domain, API and UI are separately verifiable",
+      children: [
+        { key: "domain", objective: "Represent booking rules", criterion: "The domain represents booking rules", reads: ["src/domain/booking.ts"], writes: ["tests/domain.test.ts"] },
+        { key: "api", objective: "Create bookings through the API", criterion: "The API creates bookings", reads: ["src/api/bookings.ts"], writes: ["tests/api-create.test.ts"] },
+        { key: "ui", objective: "Submit the booking form", criterion: "The form submits a booking", reads: ["src/ui/BookingForm.tsx"], writes: ["tests/ui.test.ts"] }
+      ]
+    }
+  };
+}
+
+/**
+ * A planner scripted per unit key. `seen` records every request so a test can
+ * assert on repair prompts without reaching into the planner.
+ */
+export function scriptedPlanner(
+  script: Record<string, unknown> = bookingCut(),
+  options: { budget?: number; maxAttemptsPerUnit?: number } = {}
+): { planner: RecursivePlanner; seen: CutRequest[] } {
+  const seen: CutRequest[] = [];
+  const planner = new RecursivePlanner({
+    model: {
+      async proposeCut(request) {
+        seen.push(request);
+        const answer = script[request.unit.key];
+        if (answer === undefined) throw new Error(`no scripted cut for ${request.unit.key}`);
+        return JSON.stringify(answer);
+      }
+    },
+    budget: { maxScopePaths: options.budget ?? 2 },
+    maxAttemptsPerUnit: options.maxAttemptsPerUnit ?? 2
   });
+  return { planner, seen };
 }
 
 export const compilerDependencies = {

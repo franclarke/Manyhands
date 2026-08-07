@@ -267,7 +267,7 @@ interesante: por qué un escalar no servía para decidir. Retira
 | 3B | Relaciones derivadas y proyección | **completada** — `e0e6f99` |
 | 3C | Criterios refinados, cableado productivo y eventos | **completada** — `2d5b0a5`, `7c6ef39` |
 | 3D | Utilidad como observación | **completada** |
-| 3F | Retiros del camino legacy | pendiente |
+| 3F | Retiros del camino legacy | **completada** |
 | 3E | Verificación de la cadena | **completada** — contrato y cadena verificados; rompe en validación (D11) |
 | 4 | Scheduler de ready-set y workspace por intento | pendiente |
 | 5 | Terminalidad total y validación derivada | pendiente |
@@ -574,19 +574,65 @@ producto diverge necesariamente. Se dejó de afirmarlo como invariante vivo sin
 tocar el freeze, que habría sido reescribir evidencia para que dé. **La suite
 quedó completamente verde: 55/55 archivos, 373 tests.**
 
-**3F — Retiros del camino legacy.** Trabajo mecánico y acotado, separado para no
-hacerlo apurado.
+**3F — Retiros del camino legacy. Cerrada el 2026-08-06.**
 
-*Análisis de alcance hecho el 2026-08-06:* la rama legacy sólo se alcanza con
-`experimentalCandidate`, que llega desde el request de la API y **ningún driver
-ni celda del repositorio setea**. Es decir: inalcanzable en la práctica, no en el
-tipo. Retirarla implica `planning-envelope.ts`, `work-breakdown.ts` (el
-*planner*), la decisión de `strategy-selector`, el canal de progreso embebido con
-`parseWorkBreakdownProgressLine`, y **8 archivos de test** que dependen de esa
-maquinaria. `schema.ts` **no** se retira: el compilador parsea a través de
-`WorkBreakdownSchema`.
+*Análisis de alcance previo:* la rama legacy sólo se alcanzaba con
+`experimentalCandidate`, que llegaba desde el request de la API y **ningún driver
+ni celda del repositorio seteaba**. Inalcanzable en la práctica, no en el tipo.
 
-*Aceptación:* ningún módulo retirado queda alcanzable, y la suite sigue verde.
+*Qué se retiró.* La regresión roja previa fue el rechazo del punto de entrada:
+`RunCreateRequestSchema` ya no admite `experimentalCandidate` ni
+`candidateCount`, así que la rama deja de ser alcanzable *en el tipo*. Con eso
+cayeron, en orden:
+
+- `planner/planning-envelope.ts` — el **protocolo de candidatos** completo:
+  sobre, presupuesto de candidatos, validación de conjunto y selección. Sobrevive
+  sólo la forma que el compilador de contratos todavía lee, ahora en
+  `planner/candidate-plan.ts` y **como tipos, no como schemas**: ya nadie la
+  parsea en una frontera de confianza. La frontera es el contrato de corte.
+- `planner/work-breakdown.ts` y `planner/prompt.ts` — el planner de una sola
+  pasada y su prompt. Los dos errores de transporte que le sobrevivieron
+  (`NonRetryablePlanningError`, `PlanningCapacityError`) viven ahora en
+  `planner/planning-errors.ts`, porque son propiedades del transporte y no del
+  planner que lo usa.
+- El **canal de progreso embebido**: `parseWorkBreakdownProgressLine`, el buffer
+  de líneas y la cola de progreso del CLI. Una unidad resuelta es una llamada
+  entera al modelo, no una línea dentro de una.
+- La rama legacy de `compileGraphRevision` (`planningEnvelope` + validación de
+  candidato) y la mitad legacy de `PlanningV2Dependencies` (`plan`,
+  `planCandidates`); `recursivePlanner` pasa a ser obligatorio.
+- Aprobar y editar una revisión ya compilada sólo necesitan journal y reloj:
+  `PlanningV2JournalDependencies`. Antes recibían la superficie entera de
+  planning con stubs que tiraban excepción, que no decían nada salvo que la
+  interfaz era demasiado ancha.
+- Seis archivos de test del protocolo retirado: tres borrados
+  (`planning-envelope`, `decomposer-work-breakdown`, `planning-candidate-replay`)
+  y tres reescritos sobre el camino productivo (`planning-v2-pipeline`,
+  `planning-v2-adaptive`, `planning-v2-approval`), conservando las garantías que
+  sobrevivieron al protocolo: qué recibe el planner, qué registra un fallo, y que
+  las unidades se vuelven durables mientras planning sigue corriendo.
+
+`schema.ts` **no** se retiró: el compilador sigue parseando a través de
+`WorkBreakdownSchema`. `PlanningModule` tampoco: ya no es alcanzable en
+producción, pero es el sustrato del arnés y el brazo de comparación de una sola
+pasada que la tesis contrasta.
+
+*Corrección durante el retiro.* El artefacto `<runId>.granularity-metrics.json`
+se escribía **sólo** en la rama legacy, así que retirarla lo habría hecho
+desaparecer en silencio junto con la medición que 3D decidió conservar. Se
+reinstaló en el camino productivo, después de que el estado es durable: una
+medición que no es evidencia nunca puede hacer fallar un run.
+
+*Aceptación:* verificada. Ningún módulo retirado queda alcanzable —
+`grep` sobre `apps/web/src`, `packages/*/src`, `tests` y `scripts` no devuelve
+una sola referencia fuera de la propia regresión que las rechaza— y la suite
+completa quedó **verde: 232 archivos, 1607 tests, 3 skips**.
+
+> Una corrida previa dio un fallo en `store-recovery-traces-security.test.ts`
+> (`EPERM` al renombrar un lock en `%TEMP%`). No lo toca este cambio: el archivo
+> y `packages/run-store` están intactos, pasa aislado, y la corrida siguiente del
+> suite completo pasó. Es una carrera del filesystem de Windows bajo paralelismo,
+> no una regresión de 3F.
 
 **Fuera de alcance:** ejecución.
 
@@ -792,16 +838,18 @@ Se anota acá a medida que aparece, para que todo se cierre dentro de este plan.
 | # | Deuda | Dónde se salda |
 |---|---|---|
 | ~~D1~~ | ~~El host productivo todavía planifica con `PlanningModule`.~~ Saldada en `7c6ef39`. | — |
-| D2 | La fórmula de utilidad todavía decide en `strategy-selector`. | 3D |
-| D3 | `planning-envelope.ts`, `work-breakdown.ts` y el canal de progreso embebido siguen alcanzables. | 3D |
-| D4 | Las caracterizaciones `it.fails` del camino viejo en `planning-harness.test.ts` se borran junto con ese camino. | 3D |
+| ~~D2~~ | ~~La fórmula de utilidad todavía decide en `strategy-selector`.~~ Saldada entre 3D y 3F: `selectGranularityStrategy` sigue calculando `requiresSemanticReplan` y el `selected` por unidad, pero en el camino productivo **nadie los consume**. Ver D13 por lo que quedó abierto. | — |
+| ~~D3~~ | ~~`planning-envelope.ts`, `work-breakdown.ts` y el canal de progreso embebido siguen alcanzables.~~ Saldada en 3F. | — |
+| D4 | Las tres caracterizaciones `it.fails` de `planning-harness.test.ts` corren sobre `PlanningModule`, que 3F **no** retiró: sigue siendo el sustrato del arnés y el brazo de una sola pasada. Se borran cuando se retire ese brazo, no antes. | etapa 7 |
 | D5 | **La raíz lee todo el snapshot.** Hoy el arnés arma la raíz con *todas* las rutas indexadas. En un repo grande eso es ilimitado y hace que el primer corte se decida sobre ruido. Hace falta una estrategia de grounding que acote las lecturas de la raíz a lo relevante para el objetivo. | etapa nueva antes de 7 |
-| D6 | **Un run no puede declarar criterios de aceptación.** `runPlanningV2` sólo los recibe desde un candidato experimental, así que el objetivo entra como un único criterio implícito. Funciona con refinamiento, pero el objetivo real queda sin enunciar. | 3D o etapa 7 |
+| D6 | **Un run no puede declarar criterios de aceptación.** Desde 3F `runPlanningV2` ya no tiene *ninguna* vía para recibirlos —el candidato experimental era la única—, así que el objetivo entra siempre como un único criterio implícito. Funciona con refinamiento, pero el objetivo real queda sin enunciar. | etapa 7 |
 | D7 | `wide-graph-oracle-contract` compara el hash de `dist` contra un freeze histórico y queda rojo con cualquier cambio de producto. Hay que decidir si se declara oráculo histórico y se retira del suite. | 3D |
 | D8 | El presupuesto de scope (`maxScopePaths`) es un parámetro sin anclar, igual que `minimumAdvantage` lo era. Debe salir de una medición del ejecutor, no de un número elegido. | etapa 7 |
 | D11 | **`baselineCommands` exige un package manager.** Un repo que declara `test` en sus scripts pero no tiene lockfile obtiene cero comandos base, así que la validación no corre nada y **todo candidato queda `unverified`**. Un proyecto Node con `node --test` no necesita package manager para validarse. Encontrado por la corrida `smoke-01`; vuelve inverificable al propio template de SP2. | etapa 5 |
 | D10 | El host cuenta unidades resueltas en el campo `attempt` de `planning.node_discovered`, que semánticamente es un número de intento. No rompe nada, pero el journal miente sobre qué mide. | 3D |
 | D9 | **El compilador declara conflicto entre unidades que sólo *leen* el mismo archivo.** `compileScopeConflicts` cruza el scope completo, así que el corte real de Haiku produjo 2 conflict constraints con escrituras disjuntas, y `wave-selector-v2` **impide seleccionar dos nodos en la misma wave** cuando hay un constraint entre ellos: los lectores compartidos se serializan. Bajo P2 sólo los escritores pueden conflictuar, así que el número correcto es siempre cero. Se intentó el retrofit y **no es expresable en el compilador viejo**: un `plannedPath` no puede nombrar un archivo existente, y su review *exige* un conflict constraint por cada solapamiento de scope. No tiene forma de decir «modifico este archivo existente» distinto de «lo leo» — la misma ambigüedad que la corrección 1 encontró en el contrato del planner. Marcado `it.fails` en `planning-cut-transcript.test.ts`. | etapa 4, junto con el scheduler que lo consume |
+| D12 | **Planning ya no puede levantar una pregunta aclaratoria.** El contrato de corte no tiene campo de preguntas, así que desde 3C nada produce una decisión `clarify_goal`; 3F borró el productor muerto y lo dejó visible. La mitad receptora sigue en pie (`questionAnswers`, `resolvedPlanningAnswers`, el guard de decisión pendiente). Hay que decidir: devolverle al contrato de corte un canal de incertidumbre, o retirar también la mitad receptora. No dejarla como está. | etapa 5 |
+| D13 | **La métrica persistida describe el árbol de la política, no el que compiló.** `strategySelectedEvent` toma `metrics` de `strategy.selectedBreakdown`. Hoy coinciden —el probe con el fixture de booking dio 3 y 3, incluso forzando presupuesto— pero `granularity-utility-policy.test.ts:26` prueba que la política **sí** puede colapsar un composite a hoja, así que la divergencia es posible y silenciosa. El origen correcto es inequívoco: el árbol que compiló. No se cambió sin una regresión roja que lo motive; el test de 3F fija la igualdad para su fixture y se pondrá rojo si divergen. | etapa 7, junto con D8 |
 
 ---
 

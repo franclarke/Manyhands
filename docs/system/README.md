@@ -87,7 +87,7 @@ sequenceDiagram
 
 - `packages/run-coordinator`: comandos, eventos, reducer, lifecycle, decisions,
   outcomes y políticas de recuperación.
-- `packages/decomposer`: `WorkBreakdownPlanner`, Graph Compiler y critics.
+- `packages/decomposer`: `RecursivePlanner`, relaciones derivadas, Graph Compiler y critics.
 - `packages/task-graph` y `packages/contracts`: grafo tipado y obligaciones
   versionadas.
 - `packages/orchestrator-graph` y `packages/execution-core`: driver, bases,

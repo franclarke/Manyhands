@@ -18,9 +18,8 @@ import { executionScopeFromAllowed } from "./scope";
 import { DecomposeStepOutputSchema } from "./llm/recursive/step-schema";
 import { z } from "zod";
 
-export * from "./planner/prompt.js";
 export * from "./planner/schema.js";
-export * from "./planner/work-breakdown.js";
+export * from "./planner/planning-errors.js";
 export * from "./planner/repository-snapshot-id.js";
 export * from "./compiler/contract-compiler.js";
 export * from "./compiler/acceptance-allocation.js";
@@ -1584,47 +1583,15 @@ export type {
   PlanningOutcome,
   PlanningModuleOptions
 } from "./planner/planning-module.js";
-export {
-  PLANNING_ENVELOPE_SCHEMA_VERSION,
-  PlanningEnvelopeSchema,
-  AcceptanceOwnershipSchema,
-  AcceptanceCriterionSchema,
-  CandidateScopeSchema,
-  CandidateSeamSpecificationSchema,
-  ContractObligationSchema,
-  LeafValidationSchema,
-  CandidatePlanDraftSchema,
-  CandidatePlanSchema,
-  createCandidatePlan,
-  createCandidatePlanFromDraft,
-  createPlanningEnvelope,
-  validateCandidatePlanSet,
-  validateCandidatePlan,
-  validatePlannerCandidateSet,
-  selectPlannerCandidate,
-  selectCandidatePlan
-} from "./planner/planning-envelope.js";
 export type {
-  PlanningEnvelope,
-  CreatePlanningEnvelopeInput,
   AcceptanceOwnership,
   CandidateSeamSpecification,
   CandidatePlan,
-  CandidatePlanDraft,
-  CreateCandidatePlanInput,
   AcceptanceCriterion,
   CandidateScope,
   ContractObligation,
-  LeafValidation,
-  CandidatePlanDiagnostic,
-  CandidatePlanSetInput,
-  PlannerCandidateSetInput,
-  CandidatePlanSetValidation,
-  PlannerCandidateSetValidation,
-  CandidatePlanSelection,
-  SelectPlannerCandidateInput,
-  SelectCandidatePlanInput
-} from "./planner/planning-envelope.js";
+  LeafValidation
+} from "./planner/candidate-plan.js";
 
 // ── Recursive interface-aware decomposer ──────
 export { RecursiveDecomposer } from "./llm/recursive/recursive-decomposer";
