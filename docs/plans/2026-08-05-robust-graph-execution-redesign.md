@@ -860,7 +860,23 @@ por una razón ya conocida, y además sólo una hoja llegó a ejecutarse.
   entran al ready-set.
 - Matar el proceso a mitad de run y reanudar: el ready-set se recomputa desde el
   journal, los workspaces en vuelo se descartan y el run llega a terminal.
-- El nivel topológico se persiste por nodo y ninguna decisión del runtime lo lee.
+- ~~El nivel topológico se persiste por nodo y ninguna decisión del runtime lo
+  lee.~~ **Hecho el 2026-08-07.** `computeTopologicalLevels` da el camino **más
+  largo** desde el inicio del run —no el más corto: un nodo sólo está disponible
+  cuando terminó su cadena de predecesores más lenta, y bandear por el más corto
+  lo dibujaría alcanzable antes de lo que puede ser. Los predecesores son las dos
+  cosas que realmente ordenan: los productores de los artifacts que consume **y
+  sus propios hijos**, porque un composite integra y sólo está listo cuando sus
+  hijos fueron adoptados.
+
+  Un ciclo **no rompe la compilación**: se omiten los niveles. Los critics ya
+  diagnostican `artifact_cycle` y corren después, así que tirar acá reemplazaría
+  su hallazgo por un mensaje peor sobre un campo que no decide nada.
+
+  La cláusula «ninguna decisión del runtime lo lee» quedó **ejecutable, no
+  declarativa**: un test escanea `scheduler`, `orchestrator-graph`,
+  `run-coordinator` y `execution-core` enteros y falla nombrando el archivo
+  ofensor. Verifiqué que muerde inyectando una lectura.
 
 **Fuera de alcance:** UI.
 

@@ -15,7 +15,15 @@ export const TaskNodeV2Schema = z.object({
   parentId: EntityIdSchema.nullable(),
   kind: z.enum(["root", "composite", "leaf", "integrator"]),
   title: NonEmptyStringSchema,
-  goal: NonEmptyStringSchema
+  goal: NonEmptyStringSchema,
+  /**
+   * Longest path from the start of the run — the wave, kept as a derived fact
+   * for the flow layout to band by. Presentational only: no runtime decision
+   * reads it, which is what separates it from the barrier it replaced.
+   *
+   * Optional because revisions compiled before stage 4 do not carry it.
+   */
+  topologicalLevel: z.number().int().nonnegative().optional()
 }).strict();
 
 export type TaskNodeV2 = z.infer<typeof TaskNodeV2Schema>;

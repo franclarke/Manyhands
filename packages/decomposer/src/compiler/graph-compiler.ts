@@ -2,6 +2,7 @@ import type { SourceContract, TaskContractBundle } from "@manyhands/contracts";
 import { RepositorySnapshotSchema, type RepositorySnapshot } from "@manyhands/repository-index";
 import {
   GraphRevisionSchema,
+  computeTopologicalLevels,
   type ArtifactRequirement,
   type ConflictConstraint,
   type GraphRevision,
@@ -135,8 +136,8 @@ export function compileGraphRevision(
   }
 
   const conflictConstraints = compileWriteConflicts(contractResult.writePathsByNodeId, nodes, dependencies, trace);
-  const graph = GraphRevisionSchema.parse({
-    schemaVersion: 2,
+  const draft = {
+    schemaVersion: 2 as const,
     graphId: dependencies.idFor("graph", breakdown.breakdownId),
     revision: 1,
     rootId: requireNodeId(nodeIdByUnitKey, breakdown.root.key),
@@ -148,7 +149,8 @@ export function compileGraphRevision(
     conflictConstraints,
     legacyOrderingConstraints: [],
     createdAt: dependencies.now()
-  });
+  };
+  const graph = GraphRevisionSchema.parse({ ...draft, nodes: withTopologicalLevels(draft) });
   const review = reviewCompiledPlan({ breakdown, repositorySnapshot, graph, contracts: contractResult.bundles, writePathsByNodeId: contractResult.writePathsByNodeId });
   assertPlanReview(review);
   return {
@@ -218,6 +220,32 @@ function compileNodes(root: WorkUnit, nodeIdByUnitKey: Record<string, string>): 
  * result is always empty. It is still computed rather than assumed: the
  * compiler does not get to trust its input.
  */
+/**
+ * Bands every node by its longest path from the start of the run, for the flow
+ * layout to draw. Presentational: nothing in the runtime reads it.
+ *
+ * A cycle leaves the levels off rather than failing the compile. The plan
+ * critics own that diagnosis and produce a far better one (`artifact_cycle`),
+ * and they run after this — so throwing here would replace their finding with a
+ * worse message about a field that decides nothing.
+ */
+function withTopologicalLevels(draft: {
+  graphId: string;
+  nodes: Record<string, TaskNodeV2>;
+  artifactRequirements: ArtifactRequirement[];
+}): Record<string, TaskNodeV2> {
+  let levels: Record<string, number>;
+  try {
+    levels = computeTopologicalLevels(draft as unknown as GraphRevision);
+  } catch {
+    return draft.nodes;
+  }
+  return Object.fromEntries(Object.entries(draft.nodes).map(([id, node]) => [id, {
+    ...node,
+    ...(levels[id] === undefined ? {} : { topologicalLevel: levels[id]! })
+  }]));
+}
+
 function compileWriteConflicts(
   scopes: Record<string, string[]>,
   nodes: Record<string, TaskNodeV2>,
