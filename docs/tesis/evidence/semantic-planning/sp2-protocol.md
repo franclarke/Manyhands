@@ -41,8 +41,8 @@ el template y sólo se ejecuta contra el commit candidato exacto.
 
 > Add express/standard order priority and backorder recording across the
 > existing domain, application and API. An order that exceeds available stock
-> must remain cancellable, record a positive backorder, emit one application
-> event, and be observable through the API through `currentOrders()`,
+> must remain cancellable, record a positive backorder, emit exactly one
+> application event of type `backorder-recorded`, and be observable through the API through `currentOrders()`,
 > `currentBackorders()` and `events()`. `currentBackorders()` returns entries
 > shaped exactly as `{ orderId, skuId, missing }`. Preserve existing behavior.
 > Add focused tests beside the modified code.

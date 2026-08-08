@@ -290,6 +290,18 @@ Antes del congelamiento, el objetivo declara literalmente la forma de cada
 entrada. No cambia el oráculo, los criterios, los umbrales ni los scopes: alinea
 la tarea que recibe el agente con el contrato que §2.1 ya decía cubierto.
 
+### 4.1.6 El objetivo omitía el literal del evento de aplicación
+
+El ensayo siguiente sí devolvió `{ orderId, skuId, missing }`, pero el oráculo
+observó cero eventos de tipo `backorder-recorded`: la implementación había
+publicado un evento semánticamente parecido con otro nombre. El criterio 3 ya
+exige exactamente ese literal, pero el objetivo sólo pedía «one application
+event».
+
+Antes del congelamiento se incorpora `backorder-recorded` al objetivo. Es una
+aclaración del criterio pre-registrado, no una modificación del evaluador, de
+los scopes o de los umbrales.
+
 ---
 
 ## 4.2 Resultado del ensayo del 2026-08-07
