@@ -88,4 +88,60 @@ describe("adaptive granularity in the productive planning pipeline", () => {
     expect(metrics.condition).toBe("C");
     expect((metrics.metrics as Record<string, unknown>).totalLeafCount).toBe(3);
   });
+
+  /**
+   * D13, and a precondition of stage 7: depth reached is the headline number the
+   * measurement cells report, and it is read from this event.
+   *
+   * The test above pins the equality on a fixture where the policy happens to
+   * agree with the fixpoint, so it cannot see the divergence. Condition A makes
+   * the divergence deterministic instead of fitted: it collapses the root to a
+   * single leaf by definition, while the tree that compiles — and therefore the
+   * tree that executes — is still the fixpoint's. If `metrics` follows the
+   * policy, the journal reports depth 0 and one leaf for a run with three, and
+   * the thesis measures a tree that never ran.
+   */
+  it("measures the tree that compiled even when the policy prefers another one", async () => {
+    const events = new JsonlRunEventStore({ directory });
+    const snapshots = new RunSnapshotStore({ directory, events });
+    const compile = vi.fn((input: GraphCompilerInput) => compileGraphRevision(input, compilerDependencies));
+    const { planner } = scriptedPlanner();
+
+    await runPlanningV2({
+      runId: "run-condition-a",
+      goal: "Build booking",
+      repoPath: "C:/repo/booking",
+      targetFingerprint: "target-1",
+      baseCommit: "1".repeat(40),
+      authority,
+      granularityCondition: "A"
+    }, {
+      events,
+      snapshots,
+      inspect: async () => bookingSnapshot(),
+      recursivePlanner: planner,
+      compile,
+      nodeIdFor: (key) => compilerDependencies.idFor("node", key),
+      now: () => "2026-07-23T01:00:00.000Z"
+    });
+
+    const replayed = foldRun(await events.load("run-condition-a"));
+    // The policy did collapse: without this the test would pass for the wrong
+    // reason, on a run where the two trees never diverged at all.
+    expect(replayed.granularityStrategy!.assessments["node-root"]?.selected).toBe("leaf");
+
+    const compiledNodes = Object.values(compile.mock.results[0]!.value.graph.nodes) as Array<{ kind: string }>;
+    expect(compiledNodes.filter((node) => node.kind === "leaf")).toHaveLength(3);
+
+    expect(replayed.granularityStrategy!.metrics.totalLeafCount).toBe(3);
+    expect(replayed.granularityStrategy!.metrics.maxGraphDepth).toBe(1);
+
+    // The journal event and the diagnostic artifact describe the same run, so
+    // they must describe the same tree. They read from different variables
+    // today, which is how the divergence stayed invisible.
+    const artifact = JSON.parse(
+      await readFile(path.join(directory, "run-condition-a.granularity-metrics.json"), "utf8")
+    ) as { metrics: Record<string, unknown> };
+    expect(artifact.metrics).toEqual(replayed.granularityStrategy!.metrics);
+  });
 });

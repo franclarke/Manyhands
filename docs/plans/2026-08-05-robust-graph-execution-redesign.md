@@ -273,7 +273,7 @@ interesante: por qué un escalar no servía para decidir. Retira
 | 4R | Retiro del fencing del run record | **diferido el 2026-08-07** — no es borrado, es reestructuración; ver abajo |
 | 5 | Terminalidad total y validación derivada | **completada** — 2026-08-07 |
 | 6 | UI: dos layouts | **completada** — 2026-08-07 |
-| 7 | Celdas de medición | pendiente |
+| 7 | Celdas de medición | **en curso** — 7A (instrumentación) cerrada el 2026-08-07; 7B ensayo y 7C serie, pendientes |
 
 ---
 
@@ -1127,6 +1127,37 @@ y vueltos a medir en vivo.
 - 2/2 celdas completas con todos los criterios externos satisfechos, o un
   resultado adverso atribuible con causa observable.
 
+**7A — Instrumentación de la medición. Cerrada el 2026-08-07.**
+
+Antes de congelar hay que poder medir lo que la etapa promete. Tres hallazgos,
+los tres encontrados **ejecutando**, no leyendo:
+
+1. **D13 saldada.** `planning.granularity_strategy_selected` medía el árbol de
+   la política, no el que compiló. Con la condición A el journal reportaba
+   profundidad 0 y una hoja para un run de tres. Profundidad alcanzada es la
+   medida principal de esta etapa y salía de ahí.
+2. **El paralelismo no tenía derivación.** Se agregó `observeRunParallelism`,
+   que separa las dos causas de un run serial —el plan no ofrecía trabajo
+   independiente, o el tope lo prohibió— y deja `peakAvailable` ausente, no en
+   cero, cuando el journal no registró explicaciones.
+3. **El oráculo externo no cubría dos de sus cinco criterios**, y el fixture
+   volvía contradictorio el objetivo. Ambos corregidos antes del congelamiento,
+   con una solución de referencia desechable que prueba las dos direcciones:
+   el evaluador falla sobre el template intacto y pasa sobre una solución
+   razonable.
+
+La pre-registración está en
+[`sp2-preregistration.md`](../tesis/evidence/semantic-planning/sp2-preregistration.md).
+
+**7B — Ensayo previo, fuera de la serie.** Pendiente. Una celda declarada como
+ensayo y nunca contada, para comprobar que la maquinaria llega de punta a punta
+sobre un target `.mjs` y que el journal registra lo que §3.3 necesita leer. El
+antecedente es exacto: la etapa 1 descubrió que el indexador no leía `.mjs` y
+que por eso el planner de SP2 recibía cero evidencia, invisible durante trece
+series.
+
+**7C — Congelamiento y dos celdas.** Pendiente, después del ensayo.
+
 ---
 
 ## 4. Qué se borra y qué se preserva
@@ -1163,7 +1194,7 @@ Se anota acá a medida que aparece, para que todo se cierre dentro de este plan.
 | D10 | El host cuenta unidades resueltas en el campo `attempt` de `planning.node_discovered`, que semánticamente es un número de intento. No rompe nada, pero el journal miente sobre qué mide. | 3D |
 | ~~D9~~ | ~~**El compilador declara conflicto entre unidades que sólo *leen* el mismo archivo.**~~ Saldada el 2026-08-06, primera rebanada de la etapa 4. El retrofit había fallado porque `plannedPaths` no puede nombrar un archivo existente: no había forma de decir «modifico esto» distinto de «lo leo». Ahora la unidad lleva `writePaths` explícito desde el planner hasta el compilador, los conflictos se computan **sólo sobre escrituras**, y el review dejó de exigir un constraint por cada solapamiento de scope. **Hallazgo del camino:** P2 se validaba *por corte*, y la cobertura sólo exige que un subárbol escriba **al menos** lo que su padre prometió — así que dos primos podían reclamar el mismo archivo y «el conjunto de conflictos es siempre vacío» era un supuesto, no un teorema. Ahora la propiedad de escritura única es del árbol, como la de claves. El `it.fails` de `planning-cut-transcript.test.ts` pasó a verde sobre la transcripción real de Haiku. | — |
 | D12 | **Planning ya no puede levantar una pregunta aclaratoria.** El contrato de corte no tiene campo de preguntas, así que desde 3C nada produce una decisión `clarify_goal`; 3F borró el productor muerto y lo dejó visible. La mitad receptora sigue en pie (`questionAnswers`, `resolvedPlanningAnswers`, el guard de decisión pendiente). Hay que decidir: devolverle al contrato de corte un canal de incertidumbre, o retirar también la mitad receptora. No dejarla como está. | etapa 5 |
-| D13 | **La métrica persistida describe el árbol de la política, no el que compiló.** `strategySelectedEvent` toma `metrics` de `strategy.selectedBreakdown`. Hoy coinciden —el probe con el fixture de booking dio 3 y 3, incluso forzando presupuesto— pero `granularity-utility-policy.test.ts:26` prueba que la política **sí** puede colapsar un composite a hoja, así que la divergencia es posible y silenciosa. El origen correcto es inequívoco: el árbol que compiló. No se cambió sin una regresión roja que lo motive; el test de 3F fija la igualdad para su fixture y se pondrá rojo si divergen. | etapa 7, junto con D8 |
+| ~~D13~~ | ~~**La métrica persistida describe el árbol de la política, no el que compiló.**~~ Saldada el 2026-08-07, en 7A. La divergencia dejó de ser hipotética: con la condición A la política colapsa la raíz a una hoja por definición, y el journal reportaba **profundidad 0 y una hoja** para un run que compiló y ejecutó tres. El mismo evento describía dos árboles distintos —`candidateTree` el compilado, `metrics` el de la política— y el artefacto de diagnóstico ya usaba el correcto, así que journal y diagnóstico podían contradecirse sobre el mismo run. Ahora ambos leen el árbol que compiló, y el test lo fija por igualdad entre los dos. La regresión no depende de afinar un umbral. | — |
 
 ---
 

@@ -270,9 +270,8 @@ function strategySelectedEvent(
   nodeIdFor: (key: string) => string,
   now: () => string
 ): RunEventInput {
-  const breakdown = strategy.selectedBreakdown;
   return {
-    eventId: `planning:${breakdown.breakdownId}:strategy:${runId}`,
+    eventId: `planning:${candidateBreakdown.breakdownId}:strategy:${runId}`,
     occurredAt: now(),
     type: "planning.granularity_strategy_selected",
     payload: {
@@ -304,7 +303,11 @@ function strategySelectedEvent(
         evidenceRefs: assessment.evidenceRefs,
         rationale: assessment.rationale
       })),
-      metrics: structuralMetrics(breakdown.root)
+      // The tree that compiled, never `strategy.selectedBreakdown`. Since 3D the
+      // policy decides nothing, so its preferred tree is not the one that runs —
+      // and depth reached is read from here. Measuring the policy's tree would
+      // report a run that never happened, silently, whenever the two diverge.
+      metrics: structuralMetrics(candidateBreakdown.root)
     }
   };
 }

@@ -4,6 +4,7 @@ export * from "./execution.js";
 export * from "./integration.js";
 export * from "./amendments.js";
 export * from "./recovery-policy.js";
+export * from "./parallelism-observation.js";
 export * from "./domain/decisions.js";
 export * from "./domain/artifacts.js";
 export * from "./domain/attempts.js";

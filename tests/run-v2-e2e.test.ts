@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { compileGraphRevision } from "@manyhands/decomposer";
 import { IntegrationManifestExecutor, JsonIntegrationOperationJournal, createIntegrationRequestManifest } from "@manyhands/execution-core";
 import { V2ExecutionDriver, type V2NodeExecutionInput, type V2NodeExecutionOutcome } from "@manyhands/orchestrator-graph";
-import { RunCoordinator, RunEventSchema, type RunEvent, type RunEventInput } from "@manyhands/run-coordinator";
+import { RunCoordinator, RunEventSchema, observeRunParallelism, type RunEvent, type RunEventInput } from "@manyhands/run-coordinator";
 import { bookingBreakdown, bookingSnapshot, compilerDependencies } from "./helpers/target-planning-fixtures";
 import { FakeGitRunner } from "./helpers/fake-git-runner";
 
@@ -68,6 +68,17 @@ describe("V2 productive run", () => {
     expect(state.finalCandidate).toMatchObject({ manifestId: "manifest-final", commit: `commit-${compiled.graph.rootId}` });
     expect(state.evidenceMatrices).toHaveLength(4);
     expect(journal.events().filter((event) => event.type === "wave.selected")).toHaveLength(2);
+
+    // Stage 7's instrument, read off the journal this run actually wrote rather
+    // than off hand-built events. A derivation that only ever sees fixtures is
+    // how a measurement ends up describing a shape the product never emits.
+    const parallelism = observeRunParallelism(journal.events());
+    expect(parallelism.unobservedReadinessCount).toBe(0);
+    // Three independent leaves under a cap of three: everything the graph
+    // offered was taken, so the plan is the ceiling and the cap never bound.
+    expect(parallelism.peakAvailable).toBe(3);
+    expect(parallelism.peakExecuted).toBe(3);
+    expect(parallelism.capBindingObservations).toBe(0);
   });
 
   it("re-enters the driver after an integration journal takeover without repeating the applied child", async () => {
