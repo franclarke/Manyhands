@@ -14,7 +14,9 @@ export interface TestIntegrityFinding {
  * A task that promises a new observable public API cannot be discharged by a
  * test-only commit when its declared scope contains an API implementation.
  * The test may prove a pre-existing, incidental read path while leaving the
- * promised boundary unchanged.
+ * promised boundary unchanged. A response property alone is not a public
+ * observable-state operation: callers need a named boundary operation to
+ * retrieve the requested state after the original mutation has completed.
  */
 export function detectRequiredPublicSurfaceFindings(input: {
   goal: string;
@@ -36,13 +38,15 @@ export function detectRequiredPublicSurfaceFindings(input: {
     const sourceContents = input.candidatePublicSourceContents ?? {};
     if (requestedStateTerms.length > 0 && changedSources.every((file) => {
       const source = sourceContents[file.replaceAll("\\", "/")];
-      return source === undefined || requestedStateTerms.every((term) => !source.toLowerCase().includes(term));
+      return source === undefined || requestedStateTerms.some((term) =>
+        !source.toLowerCase().includes(term) || !hasNamedPublicStateOperation(source, term)
+      );
     })) {
       const path = changedSources.sort()[0]!;
       return [finding(
         "required_public_surface_unrepresented",
         path,
-        `Task requires observable ${requestedStateTerms.join(", ")}, but the changed API source does not represent that requested state.`
+        `Task requires observable ${requestedStateTerms.join(", ")}, but the changed API source exposes no named public operation for that state.`
       )];
     }
     return [];
@@ -53,6 +57,13 @@ export function detectRequiredPublicSurfaceFindings(input: {
     path,
     `Task promises a new observable public API surface, but candidate changes no declared API implementation.`
   )];
+}
+
+function hasNamedPublicStateOperation(source: string, requestedStateTerm: string): boolean {
+  const escaped = requestedStateTerm.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+  const identifier = `[A-Za-z_$][\\w$]*${escaped}[\\w$]*`;
+  return new RegExp(`\\b(?:function\\s+)?${identifier}\\s*\\(`, "iu").test(source)
+    || new RegExp(`\\bget\\s+${identifier}\\s*\\(`, "iu").test(source);
 }
 
 export function detectTestIntegrityFindings(input: {
