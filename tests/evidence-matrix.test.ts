@@ -76,6 +76,19 @@ describe("buildEvidenceMatrix", () => {
     }).success).toBe(false);
   });
 
+  it("persists a failed matrix containing the observable-public-surface finding", () => {
+    const parsed = EvidenceMatrixRecordSchema.safeParse({
+      matrixId: "matrix-public-surface",
+      candidateCommit: "candidate",
+      validationContract: { id: "validation-public-surface", revision: "rev-1" },
+      criteria: [{ criterionId: "criterion-public-surface", obligationId: "obligation-public-surface", status: "failed", justification: "API has no named operation", evidenceRefs: [] }],
+      outcome: "failed",
+      integrityFindings: [{ findingId: "finding-public-surface", code: "required_public_surface_unrepresented", path: "src/api/orders.ts", message: "No named operation" }]
+    });
+
+    expect(parsed.success).toBe(true);
+  });
+
   it("keeps a passed command uncovered when its required baseline was not run", () => {
     const matrix = buildEvidenceMatrix({ obligations, evidence: [
       { evidenceId: "e-static", obligationId: "obligation-b", criterionId: "criterion-b", kind: "static_analysis", passed: true, attempt: 1, commandDigest: "b".repeat(64), durationMs: 5, references: ["tsconfig.json"] }
