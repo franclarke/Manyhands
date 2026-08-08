@@ -415,6 +415,11 @@ export class RecursivePlanner {
       }
     }
 
+    const cycle = siblingDependencyCycle(children, producedBySibling);
+    if (cycle !== undefined) {
+      issues.push(`P5 ${cycle.join(" -> ")}: sibling reads create a dependency cycle. Keep the layered work together or make each child read only its upstream producer's output.`);
+    }
+
     // ...and neither does a unit in any other branch. The parent's own promised
     // writes are excluded: coverage *requires* a child to reproduce them, so
     // re-claiming what this branch already owns is the contract, not a clash.
@@ -491,13 +496,14 @@ export function buildCutPrompt(input: CutPromptInput): { system: string; user: s
       "Rules:",
       "- `writes` are the files a child creates or modifies. `reads` are files it needs to read and will not change.",
       "- No two children may write the same path. If they both need it, one owns it and the others read it.",
+      "- Sibling reads and writes must form one acyclic direction. List only the files a child needs; do not list a higher layer merely for context.",
       "- A child small enough to implement in one step must write at least one test file that proves its criteria.",
       "- Every `read` must already exist in the repository evidence below, be written by a sibling, or be one the parent already reads.",
       "- Together the children must write every path the parent promised to write.",
       "- Every child must carry strictly fewer paths than this unit; a cut that does not shrink is not a cut.",
       "- `criterion` is what that child alone claims, in one sentence. Do not repeat this unit's claim: this unit proves it by integrating its children.",
       "- `rationale` states the boundary that justifies this cut in one sentence.",
-      "- Do not describe interfaces, dependencies, ordering or tests between children. Those are derived, not declared."
+      "- Do not declare abstract interfaces or ordering between children. Relations are derived only from the exact file reads and writes."
     ].join("\n"),
     user: [
       `Unit: ${input.unit.key}`,
@@ -532,6 +538,44 @@ function bullets(paths: readonly string[]): string {
 
 function unique(values: readonly string[]): string[] {
   return [...new Set(values)];
+}
+
+function siblingDependencyCycle(
+  children: readonly ChildProposal[],
+  producersByPath: ReadonlyMap<string, readonly string[]>
+): string[] | undefined {
+  const edges = new Map(children.map((child) => [child.key, new Set<string>()] as const));
+  for (const child of children) {
+    for (const read of child.reads) {
+      for (const producer of producersByPath.get(normalize(read)) ?? []) {
+        if (producer !== child.key) edges.get(producer)?.add(child.key);
+      }
+    }
+  }
+
+  const visiting = new Set<string>();
+  const visited = new Set<string>();
+  const path: string[] = [];
+  const visit = (key: string): string[] | undefined => {
+    if (visiting.has(key)) return [...path.slice(path.indexOf(key)), key];
+    if (visited.has(key)) return undefined;
+    visiting.add(key);
+    path.push(key);
+    for (const consumer of edges.get(key) ?? []) {
+      const cycle = visit(consumer);
+      if (cycle !== undefined) return cycle;
+    }
+    path.pop();
+    visiting.delete(key);
+    visited.add(key);
+    return undefined;
+  };
+
+  for (const child of children) {
+    const cycle = visit(child.key);
+    if (cycle !== undefined) return cycle;
+  }
+  return undefined;
 }
 
 function positive(value: number, label: string): number {

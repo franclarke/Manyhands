@@ -186,6 +186,23 @@ describe("recursive planner", () => {
     expect(result.root.kind).toBe("composite");
   });
 
+  it("repairs sibling reads that would compile into an artifact cycle", async () => {
+    const cyclic = cut("Split by layer but give the domain unnecessary edge reads", [
+      child("domain", [A], [D, "test/domain.test.js"]),
+      child("application", [D], [S, "test/application.test.js"]),
+      child("api", [S], [A, "test/api.test.js"])
+    ]);
+
+    const { model, result } = await planDeep({
+      ...DEEP_TREE,
+      root: [cyclic, DEEP_TREE.root]
+    });
+
+    const repair = model.seen.find((request) => request.unit.key === "root" && request.attempt === 2);
+    expect(repair?.repairIssues.join(" ")).toContain("dependency cycle");
+    expect(result.unresolved).toHaveLength(0);
+  });
+
   /**
    * The root arrives from the host with reads and no writes. Accepting it as a
    * leaf because it happens to fit the budget produces a plan whose only unit
