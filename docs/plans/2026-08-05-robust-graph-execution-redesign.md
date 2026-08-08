@@ -1177,9 +1177,17 @@ hallazgos más:
    `CLAUDE.md`; la repetición del identificador queda como deuda.
 5. **Un rechazo por scope estricto no nombraba ningún archivo.** El mensaje leía
    sólo `violations` —hits de glob prohibido— y la política estricta rechaza por
-   `outOfScope`; con el trace store vacío, qué archivo se rechazó se perdió. La
-   etapa 7 sólo acepta un resultado adverso si es atribuible con causa
-   observable, así que esto la ataca de frente. Corregido con regresión roja.
+   `outOfScope`. La decisión que se le levanta al operador se arma con ese
+   motivo, así que le pedía reintentar una violación que no nombraba, mientras
+   la ruta estaba registrada en un trace al que nada apunta. Corregido con
+   regresión roja.
+6. **El ejecutor hereda la configuración global del operador.** La ruta que
+   causó ese rechazo era un documento de plan escrito por una **skill global**
+   cargada por el CLI ejecutor, no por el trabajo del leaf. La máquina del
+   operador es hoy una variable no controlada dentro de cada celda, y su efecto
+   se registra como violación de scope atribuida al sistema bajo prueba. Es el
+   hallazgo con más consecuencias para la validez de la serie y **bloquea el
+   congelamiento**.
 
 La pasada 3 sí produjo la **primera entrega verificada real**: la hoja de dominio
 escribió `src/domain/orders.mjs` y su test focalizado dentro del scope declarado,

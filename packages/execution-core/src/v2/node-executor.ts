@@ -859,9 +859,10 @@ function executionFailureReason(result: {
     // forbidden-glob hit lands in `violations`, while a path that is merely
     // outside the allow-list lands in `outOfScope` and only becomes terminal
     // under a non-advisory policy. Reading `violations` alone left every strict
-    // rejection with no paths at all — and the trace store held nothing either,
-    // so the operator was asked to retry a violation nobody could see (SP2
-    // rehearsal, run dbb427ca).
+    // rejection with no paths at all, so the decision raised to the operator
+    // asked them to retry a violation it would not name — while the answer sat
+    // in a `scope_check_failed` trace nobody is pointed at (SP2 rehearsal, run
+    // dbb427ca).
     const rejected = [...(result.scopeCheck?.violations ?? []), ...(result.scopeCheck?.outOfScope ?? [])];
     const detail = rejected.length > 0
       ? `changed files outside the declared scope: ${[...new Set(rejected)].join(", ")}`

@@ -7,9 +7,12 @@ import { FakeGitRunner } from "./helpers/fake-git-runner";
  *
  * Observed in the third SP2 rehearsal (run `dbb427ca`): the application leaf was
  * rejected and the persisted reason read "scope_violation: the agent changed
- * files outside the declared scope" — no paths, and the trace store held
- * nothing either, so which files were rejected is simply gone. The operator's
- * decision asks "retry with guidance" about a violation nobody can see.
+ * files outside the declared scope" — no paths. The decision raised to the
+ * operator is built from that reason, so it asked them to "retry with guidance"
+ * about a violation it would not name. The path was recorded, in a
+ * `scope_check_failed` trace, but nothing points there: answering the question
+ * the system asked required excavating a file the operator has no reason to
+ * open.
  *
  * The failure-reason builder already refuses to dump the diff for a scope
  * rejection, precisely so the paths stay readable. It reads `violations`, which

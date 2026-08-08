@@ -238,6 +238,28 @@ Así el evaluador no se indexa, no se lee y no se escribe. No hace falta compara
 hashes: el archivo no existe en el árbol que produce el run, de modo que la
 condición se satisface por construcción en vez de por vigilancia.
 
+### 4.1.3 El ejecutor hereda la configuración global del operador
+
+La ruta que hizo fracasar la hoja de aplicación en la pasada 3 fue
+`docs/superpowers/plans/2026-08-07-application-backorder-event-flow.md`. No la
+escribió el trabajo del leaf: la escribió una **skill global del operador** que
+el CLI ejecutor carga desde su directorio de configuración personal.
+
+Es el hallazgo con más consecuencias para la validez de la serie. La máquina del
+operador —sus skills, su `CLAUDE.md` global, sus settings— es hoy una **variable
+no controlada dentro de cada celda**. Una celda puede fracasar por un archivo que
+ManyHands nunca pidió, y el fracaso se registra como violación de scope, es
+decir, atribuido al sistema bajo prueba.
+
+No alcanza con excluir esa ruta: la lista de emisores posibles no está acotada y
+cambia con la configuración del operador entre una celda y la siguiente, que es
+exactamente lo que un congelamiento debe impedir.
+
+**Corrección requerida antes de congelar:** el ejecutor corre con un directorio
+de configuración propio del run, y la configuración efectiva se registra en el
+freeze. El diseño está en
+[`.scratch/stage-7-defects/`](../../../../.scratch/stage-7-defects/).
+
 ---
 
 ## 4.2 Resultado del ensayo del 2026-08-07
@@ -321,14 +343,24 @@ oráculo fuera del índice el agente sí trabajó.
 - Pero **el motivo persistido no nombró ningún archivo**: `"scope_violation: the
   agent changed files outside the declared scope"`. El constructor del mensaje
   leía sólo `violations` —los hits de glob prohibido—, y un rechazo por política
-  estricta llega en `outOfScope`. El trace store estaba vacío, así que qué
-  archivo se rechazó **se perdió**. La decisión que se le ofrece al operador es
-  «reintentar con guía» sobre una violación que nadie puede ver.
+  estricta llega en `outOfScope`. La decisión que se le ofrece al operador se
+  arma con ese motivo, así que le pide «reintentar con guía» sobre una violación
+  que no nombra. Corregido con regresión roja; el mensaje ahora incluye las dos
+  mitades y cubre también `scope_gated`, que tenía la misma forma.
 
-  Eso ataca directamente la cláusula de aceptación de la etapa 7: un resultado
-  adverso sólo vale si es **atribuible con causa observable**. Corregido con
-  regresión roja sobre el caso exacto; el mensaje ahora incluye las dos mitades,
-  y también cubre `scope_gated`, que tenía la misma forma.
+  **Corrección de un error propio:** al diagnosticar esto afirmé que el trace
+  store estaba vacío y que la ruta rechazada se había perdido. Es falso —fue el
+  mismo error de envelope que ya había cometido con el journal—. El trace sí
+  registró `scope_check_failed` con la ruta exacta. El defecto es real pero es
+  otro: la información existe y ninguna superficie que el operador lea apunta a
+  ella.
+
+- **Y la ruta rechazada cambia la interpretación del fallo.** Era
+  `docs/superpowers/plans/2026-08-07-application-backorder-event-flow.md`: un
+  documento de plan que escribió una **skill global del operador** cargada por el
+  CLI ejecutor, no trabajo del leaf. El leaf fue rechazado por un artefacto de su
+  entorno de ejecución, no por un error de planificación de ManyHands. Ver
+  §4.1.3.
 
 Paralelismo en las tres observaciones de la pasada 3: `available` nunca pasó de
 1, `cap=4` nunca ató. Igual que en la pasada 1 — la cadena domain→application→api
