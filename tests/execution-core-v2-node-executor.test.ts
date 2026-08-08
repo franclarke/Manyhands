@@ -411,6 +411,7 @@ describe("V2NodeExecutor", () => {
     expect(prompts[0]).toContain("Physical child patches");
     expect(prompts[0]).toContain("Preserve every child addition");
     expect(prompts[0]).toContain("existing unrelated state");
+    expect(prompts[0]).toContain("Do not create or modify AGENTS.md");
     const abortIndex = git.calls.findIndex((call) => call.op === "cherryPickAbort");
     const repairStageIndex = git.calls.findIndex((call) => call.op === "addAllExcluding");
     expect(abortIndex).toBeGreaterThanOrEqual(0);

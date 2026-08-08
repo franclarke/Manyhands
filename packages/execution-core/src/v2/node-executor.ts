@@ -740,6 +740,7 @@ function buildV2RepairInstructions(
     ...(repairFeedback === undefined ? [] : ["", repairFeedback]),
     "Before finishing, run git diff --check and verify that no <<<<<<<, =======, or >>>>>>> conflict markers remain.",
     "Then run `pnpm build` before `pnpm test`; fix any type or build error before reporting the repair complete.",
+    "Do not create or modify AGENTS.md, CLAUDE.md, CODEX.md, or other agent-instruction files; report a durable lesson in your final summary instead.",
     "",
     "Git conflict output:",
     repair.conflictOutput,
@@ -763,6 +764,7 @@ function buildV2CodeRepairInstructions(
     "",
     "Preserve the declared scope and shared contracts. Change only what is required to satisfy the failed evidence.",
     "Re-check every quoted identifier, enum literal, field name, and return shape from the objective before editing; preserve them verbatim and do not replace them with a semantically similar name or alias.",
+    "Do not create or modify AGENTS.md, CLAUDE.md, CODEX.md, or other agent-instruction files; they are outside this repair scope.",
     "Do not commit; the orchestrator will revalidate and commit the repair."
   ].join("\n");
 }
