@@ -302,6 +302,21 @@ Antes del congelamiento se incorpora `backorder-recorded` al objetivo. Es una
 aclaración del criterio pre-registrado, no una modificación del evaluador, de
 los scopes o de los umbrales.
 
+### 4.1.7 El objetivo omitía el dominio cerrado de `priority`
+
+El ensayo posterior llegó a un candidato raíz que pasaba sus cinco tests, pero
+el oráculo observó que `priority: "urgent"` no era rechazado. El dominio
+implementado degradaba silenciosamente ese valor a `standard`. El criterio 1
+pre-registrado ya exigía que `priority` acepte **sólo** `standard` o `express`
+y que `standard` sea el valor por defecto; el objetivo enviado al planner sólo
+decía «express/standard».
+
+Antes del congelamiento, el objetivo declara el dominio cerrado, el valor por
+defecto y el error que debe nombrar `priority`. Además, los cinco criterios
+externos se entregan como criterios de aceptación del run, para que el planner
+no tenga que inferirlos desde una frase resumida. No se cambia el oráculo, los
+umbrales, los scopes, el template ni las definiciones de medición.
+
 ---
 
 ## 4.2 Resultado del ensayo del 2026-08-07

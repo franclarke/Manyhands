@@ -40,7 +40,9 @@ el template y sólo se ejecuta contra el commit candidato exacto.
 ## Objetivo exacto
 
 > Add express/standard order priority and backorder recording across the
-> existing domain, application and API. An order that exceeds available stock
+> existing domain, application and API. `priority` accepts only `standard` or
+> `express`, defaults to `standard` when omitted, and rejects other values with
+> a `priority` error. An order that exceeds available stock
 > must remain cancellable, record a positive backorder, emit exactly one
 > application event of type `backorder-recorded`, and be observable through the API through `currentOrders()`,
 > `currentBackorders()` and `events()`. `currentBackorders()` returns entries
