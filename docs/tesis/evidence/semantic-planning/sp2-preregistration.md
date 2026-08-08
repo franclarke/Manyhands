@@ -297,13 +297,61 @@ correctamente, no colgado — así que **nunca llegó a integración ni a entreg
 El camino más allá de la primera hoja sigue sin verificarse de punta a punta.
 Hace falta un segundo ensayo antes de congelar.
 
+### Pasadas 2 y 3
+
+**Pasada 2** (`209c3e59`) murió escribiendo el ref del candidato:
+`update_ref failed ... unable to create directory`. La aritmética: ruta del repo
+138 caracteres + ruta del ref 136 = 274, contra `MAX_PATH = 260`. El ref por
+intento gasta 136 él solo porque el `runId` aparece **dos veces**, así que sobran
+~124 para la ruta del target. El scratchpad de sesión arranca en ~132: la culpa
+del setup fue mía, pero el límite es del producto y queda anotado en `CLAUDE.md`.
+Lo importante: **la hoja produjo un commit real** (`19f77691`), así que con el
+oráculo fuera del índice el agente sí trabajó.
+
+**Pasada 3** (`dbb427ca`), en `C:/mh-sp2/r3`:
+
+- **Primera entrega verificada real de la serie de ensayos.** La hoja de dominio
+  produjo `70b40d20` con `src/domain/orders.mjs` y `test/orders.test.mjs` — el
+  cambio *y* su test focalizado, dentro de su scope declarado—, validación
+  `verified`, criterio `satisfied`. 517k tokens de entrada, contra los 184k que
+  gastó sin producir nada en la pasada 1.
+- La hoja de aplicación fue rechazada por **scope**, clasificada correctamente
+  como `scope_unexpected_commit` con `discard_candidate` y presupuesto de retry
+  0. La taxonomía funcionó.
+- Pero **el motivo persistido no nombró ningún archivo**: `"scope_violation: the
+  agent changed files outside the declared scope"`. El constructor del mensaje
+  leía sólo `violations` —los hits de glob prohibido—, y un rechazo por política
+  estricta llega en `outOfScope`. El trace store estaba vacío, así que qué
+  archivo se rechazó **se perdió**. La decisión que se le ofrece al operador es
+  «reintentar con guía» sobre una violación que nadie puede ver.
+
+  Eso ataca directamente la cláusula de aceptación de la etapa 7: un resultado
+  adverso sólo vale si es **atribuible con causa observable**. Corregido con
+  regresión roja sobre el caso exacto; el mensaje ahora incluye las dos mitades,
+  y también cubre `scope_gated`, que tenía la misma forma.
+
+Paralelismo en las tres observaciones de la pasada 3: `available` nunca pasó de
+1, `cap=4` nunca ató. Igual que en la pasada 1 — la cadena domain→application→api
+no ofrece trabajo independiente. Es un resultado sobre la descomposición, no
+sobre la configuración, y el instrumento lo distingue.
+
+Sigue sin establecerse **integración y entrega**: las tres pasadas pararon antes.
+
 ### Deuda que dejó abierta
 
-`artifact_empty` se clasifica `unclassified`. La causa es perfectamente
-nombrable —el productor no produjo nada— y la etapa 5 afirma que toda falla mapea
-a exactamente una causa. Es una laguna de la taxonomía y necesita su propia
-regresión; no bloquea el ensayo porque su causa raíz acaba de cerrarse, pero la
-clase sigue siendo la equivocada si vuelve a aparecer por otra vía.
+**La taxonomía tiene una laguna real, y ya son dos casos distintos.**
+`artifact_empty` cayó en `unclassified` en la pasada 1; una falla de
+`git update-ref` por longitud de ruta cayó en `unclassified` en la pasada 2. Las
+dos causas son perfectamente nombrables —el productor no produjo nada; el
+filesystem rechazó la ruta— y la etapa 5 afirma que toda falla mapea a
+exactamente una causa con recuperación definida. Dos observaciones
+independientes lo vuelven un patrón, no una anécdota. Necesita su propia
+regresión y una clase de entorno/filesystem.
+
+**El ref por intento repite el `runId`.** 136 caracteres para el ref, de los
+cuales 72 son el mismo identificador dos veces. En Windows eso decide si un
+target puede correr o no. Es deuda de producto, no sólo una restricción de
+setup.
 
 ---
 

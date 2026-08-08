@@ -854,10 +854,17 @@ function executionFailureReason(result: {
   // A scope rejection is explained by the paths that left the contract, not by
   // the agent's diff: dumping the diff here buried the actual cause in the
   // persisted failure reason and made the journal unreadable.
-  if (result.status === "scope_violation") {
-    const violations = result.scopeCheck?.violations ?? [];
-    const detail = violations.length > 0
-      ? `changed files outside the declared scope: ${violations.join(", ")}`
+  if (result.status === "scope_violation" || result.status === "scope_gated") {
+    // Both halves of the rejection, because they arrive in different places: a
+    // forbidden-glob hit lands in `violations`, while a path that is merely
+    // outside the allow-list lands in `outOfScope` and only becomes terminal
+    // under a non-advisory policy. Reading `violations` alone left every strict
+    // rejection with no paths at all — and the trace store held nothing either,
+    // so the operator was asked to retry a violation nobody could see (SP2
+    // rehearsal, run dbb427ca).
+    const rejected = [...(result.scopeCheck?.violations ?? []), ...(result.scopeCheck?.outOfScope ?? [])];
+    const detail = rejected.length > 0
+      ? `changed files outside the declared scope: ${[...new Set(rejected)].join(", ")}`
       : "the agent changed files outside the declared scope";
     return `${result.status}: ${detail}`;
   }

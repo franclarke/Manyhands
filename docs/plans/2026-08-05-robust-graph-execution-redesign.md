@@ -1168,9 +1168,26 @@ que existía: encontró tres cosas que ningún test podía encontrar.
    contrato de seam ya no tiene campo `materialization`. Reemplazado por una
    propiedad que sí puede fallar.
 
-Lo que **no** estableció: el run quedó en `waiting_for_input` con una decisión
-pendiente —correctamente, no colgado—, así que nunca llegó a integración ni a
-entrega. Eso queda para la segunda pasada.
+**Segunda y tercera pasada** (`209c3e59`, `dbb427ca`), el mismo día. Dos
+hallazgos más:
+
+4. **Una hoja no puede vivir en una ruta larga en Windows.** El ref de candidato
+   por intento gasta ~136 caracteres porque el `runId` aparece dos veces, lo que
+   deja ~124 de los 260 de `MAX_PATH` para el repo del target. Registrado en
+   `CLAUDE.md`; la repetición del identificador queda como deuda.
+5. **Un rechazo por scope estricto no nombraba ningún archivo.** El mensaje leía
+   sólo `violations` —hits de glob prohibido— y la política estricta rechaza por
+   `outOfScope`; con el trace store vacío, qué archivo se rechazó se perdió. La
+   etapa 7 sólo acepta un resultado adverso si es atribuible con causa
+   observable, así que esto la ataca de frente. Corregido con regresión roja.
+
+La pasada 3 sí produjo la **primera entrega verificada real**: la hoja de dominio
+escribió `src/domain/orders.mjs` y su test focalizado dentro del scope declarado,
+con validación `verified`. Falló después, en la hoja de aplicación, por scope.
+
+Lo que **sigue sin establecerse**: las tres pasadas pararon en una decisión
+pendiente —correctamente, nunca colgadas—, así que **integración y entrega no se
+han ejercitado**. Eso queda pendiente antes del congelamiento.
 
 De paso quedaron comprobadas contra un target real, no contra fixtures: D11
 (`baselineCommands=[npm test]` sobre un `.mjs` sin lockfile), la profundidad
