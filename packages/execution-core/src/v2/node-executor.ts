@@ -732,6 +732,7 @@ function buildV2RepairInstructions(
     "Do not use a blanket checkout of only ours or only theirs: that would discard one child's behavior.",
     "Treat the already-integrated canonical producer behavior as authoritative when reconciling a consumer leaf.",
     "Run a literal-contract audit against the parent objective and child acceptance criteria: preserve every quoted identifier, enum literal, field name, and return shape verbatim; do not resolve a mismatch by inventing a semantically similar name or alias.",
+    "For every named state that the parent objective says must be observable through a public boundary, inspect the repaired boundary source and expose that state explicitly. Forwarding existing unrelated state through a generic API method does not satisfy this obligation.",
     "Do not add an exception-based fallback or duplicate state to compensate for a changed canonical API; consume its returned state and exported operations instead.",
     "The only accepted repair is a non-empty working-tree diff that applies the incoming intent while preserving the current sibling behavior.",
     "Do not report the conflict resolved from the final summary alone: inspect `git status --short` and `git diff --stat`, and keep editing until the actual diff is present.",
