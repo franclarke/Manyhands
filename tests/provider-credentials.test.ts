@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { evaluateClaudeCredential } from "@/lib/server/providers/credentials";
+import { apiKeyReachesExecutor, evaluateClaudeCredential } from "@/lib/server/providers/credentials";
 
 // Fixed "now": 2026-06-25T14:00:00Z (epoch ms).
 const NOW = Date.UTC(2026, 5, 25, 14, 0, 0);
@@ -14,6 +14,33 @@ function credsFile(expiresAt: number, options: { refreshToken?: boolean } = {}):
     }
   });
 }
+
+/**
+ * The preflight has to ask about the credential the executor will actually
+ * receive, not the one the server happens to hold.
+ *
+ * Agent subprocesses no longer inherit metered API keys: the runs bill against
+ * the subscription credentials the CLIs keep under HOME. So a bare
+ * `ANTHROPIC_API_KEY` in the server's environment authorizes nothing downstream,
+ * and counting it would report a ready run whose every leaf then 401s — the
+ * exact F-001 false-ready this module exists to prevent, reintroduced from the
+ * other side.
+ */
+describe("does an API key reach the executor at all", () => {
+  it("does not, when the operator has not allowed it through", () => {
+    expect(apiKeyReachesExecutor({ ANTHROPIC_API_KEY: "metered-key" })).toBe(false);
+  });
+
+  it("does, when the operator opted in explicitly", () => {
+    expect(
+      apiKeyReachesExecutor({ ANTHROPIC_API_KEY: "metered-key", MANYHANDS_AGENT_ENV_ALLOW: "ANTHROPIC_API_KEY" })
+    ).toBe(true);
+  });
+
+  it("is false when there is no key at all", () => {
+    expect(apiKeyReachesExecutor({ MANYHANDS_AGENT_ENV_ALLOW: "ANTHROPIC_API_KEY" })).toBe(false);
+  });
+});
 
 describe("evaluateClaudeCredential (F-001 / F-028: validity, not mere presence)", () => {
   it("is usable when an ANTHROPIC_API_KEY is present, regardless of the token file", () => {

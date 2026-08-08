@@ -192,8 +192,8 @@ export function buildAgentEnvironment(options: BuildAgentEnvironmentOptions = {}
 
 ### 5.1 Categorías de Variables Permitidas
 1. **System Allowlist**: `PATH`, `COMSPEC`, `SHELL`, `TEMP`, `TMP`, `HOME`, `USERPROFILE`, `APPDATA`, `LOCALAPPDATA`, `LANG`, `NODE_ENV`, `PNPM_HOME`.
-2. **Provider Credentials** (Solo para ejecutores de agentes, omitido en terminales humanas): `ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, `OPENAI_API_KEY`, `CODEX_API_KEY`.
-3. **Escapes del Operador**: Cualquier variable definida explícitamente en la variable de entorno `MANYHANDS_AGENT_ENV_ALLOW` (separada por comas).
+2. **Provider Credentials** (Solo para ejecutores de agentes, omitido en terminales humanas): `CLAUDE_CODE_OAUTH_TOKEN`. **Sólo credenciales de suscripción.** Las API keys metered —`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `CODEX_API_KEY`— **no** se reenvían: ambos CLIs guardan sus credenciales de suscripción bajo `HOME` y prefieren una key explícita por encima de ellas, así que reenviarla movería el run a facturación por API en silencio, sin que nada en el registro lo diga.
+3. **Escapes del Operador**: Cualquier variable definida explícitamente en la variable de entorno `MANYHANDS_AGENT_ENV_ALLOW` (separada por comas). Es también el opt-in para facturar contra la API: declarar la key **y** nombrarla acá. El preflight de credenciales usa la misma regla, para que nunca reporte listo un run cuyo ejecutor no vería la credencial.
 
 > [!IMPORTANT]
 > Todas las variables internas `MANYHANDS_*` y las credenciales no declaradas del entorno del servidor son eliminadas completamente antes de lanzar el agente.

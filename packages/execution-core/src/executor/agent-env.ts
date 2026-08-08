@@ -6,8 +6,9 @@
  *
  *  - the system/toolchain variables they need to run at all (PATH, temp,
  *    Windows shims, HOME/APPDATA where CLI auth stores live, locale);
- *  - the DECLARED provider credentials the product's agents use
- *    (Anthropic/OpenAI keys) — omitted for human terminal shells;
+ *  - the DECLARED provider credentials the product's agents use — subscription
+ *    tokens only, never metered API keys (see below) — omitted for human
+ *    terminal shells;
  *  - whatever the operator explicitly allows via
  *    `MANYHANDS_AGENT_ENV_ALLOW` (comma-separated variable names).
  *
@@ -68,12 +69,24 @@ const SYSTEM_ALLOWLIST = new Set(
   ].map((name) => name.toUpperCase())
 );
 
-/** Credentials the product's agent executors are declared to use. */
-const PROVIDER_CREDENTIAL_ALLOWLIST = new Set(
-  ["ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN", "OPENAI_API_KEY", "CODEX_API_KEY"].map((name) =>
-    name.toUpperCase()
-  )
-);
+/**
+ * Credentials the product's agent executors are declared to use.
+ *
+ * Subscription only, on purpose. Both CLIs already hold their own credentials
+ * under HOME — `~/.claude/.credentials.json` and `~/.codex/auth.json` — and both
+ * prefer an explicit API key over them. So forwarding a metered key is not a
+ * neutral convenience: it silently moves every run onto API credits, and
+ * nothing in the run record says which billing mode was used. A key set in the
+ * server's environment for some unrelated tool would be enough.
+ *
+ * `CLAUDE_CODE_OAUTH_TOKEN` is a long-lived subscription token for headless
+ * use, not a metered key, so it stays.
+ *
+ * Deliberate API billing is still available — it just has to be asked for,
+ * through the operator escape hatch below (`MANYHANDS_AGENT_ENV_ALLOW`), which
+ * is the opt-in and needs no second mechanism.
+ */
+const PROVIDER_CREDENTIAL_ALLOWLIST = new Set(["CLAUDE_CODE_OAUTH_TOKEN"].map((name) => name.toUpperCase()));
 
 export interface BuildAgentEnvironmentOptions {
   /** Source environment. Defaults to `process.env`. */

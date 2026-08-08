@@ -60,6 +60,24 @@ quien fuerza `ANTHROPIC_API_KEY`, no `--setting-sources`, pero eso es lectura de
 un `--help`, no evidencia. Se comprueba con un run real antes de cerrar el
 ticket.
 
+**Esa verificación ahora es sobre facturación, no sólo sobre que autentique.**
+Las credenciales de suscripción viven en `~/.claude/.credentials.json`
+(`subscriptionType: pro`) y `~/.codex/auth.json` (`auth_mode: chatgpt`), o sea
+**dentro de `HOME`**, que el allowlist de entorno sigue pasando. Son archivos de
+credenciales, no una *setting source*, así que excluir `user` no debería tocarlas
+— pero si lo hiciera, el CLI caería a otra vía de auth y el run pasaría a
+facturar contra la API. Un `--setting-sources` que aísle el comportamiento y de
+paso cambie la facturación sería peor que el problema que resuelve.
+
+Esto refuerza el descarte de `--bare`: su propia descripción dice que la
+autenticación pasa a ser `ANTHROPIC_API_KEY` estricto, o sea créditos de API.
+Queda descartado por dos razones independientes.
+
+**Nota sobre Codex:** su perfil ya pasa `--ignore-user-config` y `--ephemeral`,
+así que el aislamiento de comportamiento que este ticket pide **ya está resuelto
+de ese lado**. El precedente está en el mismo repositorio; el que falta es
+`claude-code`.
+
 La configuración efectiva del ejecutor —flags exactas incluidas— pasa a formar
 parte del freeze. Un ejecutor no registrado hace irreproducible la celda aunque
 esté aislado.

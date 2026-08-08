@@ -30,22 +30,67 @@ describe("B-006 buildAgentEnvironment", () => {
     expect(pathKey).toBeDefined();
   });
 
-  it("keeps declared provider credentials for agents but not for terminals", () => {
+  /**
+   * Billing is a property of which credential the CLI finds, and both CLIs
+   * prefer an explicit API key over the subscription they have stored. So
+   * forwarding a metered key is not a neutral convenience: it silently moves a
+   * run onto API credits, with nothing in the run record to say so.
+   *
+   * Francisco's setup runs on subscriptions — `~/.claude/.credentials.json`
+   * carries `subscriptionType: pro`, `~/.codex/auth.json` carries
+   * `auth_mode: chatgpt`. Those live in HOME, which stays allowed. A metered key
+   * appearing in the server's environment for some unrelated reason must not be
+   * able to override them.
+   */
+  it("does not hand agents a metered API key, so the CLI uses its stored subscription", () => {
     const base = {
       PATH: "/usr/bin",
-      ANTHROPIC_API_KEY: "declared-key",
+      ANTHROPIC_API_KEY: "metered-key",
+      OPENAI_API_KEY: "metered-key",
+      CODEX_API_KEY: "metered-key",
       [CANARY]: "leaked-if-visible",
       AWS_SECRET_ACCESS_KEY: "cloud-secret"
     } as NodeJS.ProcessEnv;
     const agentEnv = buildAgentEnvironment({ base });
-    expect(agentEnv.ANTHROPIC_API_KEY).toBe("declared-key");
+
+    expect(agentEnv.ANTHROPIC_API_KEY).toBeUndefined();
+    expect(agentEnv.OPENAI_API_KEY).toBeUndefined();
+    expect(agentEnv.CODEX_API_KEY).toBeUndefined();
     expect(agentEnv[CANARY]).toBeUndefined();
     expect(agentEnv.AWS_SECRET_ACCESS_KEY).toBeUndefined();
+  });
 
-    const terminalEnv = buildAgentEnvironment({ base, includeProviderCredentials: false });
-    expect(terminalEnv.ANTHROPIC_API_KEY).toBeUndefined();
-    expect(terminalEnv[CANARY]).toBeUndefined();
-    expect(terminalEnv.PATH).toBe("/usr/bin");
+  /**
+   * `CLAUDE_CODE_OAUTH_TOKEN` is a long-lived subscription token for headless
+   * use, not a metered key. Dropping it would break the very billing mode this
+   * is protecting.
+   */
+  it("keeps a subscription token, which is the billing mode we want", () => {
+    const base = { PATH: "/usr/bin", CLAUDE_CODE_OAUTH_TOKEN: "subscription-token" } as NodeJS.ProcessEnv;
+
+    expect(buildAgentEnvironment({ base }).CLAUDE_CODE_OAUTH_TOKEN).toBe("subscription-token");
+    // A terminal shell is not an agent and never needs it.
+    expect(buildAgentEnvironment({ base, includeProviderCredentials: false }).CLAUDE_CODE_OAUTH_TOKEN).toBeUndefined();
+  });
+
+  /**
+   * Deliberate API billing stays possible — it just has to be asked for. The
+   * operator escape hatch that already existed is the opt-in; no second
+   * mechanism is needed.
+   */
+  it("lets an operator opt back into API billing explicitly", () => {
+    const base = { PATH: "/usr/bin", ANTHROPIC_API_KEY: "metered-key" } as NodeJS.ProcessEnv;
+    const env = buildAgentEnvironment({ base, extraAllow: ["ANTHROPIC_API_KEY"] });
+
+    expect(env.ANTHROPIC_API_KEY).toBe("metered-key");
+  });
+
+  it("keeps the home directory where the subscription credentials live", () => {
+    const base = { PATH: "/usr/bin", USERPROFILE: "C:/Users/franc", HOME: "/home/franc" } as NodeJS.ProcessEnv;
+    const env = buildAgentEnvironment({ base });
+
+    expect(env.USERPROFILE).toBe("C:/Users/franc");
+    expect(env.HOME).toBe("/home/franc");
   });
 
   it("honors the operator's explicit extra allowlist", () => {
