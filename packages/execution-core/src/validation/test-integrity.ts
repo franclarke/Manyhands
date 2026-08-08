@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import ts from "typescript";
 
-export const TEST_INTEGRITY_DETECTOR_VERSION = 1 as const;
+export const TEST_INTEGRITY_DETECTOR_VERSION = 2 as const;
 
 export interface TestIntegrityFinding {
   findingId: string;
@@ -54,7 +54,23 @@ export function detectTestIntegrityFindings(input: {
 }
 
 function isWeaker(candidate: string, baseline: string): boolean {
-  return candidate.trim() !== baseline.trim();
+  const normalizedCandidate = candidate.trim();
+  const normalizedBaseline = baseline.trim();
+  return normalizedCandidate !== normalizedBaseline
+    && !isAdditiveNodeTestDiscovery(normalizedCandidate, normalizedBaseline);
+}
+
+/**
+ * The baseline command remains intact and the added arguments are only test
+ * paths. This is the one script change whose coverage relation is observable
+ * without trying to interpret arbitrary shell syntax.
+ */
+function isAdditiveNodeTestDiscovery(candidate: string, baseline: string): boolean {
+  if (!baseline.startsWith("node --test ") || !candidate.startsWith(`${baseline} `)) return false;
+  const addedPaths = candidate.slice(baseline.length).trim().split(/\s+/u);
+  return addedPaths.length > 0 && addedPaths.every((path) =>
+    path.length > 0 && !path.startsWith("-") && !/[;&|`$<>()]/u.test(path)
+  );
 }
 
 function finding(code: TestIntegrityFinding["code"], path: string, message: string): TestIntegrityFinding {

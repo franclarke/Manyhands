@@ -86,6 +86,15 @@ describe("test integrity and baseline", () => {
     })).toEqual([expect.objectContaining({ code: "test_configuration_changed", path: "vitest.config.ts" })]);
   });
 
+  it("allows an additive Node test discovery path without dropping the baseline path", () => {
+    expect(detectTestIntegrityFindings({
+      baselineTestFiles: ["test/baseline.test.mjs"],
+      candidateTestFiles: ["test/baseline.test.mjs", "test/domain/orders.test.mjs"],
+      baselineScripts: { "package.json#scripts.test": "node --test test/*.test.mjs" },
+      candidateScripts: { "package.json#scripts.test": "node --test test/*.test.mjs test/domain/*.test.mjs" }
+    })).toEqual([]);
+  });
+
   it("rejects symlinked parents before materializing a negative control", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "mh-nc-root-"));
     const outside = await mkdtemp(path.join(os.tmpdir(), "mh-nc-outside-"));
