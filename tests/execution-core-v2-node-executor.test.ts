@@ -4,6 +4,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { compileGraphRevision } from "@manyhands/decomposer";
 import {
+  detectRequiredPublicSurfaceFindings,
   ExecutionConfigSchema,
   ExecutionBaseBuilder,
   ExactCandidateValidatorV2,
@@ -26,6 +27,20 @@ import { FakeGitRunner, fakeWorkspaceProvider } from "./helpers/fake-git-runner"
 const at = "2026-07-17T12:00:00.000Z";
 
 describe("V2NodeExecutor", () => {
+  it("accepts a named observable state operation with a backorder suffix", () => {
+    const findings = detectRequiredPublicSurfaceFindings({
+      goal: "Expose backorder state through the public API.",
+      acceptanceCriteria: [],
+      allowedPaths: ["src/api/warehouse-api.mjs"],
+      changedFiles: ["src/api/warehouse-api.mjs"],
+      candidatePublicSourceContents: {
+        "src/api/warehouse-api.mjs": "export function createWarehouseApi() { return { backorderOrders() { return []; } }; }"
+      }
+    });
+
+    expect(findings).toEqual([]);
+  });
+
   it("includes integrity findings in code-repair instructions", () => {
     const instructions = buildV2CodeRepairInstructions(
       { node: { title: "API backorder exposure" }, contract: { task: { goal: "Expose backorders through the public API." } } } as never,

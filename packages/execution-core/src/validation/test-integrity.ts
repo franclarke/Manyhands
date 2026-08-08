@@ -60,10 +60,8 @@ export function detectRequiredPublicSurfaceFindings(input: {
 }
 
 function hasNamedPublicStateOperation(source: string, requestedStateTerm: string): boolean {
-  const escaped = requestedStateTerm.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
-  const identifier = `[A-Za-z_$][\\w$]*${escaped}[\\w$]*`;
-  return new RegExp(`\\b(?:function\\s+)?${identifier}\\s*\\(`, "iu").test(source)
-    || new RegExp(`\\bget\\s+${identifier}\\s*\\(`, "iu").test(source);
+  const operations = source.matchAll(/\b(?:function\s+|get\s+)?([A-Za-z_$][A-Za-z0-9_$]*)\s*\(/gu);
+  return [...operations].some((match) => match[1]?.toLowerCase().includes(requestedStateTerm.toLowerCase()) === true);
 }
 
 export function detectTestIntegrityFindings(input: {
