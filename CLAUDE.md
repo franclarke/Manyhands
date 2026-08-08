@@ -59,6 +59,20 @@ unknown.
   targets y el evaluador externo que cubre *ese* alcance. Viven fuera de este
   repo y desaparecen sin dejar rastro en el historial; descubrirlo después de
   escribir el freeze cuesta la sesión entera.
+- Que existan no alcanza: **ejecutar el oráculo en las dos direcciones antes de
+  congelar**. Debe fallar sobre el target intacto —si pasa, no mide la tarea— y
+  pasar sobre una solución de referencia desechable escrita fuera del repo. Sin
+  la segunda mitad no hay forma de distinguir «el sistema falló» de «los
+  criterios eran mutuamente imposibles». En SP2 eso reveló dos criterios
+  declarados que el evaluador nunca comprobaba y un `deepStrictEqual` del
+  fixture que volvía contradictorio el objetivo. Corregir oráculo y fixture es
+  legítimo **sólo antes** del congelamiento, y se registra en la
+  pre-registración.
+- Toda derivación de una métrica se escribe **antes** de la serie y se verifica
+  contra un journal real producido por el camino productivo, no sólo contra
+  eventos armados a mano. Una derivación escrita después de ver los runs está
+  ajustada a ellos. Si la evidencia no se registró, la métrica se reporta
+  **ausente**, nunca en cero: «no se observó» no es «no había».
 - El modelo de planning productivo (`invokeSelectedPlanningCli`) entrega la
   respuesta como **string**. Un test de `PlanningModule` o `WorkBreakdownPlanner`
   que devuelva array u objeto no ejercita el camino real y deja pasar defectos
