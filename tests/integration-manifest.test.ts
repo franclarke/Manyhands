@@ -29,6 +29,16 @@ function request(availableArtifacts = [artifact("a", "node-a", "SHA_A"), artifac
 }
 
 describe("IntegrationManifestExecutor", () => {
+  it("preserves the scheduler's topological artifact order instead of sorting ids", () => {
+    const built = request([
+      artifact("api", "node-api", "SHA_API"),
+      artifact("domain", "node-domain", "SHA_DOMAIN"),
+      artifact("application", "node-application", "SHA_APPLICATION")
+    ], ["domain", "application", "api"]);
+
+    expect(built.childArtifacts.map((child) => child.artifactId)).toEqual(["domain", "application", "api"]);
+  });
+
   it("recovers after a crash following the first child without repeating its side effect", async () => {
     const journalDirectory = await mkdtemp(join(tmpdir(), "mh-integration-journal-"));
     try {

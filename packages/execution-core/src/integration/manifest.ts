@@ -53,7 +53,10 @@ export function createIntegrationRequestManifest(input: {
     return [parsed.artifactId, parsed] as const;
   }));
   if (available.size !== input.availableArtifacts.length) throw new Error("Available integration artifacts must have unique ids.");
-  const requiredArtifactIds = [...new Set(input.requiredArtifactIds)].sort();
+  // The execution driver has already put these artifacts in producer-before-
+  // consumer order. Sorting ids here can make a downstream patch apply before
+  // the upstream source it was authored against.
+  const requiredArtifactIds = [...new Set(input.requiredArtifactIds)];
   const childArtifacts = requiredArtifactIds.flatMap((id) => available.get(id) ?? []);
   const missingRequiredArtifactIds = requiredArtifactIds.filter((id) => !available.has(id));
   const identity = JSON.stringify({ runId: input.runId, attempt: input.integrationAttemptId, compositeNode: input.compositeNode, base: input.base, requiredArtifactIds, childArtifacts: childArtifacts.map(({ artifactId, digest }) => ({ artifactId, digest })), seams: input.seamRevisions, validation: input.validationContract, output: input.outputArtifactContract });
