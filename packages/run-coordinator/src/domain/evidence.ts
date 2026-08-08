@@ -20,7 +20,7 @@ export const EvidenceMatrixRecordSchema = z.object({
   observations: z.array(CriterionEvidenceObservationSchema).default([]),
   integrityFindings: z.array(z.object({
     findingId: EntityIdSchema,
-    code: z.enum(["test_removed", "test_script_weakened", "test_configuration_changed", "test_skipped", "test_only", "assertion_removed"]),
+    code: z.enum(["test_removed", "test_script_weakened", "test_configuration_changed", "test_skipped", "test_only", "assertion_removed", "required_public_surface_unchanged", "required_public_surface_unrepresented"]),
     path: NonEmptyStringSchema,
     message: NonEmptyStringSchema
   }).strict()).optional(),
