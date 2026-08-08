@@ -312,10 +312,12 @@ y que `standard` sea el valor por defecto; el objetivo enviado al planner sólo
 decía «express/standard».
 
 Antes del congelamiento, el objetivo declara el dominio cerrado, el valor por
-defecto y el error que debe nombrar `priority`. Además, los cinco criterios
-externos se entregan como criterios de aceptación del run, para que el planner
-no tenga que inferirlos desde una frase resumida. No se cambia el oráculo, los
-umbrales, los scopes, el template ni las definiciones de medición.
+defecto y el error que debe nombrar `priority`. Además, los cuatro criterios
+semánticos del target se entregan como criterios de aceptación del run, para
+que el planner no tenga que inferirlos desde una frase resumida. El quinto
+criterio sigue siendo la comprobación externa sobre el commit exacto: no entra
+al scope del agente ni del target. No se cambia el oráculo, los umbrales, los
+scopes, el template ni las definiciones de medición.
 
 ---
 
