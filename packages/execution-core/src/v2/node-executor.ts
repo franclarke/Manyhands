@@ -241,7 +241,17 @@ export class V2NodeExecutor {
         // never carries -- let the system's own verification decide: revalidate
         // the baseline, and accept the no-op only if the contract really is
         // satisfied. An agent that simply skipped its work still fails.
-        if (result.status === "empty_diff") {
+        // ...but only when there is prior work that could have done it. A leaf
+        // whose worktree still sits on the run's own base commit has no sibling
+        // ahead of it, so nothing in this run can have satisfied its contract.
+        // Revalidating there asks the target's suite whether it was green
+        // before the run started, and on any well-formed target it was — which
+        // is how a leaf that spent 184k tokens and changed nothing came back
+        // `verified`, with its empty artifact adopted (SP2 rehearsal, run
+        // 1bb2b66b). Whole-suite validation cannot tell "already satisfied"
+        // apart from "untouched", so the question is only worth asking when the
+        // baseline has actually moved.
+        if (result.status === "empty_diff" && result.currentHead !== input.graph.baseCommit) {
           const baselineMatrix = await this.options.validator.validate({
             runId: input.runId,
             attemptId: input.attemptId,

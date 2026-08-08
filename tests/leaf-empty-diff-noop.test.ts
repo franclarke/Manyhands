@@ -20,9 +20,11 @@ import { FakeGitRunner } from "./helpers/fake-git-runner";
  * fails. An agent that skips its work can never be recorded as success.
  */
 describe("empty diff on a leaf", () => {
-  it("succeeds without a commit when the baseline already satisfies the contract", async () => {
+  it("succeeds without a commit when a sibling already satisfied the contract", async () => {
     const validated: string[] = [];
     const outcome = await runLeaf({
+      // The sibling committed, so this leaf's base is ahead of the run's.
+      worktreeHead: "SIBLING_SHA",
       validate: (candidateCommit) => {
         validated.push(candidateCommit);
         return "verified";
@@ -32,13 +34,34 @@ describe("empty diff on a leaf", () => {
     expect(outcome.kind).toBe("success");
     if (outcome.kind !== "success") return;
     // Validation ran against the baseline, which is the only candidate there is.
-    expect(validated).toEqual(["BASE_SHA"]);
-    expect(outcome.candidateCommit).toBe("BASE_SHA");
+    expect(validated).toEqual(["SIBLING_SHA"]);
+    expect(outcome.candidateCommit).toBe("SIBLING_SHA");
     expect(outcome.changedFiles).toEqual([]);
   });
 
   it("still fails when the baseline does not satisfy the contract", async () => {
-    const outcome = await runLeaf({ validate: () => "failed" });
+    const outcome = await runLeaf({ worktreeHead: "SIBLING_SHA", validate: () => "failed" });
+
+    expect(outcome.kind).toBe("failure");
+    if (outcome.kind !== "failure") return;
+    expect(outcome.reason).toContain("empty_diff");
+  });
+
+  /**
+   * The SP2 rehearsal of 2026-08-07. The domain leaf ran in the first wave,
+   * spent 184k input tokens and changed nothing. Revalidating its baseline
+   * returned `verified` — the target's `npm test` passes on an untouched tree,
+   * because the behaviour the leaf was asked to add has no test yet — so the
+   * leaf was recorded as a satisfied no-op and its empty artifact adopted.
+   *
+   * The no-op exists for a leaf whose sibling already did its work. Nothing had
+   * run yet: the worktree still sits on the run's own base commit, so no sibling
+   * could have satisfied anything. Whole-suite validation cannot tell "the
+   * contract is already met" from "this target's tests were green before we
+   * started", and on any well-formed target they are the same observation.
+   */
+  it("refuses the no-op when nothing in the run has committed yet", async () => {
+    const outcome = await runLeaf({ worktreeHead: "BASE_SHA", validate: () => "verified" });
 
     expect(outcome.kind).toBe("failure");
     if (outcome.kind !== "failure") return;
@@ -46,10 +69,14 @@ describe("empty diff on a leaf", () => {
   });
 });
 
-async function runLeaf(options: { validate: (candidateCommit: string) => "verified" | "failed" }) {
+async function runLeaf(options: {
+  validate: (candidateCommit: string) => "verified" | "failed";
+  /** Where the leaf's worktree sits: the run's base, or a sibling's commit. */
+  worktreeHead: string;
+}) {
   const worktreePath = "C:/wt/slot-000";
   const git = new FakeGitRunner({
-    heads: { [worktreePath]: "BASE_SHA" },
+    heads: { [worktreePath]: options.worktreeHead },
     diffCachedNameOnly: [],
     diffCached: ""
   });
@@ -73,15 +100,15 @@ async function runLeaf(options: { validate: (candidateCommit: string) => "verifi
     } as never,
     worktrees: {
       acquire: async () => ({
-        worktree: { taskId: "node-1", path: worktreePath, baseCommit: "BASE_SHA" },
-        manifest: { resultingCommit: "BASE_SHA" },
+        worktree: { taskId: "node-1", path: worktreePath, baseCommit: options.worktreeHead },
+        manifest: { resultingCommit: options.worktreeHead },
         release: async () => undefined
       })
     } as never,
     baseBuilder: {
       build: async () => ({
-        worktree: { taskId: "node-1", path: worktreePath, baseCommit: "BASE_SHA" },
-        manifest: { resultingCommit: "BASE_SHA" },
+        worktree: { taskId: "node-1", path: worktreePath, baseCommit: options.worktreeHead },
+        manifest: { resultingCommit: options.worktreeHead },
         release: async () => undefined
       })
     } as never,
