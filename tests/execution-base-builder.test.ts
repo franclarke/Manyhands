@@ -47,6 +47,36 @@ describe("ExecutionBaseBuilder", () => {
     ]);
   });
 
+  it("materializes a shared candidate commit once while retaining each declared artifact", async () => {
+    const git = new FakeGitRunner({
+      cherryPickOutcomes: [
+        { ok: true, conflictFiles: [], output: "" },
+        { ok: false, kind: "empty", conflictFiles: [], output: "The previous cherry-pick is now empty." }
+      ],
+      cherryPickResultShas: [RESULT]
+    });
+    const manager = new WorktreeManager({ git, repoRoot: "C:/repo", now: () => "2026-08-17T12:00:00.000Z" });
+    const builder = new ExecutionBaseBuilder({ git, worktreeManager: manager, now: () => "2026-08-17T12:00:00.000Z" });
+
+    const built = await builder.build({
+      runId: "run-shared-commit",
+      nodeId: "api-consumer",
+      baseCommit: BASE,
+      contractBaseline: { id: "api-contract", revision: "rev-1" },
+      artifacts: [
+        artifact("domain-to-service", ARTIFACT_A_COMMIT, "domain-digest"),
+        artifact("domain-to-api", ARTIFACT_A_COMMIT, "domain-digest")
+      ],
+      inputFingerprint: FINGERPRINT
+    });
+
+    expect(git.calls.filter((call) => call.op === "cherryPick").map((call) => call.args.commitSha)).toEqual([ARTIFACT_A_COMMIT]);
+    expect(built.manifest.materializedArtifacts.map(({ artifactId, beforeCommit, resultingCommit }) => ({ artifactId, beforeCommit, resultingCommit }))).toEqual([
+      { artifactId: "domain-to-service", beforeCommit: BASE, resultingCommit: RESULT },
+      { artifactId: "domain-to-api", beforeCommit: RESULT, resultingCommit: RESULT }
+    ]);
+  });
+
   it("fails with structured evidence and cleans the worktree before an executor can be invoked", async () => {
     const git = new FakeGitRunner({
       cherryPickOutcomes: [{ ok: false, kind: "conflict", conflictFiles: ["src/shared.ts"], output: "CONFLICT" }]
