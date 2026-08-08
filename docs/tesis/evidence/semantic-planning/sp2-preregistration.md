@@ -20,8 +20,8 @@ desaparecen sin dejar rastro. Se verificaron uno por uno antes de escribir nada:
 
 | Activo | Estado |
 |---|---|
-| Template del target | Presente: `sp2-target-template/`, 4 archivos, 71 líneas |
-| Evaluador externo | Presente: `sp2-target-template/evaluator.mjs` |
+| Template del target | Presente: `sp2-target-template/` |
+| Evaluador externo | Presente: `sp2-oracle/evaluator.mjs` — **fuera** del template, ver §4.1.2 |
 | Objetivo exacto y criterios | Presentes en `sp2-protocol.md` §«Objetivo exacto» y §«Criterios externos» |
 | SHA base por celda | **Se crea al congelar** — el protocolo lo especifica así (`git init` sobre una copia del template) |
 
@@ -179,6 +179,131 @@ El ensayo verifica, y sólo verifica:
 
 Si algo de eso falla, se arregla y se vuelve a ensayar. El congelamiento ocurre
 después.
+
+---
+
+## 4.1 Enmiendas que produjo el ensayo
+
+El ensayo del 2026-08-07 (run `1bb2b66b`) encontró dos cosas que ningún test
+podía encontrar. Las dos cambian el protocolo **antes** del congelamiento.
+
+### 4.1.1 El gate de seams `logical` es vacuo por construcción
+
+`sp2-protocol.md` §Procedimiento paso 2 manda marcar `FAIL` de planning si
+alguna seam `api`, `type` o `command` tiene materialización `logical`.
+
+En el sistema rediseñado `SeamContractSchema` es `.strict()` y **no tiene campo
+`materialization`**. Leer `seam.materialization` compara `undefined` contra
+`"logical"` y da verdadero para cualquier plan, seguro o no. El gate no protege
+nada y se lee como si lo hiciera — que es peor que no tenerlo.
+
+La propiedad que SP1p perseguía sigue siendo la correcta, pero ahora vive en
+otro lado: desde la etapa 3B las relaciones se derivan de `reads ∩ writes` y
+cruzan como artefactos. **Enunciado de reemplazo, verificable y falsable:**
+
+> Toda seam ejecutable debe cruzar como un artefacto **materializado** que el
+> consumidor espera en fase `execution`. Ninguna requirement de ejecución puede
+> resolver a un artefacto sin materialización, y ningún par
+> productor→consumidor declarado por una seam puede quedar sin cubrir.
+
+Verificado sobre el plan del ensayo: 4 seams, 3 requirements de ejecución, todas
+con `materialization: "files"` y rutas concretas, cero pares sin cubrir.
+
+### 4.1.2 El oráculo estaba dentro del alcance del run
+
+`evaluator.mjs` vivía dentro del repositorio del target. El ensayo mostró tres
+consecuencias, y las tres son sobre la validez del resultado, no sobre el
+sistema:
+
+1. **Escritura.** Quedó en `allowedPaths` del scope de la raíz y en los
+   `expectedPaths` de su artefacto de salida. El run podía editar el evaluador
+   que lo juzga; «el evaluador pasó» dejaba de ser evidencia. El daño es
+   silencioso: un `PASS` sobre un oráculo modificado se ve idéntico a uno real.
+2. **Lectura.** El indexador lo tomó como uno de los 5 archivos del target, así
+   que entró como evidencia del planner. El run planificaba y ejecutaba **con
+   el test de aceptación a la vista**, y podía satisfacer sus aserciones exactas
+   en vez del objetivo. Para una afirmación sobre producir software correcto,
+   eso la debilita mucho más que el punto 1.
+3. **Ruido.** Un archivo que no es parte del sistema bajo prueba entró en el
+   grafo de decisión del corte.
+
+**Corrección: el oráculo sale del repositorio del target.** Vive en
+[`sp2-oracle/`](sp2-oracle/), fuera del template. Se evalúa así:
+
+1. Checkout del commit candidato exacto en un árbol descartable.
+2. Copiar el oráculo congelado dentro de ese árbol.
+3. Correr los tests propios del target y después `node evaluator.mjs`.
+
+Así el evaluador no se indexa, no se lee y no se escribe. No hace falta comparar
+hashes: el archivo no existe en el árbol que produce el run, de modo que la
+condición se satisface por construcción en vez de por vigilancia.
+
+---
+
+## 4.2 Resultado del ensayo del 2026-08-07
+
+Run `1bb2b66b-7032-41a0-8849-23ff1ee1878f`, `claude-code-cli`/`haiku` en las tres
+etapas, condición C, `maxParallel: 4`, target creado desde el template en
+`57661c72`. **No es una celda y no cuenta.**
+
+### Lo que quedó establecido
+
+| Verificación | Resultado |
+|---|---|
+| Inspección de un target `.mjs` sin lockfile | **PASS** — 5 archivos indexados y `baselineCommands=[npm test]`. Es D11 comprobada contra un target real, no un fixture |
+| Plan compilado, seams ejecutables materializadas | **PASS** — 4 nodos, 3 hojas, 3 requirements de ejecución, todas `files`, cero pares sin cubrir |
+| El run no puede escribir el oráculo | **FAIL** → enmienda §4.1.2 |
+| `readiness.observed` con explicaciones | **PASS** — 3/3; el instrumento de §3.3 tiene de dónde leer |
+| Profundidad persistida = árbol compilado | **PASS** — profundidad 1, 3 hojas, iguales |
+
+El plan que produjo es exactamente el vertical slice que
+[`next-run.md`](next-run.md) recomendaba: Domain → Application → API más un
+composite de integración, con las seams cruzando como artefactos.
+
+Primera medición de paralelismo sobre un journal productivo: `available=1`,
+`executed=1`, `cap=4`. **El tope no ató**; la cadena domain→application→api no
+ofrece trabajo independiente. Es el resultado que el instrumento existe para
+distinguir, y con el oráculo viejo se habría reportado como «sin paralelismo» sin
+poder decir por qué.
+
+### El defecto que habría invalidado las dos celdas
+
+La hoja de dominio corrió, gastó 184.739 tokens de entrada y **no cambió nada**:
+`changedFiles: []`, `candidateCommit` igual al commit base. Aun así quedó
+`validation.completed → verified`, criterio `satisfied`, y su artefacto fue
+**adoptado**. El run recién se rompió dos nodos después, cuando el consumidor no
+pudo materializar el artefacto vacío — y esa falla se clasificó `unclassified`,
+porque para entonces ya nadie podía nombrar la causa.
+
+La causa está en `ResultRecorder`. Un diff vacío se acepta como no-op legítimo
+cuando «el baseline ya satisface el contrato», y la evidencia que pedía era que
+los archivos existieran y no tuvieran el marcador de stub del scaffolder. La
+rama fue escrita para el walking skeleton, donde el propio run escribe esos
+archivos. **Nada en el repositorio construye ese scaffolder**, así que ningún
+archivo lleva nunca el marcador y la condición la cumple todo archivo
+preexistente de un target brownfield: es decir, siempre.
+
+Un agente que no hizo nada quedaba indistinguible de uno que no tenía nada que
+hacer, y el run afirmaba lo segundo.
+
+Corregido: el no-op exige ahora evidencia positiva de que **este run** escribió
+esos archivos (`groundingScaffoldedPaths`). Ausente —el caso de todos los
+llamadores actuales— un diff vacío es `empty_diff`, una falla.
+
+### Lo que el ensayo **no** estableció
+
+El run quedó parado en `waiting_for_input` con una decisión pendiente —
+correctamente, no colgado — así que **nunca llegó a integración ni a entrega**.
+El camino más allá de la primera hoja sigue sin verificarse de punta a punta.
+Hace falta un segundo ensayo antes de congelar.
+
+### Deuda que dejó abierta
+
+`artifact_empty` se clasifica `unclassified`. La causa es perfectamente
+nombrable —el productor no produjo nada— y la etapa 5 afirma que toda falla mapea
+a exactamente una causa. Es una laguna de la taxonomía y necesita su propia
+regresión; no bloquea el ensayo porque su causa raíz acaba de cerrarse, pero la
+clase sigue siendo la equivocada si vuelve a aparecer por otra vía.
 
 ---
 

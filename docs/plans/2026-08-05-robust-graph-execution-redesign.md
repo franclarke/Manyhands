@@ -1149,12 +1149,34 @@ los tres encontrados **ejecutando**, no leyendo:
 La pre-registración está en
 [`sp2-preregistration.md`](../tesis/evidence/semantic-planning/sp2-preregistration.md).
 
-**7B — Ensayo previo, fuera de la serie.** Pendiente. Una celda declarada como
-ensayo y nunca contada, para comprobar que la maquinaria llega de punta a punta
-sobre un target `.mjs` y que el journal registra lo que §3.3 necesita leer. El
-antecedente es exacto: la etapa 1 descubrió que el indexador no leía `.mjs` y
-que por eso el planner de SP2 recibía cero evidencia, invisible durante trece
-series.
+**7B — Ensayo previo, fuera de la serie. Primera pasada corrida el 2026-08-07;
+hace falta una segunda.** Run `1bb2b66b`, `haiku`, condición C. Sirvió para lo
+que existía: encontró tres cosas que ningún test podía encontrar.
+
+1. **Un intento que no cambió nada quedó `verified` y su artefacto adoptado.**
+   La hoja de dominio gastó 184k tokens de entrada, produjo `changedFiles: []`
+   con el commit base como candidato, y el run recién se rompió dos nodos
+   después con `artifact_empty`. `ResultRecorder` acepta un diff vacío como
+   no-op cuando los archivos existen y no llevan el marcador de stub del
+   scaffolder — y **nada en el repositorio construye ese scaffolder**, así que
+   la condición la cumple todo archivo preexistente. En un target brownfield la
+   rama dispara siempre. Corregido con regresión roja previa: el no-op ahora
+   exige evidencia positiva de que este run escribió esos archivos.
+2. **El oráculo externo estaba dentro del scope del run** — lo podía leer al
+   planificar y escribir al ejecutar. Movido fuera del target.
+3. **El gate de seams `logical` del protocolo es vacuo por construcción**: el
+   contrato de seam ya no tiene campo `materialization`. Reemplazado por una
+   propiedad que sí puede fallar.
+
+Lo que **no** estableció: el run quedó en `waiting_for_input` con una decisión
+pendiente —correctamente, no colgado—, así que nunca llegó a integración ni a
+entrega. Eso queda para la segunda pasada.
+
+De paso quedaron comprobadas contra un target real, no contra fixtures: D11
+(`baselineCommands=[npm test]` sobre un `.mjs` sin lockfile), la profundidad
+persistida de 7A, el instrumento de paralelismo (`available=1, executed=1,
+cap=4`: el tope no ató, la cadena no ofrecía trabajo independiente) y la
+política de recuperación de la etapa 5 sobre una falla no modelada real.
 
 **7C — Congelamiento y dos celdas.** Pendiente, después del ensayo.
 

@@ -20,6 +20,46 @@ function okOutcome() {
 }
 
 describe("ResultRecorder empty-diff no-op handling", () => {
+  /**
+   * The SP2 rehearsal of 2026-08-07, reduced. A leaf was told to add order
+   * priority to `src/domain/orders.mjs`; its executor spent 184k tokens and
+   * changed nothing. The recorder answered `success / already_satisfied`, the
+   * artifact was adopted at the base commit, and the run only broke two nodes
+   * later with `artifact_empty` — classified `unclassified`, because by then
+   * nothing could name the cause.
+   *
+   * The no-op branch exists for a file the run's own grounding scaffolder wrote
+   * complete, leaving its leaf nothing to add. Its test was "the file exists and
+   * carries no stub marker", which every pre-existing file in a real repository
+   * passes. So on any brownfield target the branch fires for any leaf that
+   * touches a file that was already there — that is, always.
+   *
+   * A no-op needs positive evidence that this run produced the baseline. Absent
+   * it, an agent that did nothing is not distinguishable from an agent that had
+   * nothing to do, and the run must not claim it was.
+   */
+  it("keeps an empty diff a failure over a file this run never scaffolded", async () => {
+    const git = new FakeGitRunner({
+      heads: { [WORKTREE.path]: "BASE_SHA" },
+      diffCachedNameOnly: [],
+      // A complete, pre-existing implementation. No stub marker, because no
+      // scaffolder ever touched it — it shipped with the target.
+      showFile: { "src/domain/orders.mjs": "export function placeOrder(state, order) {\n  return state;\n}\n" }
+    });
+    const recorder = new ResultRecorder({ git, traceStore: new InMemoryTraceStore() });
+
+    const result = await recorder.record({
+      worktree: WORKTREE,
+      executorOutcome: okOutcome(),
+      executionScope: { implementationPaths: ["src/domain/orders.mjs"], testPaths: [], configPaths: [] },
+      expectedOutput: { changedFiles: ["src/domain/orders.mjs"], producedSymbols: [], consumedSymbols: [], diffShapeHint: "diff" }
+    });
+
+    expect(result.status).toBe("empty_diff");
+    expect(result.disposition).toBe("failed");
+    expect(result.noOp).toBeUndefined();
+  });
+
   it("treats an empty diff as a no-op success when the baseline already satisfies the contract", async () => {
     const git = new FakeGitRunner({
       heads: { [WORKTREE.path]: "BASE_SHA" },
@@ -32,7 +72,12 @@ describe("ResultRecorder empty-diff no-op handling", () => {
       worktree: WORKTREE,
       executorOutcome: okOutcome(),
       executionScope: { implementationPaths: ["src/index.js"], testPaths: [], configPaths: [] },
-      expectedOutput: { changedFiles: ["src/index.js"], producedSymbols: [], consumedSymbols: [], diffShapeHint: "diff" }
+      expectedOutput: { changedFiles: ["src/index.js"], producedSymbols: [], consumedSymbols: [], diffShapeHint: "diff" },
+      // The premise the branch was always assuming, now stated: this run wrote
+      // the file, so "complete and unmodified" really does mean the leaf had
+      // nothing to add. Leaving it implicit is what made the branch fire for
+      // every pre-existing file in a real repository.
+      groundingScaffoldedPaths: ["src/index.js"]
     });
 
     expect(result.status).toBe("success");

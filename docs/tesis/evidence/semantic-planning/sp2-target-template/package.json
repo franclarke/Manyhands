@@ -4,7 +4,6 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "test": "node --test test/*.test.mjs",
-    "evaluate": "node evaluator.mjs"
+    "test": "node --test test/*.test.mjs"
   }
 }

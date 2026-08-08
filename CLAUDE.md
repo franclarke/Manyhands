@@ -51,9 +51,15 @@ unknown.
 - No introducir duplicados de estado o relaciones como puente sin retiro
   explícito.
 - Preferir slices verticales y diffs pequeños a una reescritura total.
-- El índice usa LF y `core.autocrlf=false`. Las herramientas de edición escriben
-  CRLF, lo que produce diffs de archivo entero. Normalizar a LF los archivos
-  modificados antes de cada commit y verificar con `git diff --numstat`.
+- `core.autocrlf=false`, así que el final de línea es parte del contenido. Las
+  herramientas de edición escriben CRLF y eso produce diffs de archivo entero.
+  **El índice no es uniforme**: la mayoría de los archivos está en LF pero
+  algunos están commiteados en CRLF, así que normalizar todo a LF a ciegas
+  reescribe esos por completo. Antes de cada commit, ajustar cada archivo
+  modificado **al final de línea con que está commiteado** —
+  `git show HEAD:<archivo> | grep -c $'\r$'` lo dice— y verificar con
+  `git diff --numstat`: un archivo que suma y resta su longitud entera es la
+  señal de que se corrigió para el lado equivocado.
 - Antes de planificar o congelar una serie experimental, verificar que sus
   activos externos existan: el repositorio base con su SHA exacto, el seed, los
   targets y el evaluador externo que cubre *ese* alcance. Viven fuera de este

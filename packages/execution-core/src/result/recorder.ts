@@ -46,6 +46,22 @@ export interface RecordParams {
    * orchestrator's own commit for an agent commit.
    */
   expectedHead?: string;
+  /**
+   * Paths this run's grounding step wrote into the walking skeleton.
+   *
+   * An empty diff is only a legitimate no-op over one of these: the scaffolder
+   * may have produced a file complete (a barrel, a re-export), leaving its leaf
+   * nothing to add. Over any other path an empty diff means the agent did
+   * nothing, and the two are indistinguishable without this.
+   *
+   * Absent means "this run scaffolded nothing", which is the safe reading and
+   * the true one for every current caller — nothing constructs the grounding
+   * agent today. Inferring the baseline from "the file exists and carries no
+   * stub marker" instead made the no-op fire for every pre-existing file in a
+   * brownfield target, so an agent that produced nothing was recorded verified
+   * and its empty artifact adopted.
+   */
+  groundingScaffoldedPaths?: readonly string[];
 }
 
 /** Keep the last N chars of executor output as the actionable failure cause. */
@@ -205,7 +221,8 @@ export class ResultRecorder {
         worktree.path,
         baseHead,
         params.expectedOutput,
-        params.executionScope
+        params.executionScope,
+        params.groundingScaffoldedPaths ?? []
       );
       if (baselineEvidence !== undefined) {
         execLog("result", "leaf succeeded (no-op: grounding baseline already satisfies the contract)", {
@@ -291,11 +308,19 @@ export class ResultRecorder {
     cwd: string,
     ref: string,
     expectedOutput: ExpectedOutput | undefined,
-    scope: ExecutionScope | undefined
+    scope: ExecutionScope | undefined,
+    scaffoldedPaths: readonly string[]
   ): Promise<{ expectedPaths: string[]; verifiedPaths: string[] } | undefined> {
     const implPaths = (expectedOutput?.changedFiles ?? scope?.implementationPaths ?? [])
       .filter((path) => !path.includes("*"));
     if (implPaths.length === 0) {
+      return undefined;
+    }
+    // Every deliverable has to be one this run wrote. A file that came with the
+    // target was never produced by the grounding step, so its completeness says
+    // nothing about whether this leaf's work is done.
+    const scaffolded = new Set(scaffoldedPaths);
+    if (!implPaths.every((path) => scaffolded.has(path))) {
       return undefined;
     }
     const verifiedPaths: string[] = [];
