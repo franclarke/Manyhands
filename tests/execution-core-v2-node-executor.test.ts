@@ -10,6 +10,7 @@ import {
   FixedAgentExecutorFactory,
   ScopeChecker,
   V2NodeExecutor,
+  buildV2CodeRepairInstructions,
   buildV2NodeInstructions,
   WorktreeManager,
   type AgentExecutor,
@@ -25,6 +26,15 @@ import { FakeGitRunner, fakeWorkspaceProvider } from "./helpers/fake-git-runner"
 const at = "2026-07-17T12:00:00.000Z";
 
 describe("V2NodeExecutor", () => {
+  it("includes integrity findings in code-repair instructions", () => {
+    const instructions = buildV2CodeRepairInstructions(
+      { node: { title: "API backorder exposure" }, contract: { task: { goal: "Expose backorders through the public API." } } } as never,
+      { criteria: [], integrityFindings: [{ findingId: "finding-api", code: "required_public_surface_unrepresented", path: "src/api/orders.ts", message: "No named public operation." }] } as never
+    );
+
+    expect(instructions).toContain("No named public operation.");
+  });
+
   it("includes the exact inherited source contract in leaf instructions", () => {
     const sourceContract = {
       goal: 'OrderPriority = "standard" | "express"; Backorder has orderId, skuId and missing; listBackorders(state) returns every recorded Backorder.',

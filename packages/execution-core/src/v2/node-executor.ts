@@ -749,7 +749,7 @@ function buildV2RepairInstructions(
   ].join("\n");
 }
 
-function buildV2CodeRepairInstructions(
+export function buildV2CodeRepairInstructions(
   input: Pick<V2PhysicalNodeExecutionInput, "node" | "contract">,
   failedMatrix: V2ExecutionEvidenceMatrix
 ): string {
@@ -761,6 +761,7 @@ function buildV2CodeRepairInstructions(
     ...failedMatrix.criteria
       .filter((criterion) => criterion.status === "failed")
       .map((criterion) => `- ${criterion.criterionId}: ${criterion.justification}`),
+    ...(failedMatrix.integrityFindings ?? []).map((finding) => `- ${finding.code} at ${finding.path}: ${finding.message}`),
     "",
     "Preserve the declared scope and shared contracts. Change only what is required to satisfy the failed evidence.",
     "Re-check every quoted identifier, enum literal, field name, and return shape from the objective before editing; preserve them verbatim and do not replace them with a semantically similar name or alias.",
