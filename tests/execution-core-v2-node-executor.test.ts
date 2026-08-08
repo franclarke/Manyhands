@@ -667,6 +667,50 @@ describe("ExactCandidateValidatorV2", () => {
     expect(git.opsInvoked().filter((operation) => operation === "worktreeRemove")).toHaveLength(2);
   });
 
+  it("rejects a test-only candidate when the task promises a new observable API surface", async () => {
+    const snapshot = bookingSnapshot();
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: snapshot }, compilerDependencies);
+    const original = compiled.contracts.find((bundle) => bundle.task.nodeId === "node-api")!;
+    const contract = {
+      ...original,
+      task: {
+        ...original.task,
+        goal: "Expose the recorded backorders through the public API.",
+        acceptanceCriteria: original.task.acceptanceCriteria.map((criterion) => ({
+          ...criterion,
+          description: "Callers can observe recorded backorders through the API."
+        }))
+      },
+      validation: {
+        ...original.validation,
+        obligations: original.validation.obligations.map((obligation) => ({ ...obligation, negativeControl: "not_required" as const }))
+      }
+    };
+    const candidate = "9".repeat(40);
+    const git = new FakeGitRunner({ diffRangeNameOnly: ["tests/api-observability.test.ts"] });
+    const validator = new ExactCandidateValidatorV2({
+      git,
+      workspaces: fakeWorkspaceProvider(git),
+      repoRoot: "C:/repo/booking",
+      repositorySnapshot: snapshot,
+      runner: { run: async () => ({ passed: true, output: "green test", exitCode: 0 }) }
+    });
+
+    const evidence = await validator.validate({
+      runId: "run-public-surface",
+      attemptId: "attempt-public-surface",
+      contract,
+      candidateCommit: candidate,
+      baselineCommit: compiled.graph.baseCommit
+    });
+
+    expect(evidence.outcome).toBe("failed");
+    expect(evidence.integrityFindings).toContainEqual(expect.objectContaining({
+      code: "required_public_surface_unchanged",
+      path: "src/api/bookings.ts"
+    }));
+  });
+
   it.each([
     ["deleted test", null, "test_removed"],
     ["skipped test", 'it.skip("works", () => { expect(run()).toBe(true); });', "test_skipped"],

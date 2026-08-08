@@ -10,7 +10,7 @@ import { GitCandidateSandboxFactory, validateExactCandidate, type EvidenceValida
 import type { EvidenceMatrix } from "../validation/evidence-matrix";
 import { compileValidationRecipe } from "../validation/recipe-compiler";
 import { ChildProcessValidationRunner, type ValidationRunner } from "../validation/runner";
-import { detectTestIntegrityFindings, isTestDiscoveryConfigurationPath, isTestFilePath } from "../validation/test-integrity";
+import { detectRequiredPublicSurfaceFindings, detectTestIntegrityFindings, isTestDiscoveryConfigurationPath, isTestFilePath } from "../validation/test-integrity";
 import type { ExecutionWorkspaceProvider } from "../worktree/execution-workspace";
 import type { V2ExecutionEvidenceMatrix, V2NodeValidationPort } from "./node-executor";
 
@@ -85,7 +85,7 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
       ...(this.options.operationId !== undefined ? { operationId: this.options.operationId } : {}),
       ...(input.signal !== undefined ? { signal: input.signal } : {})
     };
-    const integrity = await this.inspectTestIntegrity(input.baselineCommit, input.candidateCommit, input.signal);
+    const integrity = await this.inspectTestIntegrity(input.contract, input.baselineCommit, input.candidateCommit, input.signal);
     const validated = await validateExactCandidate({
       recipe,
       obligations: input.contract.validation.obligations,
@@ -145,7 +145,7 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
     };
   }
 
-  private async inspectTestIntegrity(baselineCommit: string, candidateCommit: string, signal?: AbortSignal): Promise<{
+  private async inspectTestIntegrity(contract: TaskContractBundle, baselineCommit: string, candidateCommit: string, signal?: AbortSignal): Promise<{
     findings: ReturnType<typeof detectTestIntegrityFindings>;
     candidateTestContents: Record<string, string>;
   }> {
@@ -250,15 +250,23 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
     for (const referenced of await this.changedValidationDependencies(validationCommands, changedFiles, baselineCommit, candidateCommit, moduleAliases, read, signal)) configurationPaths.add(referenced);
     for (const exceeded of readBudget.exceededPaths) configurationPaths.add(exceeded);
     return {
-      findings: detectTestIntegrityFindings({
-        baselineTestFiles: [...baselineFiles].sort(),
-        candidateTestFiles: [...candidateFiles].sort(),
-        baselineScripts,
-        candidateScripts,
-        baselineTestContents,
-        candidateTestContents,
-        changedTestConfigurationPaths: [...configurationPaths]
-      }),
+      findings: [
+        ...detectTestIntegrityFindings({
+          baselineTestFiles: [...baselineFiles].sort(),
+          candidateTestFiles: [...candidateFiles].sort(),
+          baselineScripts,
+          candidateScripts,
+          baselineTestContents,
+          candidateTestContents,
+          changedTestConfigurationPaths: [...configurationPaths]
+        }),
+        ...detectRequiredPublicSurfaceFindings({
+          goal: contract.task.goal,
+          acceptanceCriteria: contract.task.acceptanceCriteria,
+          allowedPaths: contract.scope.allowedPaths,
+          changedFiles
+        })
+      ],
       candidateTestContents
     };
   }

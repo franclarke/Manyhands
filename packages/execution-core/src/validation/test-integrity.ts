@@ -1,13 +1,41 @@
 import { createHash } from "node:crypto";
 import ts from "typescript";
 
-export const TEST_INTEGRITY_DETECTOR_VERSION = 2 as const;
+export const TEST_INTEGRITY_DETECTOR_VERSION = 3 as const;
 
 export interface TestIntegrityFinding {
   findingId: string;
-  code: "test_removed" | "test_script_weakened" | "test_configuration_changed" | "test_skipped" | "test_only" | "assertion_removed";
+  code: "test_removed" | "test_script_weakened" | "test_configuration_changed" | "test_skipped" | "test_only" | "assertion_removed" | "required_public_surface_unchanged";
   path: string;
   message: string;
+}
+
+/**
+ * A task that promises a new observable public API cannot be discharged by a
+ * test-only commit when its declared scope contains an API implementation.
+ * The test may prove a pre-existing, incidental read path while leaving the
+ * promised boundary unchanged.
+ */
+export function detectRequiredPublicSurfaceFindings(input: {
+  goal: string;
+  acceptanceCriteria: readonly { description: string }[];
+  allowedPaths: readonly string[];
+  changedFiles: readonly string[];
+}): TestIntegrityFinding[] {
+  const promise = [input.goal, ...input.acceptanceCriteria.map((criterion) => criterion.description)].join(" ");
+  if (!/\b(?:api|endpoint|route|public interface)\b/iu.test(promise) || !/\b(?:expose|observable|observe|read|list|retrieve|access)\b/iu.test(promise)) return [];
+  const publicSources = input.allowedPaths
+    .filter((file) => !isTestFilePath(file))
+    .filter((file) => /(?:^|\/)(?:api|routes?|controllers?)(?:\/|$)/iu.test(file));
+  if (publicSources.length === 0) return [];
+  const changed = new Set(input.changedFiles.map((file) => file.replaceAll("\\", "/")));
+  if (publicSources.some((file) => changed.has(file.replaceAll("\\", "/")))) return [];
+  const path = publicSources.sort()[0]!;
+  return [finding(
+    "required_public_surface_unchanged",
+    path,
+    `Task promises a new observable public API surface, but candidate changes no declared API implementation.`
+  )];
 }
 
 export function detectTestIntegrityFindings(input: {
