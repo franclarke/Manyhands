@@ -34,6 +34,7 @@ describe("V2NodeExecutor", () => {
 
     expect(instructions).toContain("No named public operation.");
     expect(instructions).toContain("identifier contains that state term");
+    expect(instructions).toContain('identifier contains "backorders"');
   });
 
   it("includes the exact inherited source contract in leaf instructions", () => {

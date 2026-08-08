@@ -753,6 +753,7 @@ export function buildV2CodeRepairInstructions(
   input: Pick<V2PhysicalNodeExecutionInput, "node" | "contract">,
   failedMatrix: V2ExecutionEvidenceMatrix
 ): string {
+  const observableStateTerms = [...new Set([...input.contract.task.goal.matchAll(/\bbackorders?\b/giu)].map((match) => match[0].toLowerCase()))];
   return [
     `Repair the failed candidate for ${input.node.title}.`,
     "",
@@ -766,6 +767,7 @@ export function buildV2CodeRepairInstructions(
     "Preserve the declared scope and shared contracts. Change only what is required to satisfy the failed evidence.",
     "Re-check every quoted identifier, enum literal, field name, and return shape from the objective before editing; preserve them verbatim and do not replace them with a semantically similar name or alias.",
     "For each named state that must be observable through a public boundary, add or update a named public operation whose identifier contains that state term. A generic method that returns an unrelated aggregate does not satisfy this requirement.",
+    ...(observableStateTerms.length === 0 ? [] : [`For this repair, the public operation identifier contains ${observableStateTerms.map((term) => `"${term}"`).join(" or ")}.`]),
     "Do not create or modify AGENTS.md, CLAUDE.md, CODEX.md, or other agent-instruction files; they are outside this repair scope.",
     "Do not commit; the orchestrator will revalidate and commit the repair."
   ].join("\n");
