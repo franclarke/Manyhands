@@ -262,6 +262,23 @@ freeze. El diseño está en
 
 ---
 
+### 4.1.4 El objetivo omitía los nombres de la superficie que el oráculo usa
+
+El ensayo de 2026-08-08 produjo una implementación con
+`backorderOrders()`. Esa operación satisface el control interno genérico de
+que el identificador nombre el estado, pero el contrato pre-registrado ya dice
+que las comprobaciones usan `currentOrders()`, `currentBackorders()` y
+`events()`. El texto del objetivo no repetía esos nombres, pese a que §2.1
+afirma que el objetivo los nombra. El agente podía, por lo tanto, producir una
+API razonable que no era la API evaluable.
+
+Antes del congelamiento se aclara el objetivo con esas tres operaciones. No
+cambia ningún criterio, umbral, scope ni el oráculo: hace explícito el contrato
+público que ya justificaba sus cinco comprobaciones. El siguiente ensayo recibe
+esa redacción; ninguna celda ha comenzado todavía.
+
+---
+
 ## 4.2 Resultado del ensayo del 2026-08-07
 
 Run `1bb2b66b-7032-41a0-8849-23ff1ee1878f`, `claude-code-cli`/`haiku` en las tres
