@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import { nowIso } from "@manyhands/shared";
 
@@ -123,7 +123,17 @@ export class EphemeralExecutionWorkspaceProvider implements ExecutionWorkspacePr
   }
 }
 
-/** The same ref the pool anchored to, so an existing run stays readable. */
+/** Candidate refs are namespaced by run, so their attempt segment need not repeat it. */
 function candidateRef(runId: string, attemptId: string): string {
-  return `refs/manyhands/runs/${safeWorktreeSegment(runId)}/attempts/${safeWorktreeSegment(attemptId)}/candidate`;
+  return `refs/manyhands/runs/${safeWorktreeSegment(runId)}/attempts/${attemptRefSegment(runId, attemptId)}/candidate`;
+}
+
+function attemptRefSegment(runId: string, attemptId: string): string {
+  const runPrefix = `${runId}:attempt:`;
+  const suffix = attemptId.startsWith(runPrefix) ? attemptId.slice(runPrefix.length) : attemptId;
+  const safeSuffix = safeWorktreeSegment(suffix);
+  const maxLength = 32;
+  if (safeSuffix.length <= maxLength) return safeSuffix;
+  const hash = createHash("sha256").update(attemptId).digest("hex").slice(0, 8);
+  return `${safeSuffix.slice(0, maxLength - hash.length - 1)}-${hash}`;
 }

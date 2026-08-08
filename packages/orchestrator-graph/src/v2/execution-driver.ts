@@ -879,12 +879,18 @@ function fact<T extends RunEventInput["type"]>(
  * (DECISIONS.md A11).
  */
 export function leafFailureObservation(outcome: { reason: string }): FailureObservation {
+  if (outcome.reason.includes("artifact_empty")) {
+    return { source: "artifact", code: "artifact_empty", message: outcome.reason };
+  }
   const knownCodes = ["scope_violation", "unexpected_commit", "worktree_pool_unavailable", "transient", "network", "timeout", "auth", "binary_missing", "quota", "executor_unavailable", "model_not_found"];
   const code = knownCodes.find((candidate) =>
     outcome.reason.trimStart().startsWith(`${candidate}:`) || outcome.reason.includes(`: ${candidate}:`)
   ) ?? outcome.reason.split(":", 1)[0]?.trim();
   if (code === "scope_violation" || code === "unexpected_commit") {
     return { source: "scope", code, message: outcome.reason };
+  }
+  if (outcome.reason.includes("update_ref failed") && outcome.reason.includes("unable to create directory")) {
+    return { source: "executor", code: "workspace_ref_rejected", message: outcome.reason };
   }
   if (code === "worktree_pool_unavailable") {
     return { source: "executor", code, message: outcome.reason };

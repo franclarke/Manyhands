@@ -10,7 +10,9 @@ describe("failure recovery policy", () => {
     [{ source: "artifact", code: "undeclared_artifact" }, "undeclared_artifact", "propose_artifact_requirement"],
     [{ source: "scope", code: "scope_violation" }, "scope_unexpected_commit", "discard_candidate"],
     [{ source: "integration", code: "conflict" }, "integration", "repair_integration"],
-    [{ source: "validation", code: "shared_config_broken" }, "shared_infrastructure", "raise_local_decision"]
+    [{ source: "validation", code: "shared_config_broken" }, "shared_infrastructure", "raise_local_decision"],
+    [{ source: "artifact", code: "artifact_empty" }, "upstream_artifact_unusable", "raise_local_decision"],
+    [{ source: "executor", code: "workspace_ref_rejected" }, "environment_workspace", "raise_local_decision"]
   ] as const)("classifies %j as %s", (observation, expectedClass, expectedFirstAction) => {
     const failureClass = classifyFailure(observation);
     const policy = recoveryPolicyFor(failureClass);
@@ -22,6 +24,10 @@ describe("failure recovery policy", () => {
     const policy = recoveryPolicyFor(classifyFailure({ source: "scope", code: "scope_violation" }));
     expect(policy.discardCandidate).toBe(true);
     expect(policy.actions).not.toContain("adopt_candidate");
+  });
+
+  it.each(["upstream_artifact_unusable", "environment_workspace"] as const)("does not retry %s because retrying cannot change its cause", (failureClass) => {
+    expect(recoveryPolicyFor(failureClass).automaticRetryBudget).toBe(0);
   });
 
   it("compiles classification and allowed recovery into one durable fact", () => {

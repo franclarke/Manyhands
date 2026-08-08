@@ -88,6 +88,13 @@ unknown.
   `unclassified`, así que el mensaje es lo único que delata la causa—. Poner los
   targets en algo como `C:/mh-<serie>/<celda>`, nunca dentro del scratchpad de
   sesión, que ya arranca en ~132 caracteres.
+- **Actualización del ref por intento (etapa 7).** La medición anterior queda
+  reemplazada: el `runId` ahora aparece sólo en el namespace y el segmento de
+  intento se limita a 32 caracteres con hash. Para un UUID, el ref mide 108
+  caracteres y deja ~146 para la ruta del repo con `MAX_PATH = 260`. Se mantiene
+  la regla de ruta corta `C:/mh-<serie>/<celda>`; si Git devuelve
+  `update_ref failed ... unable to create directory`, se clasifica
+  `environment_workspace`, no como un fallo del plan ni del agente.
 - El modelo de planning productivo (`invokeSelectedPlanningCli`) entrega la
   respuesta como **string**. Un test de `PlanningModule` o `WorkBreakdownPlanner`
   que devuelva array u objeto no ejercita el camino real y deja pasar defectos

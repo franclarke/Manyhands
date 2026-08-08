@@ -25,9 +25,11 @@ const POLICIES: Record<FailureClass, Omit<RecoveryPolicy, "failureClass">> = {
   code_test: { actions: ["repair_code", "propose_graph_amendment"], automaticRetryBudget: 1, discardCandidate: true, requiresEvidence: true },
   contract_decomposition: { actions: ["propose_graph_amendment"], automaticRetryBudget: 0, discardCandidate: true, requiresEvidence: true },
   undeclared_artifact: { actions: ["propose_artifact_requirement"], automaticRetryBudget: 0, discardCandidate: true, requiresEvidence: true },
+  upstream_artifact_unusable: { actions: ["raise_local_decision"], automaticRetryBudget: 0, discardCandidate: true, requiresEvidence: true },
   scope_unexpected_commit: { actions: ["discard_candidate", "raise_local_decision"], automaticRetryBudget: 0, discardCandidate: true, requiresEvidence: true },
   integration: { actions: ["repair_integration", "propose_graph_amendment"], automaticRetryBudget: 1, discardCandidate: true, requiresEvidence: true },
   shared_infrastructure: { actions: ["raise_local_decision"], automaticRetryBudget: 0, discardCandidate: true, requiresEvidence: true },
+  environment_workspace: { actions: ["raise_local_decision"], automaticRetryBudget: 0, discardCandidate: true, requiresEvidence: true },
   // One retry, then a human. Repairing code is off the table — nobody
   // established the code was wrong — but a single retry is evidence gathering
   // rather than blind hope: a failure that reproduces identically is

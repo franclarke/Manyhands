@@ -15,7 +15,9 @@
  * Everything else — including every `MANYHANDS_*` internal variable — is
  * dropped. This is secret REDUCTION, not a sandbox: the agent still has
  * shell, filesystem and network access as the local user (see the threat
- * model in docs/system/security-boundary.md).
+ * model in docs/system/security-boundary.md). Executor profiles separately
+ * constrain behavior configuration: Claude excludes its `user` settings
+ * source, while Codex ignores user config.
  */
 
 /** Variables any CLI/toolchain needs to function, matched case-insensitively. */

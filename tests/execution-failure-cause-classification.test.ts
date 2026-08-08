@@ -43,6 +43,22 @@ describe("leafFailureObservation", () => {
     expect(classifyFailure(observation)).toBe("unclassified");
   });
 
+  it("names the observed empty upstream artifact instead of leaving its consumer unclassified", () => {
+    const observation = leafFailureObservation({
+      reason: "Could not materialize artifact artifact-domain-output: artifact_empty."
+    });
+
+    expect(classifyFailure(observation)).toBe("upstream_artifact_unusable");
+  });
+
+  it("names the observed workspace ref failure instead of leaving it unclassified", () => {
+    const observation = leafFailureObservation({
+      reason: "update_ref failed for ref 'refs/manyhands/runs/run-1/attempts/run-1_attempt_node-a-hash/candidate': cannot lock ref: unable to create directory"
+    });
+
+    expect(classifyFailure(observation)).toBe("environment_workspace");
+  });
+
   it("keeps an unavailable worktree pool in infrastructure recovery", () => {
     const observation = leafFailureObservation({
       reason: "worktree_pool_unavailable: could not remove invalid slot slot-000"

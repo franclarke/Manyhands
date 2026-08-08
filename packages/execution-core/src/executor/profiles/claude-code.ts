@@ -24,6 +24,8 @@ export function buildClaudeCodeArgs(options: AgentExecutorOptions): string[] {
     options.model,
     "--output-format",
     "json",
+    "--setting-sources",
+    "project,local",
     ...permissionArgsFor(options.bypassApprovals)
   ];
 }

@@ -1,3 +1,4 @@
+import { win32 } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { EphemeralExecutionWorkspaceProvider } from "@manyhands/execution-core";
@@ -92,6 +93,32 @@ describe("ephemeral execution workspace", () => {
     expect(anchor.candidateCommit).toBe(CANDIDATE);
     expect(anchor.ref).toContain("run-1");
     expect(anchor.ref).toContain("attempt-1");
+  });
+
+  it("anchors retries for a long target within the Windows path budget without colliding", async () => {
+    const git = fakeGit();
+    const repoRoot = `C:/${"r".repeat(135)}`;
+    const provider = new EphemeralExecutionWorkspaceProvider({
+      repoRoot,
+      worktreesRoot: "C:/mh-sp2/cell",
+      platform: "win32",
+      git,
+      now: () => "2026-08-07T00:00:00.000Z"
+    });
+    const runId = "209c3e59-8c99-448e-a32d-dabd967d7a10";
+    const taskId = "node-domain-priority-backorder-6f4918a2e6";
+    const first = await provider.acquire({ taskId, runId, kind: "leaf", baseCommit: BASE });
+    const second = await provider.acquire({ taskId, runId, kind: "leaf", baseCommit: BASE });
+
+    await first.release({ kind: "candidate", runId, attemptId: `${runId}:attempt:${taskId}:1`, candidateCommit: CANDIDATE });
+    await second.release({ kind: "candidate", runId, attemptId: `${runId}:attempt:${taskId}:2`, candidateCommit: CANDIDATE });
+
+    const refs = git.calls.filter((call) => call.op === "updateRef").map((call) => call.ref!);
+    expect(refs).toHaveLength(2);
+    expect(new Set(refs).size).toBe(2);
+    for (const ref of refs) {
+      expect(win32.join(repoRoot, ".git", ref).length).toBeLessThanOrEqual(260);
+    }
   });
 
   it("is idempotent, so a double release cannot remove a workspace twice", async () => {
