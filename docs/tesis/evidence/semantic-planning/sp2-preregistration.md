@@ -277,6 +277,19 @@ cambia ningún criterio, umbral, scope ni el oráculo: hace explícito el contra
 público que ya justificaba sus cinco comprobaciones. El siguiente ensayo recibe
 esa redacción; ninguna celda ha comenzado todavía.
 
+### 4.1.5 El objetivo omitía la forma pública del backorder
+
+El ensayo posterior llegó a candidato raíz y pasó sus cinco tests propios, pero
+el oráculo externo observó que `currentBackorders()` devolvía
+`{ orderId, skuId, quantity }` en vez de la forma pre-registrada
+`{ orderId, skuId, missing }`. El criterio exige una lista de backorders, y el
+oráculo ya define su representación; dejar ese campo implícito permitió una
+implementación plausible pero no evaluable.
+
+Antes del congelamiento, el objetivo declara literalmente la forma de cada
+entrada. No cambia el oráculo, los criterios, los umbrales ni los scopes: alinea
+la tarea que recibe el agente con el contrato que §2.1 ya decía cubierto.
+
 ---
 
 ## 4.2 Resultado del ensayo del 2026-08-07

@@ -43,8 +43,9 @@ el template y sólo se ejecuta contra el commit candidato exacto.
 > existing domain, application and API. An order that exceeds available stock
 > must remain cancellable, record a positive backorder, emit one application
 > event, and be observable through the API through `currentOrders()`,
-> `currentBackorders()` and `events()`. Preserve existing behavior. Add focused
-> tests beside the modified code.
+> `currentBackorders()` and `events()`. `currentBackorders()` returns entries
+> shaped exactly as `{ orderId, skuId, missing }`. Preserve existing behavior.
+> Add focused tests beside the modified code.
 
 ## Criterios externos
 
