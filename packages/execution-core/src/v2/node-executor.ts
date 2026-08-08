@@ -765,6 +765,7 @@ export function buildV2CodeRepairInstructions(
     "",
     "Preserve the declared scope and shared contracts. Change only what is required to satisfy the failed evidence.",
     "Re-check every quoted identifier, enum literal, field name, and return shape from the objective before editing; preserve them verbatim and do not replace them with a semantically similar name or alias.",
+    "For each named state that must be observable through a public boundary, add or update a named public operation whose identifier contains that state term. A generic method that returns an unrelated aggregate does not satisfy this requirement.",
     "Do not create or modify AGENTS.md, CLAUDE.md, CODEX.md, or other agent-instruction files; they are outside this repair scope.",
     "Do not commit; the orchestrator will revalidate and commit the repair."
   ].join("\n");
