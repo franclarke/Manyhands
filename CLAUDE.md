@@ -79,6 +79,15 @@ unknown.
   eventos armados a mano. Una derivación escrita después de ver los runs está
   ajustada a ellos. Si la evidencia no se registró, la métrica se reporta
   **ausente**, nunca en cero: «no se observó» no es «no había».
+- **Un repositorio target no puede vivir en una ruta larga en Windows.** El ref
+  de candidato por intento
+  (`refs/manyhands/runs/<runId>/attempts/<runId>_attempt_<nodo>-<hash>/candidate`)
+  ocupa ~136 caracteres él solo, porque el `runId` aparece **dos veces**. Con
+  `MAX_PATH = 260` eso deja ~124 para la ruta del repo. Pasado ese límite el run
+  muere con `update_ref failed ... unable to create directory` —y se clasifica
+  `unclassified`, así que el mensaje es lo único que delata la causa—. Poner los
+  targets en algo como `C:/mh-<serie>/<celda>`, nunca dentro del scratchpad de
+  sesión, que ya arranca en ~132 caracteres.
 - El modelo de planning productivo (`invokeSelectedPlanningCli`) entrega la
   respuesta como **string**. Un test de `PlanningModule` o `WorkBreakdownPlanner`
   que devuelva array u objeto no ejercita el camino real y deja pasar defectos
