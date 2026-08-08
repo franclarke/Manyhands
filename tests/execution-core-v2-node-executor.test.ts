@@ -35,6 +35,7 @@ describe("V2NodeExecutor", () => {
     expect(instructions).toContain("No named public operation.");
     expect(instructions).toContain("identifier contains that state term");
     expect(instructions).toContain('identifier contains "backorders"');
+    expect(instructions).toContain("currentBackorders");
     expect(instructions).toContain("Do not resolve this by adding only a test");
   });
 

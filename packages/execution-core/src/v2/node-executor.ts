@@ -769,6 +769,9 @@ export function buildV2CodeRepairInstructions(
     "For each named state that must be observable through a public boundary, add or update a named public operation whose identifier contains that state term. A generic method that returns an unrelated aggregate does not satisfy this requirement.",
     ...(observableStateTerms.length === 0 ? [] : [
       `For this repair, the public operation identifier contains ${observableStateTerms.map((term) => `"${term}"`).join(" or ")}.`,
+      ...(observableStateTerms.some((term) => term === "backorder" || term === "backorders")
+        ? ["For recorded backorder state, expose the exact read operation `currentBackorders()`; do not substitute an events feed or a generic current-orders read."]
+        : []),
       "Required concrete change: edit the declared API source to add or update that operation, then exercise it from the focused test.",
       "Do not resolve this by adding only a test, returning the state from a mutation, or relying on an existing generic operation."
     ]),
