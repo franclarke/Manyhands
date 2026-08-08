@@ -92,6 +92,8 @@ export const RunRecordSchema = z.object({
   runId: z.string().min(1),
   workspaceId: z.string().min(1),
   userPrompt: z.string().trim().min(1).max(RUN_USER_PROMPT_MAX_LENGTH),
+  /** Explicit root criteria survive creation so planning can allocate them. */
+  acceptanceCriteria: z.array(z.string().trim().min(1).max(400)).max(20).default([]),
   title: z.string().min(1).max(160),
   planningSelection: StageSelectionSchema,
   executionSelection: StageSelectionSchema,
@@ -129,6 +131,7 @@ export type RunFile = z.infer<typeof RunFileSchema>;
 export const RunCreateRequestSchema = z.object({
   workspaceId: z.string().min(1),
   userPrompt: z.string().trim().min(1).max(RUN_USER_PROMPT_MAX_LENGTH),
+  acceptanceCriteria: z.array(z.string().trim().min(1).max(400)).max(20).optional(),
   planningSelection: StageSelectionSchema.optional(),
   executionSelection: StageSelectionSchema.optional(),
   repairSelection: StageSelectionSchema.optional(),

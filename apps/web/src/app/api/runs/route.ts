@@ -79,6 +79,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         runId: randomUUID(),
         workspaceId: workspace.id,
         userPrompt: parsed.data.userPrompt,
+        acceptanceCriteria: parsed.data.acceptanceCriteria ?? [],
         title: parsed.data.userPrompt.slice(0, 120),
         planningSelection,
         executionSelection,

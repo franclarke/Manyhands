@@ -172,6 +172,7 @@ function buildV2Record(
     runId,
     workspaceId: stringField(legacy, "workspaceId") ?? "legacy-import",
     userPrompt,
+    acceptanceCriteria: [],
     title: (stringField(legacy, "title") ?? userPrompt).slice(0, 160),
     planningSelection: stage,
     executionSelection: stage,
