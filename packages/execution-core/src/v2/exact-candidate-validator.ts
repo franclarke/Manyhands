@@ -181,6 +181,11 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
       from: baselineCommit,
       to: candidateCommit
     });
+    const candidatePublicSourceContents: Record<string, string> = {};
+    for (const file of changedFiles.filter((file) => /(?:^|\/)(?:api|routes?|controllers?)(?:\/|$)/iu.test(file)).sort()) {
+      const contents = await read(candidateCommit, file);
+      if (contents !== null) candidatePublicSourceContents[file.replaceAll("\\", "/")] = contents;
+    }
     for (const file of changedFiles.filter(isTestFilePath).sort()) {
       const baseline = await read(baselineCommit, file);
       const candidate = await read(candidateCommit, file);
@@ -264,7 +269,8 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
           goal: contract.task.goal,
           acceptanceCriteria: contract.task.acceptanceCriteria,
           allowedPaths: contract.scope.allowedPaths,
-          changedFiles
+          changedFiles,
+          candidatePublicSourceContents
         })
       ],
       candidateTestContents

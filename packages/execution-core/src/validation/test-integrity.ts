@@ -1,11 +1,11 @@
 import { createHash } from "node:crypto";
 import ts from "typescript";
 
-export const TEST_INTEGRITY_DETECTOR_VERSION = 3 as const;
+export const TEST_INTEGRITY_DETECTOR_VERSION = 4 as const;
 
 export interface TestIntegrityFinding {
   findingId: string;
-  code: "test_removed" | "test_script_weakened" | "test_configuration_changed" | "test_skipped" | "test_only" | "assertion_removed" | "required_public_surface_unchanged";
+  code: "test_removed" | "test_script_weakened" | "test_configuration_changed" | "test_skipped" | "test_only" | "assertion_removed" | "required_public_surface_unchanged" | "required_public_surface_unrepresented";
   path: string;
   message: string;
 }
@@ -21,6 +21,7 @@ export function detectRequiredPublicSurfaceFindings(input: {
   acceptanceCriteria: readonly { description: string }[];
   allowedPaths: readonly string[];
   changedFiles: readonly string[];
+  candidatePublicSourceContents?: Readonly<Record<string, string>>;
 }): TestIntegrityFinding[] {
   const promise = [input.goal, ...input.acceptanceCriteria.map((criterion) => criterion.description)].join(" ");
   if (!/\b(?:api|endpoint|route|public interface)\b/iu.test(promise) || !/\b(?:expose|observable|observe|read|list|retrieve|access)\b/iu.test(promise)) return [];
@@ -29,7 +30,23 @@ export function detectRequiredPublicSurfaceFindings(input: {
     .filter((file) => /(?:^|\/)(?:api|routes?|controllers?)(?:\/|$)/iu.test(file));
   if (publicSources.length === 0) return [];
   const changed = new Set(input.changedFiles.map((file) => file.replaceAll("\\", "/")));
-  if (publicSources.some((file) => changed.has(file.replaceAll("\\", "/")))) return [];
+  const changedSources = publicSources.filter((file) => changed.has(file.replaceAll("\\", "/")));
+  if (changedSources.length > 0) {
+    const requestedStateTerms = [...new Set([...promise.matchAll(/\bbackorders?\b/giu)].map((match) => match[0].toLowerCase()))];
+    const sourceContents = input.candidatePublicSourceContents ?? {};
+    if (requestedStateTerms.length > 0 && changedSources.every((file) => {
+      const source = sourceContents[file.replaceAll("\\", "/")];
+      return source === undefined || requestedStateTerms.every((term) => !source.toLowerCase().includes(term));
+    })) {
+      const path = changedSources.sort()[0]!;
+      return [finding(
+        "required_public_surface_unrepresented",
+        path,
+        `Task requires observable ${requestedStateTerms.join(", ")}, but the changed API source does not represent that requested state.`
+      )];
+    }
+    return [];
+  }
   const path = publicSources.sort()[0]!;
   return [finding(
     "required_public_surface_unchanged",

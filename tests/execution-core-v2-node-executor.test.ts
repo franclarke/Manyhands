@@ -711,6 +711,33 @@ describe("ExactCandidateValidatorV2", () => {
     }));
   });
 
+  it("rejects an API edit that still omits the named observable backorder state", async () => {
+    const snapshot = bookingSnapshot();
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: snapshot }, compilerDependencies);
+    const original = compiled.contracts.find((bundle) => bundle.task.nodeId === "node-api")!;
+    const contract = {
+      ...original,
+      task: {
+        ...original.task,
+        goal: "Expose recorded backorders through the public API.",
+        acceptanceCriteria: original.task.acceptanceCriteria.map((criterion) => ({ ...criterion, description: "The API exposes recorded backorders." }))
+      },
+      validation: { ...original.validation, obligations: original.validation.obligations.map((obligation) => ({ ...obligation, negativeControl: "not_required" as const })) }
+    };
+    const candidate = "8".repeat(40);
+    const baseline = compiled.graph.baseCommit;
+    const git = new FakeGitRunner({
+      diffRangeNameOnly: ["src/api/bookings.ts"],
+      showFileByRef: { [candidate]: { "src/api/bookings.ts": "export function currentOrders() { return []; }" } }
+    });
+    const validator = new ExactCandidateValidatorV2({ git, workspaces: fakeWorkspaceProvider(git), repoRoot: "C:/repo/booking", repositorySnapshot: snapshot, runner: { run: async () => ({ passed: true, output: "green", exitCode: 0 }) } });
+
+    const evidence = await validator.validate({ runId: "run-public-state", attemptId: "attempt-public-state", contract, candidateCommit: candidate, baselineCommit: baseline });
+
+    expect(evidence.outcome).toBe("failed");
+    expect(evidence.integrityFindings).toContainEqual(expect.objectContaining({ code: "required_public_surface_unrepresented", path: "src/api/bookings.ts" }));
+  });
+
   it.each([
     ["deleted test", null, "test_removed"],
     ["skipped test", 'it.skip("works", () => { expect(run()).toBe(true); });', "test_skipped"],
