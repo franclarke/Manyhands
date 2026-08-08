@@ -748,7 +748,11 @@ describe("ExactCandidateValidatorV2", () => {
     const evidence = await validator.validate({ runId: "run-public-state", attemptId: "attempt-public-state", contract, candidateCommit: candidate, baselineCommit: baseline });
 
     expect(evidence.outcome).toBe("failed");
-    expect(evidence.integrityFindings).toContainEqual(expect.objectContaining({ code: "required_public_surface_unrepresented", path: "src/api/bookings.ts" }));
+    expect(evidence.integrityFindings).toContainEqual(expect.objectContaining({
+      code: "required_public_surface_unrepresented",
+      path: "src/api/bookings.ts",
+      message: expect.stringContaining('identifier contains "backorders"')
+    }));
   });
 
   it("rejects a backorder response field when the API exposes no named backorder read operation", async () => {

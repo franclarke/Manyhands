@@ -46,7 +46,7 @@ export function detectRequiredPublicSurfaceFindings(input: {
       return [finding(
         "required_public_surface_unrepresented",
         path,
-        `Task requires observable ${requestedStateTerms.join(", ")}, but the changed API source exposes no named public operation for that state.`
+        `Task requires observable ${requestedStateTerms.join(", ")}, but the changed API source exposes no named public operation whose identifier contains ${requestedStateTerms.map((term) => `"${term}"`).join(" or ")}.`
       )];
     }
     return [];
