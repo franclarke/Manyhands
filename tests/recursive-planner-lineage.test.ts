@@ -73,6 +73,15 @@ describe("recursive planner criterion lineage", () => {
     expect(result.unresolved).toHaveLength(0);
   });
 
+  it("shows criterion ids beside descriptions so the model can emit valid lineage", async () => {
+    const model = modelFor(VALID);
+    await new RecursivePlanner({ model, budget: { maxScopePaths: 4 }, maxAttemptsPerUnit: 1 })
+      .plan({ root: ROOT, criteria: CRITERIA, evidence: EVIDENCE });
+
+    expect(model.seen[0]?.user).toContain("criterion-1:");
+    expect(model.seen[0]?.user).toContain("criterion-2:");
+  });
+
   it("returns a duplicate-parent-criterion diagnostic and repairs the cut", async () => {
     const model = modelFor(cut([
       child("domain", ["criterion-1", "criterion-2"], [DOMAIN], [DOMAIN, TEST_DOMAIN]),

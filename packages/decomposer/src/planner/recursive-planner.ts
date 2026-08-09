@@ -548,7 +548,7 @@ export interface CutPromptInput {
  */
 export function buildCutPrompt(input: CutPromptInput): { system: string; user: string } {
   const criteria = input.unit.criteria
-    .map((criterion) => `- ${criterion.description}`)
+    .map((criterion) => `- ${criterion.id}: ${criterion.description}`)
     .join("\n");
   const evidence = input.evidence
     .map((item) => `- ${item.reference} [${item.kind}] ${item.observation}`)
