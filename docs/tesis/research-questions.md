@@ -257,8 +257,8 @@ pre-registradas en `evidence/final-experiment/preregistration.md`:
    adaptativas por tarea producen un candidato entregado y verificado por un
    oráculo externo.
 2. **H-F2 — selección de granularidad según forma:** composite con hojas
-   domain/application/api para la tarea multi-capa y raíz leaf para la tarea
-   cohesiva, en ambas repeticiones.
+   domain/application/api para la tarea multi-capa y una envoltura de raíz con
+   una única hoja para la tarea cohesiva, en ambas repeticiones.
 
 La serie no contiene controles A/B y no responde superioridad, causalidad ni
 trade-off universal. Warehouse, G5, G6 y G7 pasan a una sección histórica o

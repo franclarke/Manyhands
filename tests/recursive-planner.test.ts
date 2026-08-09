@@ -113,6 +113,24 @@ describe("recursive planner", () => {
     expect(model.seen).toHaveLength(0);
   });
 
+  it("accepts a cohesive root wrapper with one executable child", async () => {
+    const model = scriptedModel({
+      root: cut("The whole request is one cohesive unit", [
+        child("inventory-summary", [D], ["test/inventory-summary.test.js"])
+      ])
+    });
+    const result = await new RecursivePlanner({ model, budget: { maxScopePaths: BUDGET } }).plan({
+      root: ROOT,
+      criteria: GOAL_CRITERIA,
+      evidence: EVIDENCE
+    });
+
+    expect(result.unresolved).toHaveLength(0);
+    expect(result.root.kind).toBe("composite");
+    expect(result.root.children).toHaveLength(1);
+    expect(result.root.children[0]?.kind).toBe("leaf");
+  });
+
   it("recurses until every unit fits the budget, producing depth beyond two", async () => {
     const { result } = await planDeep(DEEP_TREE);
 

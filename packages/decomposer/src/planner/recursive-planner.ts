@@ -89,7 +89,9 @@ function asUnit(child: ChildProposal, parentCriteria: readonly GoalCriterion[]):
  */
 export const CutProposalSchema = z.object({
   rationale: NonEmptyStringSchema,
-  children: z.array(ChildProposalSchema).min(2)
+  // The root may be a semantic wrapper around one executable leaf when the
+  // request is cohesive. Non-root cuts still reject one-child "splits" below.
+  children: z.array(ChildProposalSchema).min(1)
 }).strict();
 
 export type CutProposal = z.infer<typeof CutProposalSchema>;
@@ -327,7 +329,7 @@ export class RecursivePlanner {
       if (attempt > 1) {
         await input.observer?.onRepairAttempted?.({ unit, attempt, diagnostics: repairIssues, depth });
       }
-      const prompt = buildCutPrompt({ unit, criteria: input.criteria, evidence: input.evidence, repairIssues });
+      const prompt = buildCutPrompt({ unit, criteria: input.criteria, evidence: input.evidence, repairIssues, depth });
       let raw: unknown;
       try {
         raw = await this.model.proposeCut({
@@ -402,6 +404,9 @@ export class RecursivePlanner {
   ): string[] {
     const issues: string[] = [];
     const children = proposal.children;
+    if (children.length === 1 && parent.key !== "root") {
+      issues.push(`children: a non-root cut must contain at least two children; only the root may wrap one cohesive executable leaf.`);
+    }
     const inherited = new Set(parent.reads.map(normalize));
     const producedBySibling = new Map<string, string[]>();
     const keys = new Set<string>();
@@ -539,6 +544,7 @@ export interface CutPromptInput {
   criteria: readonly GoalCriterion[];
   evidence: readonly RepositoryEvidence[];
   repairIssues: readonly string[];
+  depth: number;
 }
 
 /**
@@ -569,6 +575,9 @@ export function buildCutPrompt(input: CutPromptInput): { system: string; user: s
       "- Every `read` must already exist in the repository evidence below, be written by a sibling, or be one the parent already reads.",
       "- Together the children must write every path the parent promised to write.",
       "- Every child must carry strictly fewer paths than this unit; a cut that does not shrink is not a cut.",
+      ...(input.depth === 0
+        ? ["- This is the root: if the whole request is one cohesive executable unit, return exactly one child for the root wrapper; otherwise return at least two children."]
+        : ["- This is not the root: return at least two children; a one-child wrapper is not a valid non-root cut."]),
       "- `criterionIds` assigns each parent criterion to exactly one child. Reuse the parent's ids; do not invent child criterion ids. The legacy `criterion` string is accepted only for v1 compatibility.",
       "- `rationale` states the boundary that justifies this cut in one sentence.",
       "- Do not declare abstract interfaces or ordering between children. Relations are derived only from the exact file reads and writes."

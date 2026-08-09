@@ -13,3 +13,9 @@ argumento central de la tesis después del recorte de alcance.
 
 G5, G6, G7, SP2 y Warehouse se conservan como evidencia histórica separada.
 No son celdas de este experimento ni se mezclan en sus veredictos.
+
+La primera rehearsal descubrió y dejó registrado un límite del planner: una
+raíz cohesiva necesitaba una envoltura de un solo hijo, pero el contrato sólo
+aceptaba cortes de dos hijos. La corrección TDD está en el runtime congelado de
+la serie final; la rehearsal anterior sigue siendo evidencia adversa del
+instrumento y no se cuenta.

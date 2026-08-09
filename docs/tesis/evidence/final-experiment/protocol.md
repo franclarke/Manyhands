@@ -44,7 +44,8 @@ nueva serie identificada; los artefactos de la serie fallida no se borran.
 ## Veredictos
 
 `PASS` exige 4/4 celdas entregadas y 4/4 oráculos PASS, además de los cuatro
-patrones estructurales de H-F2. Cualquier otro resultado es `FAIL` o
+patrones estructurales de H-F2: dos raíces multi-capa con al menos tres hojas y
+dos raíces cohesivas con una única hoja bajo la envoltura. Cualquier otro resultado es `FAIL` o
 `INCONCLUSIVE` según la regla registrada; nunca se redondea ni se imputan celdas
 faltantes.
 

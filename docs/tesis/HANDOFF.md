@@ -1672,5 +1672,6 @@ hipótesis positiva.
 La única serie nueva es `evidence/final-experiment/`, con dos proposiciones
 operables: H-F1 (delivery end-to-end y oráculo externo en dos tareas y dos
 repeticiones por tarea) y H-F2 (composite domain/application/api para la tarea
-multi-capa y raíz leaf para la tarea cohesiva, en ambas repeticiones). El
+multi-capa y una envoltura de raíz con una única hoja para la tarea cohesiva, en
+ambas repeticiones). El
 resultado sólo se generaliza al target y configuración congelados.

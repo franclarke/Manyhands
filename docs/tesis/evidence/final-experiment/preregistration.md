@@ -29,7 +29,10 @@ pre-registrada de la tarea:
 
 - **M (multi-capa):** raíz composite, al menos tres hojas ejecutables y
   ownership explícito para `domain`, `application` y `api`.
-- **S (cohesiva):** raíz leaf, profundidad cero y una única unidad ejecutable.
+- **S (cohesiva):** envoltura de raíz con exactamente una hoja ejecutable,
+  sin split semántico adicional. La envoltura existe porque el coordinador
+  necesita que la raíz, que no escribe archivos, delegue la evidencia a una
+  hoja; no cuenta como una segunda unidad de trabajo.
 
 **PASS:** las dos repeticiones M cumplen el primer patrón y las dos S el
 segundo, con eventos de planning y graph compiler persistidos.
