@@ -159,6 +159,13 @@ export const SemanticPlanSchema = z.union([SemanticPlanV2Schema, SemanticPlanV1S
   const pathEvidenceIds = new Set(plan.repositoryEvidence.filter((evidence) => evidence.kind === "path").map((evidence) => evidence.id));
   const outcomeCountByCriterion = new Map<string, number>();
   const anyOutcomeCountByCriterion = new Map<string, number>();
+  // Plans produced by the retired recursive v1 adapter used descriptive,
+  // synthetic criterion ids (for example `criterion:domain`) instead of the
+  // canonical goal ids. Keep those plans replayable when none of their
+  // outcomes carries a canonical id; once a plan mixes legacy and canonical
+  // lineage, fail closed so a new plan cannot silently lose ownership.
+  const knownLeafCriterionReferences = new Set<string>();
+  const unknownCriterionReferences = new Set<string>();
 
   for (const unit of units) {
     for (const evidenceId of unit.evidenceIds) if (!evidenceIds.has(evidenceId)) addIssue(context, `semantic unit ${unit.key} references unknown evidence ${evidenceId}`);
@@ -167,7 +174,8 @@ export const SemanticPlanSchema = z.union([SemanticPlanV2Schema, SemanticPlanV1S
     }
     for (const outcome of unit.outcomes) {
       for (const criterionId of outcome.criterionIds) {
-        if (!criterionIds.has(criterionId)) addIssue(context, `semantic outcome ${outcome.id} references unknown criterion ${criterionId}`);
+        if (!criterionIds.has(criterionId)) unknownCriterionReferences.add(criterionId);
+        else if (unit.kind === "leaf") knownLeafCriterionReferences.add(criterionId);
         anyOutcomeCountByCriterion.set(criterionId, (anyOutcomeCountByCriterion.get(criterionId) ?? 0) + 1);
         // Composite outcomes are an integration roll-up and may repeat the
         // criterion they prove. Acceptance ownership is the unique executable
@@ -178,10 +186,16 @@ export const SemanticPlanSchema = z.union([SemanticPlanV2Schema, SemanticPlanV1S
       }
     }
   }
-  for (const criterion of plan.criteria) {
-    const leafCount = outcomeCountByCriterion.get(criterion.id) ?? 0;
-    const count = leafCount > 0 ? leafCount : (anyOutcomeCountByCriterion.get(criterion.id) ?? 0);
-    if (criterion.required && count !== 1) addIssue(context, `required criterion ${criterion.id} must be owned by exactly one semantic outcome`);
+  const legacyLineage = knownLeafCriterionReferences.size === 0 && unknownCriterionReferences.size > 0;
+  if (!legacyLineage) {
+    for (const criterionId of unknownCriterionReferences) {
+      addIssue(context, `semantic outcome references unknown criterion ${criterionId}`);
+    }
+    for (const criterion of plan.criteria) {
+      const leafCount = outcomeCountByCriterion.get(criterion.id) ?? 0;
+      const count = leafCount > 0 ? leafCount : (anyOutcomeCountByCriterion.get(criterion.id) ?? 0);
+      if (criterion.required && count !== 1) addIssue(context, `required criterion ${criterion.id} must be owned by exactly one semantic outcome`);
+    }
   }
   for (const seam of plan.seams) {
     if (!unitKeys.has(seam.producerUnitKey)) addIssue(context, `semantic seam ${seam.id} references unknown producer ${seam.producerUnitKey}`);

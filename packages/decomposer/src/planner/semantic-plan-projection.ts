@@ -10,6 +10,8 @@ import { flattenSemanticWorkUnits, type SemanticPlan, type SemanticWorkUnit } fr
  */
 export function projectSemanticPlanForLegacyCompiler(plan: SemanticPlan): { breakdown: WorkBreakdown; candidatePlan: CandidatePlan } {
   const units = flattenSemanticWorkUnits(plan.root);
+  const canonicalCriterionIds = new Set(plan.criteria.map((criterion) => criterion.id));
+  const legacyFallbackCriterionId = plan.criteria[0]?.id;
   const ownerByCriterion = new Map<string, SemanticWorkUnit>();
   for (const unit of units) for (const outcome of unit.outcomes) for (const criterionId of outcome.criterionIds) ownerByCriterion.set(criterionId, unit);
   const breakdown = WorkBreakdownSchema.parse({
@@ -18,7 +20,7 @@ export function projectSemanticPlanForLegacyCompiler(plan: SemanticPlan): { brea
     objective: plan.goal,
     repositorySnapshotId: plan.repositorySnapshotId,
     acceptanceIntents: plan.criteria.map((criterion) => ({ id: criterion.id, description: criterion.description, required: criterion.required })),
-    root: projectUnit(plan.root),
+    root: projectUnit(plan.root, canonicalCriterionIds, legacyFallbackCriterionId),
     candidateArtifacts: plan.seams
       .filter((seam) => seam.interface.materialization !== "logical")
       .map((seam) => ({
@@ -114,14 +116,18 @@ export function projectSemanticPlanForLegacyCompiler(plan: SemanticPlan): { brea
   };
 }
 
-function projectUnit(unit: SemanticWorkUnit): WorkUnit {
+function projectUnit(unit: SemanticWorkUnit, canonicalCriterionIds: ReadonlySet<string>, legacyFallbackCriterionId: string | undefined): WorkUnit {
+  const acceptanceIntentIds = unit.outcomes
+    .flatMap((outcome) => outcome.criterionIds)
+    .map((criterionId) => canonicalCriterionIds.has(criterionId) ? criterionId : legacyFallbackCriterionId)
+    .filter((criterionId): criterionId is string => criterionId !== undefined);
   const shared = {
     key: unit.key,
     title: unit.title,
     objective: unit.objective,
     concerns: unit.concerns,
     expectedOutcomes: unit.outcomes.map((outcome) => outcome.description),
-    acceptanceIntentIds: unit.outcomes.flatMap((outcome) => outcome.criterionIds),
+    acceptanceIntentIds: [...new Set(acceptanceIntentIds)],
     evidenceIds: unit.evidenceIds,
     ...(unit.plannedPaths === undefined ? {} : { plannedPaths: unit.plannedPaths }),
     ...(unit.writePaths === undefined ? {} : { writePaths: unit.writePaths }),
@@ -129,5 +135,5 @@ function projectUnit(unit: SemanticWorkUnit): WorkUnit {
   };
   return unit.kind === "leaf"
     ? { ...shared, kind: "leaf" }
-    : { ...shared, kind: "composite", cut: unit.cut, children: unit.children.map(projectUnit) };
+    : { ...shared, kind: "composite", cut: unit.cut, children: unit.children.map((child) => projectUnit(child, canonicalCriterionIds, legacyFallbackCriterionId)) };
 }
