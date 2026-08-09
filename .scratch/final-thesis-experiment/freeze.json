@@ -1,0 +1,39 @@
+{
+  "series": "FINAL-THESIS-EXPERIMENT",
+  "frozenAt": "2026-08-09T13:07:06.9923179Z",
+  "protocol": "docs/tesis/evidence/final-experiment/protocol.md",
+  "preregistration": "docs/tesis/evidence/final-experiment/preregistration.md",
+  "manyhandsCommit": "8ff19c96f909f79c095b6bb27682be745e27ac01",
+  "targetTemplate": "docs/tesis/evidence/final-experiment/target-template",
+  "targetTemplateFileHashes": {
+    "package.json": "08a98bb7b712cfb271cae55561c9940e370a8881f8b6dfed0e726b183fd91e4d",
+    "src/api/warehouse-api.mjs": "85637b88a70bda646b46ab9c3c6202997febef5e6204be852dc91cf3bfe18a00",
+    "src/application/order-service.mjs": "be16aeffc08657edc479fef6fbfd85aae403b91cce0798ba8dacdafe4b799ba0",
+    "src/domain/orders.mjs": "4f602fb943ffe53f17fe506754052170fcf8da42aa3f17e1ae7438a9cc7e4f45",
+    "test/baseline.test.mjs": "80de34ab47454c212b912ab7d9592033b0ba7855ee9679a83518f9422d6254b9"
+  },
+  "oracle": {
+    "path": "docs/tesis/evidence/final-experiment/oracle/evaluator.mjs",
+    "sha256": "deacfeb9204c8c21d53cfd97d59fc50a9cd214e15f523220b06a312c81d576c3",
+    "scope": "external checkout only; never indexed or writable by the run"
+  },
+  "model": {
+    "executorId": "codex-cli",
+    "model": "gpt-5.4-mini",
+    "effort": "medium",
+    "stages": ["planning", "execution", "repair"]
+  },
+  "stimulus": {
+    "condition": "C",
+    "maxParallel": 2,
+    "scopePolicy": "strict",
+    "maxPlanningAttempts": 1,
+    "automaticRetryBudget": 0,
+    "maxCostUsd": 8,
+    "buildBeforeEachRun": "pnpm build",
+    "targetRoot": "C:/mh-final-thesis",
+    "rehearsal": "final-rehearsal",
+    "cells": ["M-C-r1", "M-C-r2", "S-C-r1", "S-C-r2"]
+  },
+  "historicalRunsExcluded": ["G5", "G6", "G7", "SP2", "Warehouse"]
+}

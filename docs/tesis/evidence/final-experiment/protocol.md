@@ -1,8 +1,8 @@
 # Experimento final de tesis — protocolo operativo
 
-Este protocolo implementa la pre-registración de `preregistration.md`. Una vez
-creado el freeze, ningún prompt, target, oráculo, umbral, modelo, orden o límite
-se modifica.
+Este protocolo implementa la pre-registración congelada de `preregistration.md`.
+Ningún prompt, target, oráculo, umbral, modelo, orden o límite se modifica
+durante la serie.
 
 ## Preparación
 

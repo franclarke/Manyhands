@@ -1,6 +1,6 @@
 # Experimento final de tesis — pre-registración
 
-**Estado:** diseño propuesto; no contiene resultados ni SHAs de candidatos.
+**Estado:** congelado antes de abrir celdas; no contiene resultados ni SHAs de candidatos.
 
 ## Propósito
 

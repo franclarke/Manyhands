@@ -1,0 +1,19 @@
+{
+  "series": "FINAL-THESIS-EXPERIMENT",
+  "cellId": "M-C-r1",
+  "taskId": "M",
+  "condition": "C",
+  "repetition": 1,
+  "workspaceId": "3c03c6b9-6f13-47ce-8af8-3c6a0f2a0001",
+  "workspaceName": "final-m-c-r1",
+  "targetRepo": "C:\\mh-final-thesis\\M-C-r1",
+  "baseSha": "cc050ed3952a7ed7a590b0fb7f7b624a68bfeb0d",
+  "goal": "Add express/standard order priority and backorder recording across the existing domain, application and API. priority accepts only standard or express, defaults to standard when omitted, and rejects other values with a priority error. An order that exceeds available stock must remain cancellable, record a positive backorder, emit exactly one application event of type backorder-recorded, and be observable through currentOrders(), currentBackorders(), and events(). currentBackorders() entries must be exactly { orderId, skuId, missing }. Preserve existing behavior. Add focused tests beside modified code.",
+  "acceptanceCriteria": [
+    "priority accepts only standard or express, defaults to standard when omitted, and invalid values fail with an error that names priority.",
+    "Insufficient stock leaves the order cancellable and records a positive backorder with exact { orderId, skuId, missing } data.",
+    "The application emits exactly one backorder-recorded event for each backorder and preserves non-backorder behavior.",
+    "The API exposes currentOrders(), currentBackorders(), and events(), with currentBackorders entries shaped exactly as { orderId, skuId, missing }."
+  ],
+  "selection": { "executorId": "codex-cli", "model": "gpt-5.4-mini", "effort": "medium" }
+}
