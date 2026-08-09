@@ -52,6 +52,7 @@ describe("artifact adoption for every contract a node produces", () => {
     const executionRequirements = compiled.graph.artifactRequirements
       .filter((requirement) => requirement.requiredFor === "execution");
     expect(executionRequirements.length).toBeGreaterThan(0);
+    const handoffProducerNodeId = executionRequirements[0]!.producerNodeId;
 
     const executed: string[] = [];
     const driver = new V2ExecutionDriver({
@@ -68,7 +69,10 @@ describe("artifact adoption for every contract a node produces", () => {
       }),
       execute: async (input) => {
         executed.push(input.node.id);
-        return successOutcome(input, compiled.graph.rootId);
+        const outcome = successOutcome(input, compiled.graph.rootId);
+        return input.node.id === handoffProducerNodeId
+          ? { ...outcome, artifactCherryPickMainline: 1 as const }
+          : outcome;
       }
     });
 
@@ -97,6 +101,9 @@ describe("artifact adoption for every contract a node produces", () => {
     for (const requirement of executionRequirements) {
       expect(adopted).toContain(requirement.artifactContract.id);
     }
+    expect(Object.values(state.adoptedArtifacts)
+      .filter((artifact) => artifact.nodeId === handoffProducerNodeId)
+      .every((artifact) => artifact.cherryPickMainline === 1)).toBe(true);
   });
 });
 

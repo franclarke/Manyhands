@@ -20,38 +20,28 @@ export interface CutFeasibilityCriticPort {
 }
 
 /**
- * Conservative default critic. A criterion can make a path obligation
- * explicit by naming one of the parent's grounded paths in its description.
- * The child that owns that criterion must then write the path. Criteria with
- * no explicit path remain the model's semantic responsibility.
+ * Conservative default critic. Only structured `requiredPaths` are write
+ * obligations. Paths mentioned in prose may instead be read-only evidence or
+ * protected regression tests, so inferring mutation authority from prose both
+ * rejects valid cuts and can encourage an agent to rewrite its oracle.
  */
 export class CutFeasibilityCritic implements CutFeasibilityCriticPort {
   review(input: CutFeasibilityReviewInput): CutFeasibilityReview {
-    const groundedPaths = unique([
-      ...input.parent.reads,
-      ...input.parent.writes,
-      ...input.evidence.filter((item) => item.kind === "path").map((item) => item.reference)
-    ]);
     const issues: string[] = [];
-    for (const child of input.proposal.children) {
-      for (const criterionId of child.criterionIds ?? []) {
-        const criterion = input.parent.criteria.find((candidate) => candidate.id === criterionId);
-        if (criterion === undefined) continue;
-        const requiredPaths = groundedPaths.filter((candidate) => mentionsPath(criterion.description, candidate));
-        for (const requiredPath of requiredPaths) {
-          if (child.writes.some((written) => normalize(written) === normalize(requiredPath))) continue;
-          issues.push(
-            `criterion_unimplementable: criterion ${criterionId} requires write path ${requiredPath}; child ${child.key} writes ${format(child.writes)}.`
-          );
-        }
+    for (const criterion of input.parent.criteria) {
+      const contributors = input.proposal.children.filter((child) => child.criterionIds?.includes(criterion.id));
+      if (contributors.length === 0) continue;
+      const contributorWrites = unique(contributors.flatMap((child) => child.writes));
+      const requiredPaths = unique(criterion.requiredPaths ?? []);
+      for (const requiredPath of requiredPaths) {
+        if (contributorWrites.some((written) => normalize(written) === normalize(requiredPath))) continue;
+        issues.push(
+          `criterion_unimplementable: criterion ${criterion.id} requires write path ${requiredPath}; its contributing children write ${format(contributorWrites)}.`
+        );
       }
     }
     return issues.length === 0 ? { ok: true } : { ok: false, issues };
   }
-}
-
-function mentionsPath(description: string, candidate: string): boolean {
-  return normalize(description).includes(normalize(candidate));
 }
 
 function normalize(value: string): string {

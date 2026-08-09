@@ -73,6 +73,7 @@ export type V2NodeExecutionOutcome =
       changedFiles: string[];
       evidenceMatrix: EvidenceMatrixRecord;
       artifactLocation: string;
+      artifactCherryPickMainline?: 1;
       integrationManifestId?: string;
       repairObservations?: V2RepairObservation[];
       finalManifestId?: string;
@@ -505,7 +506,8 @@ export class V2ExecutionDriver {
           artifactId: `${contract.id}:${attempt.attemptId}`,
           contract: { id: contract.id, revision: contract.revision },
           kind: "commit",
-          location: outcome.artifactLocation
+          location: outcome.artifactLocation,
+          ...(outcome.artifactCherryPickMainline === undefined ? {} : { cherryPickMainline: outcome.artifactCherryPickMainline })
         },
         adoptedAt: at
       }, {
@@ -932,7 +934,7 @@ export function leafFailureObservation(outcome: { reason: string; failureCause?:
     return { source: "executor", code, message: outcome.reason };
   }
   if (["transient", "network", "timeout"].includes(code ?? "")) {
-    return { source: "executor", code: code === "timeout" ? "transient" : code, timedOut: code === "timeout", message: outcome.reason };
+    return { source: "executor", code, timedOut: code === "timeout", message: outcome.reason };
   }
   if (["auth", "binary_missing", "quota", "executor_unavailable", "model_not_found"].includes(code ?? "")) {
     return { source: "executor", code, message: outcome.reason };

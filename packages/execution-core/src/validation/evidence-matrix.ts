@@ -50,7 +50,7 @@ export function buildEvidenceMatrix(input: {
   integrityFindings?: TestIntegrityFinding[];
 }): EvidenceMatrix {
   const notApplicable = new Set(input.notApplicableObligationIds ?? []);
-  const integrityFindings = input.integrityFindings ?? [];
+  const integrityFindings = classifyIntegrityFindings(input.integrityFindings ?? [], input.obligations, input.evidence);
   const criteria = input.obligations.map((obligation): CriterionEvidence => {
     if (notApplicable.has(obligation.id)) return result(obligation, "not_applicable", "Obligation explicitly does not apply to this candidate.", []);
     const evidence = input.evidence
@@ -72,7 +72,7 @@ export function buildEvidenceMatrix(input: {
     return result(obligation, "satisfied", "Acceptable linked evidence passed on the exact candidate.", refs);
   });
   const required = input.obligations.map((obligation, index) => ({ obligation, criterion: criteria[index]! })).filter(({ obligation }) => obligation.severity === "required");
-  const integrityFailed = integrityFindings.length > 0;
+  const integrityFailed = integrityFindings.some((finding) => finding.disposition !== "rebutted");
   const hardFailure = required.some(({ obligation, criterion }) => criterion.status === "failed" || (criterion.status === "flaky" && obligation.flakyPolicy === "forbid"));
   const uncovered = required.some(({ criterion }) => criterion.status === "uncovered");
   return {
@@ -82,6 +82,40 @@ export function buildEvidenceMatrix(input: {
     integrityFindings: integrityFindings.map((finding) => ({ ...finding })),
     negativeControls: input.evidence.flatMap((item) => item.negativeControl === undefined ? [] : [{ ...item.negativeControl }])
   };
+}
+
+/**
+ * Assertion-call count is a conservative proxy, not semantic proof of test
+ * weakening. A contract migration can replace a wrapper assertion and a
+ * nested-payload assertion with one exact aggregate assertion. Preserve that
+ * observation, but let differential evidence rebut it only when every required
+ * test obligation passes on the candidate and its negative control detects the
+ * old implementation. Structural tampering remains unconditionally blocking.
+ */
+function classifyIntegrityFindings(
+  findings: readonly TestIntegrityFinding[],
+  obligations: readonly ValidationObligation[],
+  evidence: readonly ValidationEvidenceObservation[]
+): TestIntegrityFinding[] {
+  const requiredTestObligations = obligations.filter((obligation) =>
+    obligation.severity === "required"
+    && obligation.acceptableEvidence.includes("test_result")
+  );
+  const rebuttalEvidenceRefs: string[] = [];
+  const differentialProofComplete = requiredTestObligations.length > 0 && requiredTestObligations.every((obligation) => {
+    if (obligation.negativeControl === "not_required") return false;
+    const final = evidence
+      .filter((item) => item.obligationId === obligation.id && item.kind === "test_result" && isRelevantEvidence(obligation, item))
+      .sort((left, right) => left.attempt - right.attempt)
+      .at(-1);
+    if (final?.passed !== true || final.negativeControl?.detectedFailure !== true) return false;
+    rebuttalEvidenceRefs.push(final.negativeControl.evidenceId);
+    return true;
+  });
+  const uniqueRebuttalRefs = [...new Set(rebuttalEvidenceRefs)];
+  return findings.map((finding) => finding.code === "assertion_removed" && differentialProofComplete
+    ? { ...finding, disposition: "rebutted", rebuttalEvidenceRefs: uniqueRebuttalRefs }
+    : { ...finding, disposition: "blocking" });
 }
 
 function isRelevantEvidence(obligation: ValidationObligation, evidence: ValidationEvidenceObservation): boolean {

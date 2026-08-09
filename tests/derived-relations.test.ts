@@ -150,6 +150,37 @@ describe("projection to a semantic plan", () => {
     expect(projected.criteria).toEqual(CRITERIA);
   });
 
+  it("declares legacy child-local criteria instead of passing them as unknown V2 ids", () => {
+    const localDomain = { id: "criterion:domain", description: "The domain cancels", required: true };
+    const localApplication = { id: "criterion:application", description: "The application exposes cancellation", required: true };
+    const projected = projectPlannedTree({
+      tree: {
+        ...TREE,
+        unit: { ...TREE.unit, criteria: [CRITERIA[0]!] },
+        children: [
+          { ...DOMAIN, unit: { ...DOMAIN.unit, criteria: [localDomain] } },
+          { ...APPLICATION, unit: { ...APPLICATION.unit, criteria: [localApplication] } }
+        ]
+      },
+      goal: "Add cancellation",
+      criteria: [CRITERIA[0]!],
+      evidence: EVIDENCE,
+      repositorySnapshotId: "sha256:fixture"
+    });
+
+    expect(projected.criteria.map((criterion) => criterion.id)).toEqual([
+      "criterion-1",
+      "criterion:domain",
+      "criterion:application"
+    ]);
+    expect(() => createSemanticPlan({
+      goal: "Add cancellation",
+      repositorySnapshotId: "sha256:fixture",
+      criteria: projected.criteria,
+      draft: projected.draft
+    })).not.toThrow();
+  });
+
   it("declares a write absent from the snapshot as a planned path, and a present one as evidence", () => {
     const projected = project();
     const domain = projected.draft.root.children[0]!;
@@ -186,12 +217,58 @@ describe("projection to a semantic plan", () => {
       .toEqual(["src/domain/backorders.js"]);
   });
 
-  it("keeps each declared criterion owned by exactly one leaf outcome", () => {
+  it("keeps disjoint criterion coverage on one leaf each", () => {
     const projected = project();
     const owners = projected.draft.root.children.flatMap((child) =>
       child.outcomes.flatMap((outcome) => outcome.criterionIds));
 
     expect(owners.sort()).toEqual(["criterion-1", "criterion-2"]);
+  });
+
+  it("assigns a criterion covered by sibling leaves to their lowest common ancestor", () => {
+    const criterion = { id: "criterion-1", description: "Deliver the complete backorder slice", required: true };
+    const sharedTree: PlannedUnit = {
+      ...TREE,
+      unit: { ...TREE.unit, criteria: [criterion] },
+      children: [
+        { ...DOMAIN, unit: { ...DOMAIN.unit, criteria: [criterion] } },
+        { ...APPLICATION, unit: { ...APPLICATION.unit, criteria: [criterion] } }
+      ]
+    };
+    const projected = projectPlannedTree({
+      tree: sharedTree,
+      goal: "Deliver the complete backorder slice",
+      criteria: [criterion],
+      evidence: EVIDENCE,
+      repositorySnapshotId: "sha256:fixture"
+    });
+    const plan = createSemanticPlan({
+      goal: "Deliver the complete backorder slice",
+      repositorySnapshotId: "sha256:fixture",
+      criteria: [...projected.criteria],
+      draft: projected.draft
+    });
+
+    expect(projectSemanticPlanForLegacyCompiler(plan).candidatePlan.acceptanceOwnership).toEqual([{
+      intentId: criterion.id,
+      ownerUnitKey: "backorders",
+      role: "global",
+      rationale: "Derived from semantic criterion coverage across the unit tree."
+    }]);
+  });
+
+  it("rejects unknown criterion ids in a newly produced V2 semantic plan", () => {
+    const projected = project();
+    for (const child of projected.draft.root.children) {
+      for (const outcome of child.outcomes) outcome.criterionIds = ["criterion:unknown"];
+    }
+
+    expect(() => createSemanticPlan({
+      goal: "Add backorders across the slice",
+      repositorySnapshotId: "sha256:fixture",
+      criteria: [...projected.criteria],
+      draft: projected.draft
+    })).toThrow(/unknown criterion/iu);
   });
 
   it("refuses to project a tree that still has an unresolved unit", () => {

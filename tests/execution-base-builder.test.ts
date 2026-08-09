@@ -77,6 +77,32 @@ describe("ExecutionBaseBuilder", () => {
     ]);
   });
 
+  it("materializes a cumulative handoff commit relative to its first parent", async () => {
+    const lineage = "9".repeat(40);
+    const git = new FakeGitRunner({
+      mergeParents: { [ARTIFACT_A_COMMIT]: [BASE, lineage] },
+      cherryPickResultShas: [RESULT]
+    });
+    const manager = new WorktreeManager({ git, repoRoot: "C:/repo", now: () => "2026-08-17T12:00:00.000Z" });
+    const builder = new ExecutionBaseBuilder({ git, worktreeManager: manager, now: () => "2026-08-17T12:00:00.000Z" });
+
+    const built = await builder.build({
+      runId: "run-repaired-handoff",
+      nodeId: "consumer",
+      baseCommit: BASE,
+      contractBaseline: { id: "consumer-contract", revision: "rev-1" },
+      artifacts: [{ ...artifact("repaired-output", ARTIFACT_A_COMMIT, "digest-repaired"), cherryPickMainline: 1 }],
+      inputFingerprint: FINGERPRINT
+    });
+
+    expect(git.calls.filter((call) => call.op === "cherryPick")).toEqual([
+      expect.objectContaining({
+        args: expect.objectContaining({ commitSha: ARTIFACT_A_COMMIT, mainline: 1 })
+      })
+    ]);
+    expect(built.manifest.resultingCommit).toBe(RESULT);
+  });
+
   it("fails with structured evidence and cleans the worktree before an executor can be invoked", async () => {
     const git = new FakeGitRunner({
       cherryPickOutcomes: [{ ok: false, kind: "conflict", conflictFiles: ["src/shared.ts"], output: "CONFLICT" }]

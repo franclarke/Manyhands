@@ -1,0 +1,123 @@
+\chapter{Conclusiones}
+\label{cap:conclusiones}
+
+\section{Respuesta a las preguntas de investigación}
+
+Esta tesis preguntó si un orquestador podía convertir objetivos de distinta
+forma en entregas verificables y si una política adaptativa podía seleccionar
+topologías coherentes con esas formas.
+
+La respuesta a la primera pregunta es \textbf{afirmativa dentro del alcance
+congelado}. En las cuatro celdas V2, \sistema\ planificó, ejecutó en aislamiento,
+integró, validó el commit candidato exacto y publicó una entrega confirmada. Los
+cuatro SHAs pasaron el oráculo externo. H-F1 obtuvo PASS 4/4.
+
+La respuesta a la segunda pregunta también es \textbf{afirmativa dentro de las
+dos formas estudiadas}. Las dos tareas multi-capa produjeron una raíz compuesta
+con tres hojas; las dos tareas cohesivas conservaron una única hoja ejecutable.
+H-F2 obtuvo PASS 4/4.
+
+Estas respuestas no dependen de Warehouse, G5, G6, G7 ni SP2. Esas líneas no se
+terminaron artificialmente ni se retiraron de la historia: se clasificaron con
+su resultado real y quedaron fuera del argumento confirmatorio.
+
+\section{Aportes}
+
+\begin{enumerate}
+  \item Una política de granularidad que separa el juicio semántico de la
+  decisión determinista y registra las razones de cada corte.
+  \item Un modelo híbrido de grafo con jerarquía de integración y relaciones
+  tipadas para artefactos, seams y conflictos.
+  \item Una ruta de ejecución aislada que controla scope, supervisa procesos y
+  adopta resultados contra una identidad de intento.
+  \item Un esquema de validación que liga criterios, comandos, baseline,
+  controles negativos e integridad de tests al candidate SHA exacto.
+  \item Una integración bottom-up y una entrega que requieren manifiesto,
+  validación final y recibo confirmado.
+  \item Un journal append-only que permite reconstruir estados, decisiones,
+  fallos y evidencia sin usar stdout como fuente de verdad.
+  \item Un paquete experimental autocontenido con pre-registro, freeze,
+  preflight, cuatro celdas, oráculo externo y artefactos crudos.
+\end{enumerate}
+
+\section{Veredicto final}
+
+\begin{center}
+  \fbox{\parbox{0.88\textwidth}{
+    \raggedright
+    \textbf{H-F1: PASS 4/4.}\quad
+    \textbf{H-F2: PASS 4/4.}\quad
+    Bajo el target Node ESM, el commit de ManyHands, Codex
+    \texttt{gpt-5.4-mini}, la política \texttt{adaptive-utility/3.1.0-pilot},
+    los límites y el protocolo congelados, ManyHands demostró viabilidad
+    end-to-end y selección repetida de las dos topologías pre-registradas.
+  }}
+\end{center}
+
+El veredicto no significa que la política sea superior a una hoja única, que sea
+óptima o que escale. V2 no tiene control A/B, utiliza un único repositorio
+pequeño y contiene dos repeticiones por forma. Su valor es demostrar una cadena
+completa y auditable, no estimar un efecto poblacional.
+
+\section{Resultados que se retiran de la afirmación positiva}
+
+La cadena Warehouse permanece en 1/8. G5 conserva su resultado comparativo
+negativo. G6 permanece inconcluso. G7 no produjo candidatos. SP2 fue piloto. La
+demostración visual posterior contiene un run entregado y varios runs adversos,
+pero no forma parte del experimento.
+
+Esta clasificación resuelve el problema editorial central: la tesis no necesita
+que todas las líneas iniciadas sean positivas. Necesita que cada afirmación se
+apoye en una prueba completa y que las líneas incompletas no se presenten como
+si aportaran fragmentos intercambiables de confirmación.
+
+\section{Limitaciones abiertas}
+
+\begin{itemize}
+  \item El target, lenguaje y modelo son únicos; no hay evidencia de
+  generalización.
+  \item Dos repeticiones por forma no habilitan inferencia estadística.
+  \item Los pesos y umbrales de la política no fueron calibrados empíricamente.
+  \item La no-determinación del planificador sigue siendo una fuente de
+  variabilidad.
+  \item No existe auditoría externa de accesibilidad de la UI.
+  \item La materialización selectiva de artefactos \texttt{files} está declarada
+  en contratos, pero el driver adopta todavía el commit completo. La capacidad
+  queda fuera de los aportes demostrados.
+  \item La ejecución depende de disponibilidad y cuota de proveedores remotos;
+  un candidato correcto puede no llegar a entrega si el executor no está
+  disponible.
+\end{itemize}
+
+\section{Trabajo futuro priorizado}
+\label{sec:futuro}
+
+El trabajo futuro debe ampliar evidencia, no acumular mecanismos sin prueba.
+El orden recomendado es:
+
+\begin{enumerate}
+  \item cerrar o retirar formalmente la materialización selectiva por archivos,
+  con una regresión Git real productor--consumidor;
+  \item replicar V2 en varios repositorios y lenguajes manteniendo un oráculo
+  externo por target;
+  \item diseñar un estudio A/B sólo después de fijar criterios externos idénticos
+  para todas las condiciones;
+  \item evaluar repositorios donde un agente único se aproxime realmente a su
+  límite de contexto, que es el régimen donde la descomposición podría aportar;
+  \item calibrar pesos y umbrales en un corpus separado del conjunto usado para
+  evaluar;
+  \item incorporar auditoría independiente del oráculo y de accesibilidad.
+\end{enumerate}
+
+\section{Cierre}
+
+La tesis no concluye que coordinar más agentes sea siempre mejor. Concluye algo
+más preciso y comprobable: es posible construir un plano de control que haga
+explícita la decisión de granularidad, preserve la identidad de los intentos,
+controle el alcance, integre resultados y exija evidencia externa sobre el
+commit que finalmente entrega. En el experimento final, esa cadena funcionó en
+las cuatro celdas y produjo las dos formas de grafo esperadas.
+
+La decisión de conservar los resultados adversos y retirar las líneas
+inconclusas del argumento positivo no debilita esta conclusión. Define su
+frontera y permite que el lector la verifique.

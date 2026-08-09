@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 1,
+  "runId": "a74c6959-8981-41b7-9341-899fca9a504e",
+  "eventSequence": 19,
+  "projection": {
+    "runId": "a74c6959-8981-41b7-9341-899fca9a504e",
+    "goal": "Add and export the pure domain function summarizeInventory(state) from src/domain/orders.mjs. It must derive { totalUnits, occupiedSkus } from state.stockBySku, work for different states without hardcoded values, preserve every existing operation, and include a focused domain test. Do not change application or api.",
+    "lifecycle": "running",
+    "sequence": 19,
+    "appliedEventIds": [
+      "run:a74c6959-8981-41b7-9341-899fca9a504e:created",
+      "repository:sha256:3571ba0f514fdc0af7990b00d8ecefea924a3ece4c1596fe5680f1749cc6c9da:inspection:2",
+      "planning:a74c6959-8981-41b7-9341-899fca9a504e:unit:root",
+      "planning:a74c6959-8981-41b7-9341-899fca9a504e:unit:add-summarize-inventory-domain-test",
+      "planning:semantic-2c4849f7e335ba1ef72567fd:completed:a74c6959-8981-41b7-9341-899fca9a504e",
+      "graph:graph-semantic-2c4849f7e335ba1ef72567fd-69fe78331c:r1:compiled",
+      "graph:graph-semantic-2c4849f7e335ba1ef72567fd-69fe78331c:r1:critic:completeness",
+      "graph:graph-semantic-2c4849f7e335ba1ef72567fd-69fe78331c:r1:critic:atomicity",
+      "graph:graph-semantic-2c4849f7e335ba1ef72567fd-69fe78331c:r1:critic:contract_compatibility",
+      "graph:graph-semantic-2c4849f7e335ba1ef72567fd-69fe78331c:r1:critic:dag_validity",
+      "graph:graph-semantic-2c4849f7e335ba1ef72567fd-69fe78331c:r1:critic:scope_isolation",
+      "graph:graph-semantic-2c4849f7e335ba1ef72567fd-69fe78331c:r1:critic:artifact_coverage",
+      "graph:graph-semantic-2c4849f7e335ba1ef72567fd-69fe78331c:r1:critic:risk_uncertainty",
+      "graph:graph-semantic-2c4849f7e335ba1ef72567fd-69fe78331c:r1:critic:validation_coverage",
+      "graph:graph-semantic-2c4849f7e335ba1ef72567fd-69fe78331c:r1:proposed",
+      "approve-plan:graph-semantic-2c4849f7e335ba1ef72567fd-69fe78331c:r1",
+      "planning:semantic-2c4849f7e335ba1ef72567fd:strategy:a74c6959-8981-41b7-9341-899fca9a504e",
+      "approve-plan:graph-semantic-2c4849f7e335ba1ef72567fd-69fe78331c:r1:resolved",
+      "approve-plan:graph-semantic-2c4849f7e335ba1ef72567fd-69fe78331c:r1:graph-approved"
+    ],
+    "decisions": {
+      "approve-plan:graph-semantic-2c4849f7e335ba1ef72567fd-69fe78331c:r1": {
+        "id": "approve-plan:graph-semantic-2c4849f7e335ba1ef72567fd-69fe78331c:r1",
+        "kind": "approve_plan",
+        "question": "Approve graph revision 1?",
+        "options": [
+          {
+            "id": "approve",
+            "label": "Approve plan"
+          },
+          {
+            "id": "request_changes",
+            "label": "Request changes"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-root-e84e8433c9"
+        ],
+        "evidenceRefs": [
+          "graph:graph-semantic-2c4849f7e335ba1ef72567fd-69fe78331c:r1"
+        ],
+        "impact": "acceptance",
+        "status": "resolved",
+        "resolution": {
+          "optionId": "approve"
+        }
+      }
+    },
+    "stoppedNodeIds": [],
+    "readiness": {
+      "readyNodeIds": [],
+      "pendingDecisionIds": []
+    },
+    "selectedWaves": [],
+    "attempts": {},
+    "adoptedArtifacts": {},
+    "nodeEvidenceMatrixIds": {},
+    "integrations": {},
+    "recoveryHistory": [],
+    "evidenceMatrices": [],
+    "outcomes": {
+      "execution": "pending",
+      "artifact": "missing",
+      "delivery": "not_started"
+    },
+    "evidenceMatrixSummaries": {},
+    "graphId": "graph-semantic-2c4849f7e335ba1ef72567fd-69fe78331c",
+    "graphRevision": 1,
+    "granularityStrategy": {
+      "policyVersion": "adaptive-utility/3.1.0-pilot",
+      "condition": "C",
+      "candidateTreeHash": "sha256:edce21829fc5855a49940a8556bfc73285cc22b5fdad8df083975b9d0279d81e",
+      "config": {
+        "minimumAdvantage": 0.15,
+        "maxLeafContextTokens": 24000,
+        "maxLeafScopePaths": 40,
+        "maxLeafPlannedPaths": 12
+      },
+      "assessments": {
+        "node-add-summarize-inventory-domain-test-60658f1533": {
+          "unitKey": "add-summarize-inventory-domain-test",
+          "nodeId": "node-add-summarize-inventory-domain-test-60658f1533",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.5
+          },
+          "benefit": 0,
+          "cost": 0.125,
+          "splitAdvantage": -0.125,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "config-package-json",
+            "path-3",
+            "path-2",
+            "sha256:3571ba0f514fdc0af7990b00d8ecefea924a3ece4c1596fe5680f1749cc6c9da"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-root-e84e8433c9": {
+          "unitKey": "root",
+          "nodeId": "node-root-e84e8433c9",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0.1782,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.5
+          },
+          "benefit": 0.0594,
+          "cost": 0.125,
+          "splitAdvantage": -0.0656,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-0",
+            "path-1",
+            "path-2",
+            "path-3",
+            "config-package-json",
+            "sha256:3571ba0f514fdc0af7990b00d8ecefea924a3ece4c1596fe5680f1749cc6c9da"
+          ],
+          "rationale": "No valid multi-child semantic split is available; leaf remains cohesive."
+        }
+      },
+      "metrics": {
+        "maxGraphDepth": 1,
+        "totalLeafCount": 1,
+        "averageBranchingFactor": 1
+      }
+    },
+    "approvedGraphRevision": 1
+  },
+  "checksum": "69dfc42a51bdb780a00c31a274453405bb6f7f2472de207fda30d048a9ccde73"
+}

@@ -34,11 +34,11 @@ describe("attempt adoption eligibility", () => {
     const decision = await adoptAttemptResult({
       attempt: { schemaVersion: 1, attemptId: "attempt-ok", runId: "run-1", nodeId: "node", inputFingerprint: fingerprint, createdAt: "2026-07-17T00:00:00.000Z", status: "finished", outputDigest: "sha256:result" },
       currentFingerprint: fingerprint,
-      artifact: { artifactId: "artifact-ok", contract: { id: "artifact-contract", revision: "r3" }, kind: "commit", location: "abc" },
+      artifact: { artifactId: "artifact-ok", contract: { id: "artifact-contract", revision: "r3" }, kind: "commit", location: "abc", cherryPickMainline: 1 },
       adoptedAt: "2026-07-17T00:02:00.000Z"
     }, artifactTransaction(artifacts));
     expect(decision).toMatchObject({ eligible: true, event: { type: "artifact.adopted" } });
-    expect(await artifacts.list("run-1")).toEqual([expect.objectContaining({ artifactId: "artifact-ok", digest: "sha256:result", producerAttemptId: "attempt-ok", contract: { id: "artifact-contract", revision: "r3" } })]);
+    expect(await artifacts.list("run-1")).toEqual([expect.objectContaining({ artifactId: "artifact-ok", digest: "sha256:result", producerAttemptId: "attempt-ok", contract: { id: "artifact-contract", revision: "r3" }, cherryPickMainline: 1 })]);
   });
 });
 

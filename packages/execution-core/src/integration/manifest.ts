@@ -12,6 +12,7 @@ export const IntegrationChildArtifactSchema = z.object({
   nodeId: EntityIdSchema, digest: NonEmptyStringSchema, producerAttemptId: EntityIdSchema,
   contract: ContractRefSchema, kind: z.enum(["commit", "files", "manifest", "logical"]),
   location: NonEmptyStringSchema, adoptedAt: IsoTimestampSchema,
+  cherryPickMainline: z.literal(1).optional(),
   evidenceRefs: z.array(NonEmptyStringSchema).optional(), diffRef: NonEmptyStringSchema.optional()
 }).strict();
 export type IntegrationChildArtifact = z.infer<typeof IntegrationChildArtifactSchema>;
@@ -230,7 +231,11 @@ export class IntegrationManifestExecutor {
             : child)
         });
       }
-      const outcome = await this.deps.git.cherryPick({ cwd: worktreePath, commitSha: artifact.location });
+      const outcome = await this.deps.git.cherryPick({
+        cwd: worktreePath,
+        commitSha: artifact.location,
+        ...(artifact.cherryPickMainline === undefined ? {} : { mainline: artifact.cherryPickMainline })
+      });
       signal?.throwIfAborted();
       if (outcome.ok) {
         const resultSha = await this.deps.git.head(worktreePath);

@@ -1,0 +1,61 @@
+{
+  "version": 2,
+  "run": {
+    "runId": "2fcea3bd-a85b-4a3d-a987-9d0badeb7f5f",
+    "workspaceId": "5739c004-f091-4e74-b426-e779c8c3cbce",
+    "userPrompt": "Repair the public reservation API contract proven by the existing failing test/public-reservation-api-contract.test.mjs. The domain and application service may keep their internal { ok, ... } result envelopes and Date objects; normalize only at the API adapter boundary. On successful calls: reserveStock must return the reservation object directly, confirmReservation must return the confirmed reservation object directly, releaseExpired must return the released reservations array directly, and listReservations must return reservation objects directly. Public reservation timestamps such as createdAt, expiresAt, and expiredAt must be ISO-8601 strings. Preserve structured shortage failures, all reservation lifecycle semantics, audit events, dashboard behavior, and existing allocation/restock endpoints. Update API and end-to-end tests to assert the consumer-facing contract instead of the internal service envelope. Make the complete npm test suite and npm run build pass. Do not remove or weaken the failing contract regression.",
+    "acceptanceCriteria": [],
+    "title": "Repair the public reservation API contract proven by the existing failing test/public-reservation-api-contract.test.mjs.",
+    "planningSelection": {
+      "executorId": "claude-code-cli",
+      "model": "sonnet"
+    },
+    "executionSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.4-mini",
+      "effort": "medium"
+    },
+    "repairSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.4-mini",
+      "effort": "medium"
+    },
+    "executionConfig": {
+      "maxParallel": 6,
+      "scopePolicy": "strict",
+      "leafTimeoutMs": 600000,
+      "integrationTimeoutMs": 600000,
+      "maxOutputBytes": 65536,
+      "maxValidationCommands": 20,
+      "installTimeoutMs": 300000,
+      "unexpectedCommitPolicy": "reject",
+      "routing": "fixed"
+    },
+    "targetContext": {
+      "sourceRealPath": "C:\\mh-thesis-visual",
+      "gitCommonDir": "C:\\mh-thesis-visual\\.git",
+      "physicalIdentity": {
+        "version": 1,
+        "device": "3156479238",
+        "file": "47287796087480255"
+      },
+      "sourceBranch": "main",
+      "sourceBaseCommit": "ff63e625c525178f12f1b2ea16a5be4f4fce703e",
+      "fingerprint": "c62bd4b97b781075",
+      "capturedAt": "2026-08-09T16:54:42.915Z"
+    },
+    "projection": {
+      "eventSequence": 19,
+      "lifecycle": "needs_approval",
+      "graphId": "graph-semantic-99ad531448cafeff455e3ea4-5cd7e8808a",
+      "graphRevision": 1,
+      "repositorySnapshotId": "sha256:4f69e73d132750dea93f0d1c02a8fd79aa76d98ed59571ca4d60f62c3944d28b",
+      "updatedAt": "2026-08-09T16:56:06.989Z"
+    },
+    "version": 24,
+    "mutationFence": 2,
+    "createdAt": "2026-08-09T16:54:42.915Z",
+    "updatedAt": "2026-08-09T16:56:07.010Z",
+    "heartbeatAt": "2026-08-09T16:56:05.825Z"
+  }
+}

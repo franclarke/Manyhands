@@ -415,7 +415,7 @@ export class RecursivePlanner {
     // prose criterion and are accepted on the compatibility path; they cannot
     // establish lineage and therefore remain unproven until projected again.
     const hasLineage = children.some((child) => child.criterionIds !== undefined);
-    const assignedCriterionCounts = new Map<string, number>();
+    const criterionCoverageCounts = new Map<string, number>();
 
     for (const child of children) {
       for (const written of child.writes) {
@@ -444,7 +444,7 @@ export class RecursivePlanner {
               issues.push(`lineage ${child.key}: unknown parent criterion ${criterionId}.`);
               continue;
             }
-            assignedCriterionCounts.set(criterionId, (assignedCriterionCounts.get(criterionId) ?? 0) + 1);
+            criterionCoverageCounts.set(criterionId, (criterionCoverageCounts.get(criterionId) ?? 0) + 1);
           }
         }
       }
@@ -474,10 +474,9 @@ export class RecursivePlanner {
     }
 
     if (hasLineage) {
-      for (const criterionId of parentCriterionIds) {
-        const count = assignedCriterionCounts.get(criterionId) ?? 0;
+      for (const criterionId of parent.criteria.filter((criterion) => criterion.required).map((criterion) => criterion.id)) {
+        const count = criterionCoverageCounts.get(criterionId) ?? 0;
         if (count === 0) issues.push(`lineage ${parent.key}: missing child assignment for parent criterion ${criterionId}.`);
-        else if (count > 1) issues.push(`lineage ${parent.key}: duplicate child assignment for parent criterion ${criterionId}; assigned ${count} times.`);
       }
     }
 
@@ -578,7 +577,7 @@ export function buildCutPrompt(input: CutPromptInput): { system: string; user: s
       ...(input.depth === 0
         ? ["- This is the root: if the whole request is one cohesive executable unit, return exactly one child for the root wrapper; otherwise return at least two children."]
         : ["- This is not the root: return at least two children; a one-child wrapper is not a valid non-root cut."]),
-      "- `criterionIds` assigns each parent criterion to exactly one child. Reuse the parent's ids; do not invent child criterion ids. The legacy `criterion` string is accepted only for v1 compatibility.",
+      "- `criterionIds` records which parent criteria each child contributes to. Reuse the parent's ids; a cross-cutting criterion may appear in several children, but every required parent criterion must appear in at least one child. Optional criteria may be omitted. Do not invent child criterion ids. The legacy `criterion` string is accepted only for v1 compatibility.",
       "- `rationale` states the boundary that justifies this cut in one sentence.",
       "- Do not declare abstract interfaces or ordering between children. Relations are derived only from the exact file reads and writes."
     ].join("\n"),

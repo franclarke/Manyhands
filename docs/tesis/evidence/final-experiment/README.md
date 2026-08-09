@@ -29,5 +29,10 @@ negativo falle. Esa correccion cambia el baseline y abre una serie V2 con nuevo
 freeze; V1 no cuenta como intento valido ni como PASS.
 El resultado cerrado de V2 está en [`FINAL-REPORT.md`](FINAL-REPORT.md). Los
 journals, snapshots, métricas, receipts y resultados del oráculo se preservan
-en `.scratch/final-thesis-experiment-v2/`; `freeze.json` allí es la autoridad
+dentro de este mismo directorio; [`freeze.json`](freeze.json) es la autoridad
 para hashes, celdas contadas, modelo y desviación del protocolo original.
+
+El protocolo y su enmienda conservan las rutas `.scratch` escritas durante la
+ejecución porque son documentos congelados. Esas menciones describen la
+custodia operativa original, no una dependencia del entregable: su contenido
+relevante fue copiado aquí y verificado contra los hashes del freeze.

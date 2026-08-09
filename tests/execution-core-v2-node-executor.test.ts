@@ -266,16 +266,19 @@ describe("V2NodeExecutor", () => {
     });
   });
 
-  it("repairs one failed code candidate in the same worktree and revalidates the repaired commit", async () => {
+  it("publishes a repaired leaf as one cumulative handoff from its physical base", async () => {
     const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
     const node = compiled.graph.nodes["node-api"]!;
     const contract = compiled.contracts.find((bundle) => bundle.task.nodeId === node.id)!;
     const firstCommit = "2".repeat(40);
     const repairedCommit = "3".repeat(40);
+    const handoffCommit = "4".repeat(40);
     const git = new FakeGitRunner({
       commitShas: [firstCommit, repairedCommit],
       diffCached: "diff",
-      diffCachedNameOnly: [contract.scope.allowedPaths[0]!]
+      diffCachedNameOnly: [contract.scope.allowedPaths[0]!],
+      diffRangeNameOnly: contract.scope.allowedPaths,
+      integrationHandoffSha: handoffCommit
     });
     const agent = successfulAgent();
     const prompts: string[] = [];
@@ -331,16 +334,27 @@ describe("V2NodeExecutor", () => {
 
     expect(outcome).toMatchObject({
       kind: "success",
-      candidateCommit: repairedCommit,
+      candidateCommit: handoffCommit,
+      artifactLocation: handoffCommit,
+      artifactCherryPickMainline: 1,
+      changedFiles: contract.scope.allowedPaths,
       evidenceMatrix: { outcome: "verified" },
       repairObservations: [{ pass: 1 }],
       finalManifestId: "manifest-repaired-root"
     });
-    expect(validated).toEqual([firstCommit, repairedCommit]);
+    expect(validated).toEqual([firstCommit, handoffCommit]);
     expect(agent.calls).toHaveLength(2);
-    expect(prepared).toEqual([repairedCommit]);
+    expect(prepared).toEqual([handoffCommit]);
     expect(prompts[1]).toContain("The API response violates the declared seam.");
     expect(git.calls.filter((call) => call.op === "commit")).toHaveLength(2);
+    expect(git.calls.filter((call) => call.op === "createIntegrationHandoff")).toEqual([
+      expect.objectContaining({
+        args: expect.objectContaining({
+          baseCommit: input.graph.baseCommit,
+          appliedCommitShas: [firstCommit, repairedCommit]
+        })
+      })
+    ]);
   });
 
   it("integrates adopted child artifacts bottom-up and prepares only a verified root candidate", async () => {

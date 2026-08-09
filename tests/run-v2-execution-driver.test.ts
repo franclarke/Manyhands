@@ -177,6 +177,56 @@ describe("V2ExecutionDriver", () => {
     expect(Object.values(state.decisions)).toHaveLength(1);
   });
 
+  it("does not automatically repeat a leaf that exhausted its executor deadline", async () => {
+    const breakdown = bookingBreakdown();
+    if (breakdown.root.kind !== "composite") throw new Error("Fixture must start composite.");
+    const domain = breakdown.root.children.find((unit) => unit.key === "domain");
+    if (domain?.kind !== "leaf") throw new Error("Missing atomic domain leaf.");
+    breakdown.root = domain;
+    breakdown.acceptanceIntents = breakdown.acceptanceIntents.filter((intent) => intent.id === "domain-ready");
+    breakdown.candidateSeams = [];
+    const compiled = compileGraphRevision(
+      { breakdown, repositorySnapshot: bookingSnapshot() },
+      compilerDependencies
+    );
+    const harness = coordinatorHarness(compiled.graph.graphId, "run-v2-timeout");
+    let attempts = 0;
+    const driver = new V2ExecutionDriver({
+      coordinator: harness.coordinator,
+      now: () => at,
+      loadCurrentInputs: staticInputs(compiled),
+      execute: async () => {
+        attempts += 1;
+        return {
+          kind: "failure",
+          reason: "timeout: timeout: The agent hit the hard timeout after producing a partial diff."
+        };
+      }
+    });
+
+    const state = await driver.run({
+      runId: "run-v2-timeout",
+      graph: compiled.graph,
+      contracts: compiled.contracts,
+      repositoryContextDigest: "sha256:repository",
+      executorProfile: { id: "codex-cli", revision: "gpt-5.4-mini" },
+      effectiveConfig: { maxParallel: 1 },
+      materializableNodeIds: [compiled.graph.rootId],
+      availableExecutorNodeIds: [compiled.graph.rootId],
+      conflictConstraints: [],
+      target: { sourceTargetFingerprint: "sha256:target", targetBranch: "main", targetHead: "base-head" }
+    });
+
+    expect(attempts).toBe(1);
+    expect(state.lifecycle).toBe("waiting_for_input");
+    expect(Object.values(state.attempts)).toHaveLength(1);
+    expect(state.recoveryHistory).toEqual(expect.arrayContaining([
+      expect.objectContaining({ failureClass: "executor_timeout" })
+    ]));
+    const classified = harness.events().find((event) => event.type === "failure.classified");
+    expect(classified?.type === "failure.classified" ? classified.payload.automaticRetryBudget : undefined).toBe(0);
+  });
+
   it("does not dispatch a second wave when bounded usage cannot prove the remaining budget", async () => {
     const compiled = compileGraphRevision(
       { breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() },

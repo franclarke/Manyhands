@@ -3,6 +3,7 @@ import { z } from "zod";
 
 export const FailureClassSchema = z.enum([
   "transient",
+  "executor_timeout",
   "environment_auth_executor",
   "code_test",
   "contract_decomposition",
@@ -48,7 +49,8 @@ export function classifyFailure(raw: FailureObservation): FailureClass {
   if (observation.code !== undefined && SHARED_CODES.has(observation.code)) return "shared_infrastructure";
   if (observation.code !== undefined && WORKSPACE_CODES.has(observation.code)) return "environment_workspace";
   if (observation.source === "planning" || (observation.code !== undefined && CONTRACT_CODES.has(observation.code))) return "contract_decomposition";
-  if (observation.source === "executor" && (observation.timedOut === true || observation.code === "transient" || observation.code === "network")) return "transient";
+  if (observation.source === "executor" && (observation.timedOut === true || observation.code === "timeout")) return "executor_timeout";
+  if (observation.source === "executor" && (observation.code === "transient" || observation.code === "network")) return "transient";
   if (observation.code !== undefined && ENVIRONMENT_CODES.has(observation.code)) return "environment_auth_executor";
   // Validation is the one source whose unmodelled failures ARE about the code:
   // a check ran against the candidate and did not pass. Everywhere else an

@@ -1,0 +1,467 @@
+{
+  "schemaVersion": 1,
+  "runId": "41ba47d5-d44a-4ec2-a470-d84437c6d076",
+  "eventSequence": 36,
+  "projection": {
+    "runId": "41ba47d5-d44a-4ec2-a470-d84437c6d076",
+    "goal": "Repair the public reservation API contract proven by the existing failing test/public-reservation-api-contract.test.mjs. Normalize only the public API boundary: reserveStock and confirmReservation must return reservation objects directly on success, releaseExpired must return the released reservations array directly, listReservations must expose reservation objects, and all public timestamps must be ISO strings. Preserve shortage failure envelopes, domain/application behavior, dashboard behavior, concurrency, idempotency, persistence, and validation. Update the API and end-to-end tests to assert the consumer-facing contract. Do not weaken, delete, skip, or rewrite the existing public reservation API contract regression.",
+    "lifecycle": "waiting_for_input",
+    "sequence": 36,
+    "appliedEventIds": [
+      "run:41ba47d5-d44a-4ec2-a470-d84437c6d076:created",
+      "repository:sha256:4f69e73d132750dea93f0d1c02a8fd79aa76d98ed59571ca4d60f62c3944d28b:inspection:2",
+      "planning:41ba47d5-d44a-4ec2-a470-d84437c6d076:unit:root",
+      "planning:41ba47d5-d44a-4ec2-a470-d84437c6d076:unit:normalize-api-boundary-contract",
+      "planning:41ba47d5-d44a-4ec2-a470-d84437c6d076:unit:update-reservation-e2e-contract-assertions",
+      "planning:semantic-ed34dc72514c8a7d61dcf071:completed:41ba47d5-d44a-4ec2-a470-d84437c6d076",
+      "graph:graph-semantic-ed34dc72514c8a7d61dcf071-b191c6c813:r1:compiled",
+      "graph:graph-semantic-ed34dc72514c8a7d61dcf071-b191c6c813:r1:critic:completeness",
+      "graph:graph-semantic-ed34dc72514c8a7d61dcf071-b191c6c813:r1:critic:atomicity",
+      "graph:graph-semantic-ed34dc72514c8a7d61dcf071-b191c6c813:r1:critic:contract_compatibility",
+      "graph:graph-semantic-ed34dc72514c8a7d61dcf071-b191c6c813:r1:critic:dag_validity",
+      "graph:graph-semantic-ed34dc72514c8a7d61dcf071-b191c6c813:r1:critic:scope_isolation",
+      "graph:graph-semantic-ed34dc72514c8a7d61dcf071-b191c6c813:r1:critic:artifact_coverage",
+      "graph:graph-semantic-ed34dc72514c8a7d61dcf071-b191c6c813:r1:critic:risk_uncertainty",
+      "graph:graph-semantic-ed34dc72514c8a7d61dcf071-b191c6c813:r1:critic:validation_coverage",
+      "graph:graph-semantic-ed34dc72514c8a7d61dcf071-b191c6c813:r1:proposed",
+      "approve-plan:graph-semantic-ed34dc72514c8a7d61dcf071-b191c6c813:r1",
+      "planning:semantic-ed34dc72514c8a7d61dcf071:strategy:41ba47d5-d44a-4ec2-a470-d84437c6d076",
+      "approve-plan:graph-semantic-ed34dc72514c8a7d61dcf071-b191c6c813:r1:resolved",
+      "approve-plan:graph-semantic-ed34dc72514c8a7d61dcf071-b191c6c813:r1:graph-approved",
+      "41ba47d5-d44a-4ec2-a470-d84437c6d076:readiness.observed:21",
+      "41ba47d5-d44a-4ec2-a470-d84437c6d076:wave.selected:22",
+      "41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-normalize-api-boundary-contract-f4ea64b47c:1:started",
+      "41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-normalize-api-boundary-contract-f4ea64b47c:1:code-failure:1",
+      "41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-normalize-api-boundary-contract-f4ea64b47c:1:code-repair:1",
+      "41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-normalize-api-boundary-contract-f4ea64b47c:1:candidate",
+      "41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-normalize-api-boundary-contract-f4ea64b47c:1:validation-completed",
+      "41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-normalize-api-boundary-contract-f4ea64b47c:1:artifact-adopted",
+      "41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-normalize-api-boundary-contract-f4ea64b47c:1:artifact-adopted:1",
+      "41ba47d5-d44a-4ec2-a470-d84437c6d076:readiness.observed:30",
+      "41ba47d5-d44a-4ec2-a470-d84437c6d076:wave.selected:31",
+      "41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-update-reservation-e2e-contract-assertions-9ce91be56a:1:started",
+      "41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-update-reservation-e2e-contract-assertions-9ce91be56a:1:failure-classified",
+      "41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-update-reservation-e2e-contract-assertions-9ce91be56a:1:failed",
+      "41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-update-reservation-e2e-contract-assertions-9ce91be56a:1:decision:41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-update-reservation-e2e-contract-assertions-9ce91be56a:1:decision",
+      "41ba47d5-d44a-4ec2-a470-d84437c6d076:readiness.observed:36"
+    ],
+    "decisions": {
+      "approve-plan:graph-semantic-ed34dc72514c8a7d61dcf071-b191c6c813:r1": {
+        "id": "approve-plan:graph-semantic-ed34dc72514c8a7d61dcf071-b191c6c813:r1",
+        "kind": "approve_plan",
+        "question": "Approve graph revision 1?",
+        "options": [
+          {
+            "id": "approve",
+            "label": "Approve plan"
+          },
+          {
+            "id": "request_changes",
+            "label": "Request changes"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-root-e84e8433c9"
+        ],
+        "evidenceRefs": [
+          "graph:graph-semantic-ed34dc72514c8a7d61dcf071-b191c6c813:r1"
+        ],
+        "impact": "acceptance",
+        "status": "resolved",
+        "resolution": {
+          "optionId": "approve"
+        }
+      },
+      "41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-update-reservation-e2e-contract-assertions-9ce91be56a:1:decision": {
+        "id": "41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-update-reservation-e2e-contract-assertions-9ce91be56a:1:decision",
+        "kind": "resolve_conflict",
+        "question": "The work for Update Reservation E2e Contract Assertions needs guidance: Could not materialize artifact artifact-contract-seam-normalize-api-boundary-contract-to-update-r-c51f9d0676:41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-normalize-api-boundary-contract-f4ea64b47c:1: artifact_conflict.",
+        "options": [
+          {
+            "id": "retry",
+            "label": "Retry with guidance"
+          },
+          {
+            "id": "stop",
+            "label": "Stop this branch"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-update-reservation-e2e-contract-assertions-9ce91be56a",
+          "node-normalize-api-boundary-contract-f4ea64b47c"
+        ],
+        "evidenceRefs": [
+          "artifact:artifact-contract-seam-normalize-api-boundary-contract-to-update-r-c51f9d0676:41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-normalize-api-boundary-contract-f4ea64b47c:1",
+          "failure:artifact_conflict",
+          "41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-update-reservation-e2e-contract-assertions-9ce91be56a:1",
+          "input-fingerprint:sha256:2467d199cb7753f268fd903be9cbba23b8eb7c97b660eaa337267c75a2edc622"
+        ],
+        "impact": "behavior",
+        "raisedAtGraphRevision": 1,
+        "status": "pending"
+      }
+    },
+    "stoppedNodeIds": [],
+    "readiness": {
+      "readyNodeIds": [],
+      "pendingDecisionIds": [
+        "41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-update-reservation-e2e-contract-assertions-9ce91be56a:1:decision"
+      ],
+      "explanations": [
+        {
+          "nodeId": "node-normalize-api-boundary-contract-f4ea64b47c",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "unresolved_decision",
+              "decisionId": "41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-update-reservation-e2e-contract-assertions-9ce91be56a:1:decision"
+            },
+            {
+              "code": "already_adopted"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-root-e84e8433c9",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "missing_artifact",
+              "artifactId": "artifact-contract-update-reservation-e2e-contract-assertions-outpu-81e4021ae6",
+              "requiredRevision": "sha256:1ce9d9b6be5f7c95eabc37b0a3f5056956450d355f4cc1161ca140fc98701600"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-update-reservation-e2e-contract-assertions-9ce91be56a",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "unresolved_decision",
+              "decisionId": "41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-update-reservation-e2e-contract-assertions-9ce91be56a:1:decision"
+            }
+          ]
+        }
+      ],
+      "effectiveConfig": {
+        "maxParallel": 6
+      },
+      "schedulerState": {
+        "materializableNodeIds": [
+          "node-root-e84e8433c9",
+          "node-normalize-api-boundary-contract-f4ea64b47c",
+          "node-update-reservation-e2e-contract-assertions-9ce91be56a"
+        ],
+        "activeResourceNodeIds": [],
+        "openCircuitBreakerNodeIds": [],
+        "availableExecutorNodeIds": [
+          "node-root-e84e8433c9",
+          "node-normalize-api-boundary-contract-f4ea64b47c",
+          "node-update-reservation-e2e-contract-assertions-9ce91be56a"
+        ],
+        "stoppedNodeIds": [],
+        "budgetAvailable": true
+      },
+      "budgetAvailable": true,
+      "conflictEvidence": [],
+      "evaluatedAt": "2026-08-09T17:05:10.438Z"
+    },
+    "selectedWaves": [
+      {
+        "waveId": "41ba47d5-d44a-4ec2-a470-d84437c6d076:wave:1",
+        "nodeIds": [
+          "node-normalize-api-boundary-contract-f4ea64b47c"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "node-root-e84e8433c9",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-normalize-api-boundary-contract-output-6b6b9f9ec5",
+                "requiredRevision": "sha256:3a7ecb7cc7c6fa3099cf72b1a2500ebe6f86760103c69b634f463c126c736f66"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-update-reservation-e2e-contract-assertions-outpu-81e4021ae6",
+                "requiredRevision": "sha256:1ce9d9b6be5f7c95eabc37b0a3f5056956450d355f4cc1161ca140fc98701600"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-update-reservation-e2e-contract-assertions-9ce91be56a",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-seam-normalize-api-boundary-contract-to-update-r-c51f9d0676",
+                "requiredRevision": "sha256:96fb40b429e9f7de5bbef87e6c9868e26c97263b555e8200395f0e5cd290acba"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "conflictEvidence": [],
+        "evaluatedAt": "2026-08-09T17:05:10.438Z"
+      },
+      {
+        "waveId": "41ba47d5-d44a-4ec2-a470-d84437c6d076:wave:2",
+        "nodeIds": [
+          "node-update-reservation-e2e-contract-assertions-9ce91be56a"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "node-normalize-api-boundary-contract-f4ea64b47c",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-root-e84e8433c9",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-update-reservation-e2e-contract-assertions-outpu-81e4021ae6",
+                "requiredRevision": "sha256:1ce9d9b6be5f7c95eabc37b0a3f5056956450d355f4cc1161ca140fc98701600"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "conflictEvidence": [],
+        "evaluatedAt": "2026-08-09T17:05:10.438Z"
+      }
+    ],
+    "attempts": {
+      "41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-normalize-api-boundary-contract-f4ea64b47c:1": {
+        "attemptId": "41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-normalize-api-boundary-contract-f4ea64b47c:1",
+        "nodeId": "node-normalize-api-boundary-contract-f4ea64b47c",
+        "inputFingerprint": "sha256:92bf35f40a0658be95f0bdcae9dd2a9e60cafdc94fd1fa61007acd7f0e6b8b30",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 1,
+        "candidateCommit": "3e631c3d50f52ffb6b928431529e789d63035a26",
+        "outputDigest": "sha256:9755922a1f45d84a25fc18c9165c1e0949ab805f1e1ae8475ff1cada06bf7295",
+        "usage": {
+          "tokensTotal": 18547,
+          "costUsd": 0.08346150000000001,
+          "source": "reported"
+        }
+      },
+      "41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-update-reservation-e2e-contract-assertions-9ce91be56a:1": {
+        "attemptId": "41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-update-reservation-e2e-contract-assertions-9ce91be56a:1",
+        "nodeId": "node-update-reservation-e2e-contract-assertions-9ce91be56a",
+        "inputFingerprint": "sha256:2467d199cb7753f268fd903be9cbba23b8eb7c97b660eaa337267c75a2edc622",
+        "kind": "execution",
+        "status": "failed",
+        "repairPasses": 0,
+        "failureReason": "Could not materialize artifact artifact-contract-seam-normalize-api-boundary-contract-to-update-r-c51f9d0676:41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-normalize-api-boundary-contract-f4ea64b47c:1: artifact_conflict."
+      }
+    },
+    "adoptedArtifacts": {
+      "artifact-contract-normalize-api-boundary-contract-output-6b6b9f9ec5:41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-normalize-api-boundary-contract-f4ea64b47c:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-normalize-api-boundary-contract-output-6b6b9f9ec5:41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-normalize-api-boundary-contract-f4ea64b47c:1",
+        "runId": "41ba47d5-d44a-4ec2-a470-d84437c6d076",
+        "nodeId": "node-normalize-api-boundary-contract-f4ea64b47c",
+        "digest": "sha256:9755922a1f45d84a25fc18c9165c1e0949ab805f1e1ae8475ff1cada06bf7295",
+        "producerAttemptId": "41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-normalize-api-boundary-contract-f4ea64b47c:1",
+        "contract": {
+          "id": "artifact-contract-normalize-api-boundary-contract-output-6b6b9f9ec5",
+          "revision": "sha256:3a7ecb7cc7c6fa3099cf72b1a2500ebe6f86760103c69b634f463c126c736f66"
+        },
+        "kind": "commit",
+        "location": "3e631c3d50f52ffb6b928431529e789d63035a26",
+        "adoptedAt": "2026-08-09T17:09:24.967Z"
+      },
+      "artifact-contract-seam-normalize-api-boundary-contract-to-update-r-c51f9d0676:41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-normalize-api-boundary-contract-f4ea64b47c:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-seam-normalize-api-boundary-contract-to-update-r-c51f9d0676:41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-normalize-api-boundary-contract-f4ea64b47c:1",
+        "runId": "41ba47d5-d44a-4ec2-a470-d84437c6d076",
+        "nodeId": "node-normalize-api-boundary-contract-f4ea64b47c",
+        "digest": "sha256:9755922a1f45d84a25fc18c9165c1e0949ab805f1e1ae8475ff1cada06bf7295",
+        "producerAttemptId": "41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-normalize-api-boundary-contract-f4ea64b47c:1",
+        "contract": {
+          "id": "artifact-contract-seam-normalize-api-boundary-contract-to-update-r-c51f9d0676",
+          "revision": "sha256:96fb40b429e9f7de5bbef87e6c9868e26c97263b555e8200395f0e5cd290acba"
+        },
+        "kind": "commit",
+        "location": "3e631c3d50f52ffb6b928431529e789d63035a26",
+        "adoptedAt": "2026-08-09T17:09:24.967Z"
+      }
+    },
+    "nodeEvidenceMatrixIds": {
+      "node-normalize-api-boundary-contract-f4ea64b47c": "matrix-1d17c16b58f274f6"
+    },
+    "integrations": {},
+    "recoveryHistory": [
+      {
+        "eventId": "41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-normalize-api-boundary-contract-f4ea64b47c:1:code-failure:1",
+        "attemptId": "41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-normalize-api-boundary-contract-f4ea64b47c:1",
+        "nodeId": "node-normalize-api-boundary-contract-f4ea64b47c",
+        "kind": "failure",
+        "failureClass": "code_test"
+      },
+      {
+        "eventId": "41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-update-reservation-e2e-contract-assertions-9ce91be56a:1:failure-classified",
+        "attemptId": "41ba47d5-d44a-4ec2-a470-d84437c6d076:attempt:node-update-reservation-e2e-contract-assertions-9ce91be56a:1",
+        "nodeId": "node-update-reservation-e2e-contract-assertions-9ce91be56a",
+        "kind": "failure",
+        "failureClass": "unclassified"
+      }
+    ],
+    "evidenceMatrices": [
+      "matrix-1d17c16b58f274f6"
+    ],
+    "outcomes": {
+      "execution": "pending",
+      "artifact": "missing",
+      "delivery": "not_started"
+    },
+    "evidenceMatrixSummaries": {
+      "matrix-1d17c16b58f274f6": {
+        "candidateCommit": "3e631c3d50f52ffb6b928431529e789d63035a26",
+        "outcome": "verified",
+        "validationRecipeDigest": "sha256:b0a937ef9b4801e4d8f4ad001d34357b2a4320266c25a44813111ce899345c11"
+      }
+    },
+    "graphId": "graph-semantic-ed34dc72514c8a7d61dcf071-b191c6c813",
+    "graphRevision": 1,
+    "granularityStrategy": {
+      "policyVersion": "adaptive-utility/3.1.0-pilot",
+      "condition": "C",
+      "candidateTreeHash": "sha256:11fab292759212559dc57a5b25372ea04f21e8ea200244c3dd9e2d7c5cc42312",
+      "config": {
+        "minimumAdvantage": 0.15,
+        "maxLeafContextTokens": 24000,
+        "maxLeafScopePaths": 40,
+        "maxLeafPlannedPaths": 12
+      },
+      "assessments": {
+        "node-normalize-api-boundary-contract-f4ea64b47c": {
+          "unitKey": "normalize-api-boundary-contract",
+          "nodeId": "node-normalize-api-boundary-contract-f4ea64b47c",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.0909
+          },
+          "benefit": 0,
+          "cost": 0.0227,
+          "splitAdvantage": -0.0227,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-2",
+            "path-3",
+            "path-4",
+            "path-12",
+            "path-7",
+            "path-10",
+            "path-11",
+            "path-8",
+            "config-package-json",
+            "path-1",
+            "path-6",
+            "sha256:4f69e73d132750dea93f0d1c02a8fd79aa76d98ed59571ca4d60f62c3944d28b"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-update-reservation-e2e-contract-assertions-9ce91be56a": {
+          "unitKey": "update-reservation-e2e-contract-assertions",
+          "nodeId": "node-update-reservation-e2e-contract-assertions-9ce91be56a",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.1429
+          },
+          "benefit": 0,
+          "cost": 0.0357,
+          "splitAdvantage": -0.0357,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-5",
+            "path-12",
+            "path-9",
+            "path-0",
+            "config-package-json",
+            "path-13",
+            "sha256:4f69e73d132750dea93f0d1c02a8fd79aa76d98ed59571ca4d60f62c3944d28b"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-root-e84e8433c9": {
+          "unitKey": "root",
+          "nodeId": "node-root-e84e8433c9",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": true,
+          "features": {
+            "contextRelief": 0.2595,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 1,
+            "pathOverlap": 0.2,
+            "validationDuplication": 0.5,
+            "uncertainty": 0.1169
+          },
+          "benefit": 0.0865,
+          "cost": 0.4542,
+          "splitAdvantage": -0.3677,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-0",
+            "path-1",
+            "path-2",
+            "path-3",
+            "path-4",
+            "path-5",
+            "path-6",
+            "path-7",
+            "path-8",
+            "path-9",
+            "path-10",
+            "path-11",
+            "path-12",
+            "path-13",
+            "config-package-json",
+            "sha256:4f69e73d132750dea93f0d1c02a8fd79aa76d98ed59571ca4d60f62c3944d28b"
+          ],
+          "rationale": "Split advantage -0.3677 is below minimum 0.1500."
+        }
+      },
+      "metrics": {
+        "maxGraphDepth": 1,
+        "totalLeafCount": 2,
+        "averageBranchingFactor": 2
+      }
+    },
+    "approvedGraphRevision": 1
+  },
+  "checksum": "10d1e6a09bc21775d5b2ca4d6570a05942cec67da7f6d023054d9f01dce269cb"
+}

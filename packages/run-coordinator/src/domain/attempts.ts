@@ -18,7 +18,7 @@ export type AttemptAdoptionDecision =
 export function decideAttemptAdoption(input: {
   attempt: AttemptRecord;
   currentFingerprint: string;
-  artifact: { artifactId: string; contract: AdoptedArtifact["contract"]; kind: AdoptedArtifact["kind"]; location: string };
+  artifact: { artifactId: string; contract: AdoptedArtifact["contract"]; kind: AdoptedArtifact["kind"]; location: string; cherryPickMainline?: 1 };
   adoptedAt?: string;
 }): AttemptAdoptionDecision {
   const attempt = AttemptRecordSchema.parse(input.attempt);
@@ -27,7 +27,7 @@ export function decideAttemptAdoption(input: {
     const reason = `Attempt fingerprint ${attempt.inputFingerprint} is stale; current input is ${input.currentFingerprint}.`;
     return { eligible: false, reason, event: { type: "attempt.stale", payload: { attemptId: attempt.attemptId, nodeId: attempt.nodeId, attemptedFingerprint: attempt.inputFingerprint, currentFingerprint: input.currentFingerprint, reason } } };
   }
-  const artifact: AdoptedArtifact = { schemaVersion: 1, artifactId: input.artifact.artifactId, runId: attempt.runId, nodeId: attempt.nodeId, digest: attempt.outputDigest, producerAttemptId: attempt.attemptId, contract: input.artifact.contract, kind: input.artifact.kind, location: input.artifact.location, adoptedAt: input.adoptedAt ?? new Date().toISOString() };
+  const artifact: AdoptedArtifact = { schemaVersion: 1, artifactId: input.artifact.artifactId, runId: attempt.runId, nodeId: attempt.nodeId, digest: attempt.outputDigest, producerAttemptId: attempt.attemptId, contract: input.artifact.contract, kind: input.artifact.kind, location: input.artifact.location, ...(input.artifact.cherryPickMainline === undefined ? {} : { cherryPickMainline: input.artifact.cherryPickMainline }), adoptedAt: input.adoptedAt ?? new Date().toISOString() };
   return { eligible: true, artifact, event: { type: "artifact.adopted", payload: { artifact } } };
 }
 

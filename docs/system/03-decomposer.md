@@ -33,7 +33,7 @@ para completar el schema.
 El planner productivo es `RecursivePlanner`. **No** pide un árbol entero de una
 vez: le pide al modelo **un corte de una unidad**, valida ese corte, y recursa
 sobre los hijos hasta punto fijo. El contrato del corte tiene cinco campos por
-hijo — `key`, `objective`, `criterion`, `reads`, `writes` — y nada más.
+hijo — `key`, `objective`, `criterionIds`, `reads`, `writes` — y nada más.
 
 Una unidad es una **hoja ejecutable** cuando entra en el presupuesto de scope
 **y escribe al menos un test**. Escribir un test es lo que la vuelve capaz de
@@ -45,7 +45,7 @@ corte aceptado satisface:
 |---|---|
 | P1 | Toda hoja es ejecutable: entra en presupuesto y escribe un test. |
 | P2 | Las escrituras de las hojas son disjuntas. |
-| P3 | Cada criterio del padre queda cubierto por exactamente un hijo. |
+| P3 | Cada criterio requerido del padre queda cubierto por uno o más hijos. |
 | P4 | Todo hijo reduce el scope respecto del padre. |
 
 Un corte rechazado vuelve al modelo con los diagnósticos del validador
@@ -116,6 +116,20 @@ partes mecánicas y rechazar ambigüedad no resuelta.
 Un finding contiene severidad, evidencia, nodo/contrato afectado y reparación
 propuesta. Los errores bloquean aprobación. Los warnings se muestran con
 impacto; no se esconden en logs.
+
+`criterionIds` expresa cobertura, no ownership. Un criterio transversal puede
+ser referenciado por varias hojas; el owner ejecutable se deriva de forma
+determinista como el ancestro común más bajo de los contribuidores terminales.
+La repetición entre hermanos es válida, la repetición dentro de una unidad y los
+IDs desconocidos no lo son. El contrato del owner materializa los tests de sus
+descendientes y los vuelve a ejecutar sobre el candidato integrado exacto.
+
+Una ruta mencionada en la descripción de un criterio no concede autoridad de
+escritura: puede ser evidencia de lectura o un oráculo protegido. Sólo
+`requiredPaths` estructurado crea una obligación de modificación y el
+`CutFeasibilityCritic` la comprueba sobre la unión de escrituras de todos los
+contribuidores. Esto evita rechazar un corte correcto por no reescribir el test
+que justamente debe permanecer independiente.
 
 ## Fallos
 

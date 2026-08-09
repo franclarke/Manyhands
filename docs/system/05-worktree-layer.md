@@ -41,6 +41,17 @@ conflictos. No aplica todos los commits de predecessors por transitividad.
 8. validar el commit en otro sandbox limpio;
 9. conservar o eliminar el worktree según política de evidencia.
 
+Una reparación local puede producir más de un commit físico en el mismo
+worktree. El artefacto adoptado no apunta al último delta aislado: se crea un
+handoff acumulativo cuyo primer padre es la base física del intento y cuyo
+segundo padre conserva la lineage completa hasta la reparación. La validación
+se ejecuta sobre ese handoff exacto y `changedFiles` se calcula contra la base.
+Así un consumidor puede materializar el resultado completo con un solo
+`cherry-pick -m 1`, sin perder el cambio inicial ni depender del estado privado
+del worktree productor. Ese modo de aplicación viaja explícitamente como
+`cherryPickMainline: 1` en el outcome, el artefacto adoptado y el manifest de la
+base; no se infiere de cualquier merge arbitrario.
+
 ## Propiedad de commits
 
 El agente modifica archivos, no crea el commit adoptable. Si crea commits:

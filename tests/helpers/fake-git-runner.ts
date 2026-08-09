@@ -40,6 +40,8 @@ export interface FakeGitRunnerConfig {
   statusPorcelain?: string[];
   /** Merge commit -> [firstParent, secondParent]. */
   mergeParents?: Record<string, [string, string]>;
+  /** Explicit SHA returned when production creates a transportable handoff. */
+  integrationHandoffSha?: string;
   /** Commit messages used by crash-recovery provenance checks. */
   commitMessages?: Record<string, string>;
 }
@@ -258,7 +260,9 @@ export class FakeGitRunner implements GitRunner {
     appliedCommitShas: readonly string[];
   }): Promise<string> {
     this.record("createIntegrationHandoff", { ...params, appliedCommitShas: [...params.appliedCommitShas] });
-    return this.heads[params.cwd] ?? params.baseCommit;
+    const handoff = this.config.integrationHandoffSha ?? this.heads[params.cwd] ?? params.baseCommit;
+    this.heads[params.cwd] = handoff;
+    return handoff;
   }
 
   async showFile(

@@ -81,8 +81,9 @@ export interface ProjectedPlan {
  * Projects the planned tree onto the existing `SemanticPlan` shape so the
  * current Graph Compiler keeps working unchanged. Its twelve invariants stop
  * being lotteries a model has to win and become theorems of this construction:
- * criteria are owned exactly once because the cut partitions them, seams have a
- * producer and consumers because they are derived, and executable
+ * criterion coverage may span several leaves while ownership is derived at
+ * their lowest common ancestor, seams have a producer and consumers because
+ * they are derived, and executable
  * materialization is `files` because the dependency is files.
  */
 export function projectPlannedTree(input: ProjectionInput): ProjectedPlan {
@@ -98,10 +99,14 @@ export function projectPlannedTree(input: ProjectionInput): ProjectedPlan {
   const testPathsByKey = new Map(leavesOf(input.tree)
     .map((leaf) => [leaf.unit.key, leaf.unit.writes.filter(isTestPath)] as const));
 
-  // Child units inherit criterion objects from their parent. The semantic plan
-  // declares the goal criteria once; flattening the tree here would duplicate
-  // those ids and make a valid lineage fail schema validation.
-  const criteria: GoalCriterion[] = [...input.criteria];
+  // Canonical lineage reuses the run criteria across contributing units. A
+  // legacy prose cut can also create an explicit child-local criterion. Declare
+  // both sets once so V2 never depends on the unknown-id replay exception.
+  const criteriaById = new Map(input.criteria.map((criterion) => [criterion.id, criterion] as const));
+  for (const planned of flattenPlannedUnits(input.tree)) {
+    for (const criterion of planned.unit.criteria) criteriaById.set(criterion.id, criterion);
+  }
+  const criteria: GoalCriterion[] = [...criteriaById.values()];
 
   const root = projectUnit(input.tree, evidenceIdByPath, testPathsByKey);
   // The plan must carry the evidence its units cite; a reference to an item the

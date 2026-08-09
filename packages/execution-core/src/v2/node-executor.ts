@@ -36,6 +36,7 @@ export interface V2ExecutionArtifact {
   contract: { id: string; revision: string };
   kind: "commit" | "files" | "manifest" | "logical";
   location: string;
+  cherryPickMainline?: 1 | undefined;
   adoptedAt: string;
 }
 
@@ -58,6 +59,8 @@ export interface V2ExecutionEvidenceMatrix {
     code: "test_removed" | "test_script_weakened" | "test_configuration_changed" | "test_skipped" | "test_only" | "assertion_removed" | "required_public_surface_unchanged" | "required_public_surface_unrepresented";
     path: string;
     message: string;
+    disposition?: "blocking" | "rebutted";
+    rebuttalEvidenceRefs?: string[];
   }>;
   negativeControls?: Array<{
     evidenceId: string;
@@ -140,6 +143,7 @@ export type V2PhysicalNodeExecutionOutcome =
       changedFiles: string[];
       evidenceMatrix: V2ExecutionEvidenceMatrix;
       artifactLocation: string;
+      artifactCherryPickMainline?: 1;
       integrationManifestId?: string;
       repairObservations?: Array<{ kind: "code" | "integration"; pass: number; evidenceRefs: string[] }>;
       finalManifestId?: string;
@@ -647,17 +651,46 @@ export class V2NodeExecutor {
         return { kind: "failure", reason: `Code repair failed: ${executionFailureReason(result)}`, usage: usageOf(result), repairObservations: [repairObservation] };
       }
       const repairedCommit = result.commitSha ?? result.currentHead;
+      // A repair commit is a delta on top of the first candidate. Publishing
+      // only that terminal delta makes the artifact impossible to materialize
+      // on a consumer's clean base. Reuse the integration handoff shape so the
+      // artifact has one transportable first-parent diff while retaining the
+      // complete physical repair lineage as its second parent.
+      const handoffCommit = await this.options.git.createIntegrationHandoff({
+        cwd: worktree.path,
+        baseCommit: worktree.baseCommit,
+        message: `mh-v2-leaf-handoff: ${input.node.id}`,
+        appliedCommitShas: [candidateCommit, repairedCommit]
+      });
+      const changedFiles = await this.options.git.diffRangeNameOnly({
+        cwd: worktree.path,
+        from: worktree.baseCommit,
+        to: handoffCommit
+      });
+      const missingArtifactPaths = missingExpectedArtifactPaths(
+        input.outputArtifactContract.expectedPaths,
+        changedFiles,
+        undefined
+      );
+      if (missingArtifactPaths.length > 0) {
+        return {
+          kind: "failure",
+          reason: `Repaired candidate omitted declared artifact paths: ${missingArtifactPaths.join(", ")}.`,
+          usage: usageOf(result),
+          repairObservations: [repairObservation]
+        };
+      }
       const evidenceMatrix = await this.options.validator.validate({
         runId: input.runId,
         attemptId: input.attemptId,
         contract: input.contract,
         ...(prepared === undefined ? {} : { prepared }),
-        candidateCommit: repairedCommit,
+        candidateCommit: handoffCommit,
         baselineCommit: input.graph.baseCommit,
         ...(input.signal !== undefined ? { signal: input.signal } : {})
       });
       return {
-        ...successOutcome(repairedCommit, result.changedFiles, evidenceMatrix),
+        ...successOutcome(handoffCommit, changedFiles, evidenceMatrix, 1),
         usage: usageOf(result),
         repairObservations: [repairObservation]
       };
@@ -855,7 +888,7 @@ function validationProgramInstructions(prepared: PreparedValidationRecipe | unde
 }
 
 function executionArtifactInput(artifact: V2ExecutionArtifact) {
-  return { artifactId: artifact.artifactId, digest: artifact.digest, contract: { ...artifact.contract }, kind: artifact.kind, location: artifact.location };
+  return { artifactId: artifact.artifactId, digest: artifact.digest, contract: { ...artifact.contract }, kind: artifact.kind, location: artifact.location, ...(artifact.cherryPickMainline === undefined ? {} : { cherryPickMainline: artifact.cherryPickMainline }) };
 }
 
 function integrationArtifact(artifact: V2ExecutionArtifact): IntegrationChildArtifact {
@@ -883,14 +916,15 @@ function usageOf(result: {
   };
 }
 
-function successOutcome(candidateCommit: string, changedFiles: string[], evidenceMatrix: V2ExecutionEvidenceMatrix) {
+function successOutcome(candidateCommit: string, changedFiles: string[], evidenceMatrix: V2ExecutionEvidenceMatrix, artifactCherryPickMainline?: 1) {
   return {
     kind: "success" as const,
     candidateCommit,
     outputDigest: digest(candidateCommit),
     changedFiles: [...changedFiles],
     evidenceMatrix,
-    artifactLocation: candidateCommit
+    artifactLocation: candidateCommit,
+    ...(artifactCherryPickMainline === undefined ? {} : { artifactCherryPickMainline })
   };
 }
 

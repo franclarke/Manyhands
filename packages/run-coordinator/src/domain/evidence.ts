@@ -22,7 +22,9 @@ export const EvidenceMatrixRecordSchema = z.object({
     findingId: EntityIdSchema,
     code: z.enum(["test_removed", "test_script_weakened", "test_configuration_changed", "test_skipped", "test_only", "assertion_removed", "required_public_surface_unchanged", "required_public_surface_unrepresented"]),
     path: NonEmptyStringSchema,
-    message: NonEmptyStringSchema
+    message: NonEmptyStringSchema,
+    disposition: z.enum(["blocking", "rebutted"]).optional(),
+    rebuttalEvidenceRefs: z.array(NonEmptyStringSchema).optional()
   }).strict()).optional(),
   negativeControls: z.array(z.object({
     evidenceId: EntityIdSchema,
@@ -34,8 +36,8 @@ export const EvidenceMatrixRecordSchema = z.object({
   if (matrix.outcome === "verified" && matrix.criteria.some((criterion) => criterion.status === "failed" || criterion.status === "uncovered")) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ["outcome"], message: "verified matrix cannot contain failed or uncovered criteria" });
   }
-  if (matrix.outcome === "verified" && (matrix.integrityFindings?.length ?? 0) > 0) {
-    context.addIssue({ code: z.ZodIssueCode.custom, path: ["outcome"], message: "verified matrix cannot contain test-integrity findings" });
+  if (matrix.outcome === "verified" && matrix.integrityFindings?.some((finding) => finding.disposition !== "rebutted") === true) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["outcome"], message: "verified matrix cannot contain blocking test-integrity findings" });
   }
   if (matrix.outcome === "verified" && matrix.negativeControls?.some((control) => !control.detectedFailure) === true) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ["outcome"], message: "verified matrix cannot contain a failed negative control" });

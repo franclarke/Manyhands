@@ -21,6 +21,10 @@ export interface RecoveryPolicy {
 
 const POLICIES: Record<FailureClass, Omit<RecoveryPolicy, "failureClass">> = {
   transient: { actions: ["retry_attempt"], automaticRetryBudget: 2, discardCandidate: true, requiresEvidence: true },
+  // Repeating the same prompt with the same executor and deadline cannot make a
+  // deterministic wall-clock limit disappear. Escalate to a materially
+  // different recovery instead of discarding and recreating identical work.
+  executor_timeout: { actions: ["switch_executor", "propose_graph_amendment", "raise_local_decision"], automaticRetryBudget: 0, discardCandidate: true, requiresEvidence: true },
   environment_auth_executor: { actions: ["request_environment_fix", "switch_executor"], automaticRetryBudget: 0, discardCandidate: true, requiresEvidence: true },
   code_test: { actions: ["repair_code", "propose_graph_amendment"], automaticRetryBudget: 1, discardCandidate: true, requiresEvidence: true },
   contract_decomposition: { actions: ["propose_graph_amendment"], automaticRetryBudget: 0, discardCandidate: true, requiresEvidence: true },

@@ -149,6 +149,8 @@ export interface RunCreateRequest {
     maxParallel?: number;
     maxPlanningAttempts?: number;
     automaticRetryBudget?: number;
+    leafTimeoutMs?: number;
+    integrationTimeoutMs?: number;
     maxCostUsd?: number;
     reasoningEffort?: EffortLevel;
   };

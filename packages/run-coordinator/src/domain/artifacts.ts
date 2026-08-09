@@ -11,6 +11,7 @@ export const AdoptedArtifactSchema = z.object({
   contract: z.object({ id: EntityIdSchema, revision: NonEmptyStringSchema }).strict(),
   kind: z.enum(["commit", "files", "manifest", "logical"]),
   location: NonEmptyStringSchema,
+  cherryPickMainline: z.literal(1).optional(),
   adoptedAt: IsoTimestampSchema
 }).strict();
 

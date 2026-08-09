@@ -8,7 +8,8 @@ export const ExecutionArtifactInputSchema = z.object({
   digest: NonEmptyStringSchema,
   contract: z.object({ id: EntityIdSchema, revision: NonEmptyStringSchema }).strict(),
   kind: z.enum(["commit", "files", "manifest", "logical"]),
-  location: NonEmptyStringSchema
+  location: NonEmptyStringSchema,
+  cherryPickMainline: z.literal(1).optional()
 }).strict();
 
 export type ExecutionArtifactInput = z.infer<typeof ExecutionArtifactInputSchema>;

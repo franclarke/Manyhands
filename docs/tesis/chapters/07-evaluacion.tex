@@ -1,0 +1,291 @@
+\chapter{Evaluación}
+\label{cap:evaluacion}
+
+\section{Autoridad experimental}
+
+La evaluación final responde únicamente dos proposiciones operables sobre el
+sistema construido. Esta decisión evita combinar retrospectivamente estudios
+que usaron instrumentos, modelos, repositorios o preguntas diferentes. La
+autoridad confirmatoria es el experimento V2 preservado en
+\path{docs/tesis/evidence/final-experiment/}; toda cifra y todo veredicto de este
+capítulo se deriva de ese paquete.
+
+Las líneas anteriores se mantienen disponibles porque sus fallos ayudaron a
+mejorar el producto y el método, pero no completan ninguna celda de V2. El
+principio aplicado es simple: un run que no produce candidato, un oráculo que no
+se ejecuta y una cadena longitudinal incompleta no se reinterpretan como éxito.
+
+\section{Preguntas e hipótesis}
+
+La primera pregunta es de viabilidad: si el orquestador puede llevar dos formas
+de cambio hasta una entrega externamente verificable. La segunda es de forma:
+si la política conserva una unidad cohesiva y descompone una tarea que atraviesa
+fronteras de integración.
+
+\begin{description}[leftmargin=1.8cm,style=nextline]
+  \item[\textbf{H-F1}] Para las dos tareas congeladas y dos repeticiones por
+  tarea, cada celda alcanza \texttt{completed} y \texttt{delivered}, publica un
+  SHA final no vacío y pasa todos los criterios de un oráculo externo sobre ese
+  SHA exacto.
+  \item[\textbf{H-F2}] Las dos repeticiones de la tarea multi-capa producen una
+  raíz composite con tres hojas ejecutables que cubren dominio, aplicación y
+  API; las dos repeticiones de la tarea cohesiva producen una envoltura de raíz
+  con exactamente una hoja ejecutable.
+\end{description}
+
+H-F1 falla si una sola celda no entrega o si un solo oráculo no pasa. H-F2 falla
+si una sola topología no coincide con el patrón registrado. Un resultado
+\texttt{not\_run} no cuenta como PASS. No existe reemplazo de celdas ni reintento
+de una repetición fallida.
+
+\section{Diseño pre-registrado}
+
+\subsection{Target y tareas}
+
+El target es un repositorio Node ESM pequeño con tres módulos productivos:
+\texttt{orders.mjs} en dominio, \texttt{order-service.mjs} en aplicación y
+\texttt{warehouse-api.mjs} en API. Su suite baseline se ejecuta con
+\texttt{node --test}. La tarea M agrega prioridad de pedidos y backorders a
+través de las tres capas. La tarea S agrega la función pura
+\texttt{summarizeInventory(state)} exclusivamente en el dominio.
+
+La elección no pretende representar todo repositorio real. Produce dos formas
+contrastantes y observables en un instrumento pequeño: M requiere coordinación
+entre tres fronteras; S tiene una única responsabilidad y un único lugar natural
+de implementación.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Celdas contadas del experimento V2.}
+  \label{tab:v2-celdas}
+  \small
+  \begin{tabularx}{\textwidth}{@{}l l l l@{}}
+    \toprule
+    \textbf{Celda} & \textbf{Forma} & \textbf{Condición} & \textbf{Repetición} \\
+    \midrule
+    \texttt{M-C-r1} & multi-capa & C adaptativa & 1 \\
+    \texttt{M-C-r2} & multi-capa & C adaptativa & 2 \\
+    \texttt{S-C-r1} & cohesiva & C adaptativa & 1 \\
+    \texttt{S-C-r2} & cohesiva & C adaptativa & 2 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+Un rehearsal se ejecutó antes de abrir las celdas. Sirvió para verificar el
+pipeline y nunca integró el denominador, aun cuando pasó. Esta regla se fijó
+antes de observar las cuatro repeticiones.
+
+\subsection{Freeze}
+
+El freeze identifica la versión de cada componente que podría cambiar el
+resultado. La tabla~\ref{tab:v2-freeze} resume los valores relevantes; el
+registro completo y sus hashes están en
+\path{docs/tesis/evidence/final-experiment/freeze.json}.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Configuración congelada de V2.}
+  \label{tab:v2-freeze}
+  \small
+  \begin{tabularx}{\textwidth}{@{}l X@{}}
+    \toprule
+    \textbf{Elemento} & \textbf{Valor} \\
+    \midrule
+    Commit de ManyHands & \texttt{35be5a92126a10f2bde1777a645f805c68e16960} \\
+    Modelo & Codex \texttt{gpt-5.4-mini}, esfuerzo \texttt{medium} \\
+    Roles del modelo & planning, ejecución y reparación \\
+    Política & \texttt{adaptive-utility/3.1.0-pilot} \\
+    Intentos de planning & 1 \\
+    Reintentos automáticos & 0 \\
+    Scope & estricto \\
+    Hash SHA-256 del oráculo & \scriptsize\texttt{deacfeb9...d576c3} (valor completo en el freeze) \\
+    Targets & \texttt{C:/mh-final-thesis-v2/<celda>} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+El protocolo original nombraba Claude. Antes de abrir celdas, la enmienda del
+freeze fijó Codex \texttt{gpt-5.4-mini} para los tres roles. No se alternaron
+modelos durante la serie. Se ejecutó \texttt{pnpm build} inmediatamente antes
+de cada run para impedir que el servidor utilizara un \texttt{dist} anterior.
+Los runs consumieron la suscripción interactiva del proveedor; no créditos de
+API.
+
+\subsection{Oráculo externo y preflight}
+
+El oráculo se encuentra fuera del target que modifican los agentes. Recibe la
+ruta de un checkout limpio del candidate SHA y verifica propiedades públicas de
+la prioridad, el registro de backorders, la cancelación, la unicidad del evento
+y la preservación del baseline. No lee prompts, trazas ni el journal de
+ManyHands; por lo tanto, su resultado no depende de cómo el sistema describió su
+propio éxito.
+
+Antes del freeze se ejecutó un preflight con tres controles: el template sin
+cambios debía fallar, dos implementaciones de referencia debían pasar y la
+inyección de un test fallido debía hacer fallar el comando de baseline. Los tres
+controles produjeron el resultado esperado. El archivo
+\path{preflight-result.json} preserva esa comprobación.
+
+Esta separación es importante. Los tests que escribe un agente pueden ser
+internamente consistentes con su implementación y, aun así, no representar el
+contrato pedido. El oráculo externo fija una vara común y se aplica al commit
+exacto que se pretende entregar.
+
+\section{Custodia y derivación de resultados}
+
+Cada celda conserva, sin edición manual, el journal append-only, el snapshot, el
+fence, las métricas de granularidad, el recibo de entrega y el resultado del
+oráculo. La cadena de verificación para H-F1 es:
+
+\begin{enumerate}
+  \item el journal contiene los hechos de integración, validación final y
+  publicación;
+  \item el snapshot reconstruido termina en \texttt{completed};
+  \item el recibo identifica \texttt{delivered}, el branch destino y el SHA;
+  \item el SHA no es vacío y difiere de la base;
+  \item el oráculo se ejecuta en un checkout limpio de ese SHA y devuelve PASS.
+\end{enumerate}
+
+Para H-F2, la topología se deriva de los eventos de planning y compilación, no
+de la cantidad de procesos observada en pantalla. Se cuentan sólo hojas
+ejecutables; la raíz técnica de una tarea cohesiva no se interpreta como una
+segunda unidad semántica.
+
+\section{Resultados}
+
+\begin{table}[htbp]
+  \centering
+  \caption{Resultados de las cuatro celdas contadas.}
+  \label{tab:v2-resultados}
+  \scriptsize
+  \begin{tabularx}{\textwidth}{@{}l X X c c X@{}}
+    \toprule
+    \textbf{Celda} & \textbf{Run} & \textbf{Candidate SHA} & \textbf{Entrega} & \textbf{Oráculo} & \textbf{Topología} \\
+    \midrule
+    \texttt{M-C-r1} & \texttt{21f2aebf...} & \texttt{6204eeb8...} & PASS & PASS & raíz composite, 3 hojas \\
+    \texttt{M-C-r2} & \texttt{99c0c50f...} & \texttt{73c6b35a...} & PASS & PASS & raíz composite, 3 hojas \\
+    \texttt{S-C-r1} & \texttt{a74c6959...} & \texttt{e4caca0b...} & PASS & PASS & raíz, 1 hoja \\
+    \texttt{S-C-r2} & \texttt{d611c700...} & \texttt{eb3631af...} & PASS & PASS & raíz, 1 hoja \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+Las cuatro celdas alcanzaron \texttt{completed} y \texttt{delivered}. Cada una
+publicó un SHA no vacío; los cuatro SHAs pasaron el comando del target y el
+oráculo externo. Las dos repeticiones M tuvieron profundidad 1, tres hojas y
+branching factor 3. Las dos repeticiones S tuvieron profundidad 1, una hoja y
+branching factor 1.
+
+\subsection{Veredicto de H-F1}
+
+\textbf{H-F1: PASS 4/4.} Ninguna celda depende de un reintento para completar y
+ningún resultado de oráculo es \texttt{not\_run}. La proposición de viabilidad
+end-to-end queda sostenida para el target, la versión, el modelo y los límites
+congelados.
+
+\subsection{Veredicto de H-F2}
+
+\textbf{H-F2: PASS 4/4.} Las dos tareas multi-capa produjeron el patrón de tres
+hojas y las dos tareas cohesivas conservaron una única hoja ejecutable. La
+proposición de selección de forma queda sostenida para las dos formas
+pre-registradas.
+
+\section{Resultado adverso V1}
+
+La primera versión de la serie no se mezcla con V2. En su primera celda, las
+hojas quedaron verdes, pero el control negativo de la raíz falló porque
+\path{test/baseline.test.mjs} no descubría los tests ubicados en
+subdirectorios. El instrumento no podía demostrar sensibilidad y la celda se
+detuvo. El fixture se corrigió, el preflight completo pasó y recién entonces se
+abrió un freeze nuevo.
+
+Esta observación muestra por qué el estado de los agentes o un conjunto de tests
+verdes no basta para declarar éxito: si el control que debe distinguir una
+implementación correcta de la base no detecta el cambio, la evidencia es
+insuficiente. El registro se conserva en
+\path{adverse-V1-M-C-r1.json} y no cuenta en el denominador 4/4.
+
+\section{Demostración visual del producto}
+\label{sec:demo-visual}
+\label{sec:hallazgos}
+
+Después del experimento se ejecutó una demostración independiente desde la
+interfaz web sobre \texttt{C:/mh-thesis-visual}. Su objetivo es ilustrar el
+producto; no agregar una quinta celda. Se usó Claude Sonnet para planning y
+Codex \texttt{gpt-5.4-mini} para ejecución. El run
+\texttt{87e7fe2c-a4c1-4c21-895c-7c1c33efc154} produjo siete nodos, validó cada
+hoja, integró el candidato
+\texttt{02234c9a2004c23db48ebba6f46a61c18f5e42e7} y lo publicó en
+\texttt{main}.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.95\textwidth]{assets/demo-run-2026-08-09/14-fixed-plan-review.png}
+  \caption{Revisión supervisada del grafo antes de iniciar la ejecución. La captura documenta la jerarquía y el punto de decisión humana; no sustituye al journal.}
+  \label{fig:demo-plan}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.95\textwidth]{assets/demo-run-2026-08-09/19-api-dashboard-parallel.png}
+  \caption{Ejecución del run demostrativo con hojas verificadas y trabajo independiente visible en el grafo.}
+  \label{fig:demo-ejecucion}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.95\textwidth]{assets/demo-run-2026-08-09/22-run-completed-delivered.png}
+  \caption{Estado terminal \texttt{completed} y resultado entregado del run demostrativo.}
+  \label{fig:demo-entrega}
+\end{figure}
+
+La demostración detectó además fallos reales antes de llegar a ese resultado:
+una interpretación exclusiva de la cobertura de criterios, un timeout, una
+inferencia de autoridad de escritura desde prosa y una pérdida de la línea
+acumulativa después de reparar una hoja. Sus journals y capturas se preservan en
+\path{docs/tesis/evidence/ui-demo-run/}. Ninguno se borra ni se transforma en
+PASS.
+
+Un run posterior generó el candidato de reparación cuyo SHA comienza en
+\texttt{43e69e0d}. El identificador completo se preserva en el paquete de
+evidencia. Ese SHA pasó 18/18 tests, build
+y oráculo externo en un checkout separado, pero el run quedó \texttt{failed}:
+la validación trató una reducción de sitios de aserción como debilitamiento y la
+reparación automática no inició por límite de uso de la suscripción. El branch
+se detuvo desde la UI. Esta distinción entre ``candidato correcto'' y ``run
+entregado'' se mantiene explícita.
+
+\section{Líneas históricas retiradas del argumento central}
+\label{sec:evidencia-historica}
+
+\begin{table}[htbp]
+  \centering
+  \caption{Evidencia histórica que no integra el veredicto V2.}
+  \label{tab:historico}
+  \small
+  \begin{tabularx}{\textwidth}{@{}l l X@{}}
+    \toprule
+    \textbf{Línea} & \textbf{Estado} & \textbf{Uso legítimo} \\
+    \midrule
+    Warehouse & 1/8 & evidencia adversa sobre la cadena longitudinal; no prueba escala \\
+    G5 & hipótesis comparativa falsada & resultado negativo sobre ese diseño; no se combina con V2 \\
+    G6 & inconcluso & evidencia de variabilidad e instrumento; sin veredicto positivo \\
+    G7 & sin candidatos & modos de falla de grafos anchos; no entrega software \\
+    SP2 & piloto & ensayo formativo; no es celda confirmatoria \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+Warehouse no se ``completa'' por prosa: queda 1/8. G5 no se reinterpreta para
+favorecer la tesis: su hipótesis quedó falsada. G6 no se fuerza a una dirección
+cuando sus repeticiones no la sostienen. G7 no aporta candidatos. SP2 no cuenta
+porque fue piloto. Estos resultados explican cómo se diseñó V2 y qué afirmaciones
+se retiraron, pero no aumentan su $n$ ni su alcance.
+
+\section{Síntesis}
+
+La evaluación final produce un resultado pequeño pero completo: cuatro celdas
+con protocolo, freeze, artefactos, delivery y oráculo externo; dos hipótesis con
+regla de PASS previa; y un veredicto 4/4 para ambas. La demostración visual
+confirma que el producto puede recorrerse y supervisarse desde la UI, pero queda
+separada del experimento. La evidencia histórica conserva su signo original.

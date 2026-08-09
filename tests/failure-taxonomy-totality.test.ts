@@ -35,7 +35,7 @@ describe("failure taxonomy", () => {
 
   it("still attributes the causes it can actually infer", () => {
     expect(classifyFailure(observation({ source: "validation", code: "test_failed" }))).toBe("code_test");
-    expect(classifyFailure(observation({ timedOut: true }))).toBe("transient");
+    expect(classifyFailure(observation({ code: "timeout", timedOut: true }))).toBe("executor_timeout");
     expect(classifyFailure(observation({ code: "auth" }))).toBe("environment_auth_executor");
     expect(classifyFailure(observation({ source: "integration" }))).toBe("integration");
     expect(classifyFailure(observation({ source: "scope" }))).toBe("scope_unexpected_commit");

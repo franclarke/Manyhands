@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "runId": "b4955431-dd65-4fa3-8b47-e502709b1afc",
+  "eventSequence": 1,
+  "projection": {
+    "runId": "b4955431-dd65-4fa3-8b47-e502709b1afc",
+    "goal": "Add a stock reservation lifecycle for outbound warehouse orders across domain, application, infrastructure, API, dashboard, and tests. Requirements: (1) create reservations with reservationId, orderId, lines, ttlMinutes, and supplied now, validating identifiers, quantities, TTL, duplicate IDs, and available stock; (2) reserving decrements available stock once and creates an active reservation with expiresAt; (3) confirming an active reservation creates the outbound order without decrementing stock again, transitions the reservation to confirmed, and records reservation-created and reservation-confirmed audit events; (4) releaseExpired at a supplied now restores stock for every expired active reservation, records reservation-expired events, and is idempotent; (5) the in-memory repository persists reservations and events; (6) the API exposes reserveStock, confirmReservation, releaseExpired, and listReservations; (7) the dashboard exposes reservations with activeCount, expiredCount, reservedUnits, and nextExpiry; (8) preserve all existing allocation/restock behavior and add focused unit plus end-to-end tests. Keep the existing module boundaries and create a cohesive domain module when appropriate.",
+    "lifecycle": "planning",
+    "sequence": 1,
+    "appliedEventIds": [
+      "run:b4955431-dd65-4fa3-8b47-e502709b1afc:created"
+    ],
+    "decisions": {},
+    "stoppedNodeIds": [],
+    "readiness": {
+      "readyNodeIds": [],
+      "pendingDecisionIds": []
+    },
+    "selectedWaves": [],
+    "attempts": {},
+    "adoptedArtifacts": {},
+    "nodeEvidenceMatrixIds": {},
+    "integrations": {},
+    "recoveryHistory": [],
+    "evidenceMatrices": [],
+    "outcomes": {
+      "execution": "pending",
+      "artifact": "missing",
+      "delivery": "not_started"
+    },
+    "evidenceMatrixSummaries": {}
+  },
+  "checksum": "f87af37f3775075943488601fec63f818a6d2f244484612479a9d2a24a12c69b"
+}

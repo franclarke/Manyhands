@@ -1,7 +1,7 @@
 # Informe final del experimento de tesis V2
 
 Fecha de cierre: 2026-08-09
-Freeze: [`freeze.json`](../../../../.scratch/final-thesis-experiment-v2/freeze.json)
+Freeze: [`freeze.json`](freeze.json)
 Estado: **PASS** bajo el protocolo congelado.
 
 ## Alcance que se evalúa
@@ -48,16 +48,16 @@ celdas y queda excluido del denominador.
 | `S-C-r2` | `d611c700-b392-41d0-88ae-39ebead48119` | `7e1e626473897aaf46c0909ff899ed924d7aa2f3` | `eb3631af68bc1add42d60aa051cf603ed3be7218` | completed, delivered | PASS | PASS | profundidad 1; 1 hoja; branching 1 |
 
 Los journals, snapshots, métricas, fences y metadatos de cada run están en
-[`runs/`](../../../../.scratch/final-thesis-experiment-v2/runs/). Los resultados
+[`runs/`](runs/). Los resultados
 del oráculo están resumidos en
-[`oracle-results.json`](../../../../.scratch/final-thesis-experiment-v2/oracle-results.json).
+[`oracle-results.json`](oracle-results.json).
 La inspección externa se hizo desde checkouts limpios, sin leer prompts ni
 journals de ManyHands.
 
 El rehearsal (`062e496e-572f-48e8-843a-31542082c6a9`) también pasó, pero no
 cuenta como celda. El preflight exigió que el template sin cambios fallara, que
 las dos referencias pasaran y que un test inyectado hiciera fallar el comando
-de baseline: [`preflight-result.json`](../../../../.scratch/final-thesis-experiment-v2/preflight-result.json).
+de baseline: [`preflight-result.json`](preflight-result.json).
 
 ## Veredicto
 
@@ -76,7 +76,7 @@ generó hojas verdes, pero falló el negative control del root porque
 `test/baseline.test.mjs` no importaba tests ubicados en subdirectorios. El
 control no podía demostrar sensibilidad y la celda se detuvo. El fixture fue
 corregido, el preflight pasó y se abrió un freeze V2 nuevo. El registro completo
-está en [`adverse-V1-M-C-r1.json`](../../../../.scratch/final-thesis-experiment-v2/adverse-V1-M-C-r1.json).
+está en [`adverse-V1-M-C-r1.json`](adverse-V1-M-C-r1.json).
 
 ## Qué permite concluir
 

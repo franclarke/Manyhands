@@ -1,0 +1,175 @@
+\chapter{Discusión}
+\label{cap:discusion}
+
+\section{Qué demuestran las dos hipótesis}
+
+H-F1 no mide cuántas líneas produjo un agente ni cuántos tests declaró pasar.
+Mide una cadena de custodia: planificación persistida, ejecución aislada,
+integración, validación del candidato exacto, publicación y verificación externa
+del mismo SHA. El PASS 4/4 muestra que esa cadena funcionó dos veces para una
+tarea multi-capa y dos veces para una tarea cohesiva.
+
+H-F2 tampoco afirma que la topología elegida sea globalmente óptima. Afirma que,
+en dos formas pre-registradas, el sistema seleccionó dos estructuras coherentes:
+tres hojas alineadas con fronteras de integración para M y una única hoja para
+S. La repetición idéntica del patrón evita basar la conclusión en una sola
+respuesta afortunada del planificador.
+
+Juntas, las hipótesis sostienen una proposición de ingeniería acotada: la
+política puede conservar o aceptar una descomposición semántica y el resto del
+sistema puede convertirla en una entrega verificable. No sostienen una ley
+general sobre repositorios, modelos o equipos.
+
+\section{La frontera entre semántica y control determinista}
+
+El diseño separa tres decisiones que suelen confundirse. El planificador
+semántico interpreta el objetivo y propone cortes. La política evalúa si el
+beneficio de un corte justifica su costo. El compilador convierte la propuesta
+aceptada en nodos, relaciones y contratos ejecutables. Esta separación permite
+rechazar un plan incoherente sin pedirle a una fórmula que invente módulos.
+
+La evidencia histórica refuerza esa frontera. Cuando una versión anterior
+intentó fabricar particiones a partir de rutas, produjo hojas que no podían
+cumplir sus contratos. Una señal cuantitativa puede decidir \emph{si} un corte
+conviene; no conoce por sí sola qué responsabilidad oculta cada módulo, en el
+sentido de Parnas \cite{parnas1972criteria}.
+
+El resultado final no valida cada peso de la fórmula. Valida que, bajo la
+configuración congelada, las decisiones resultantes fueron estables para las dos
+formas estudiadas. La calibración de pesos y umbral sigue abierta.
+
+\section{Evidencia independiente frente a evidencia endógena}
+
+Un sistema generativo puede escribir a la vez la implementación y las pruebas
+que la aprueban. Esa cercanía crea un riesgo metodológico: ambos artefactos
+pueden compartir la misma interpretación errónea. V2 reduce ese riesgo mediante
+un oráculo externo que no forma parte del target y se ejecuta después sobre el
+commit exacto.
+
+El resultado adverso V1 demuestra el valor de otro control: un test verde no es
+suficiente si el control negativo no puede hacerlo fallar. El sistema exige
+sensibilidad observable. La demostración posterior agregó un matiz: contar
+llamadas de aserción es una heurística conservadora, no una prueba semántica de
+debilitamiento. Una migración de contrato puede reemplazar dos aserciones sobre
+un wrapper por una comparación exacta del objeto público. La corrección conserva
+el hallazgo y sólo lo clasifica como rebatido cuando todas las obligaciones
+requeridas pasan y sus controles negativos detectan la implementación vieja.
+
+Este criterio evita dos extremos: aceptar cualquier reescritura de tests o
+bloquear cambios correctos porque la sintaxis tiene menos llamadas. Los casos
+estructurales ---test eliminado, skip, focus, script debilitado o configuración
+alterada--- continúan bloqueando.
+
+\section{Trazabilidad del run}
+
+El journal append-only permite reconstruir no sólo el estado terminal, sino la
+causa de cada transición. Un snapshot acelera la lectura, pero no reemplaza el
+journal. Las trazas del modelo explican su actividad, pero tampoco gobiernan el
+lifecycle. Esta separación impide inferir éxito desde stdout o desde un proceso
+que terminó con código cero.
+
+La demostración visual hizo visible la utilidad práctica de esta arquitectura.
+El run exitoso conserva la secuencia desde la revisión del plan hasta la
+entrega; los runs adversos conservan el punto exacto donde fallaron. Por eso fue
+posible distinguir un candidato correcto de un run fallido por cuota, sin
+convertir uno en el otro.
+
+\section{Alcance real de la implementación}
+
+La ruta productiva implementa el planning semántico, el compilador de grafo, el
+scheduler por readiness, la ejecución en worktrees, el control de scope, la
+validación del commit exacto, la integración ascendente, el journal con fencing
+y la entrega con recibo. El experimento V2 recorrió esa ruta hasta
+\texttt{completed}.
+
+No toda capacidad del contrato objetivo está igualmente cerrada. En particular,
+un seam puede declarar \texttt{materialization: "files"} y
+\texttt{expectedPaths}, pero el driver actual adopta el resultado producido como
+un commit completo. La reparación de línea acumulativa evita publicar sólo el
+delta terminal y declara de forma explícita el mainline de cherry-pick; no
+implementa aún transporte selectivo por archivos. Presentar esa capacidad como
+terminada sería confundir el contrato objetivo con el estado real.
+
+Esta limitación no altera el resultado V2: sus candidatos fueron validados e
+integrados bajo la implementación congelada. Sí limita una afirmación más amplia
+sobre composición mínima de artefactos entre siblings. La tesis la excluye del
+conjunto de contribuciones demostradas.
+
+\section{Amenazas a la validez}
+
+\paragraph{Validez interna.} Las cuatro celdas compartieron la misma versión,
+modelo, política y protocolo; no hubo retries automáticos ni ajuste de umbrales.
+El oráculo se aplicó al SHA exacto. La principal amenaza residual es el
+no-determinismo del modelo: dos repeticiones reducen el riesgo de una única
+respuesta atípica, pero no lo eliminan.
+
+\paragraph{Validez de constructo.} H-F1 representa viabilidad end-to-end, no
+calidad absoluta del software. El oráculo cubre cinco criterios públicos y el
+baseline, pero no todas las propiedades posibles. H-F2 representa coincidencia
+con dos patrones predefinidos, no optimalidad ni mínimo costo.
+
+\paragraph{Validez externa.} El target es pequeño, usa Node ESM y un único
+modelo. Los cuatro resultados no se extrapolan a monorepositorios, otros
+lenguajes, modelos, sistemas operativos o tareas de meses de duración.
+
+\paragraph{Poder del diseño.} Dos observaciones por forma permiten exigir
+repetición, no inferencia estadística. El resultado es una demostración
+replicable de ingeniería, no una estimación poblacional.
+
+\paragraph{Independencia del instrumento.} El oráculo es externo al target, pero
+fue diseñado para este estudio. El preflight prueba que discrimina referencias
+correctas, baseline y una falla inyectada; una réplica futura debería incorporar
+revisión independiente adicional del oráculo.
+
+\paragraph{Efecto de desarrollo previo.} V2 se ejecutó después de múltiples
+series adversas que corrigieron defectos del sistema. Esto no invalida su freeze,
+pero significa que V2 evalúa la versión final construida, no el proceso completo
+como si hubiera sido correcto desde el inicio. Los resultados anteriores se
+preservan justamente para no ocultar esa evolución.
+
+\section{Por qué no se combinan los estudios históricos}
+
+Sumar Warehouse 1/8, G5, G6, G7 o SP2 al 4/4 produciría un número sin
+interpretación: cambiaron preguntas, targets, modelos, instrumentos y reglas de
+detención. Tampoco sería correcto borrar esas líneas, porque documentan
+resultados negativos que condicionaron el diseño final.
+
+La solución adoptada es una jerarquía de evidencia:
+
+\begin{enumerate}
+  \item V2 responde H-F1 y H-F2.
+  \item La demostración UI ilustra el producto y expone defectos, sin contar.
+  \item Las series históricas explican decisiones y limitaciones, sin sostener
+  el argumento positivo.
+\end{enumerate}
+
+Esta jerarquía produce una tesis más modesta que una narrativa acumulativa, pero
+también más verificable: cada conclusión tiene un denominador, un protocolo y
+una ruta de evidencia únicos.
+
+\section{Lecciones de ingeniería}
+
+\begin{itemize}
+  \item \textbf{El commit es la unidad de verdad del resultado.} Tests, diff,
+  manifiesto, recibo y oráculo deben referirse al mismo SHA.
+  \item \textbf{La recuperación debe preservar identidad.} Una reparación es un
+  delta sobre un candidato; el artefacto publicado debe representar la línea
+  acumulativa que un consumidor puede materializar.
+  \item \textbf{La cobertura no es ownership.} Un criterio transversal puede
+  aparecer en varias hojas; la autoridad de aceptación se deriva del ancestro
+  común más bajo, no de una cardinalidad artificial uno-a-uno.
+  \item \textbf{La prosa no otorga autoridad.} Una ruta mencionada como
+  evidencia no debe transformarse en permiso de escritura sin un campo
+  estructurado que lo declare.
+  \item \textbf{Los límites externos son resultados operativos.} Una cuota de
+  proveedor no refuta el código candidato, pero sí impide que un run alcance su
+  estado de entrega y debe preservarse como tal.
+\end{itemize}
+
+\section{Síntesis de la discusión}
+
+La contribución más sólida no es afirmar que más agentes son mejores. Es mostrar
+un mecanismo auditable que decide entre una hoja y un corte semántico, ejecuta
+la estructura elegida y exige evidencia sobre el resultado exacto. V2 demuestra
+que ese mecanismo funciona en un alcance controlado. Los límites declarados
+impiden convertir esa demostración en una afirmación de escala o superioridad.

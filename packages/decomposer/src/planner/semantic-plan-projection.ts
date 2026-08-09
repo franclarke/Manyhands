@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { allocateAcceptanceIntents } from "../compiler/acceptance-allocation.js";
 import type { CandidatePlan } from "./candidate-plan.js";
 import { WorkBreakdownSchema, type WorkBreakdown, type WorkUnit } from "./schema.js";
 import { flattenSemanticWorkUnits, type SemanticPlan, type SemanticWorkUnit } from "./semantic-plan.js";
@@ -12,8 +13,6 @@ export function projectSemanticPlanForLegacyCompiler(plan: SemanticPlan): { brea
   const units = flattenSemanticWorkUnits(plan.root);
   const canonicalCriterionIds = new Set(plan.criteria.map((criterion) => criterion.id));
   const legacyFallbackCriterionId = plan.criteria[0]?.id;
-  const ownerByCriterion = new Map<string, SemanticWorkUnit>();
-  for (const unit of units) for (const outcome of unit.outcomes) for (const criterionId of outcome.criterionIds) ownerByCriterion.set(criterionId, unit);
   const breakdown = WorkBreakdownSchema.parse({
     schemaVersion: 2,
     breakdownId: plan.planId,
@@ -46,6 +45,8 @@ export function projectSemanticPlanForLegacyCompiler(plan: SemanticPlan): { brea
     uncertainties: plan.uncertainties,
     questions: plan.questions
   });
+  const ownerKeyByCriterion = allocateAcceptanceIntents(breakdown.root);
+  const unitByKey = new Map(units.map((unit) => [unit.key, unit] as const));
   const scopes = units.map((unit) => ({
     unitKey: unit.key,
     // Evidence and reads are grounding context, not mutation authority. A V2
@@ -56,17 +57,20 @@ export function projectSemanticPlanForLegacyCompiler(plan: SemanticPlan): { brea
     paths: [...new Set(unit.writePaths ?? unit.plannedPaths ?? [])]
   })).filter((scope) => scope.paths.length > 0);
   const acceptanceOwnership = plan.criteria.map((criterion) => {
-    const owner = ownerByCriterion.get(criterion.id);
+    const ownerKey = ownerKeyByCriterion[criterion.id];
+    const owner = ownerKey === undefined ? undefined : unitByKey.get(ownerKey);
     if (owner === undefined) throw new Error(`Criterion ${criterion.id} has no semantic owner.`);
     return {
       intentId: criterion.id,
       ownerUnitKey: owner.key,
       role: owner.kind === "leaf" ? "local" as const : "global" as const,
-      rationale: "Derived from the unique semantic outcome that covers this criterion."
+      rationale: "Derived from semantic criterion coverage across the unit tree."
     };
   });
   const acceptanceCriteria = plan.criteria.map((criterion) => {
-    const owner = ownerByCriterion.get(criterion.id)!;
+    const ownerKey = ownerKeyByCriterion[criterion.id];
+    const owner = ownerKey === undefined ? undefined : unitByKey.get(ownerKey);
+    if (owner === undefined) throw new Error(`Criterion ${criterion.id} has no semantic owner.`);
     return {
       intentId: criterion.id,
       kind: owner.kind === "leaf" ? "leafAcceptance" as const : "globalAcceptance" as const,

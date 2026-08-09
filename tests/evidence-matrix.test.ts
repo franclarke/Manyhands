@@ -76,6 +76,88 @@ describe("buildEvidenceMatrix", () => {
     }).success).toBe(false);
   });
 
+  it("records an assertion-count contraction as rebutted when differential evidence proves the rewritten test", () => {
+    const obligation = {
+      ...obligations[0]!,
+      negativeControl: "when_feasible" as const
+    };
+    const matrix = buildEvidenceMatrix({
+      obligations: [obligation],
+      evidence: [{
+        evidenceId: "candidate-test",
+        obligationId: obligation.id,
+        criterionId: obligation.criterionId,
+        kind: "test_result",
+        passed: true,
+        attempt: 1,
+        commandDigest: "a".repeat(64),
+        durationMs: 10,
+        references: ["tests/a.test.ts"],
+        negativeControl: {
+          evidenceId: "negative-control",
+          obligationId: obligation.id,
+          detectedFailure: true,
+          outputDigest: "b".repeat(64)
+        }
+      }],
+      integrityFindings: [{
+        findingId: "finding-assertion-count",
+        code: "assertion_removed",
+        path: "tests/a.test.ts",
+        message: "Candidate reduces assertion sites from 51 to 49."
+      }]
+    });
+
+    expect(matrix.outcome).toBe("verified");
+    expect(matrix.integrityFindings).toEqual([expect.objectContaining({
+      findingId: "finding-assertion-count",
+      disposition: "rebutted",
+      rebuttalEvidenceRefs: ["negative-control"]
+    })]);
+    expect(EvidenceMatrixRecordSchema.safeParse({
+      matrixId: "matrix-rebutted-assertion-count",
+      candidateCommit: "candidate",
+      validationContract: { id: "validation-1", revision: "rev-1" },
+      ...matrix
+    }).success).toBe(true);
+  });
+
+  it("keeps assertion contraction and structural tampering blocking without adequate differential evidence", () => {
+    const obligation = { ...obligations[0]!, negativeControl: "when_feasible" as const };
+    const evidence = [{
+      evidenceId: "candidate-test",
+      obligationId: obligation.id,
+      criterionId: obligation.criterionId,
+      kind: "test_result" as const,
+      passed: true,
+      attempt: 1,
+      commandDigest: "a".repeat(64),
+      durationMs: 10,
+      references: ["tests/a.test.ts"],
+      negativeControl: {
+        evidenceId: "negative-control",
+        obligationId: obligation.id,
+        detectedFailure: true,
+        outputDigest: "b".repeat(64)
+      }
+    }];
+    const assertionWithoutControl = buildEvidenceMatrix({
+      obligations: [{ ...obligation, negativeControl: "not_required" as const }],
+      evidence: evidence.map(({ negativeControl: _negativeControl, ...item }) => item),
+      integrityFindings: [{ findingId: "finding-assertion", code: "assertion_removed", path: "tests/a.test.ts", message: "Removed assertion" }]
+    });
+    const skippedWithControl = buildEvidenceMatrix({
+      obligations: [obligation],
+      evidence,
+      integrityFindings: [{ findingId: "finding-skip", code: "test_skipped", path: "tests/a.test.ts", message: "Skipped test" }]
+    });
+
+    expect(assertionWithoutControl.outcome).toBe("failed");
+    expect(assertionWithoutControl.integrityFindings).toEqual([expect.objectContaining({ disposition: "blocking" })]);
+    expect(skippedWithControl.outcome).toBe("failed");
+    expect(skippedWithControl.integrityFindings).toEqual([expect.objectContaining({ disposition: "blocking" })]);
+  });
+
   it("persists a failed matrix containing the observable-public-surface finding", () => {
     const parsed = EvidenceMatrixRecordSchema.safeParse({
       matrixId: "matrix-public-surface",

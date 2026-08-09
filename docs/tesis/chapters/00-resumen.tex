@@ -1,0 +1,59 @@
+\chapter*{Resumen}
+\addcontentsline{toc}{chapter}{Resumen}
+
+Los agentes de programación basados en modelos de lenguaje pueden modificar un
+repositorio, ejecutar pruebas y reaccionar a sus resultados. Cuando el objetivo
+atraviesa varias capas, sin embargo, un único agente concentra demasiado
+contexto y una división excesiva introduce coordinación, contratos y conflictos
+de integración. Esta tesis estudia esa tensión, denominada \emph{paradoja de la
+granularidad}, mediante el diseño, la implementación y la evaluación de
+\sistema, un orquestador local de agentes de código.
+
+El aporte técnico combina dos responsabilidades. Un planificador semántico
+propone unidades de trabajo justificadas por el objetivo y el repositorio. Una
+política determinista y versionada evalúa si conviene conservar cada unidad como
+hoja cohesiva o aceptar un corte semántico propuesto. El resultado se compila en
+un grafo híbrido con jerarquía de integración y relaciones tipadas para
+artefactos, interfaces y conflictos. Cada intento se ejecuta en un
+\emph{worktree} aislado; el orquestador inspecciona el diff, controla el alcance,
+valida el commit candidato exacto, integra de abajo hacia arriba y publica sólo
+un resultado acompañado por manifiesto y comprobante. La historia canónica del
+run es un journal append-only de eventos de dominio.
+
+La evaluación confirmatoria final se pre-registró como una serie pequeña y
+acotada. Se utilizó un repositorio Node ESM con capas de dominio, aplicación y
+API; dos formas de tarea ---una modificación multi-capa y una función cohesiva
+de dominio---; dos repeticiones por forma; una única configuración adaptativa;
+el modelo Codex \texttt{gpt-5.4-mini}; cero reintentos automáticos; y un oráculo
+externo ejecutado sobre cada SHA candidato exacto. Un rehearsal previo verificó
+el instrumento y quedó fuera del denominador.
+
+Se fijaron dos hipótesis. \textbf{H-F1} exigía que las cuatro celdas llegaran a
+\texttt{completed} y \texttt{delivered}, publicaran un SHA no vacío y pasaran el
+oráculo externo. \textbf{H-F2} exigía que la tarea multi-capa produjera una raíz
+compuesta con tres hojas ---dominio, aplicación y API---, y que la tarea cohesiva
+produjera una sola hoja ejecutable. El resultado fue \textbf{PASS 4/4 para
+H-F1} y \textbf{PASS 4/4 para H-F2}. Las cuatro entregas y topologías se derivan
+de journals, snapshots, recibos y resultados de oráculo preservados junto con
+el manuscrito.
+
+El alcance de la conclusión es deliberadamente estrecho. La serie no tiene
+controles A/B y usa un único target pequeño; por ello no demuestra superioridad
+frente a no descomponer, causalidad, optimalidad, escalabilidad ni
+generalización estadística. Las líneas históricas Warehouse, G5, G6, G7 y SP2
+no se combinan con el resultado final: Warehouse permanece en 1/8, G5 produjo un
+resultado comparativo negativo, G6 fue inconcluso, G7 no produjo candidatos y
+SP2 fue piloto. Se conservan como evidencia adversa o formativa, no como piezas
+incompletas de un denominador positivo.
+
+La conclusión defendible es concreta: bajo la versión, el modelo, la política,
+los límites y el protocolo congelados, \sistema\ realizó de forma reproducible
+el recorrido de planificación, ejecución aislada, integración, validación
+externa del commit exacto y entrega, y seleccionó las dos formas de topología
+pre-registradas. El trabajo aporta además una disciplina de evidencia para no
+confundir actividad de agentes, tests autocontenidos o resultados parciales con
+software entregado y verificado.
+
+\textbf{Palabras clave:} orquestación de agentes, modelos de lenguaje,
+descomposición de tareas, granularidad adaptativa, worktrees de Git, validación
+de commits, evidencia experimental.

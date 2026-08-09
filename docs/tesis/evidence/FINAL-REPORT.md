@@ -27,7 +27,8 @@ cohesivas con una envoltura de raíz y una sola hoja ejecutable.
 Modelo efectivo: Codex `gpt-5.4-mini`, esfuerzo `medium`, en planning,
 execution y repair. Se usaron cero retries automáticos y `pnpm build` antes de
 cada run. El rehearsal se excluye del denominador. La cadena de custodia,
-hashes, métricas y journals están en `.scratch/final-thesis-experiment-v2/`.
+hashes, métricas y journals está autocontenida en
+[`final-experiment/`](final-experiment/).
 
 ## Evidencia histórica que no se combina
 

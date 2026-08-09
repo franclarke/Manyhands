@@ -52,6 +52,87 @@ describe("acceptance intent allocation", () => {
     });
   });
 
+  it("binds descendant-authored tests to a shared criterion owned by their composite", () => {
+    const inventory = leaf("inventory", "src/inventory.ts", ["shared"]);
+    inventory.plannedPaths = ["tests/inventory-reservation.test.ts"];
+    const orders = leaf("orders", "src/orders.ts", ["shared"]);
+    orders.plannedPaths = ["tests/orders-reservation.test.ts"];
+    const root = composite("root", [inventory, orders], ["shared"]);
+    const breakdown = WorkBreakdownSchema.parse({
+      schemaVersion: 2,
+      breakdownId: "shared-integration-evidence",
+      objective: "Deliver the reservation lifecycle",
+      repositorySnapshotId: "snapshot-1",
+      acceptanceIntents: [{ id: "shared", description: "The complete reservation lifecycle works", required: true }],
+      repositoryEvidence: ["inventory", "orders"].map((name) => ({
+        id: `path-${name}`,
+        kind: "path",
+        reference: `src/${name}.ts`,
+        observation: `${name} module`,
+        confidence: 1
+      })),
+      root
+    });
+
+    const compiled = compileContractBundles({
+      breakdown,
+      repositorySnapshot: snapshot(),
+      nodeIdByUnitKey: nodeIds(root)
+    }, dependencies);
+    const rootBundle = compiled.bundles.find((bundle) => bundle.task.nodeId === "node-root")!;
+
+    expect(rootBundle.validation.obligations[0]?.evidence).toEqual({
+      kind: "focused_command",
+      selectors: ["tests/inventory-reservation.test.ts", "tests/orders-reservation.test.ts"],
+      references: ["tests/inventory-reservation.test.ts", "tests/orders-reservation.test.ts"]
+    });
+  });
+
+  it("rejects candidate ownership that disagrees with canonical LCA allocation", () => {
+    const inventory = leaf("inventory", "src/inventory.ts", ["shared"]);
+    const orders = leaf("orders", "src/orders.ts", ["shared"]);
+    const root = composite("root", [inventory, orders], ["shared"]);
+    const breakdown = WorkBreakdownSchema.parse({
+      schemaVersion: 2,
+      breakdownId: "tampered-ownership",
+      objective: "Deliver the reservation lifecycle",
+      repositorySnapshotId: "snapshot-1",
+      acceptanceIntents: [{ id: "shared", description: "The complete reservation lifecycle works", required: true }],
+      repositoryEvidence: ["inventory", "orders"].map((name) => ({
+        id: `path-${name}`,
+        kind: "path",
+        reference: `src/${name}.ts`,
+        observation: `${name} module`,
+        confidence: 1
+      })),
+      root
+    });
+    const candidatePlan = {
+      candidateId: "tampered",
+      repositorySnapshotId: "snapshot-1",
+      goalDigest: "sha256:goal",
+      candidateHash: "sha256:candidate",
+      breakdown,
+      scopes: [
+        { unitKey: "root", paths: ["src/inventory.ts", "src/orders.ts"] },
+        { unitKey: "inventory", paths: ["src/inventory.ts"] },
+        { unitKey: "orders", paths: ["src/orders.ts"] }
+      ],
+      acceptanceCriteria: [{ intentId: "shared", kind: "leafAcceptance" as const, description: "The complete reservation lifecycle works" }],
+      acceptanceOwnership: [{ intentId: "shared", ownerUnitKey: "orders", role: "local" as const, rationale: "last child wins" }],
+      seamSpecifications: [],
+      contractObligations: [],
+      leafValidations: []
+    };
+
+    expect(() => compileContractBundles({
+      breakdown,
+      repositorySnapshot: snapshot(),
+      nodeIdByUnitKey: nodeIds(root),
+      candidatePlan
+    }, dependencies)).toThrow(/acceptance ownership.*shared.*root.*orders/iu);
+  });
+
   it("does not synthesize shared relevance from a unit-level test reference", () => {
     const breakdown = fiveIntentBreakdown();
     breakdown.repositoryEvidence.push({

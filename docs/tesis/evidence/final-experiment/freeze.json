@@ -1,0 +1,47 @@
+{
+  "series": "FINAL-THESIS-EXPERIMENT-V2",
+  "status": "completed",
+  "frozenAt": "2026-08-09T13:45:00.000Z",
+  "manyhandsCommit": "35be5a92126a10f2bde1777a645f805c68e16960",
+  "oracle": {
+    "path": "docs/tesis/evidence/final-experiment/oracle/evaluator.mjs",
+    "sha256": "deacfeb9204c8c21d53cfd97d59fc50a9cd214e15f523220b06a312c81d576c3"
+  },
+  "template": {
+    "source": "docs/tesis/evidence/final-experiment/target-template",
+    "package.json": "08a98bb7b712cfb271cae55561c9940e370a8881f8b6dfed0e726b183fd91e4d",
+    "src/api/warehouse-api.mjs": "85637b88a70bda646b46ab9c3c6202997febef5e6204be852dc91cf3bfe18a00",
+    "src/application/order-service.mjs": "be16aeffc08657edc479fef6fbfd85aae403b91cce0798ba8dacdafe4b799ba0",
+    "src/domain/orders.mjs": "4f602fb943ffe53f17fe506754052170fcf8da42aa3f17e1ae7438a9cc7e4f45",
+    "test/baseline.test.mjs": "7b204a047ce1c7019cb49c18132ebac969a89d7c80fe8da5f526fd9153cf41ef"
+  },
+  "model": { "executorId": "codex-cli", "model": "gpt-5.4-mini", "effort": "medium" },
+  "condition": "C",
+  "planning": { "maxPlanningAttempts": 1 },
+  "execution": {
+    "maxParallel": 2,
+    "scopePolicy": "strict",
+    "leafTimeoutMs": 1200000,
+    "integrationTimeoutMs": 1200000,
+    "automaticRetryBudget": 0,
+    "maxCostUsd": 8,
+    "unexpectedCommitPolicy": "reject"
+  },
+  "targetRoot": "C:/mh-final-thesis-v2",
+  "rehearsal": { "cellId": "final-v2-rehearsal", "workspaceId": "818a0f16-f097-435c-aec8-3b271e6aa97f" },
+  "cells": [
+    { "cellId": "M-C-r1", "taskId": "M", "repetition": 1, "workspaceId": "beab6355-4776-40ac-b549-2c4d97e5729b", "targetRepo": "C:/mh-final-thesis-v2/M-C-r1", "baseSha": "bd288be828f581b96add1bcab3230fa84b2fff25" },
+    { "cellId": "M-C-r2", "taskId": "M", "repetition": 2, "workspaceId": "fbc2c686-e4cd-4966-98c2-413d9df6be84", "targetRepo": "C:/mh-final-thesis-v2/M-C-r2", "baseSha": "790690b6ac57194ed0c08e8f17f4c275bab5f84a" },
+    { "cellId": "S-C-r1", "taskId": "S", "repetition": 1, "workspaceId": "4ada1eac-3866-4cc8-b103-108a36c9005d", "targetRepo": "C:/mh-final-thesis-v2/S-C-r1", "baseSha": "790690b6ac57194ed0c08e8f17f4c275bab5f84a" },
+    { "cellId": "S-C-r2", "taskId": "S", "repetition": 2, "workspaceId": "85aa9a0f-0939-482f-9815-0b2409dddc0c", "targetRepo": "C:/mh-final-thesis-v2/S-C-r2", "baseSha": "7e1e626473897aaf46c0909ff899ed924d7aa2f3" }
+  ],
+  "excludedHistorical": ["G5", "G6", "G7", "SP2", "Warehouse", "FINAL-THESIS-EXPERIMENT-V1"],
+  "results": {
+    "rehearsal": { "runId": "062e496e-572f-48e8-843a-31542082c6a9", "candidateSha": "dc953bda672b2303b8b70b4ad5dcf2d94a3d7263", "oracle": "PASS", "counted": false },
+    "M-C-r1": { "runId": "21f2aebf-9218-4c2e-9e96-b8b60b86fc59", "candidateSha": "6204eeb8b416bda97c9a97d9a82f667726bf0022", "oracle": "PASS", "counted": true },
+    "M-C-r2": { "runId": "99c0c50f-8e76-49ef-8bd4-bb020b1240b9", "candidateSha": "73c6b35a5849a2514513fd4bf44139dd91f6537f", "oracle": "PASS", "counted": true },
+    "S-C-r1": { "runId": "a74c6959-8981-41b7-9341-899fca9a504e", "candidateSha": "e4caca0b7df98367bb998cb6f40ba95de0b93033", "oracle": "PASS", "counted": true },
+    "S-C-r2": { "runId": "d611c700-b392-41d0-88ae-39ebead48119", "candidateSha": "eb3631af68bc1add42d60aa051cf603ed3be7218", "oracle": "PASS", "counted": true }
+  },
+  "modelDeviation": "The preregistered protocol named Claude; this frozen series uses Codex gpt-5.4-mini for planning, execution and repair as instructed by the operator. The same model and effort are used in all cells."
+}

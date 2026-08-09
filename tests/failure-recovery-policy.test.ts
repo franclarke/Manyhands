@@ -3,7 +3,7 @@ import { classifyFailure, eventsForCommand, recoveryPolicyFor } from "@manyhands
 
 describe("failure recovery policy", () => {
   it.each([
-    [{ source: "executor", timedOut: true }, "transient", "retry_attempt"],
+    [{ source: "executor", code: "timeout", timedOut: true }, "executor_timeout", "switch_executor"],
     [{ source: "executor", code: "auth" }, "environment_auth_executor", "request_environment_fix"],
     [{ source: "validation", exitCode: 1 }, "code_test", "repair_code"],
     [{ source: "planning", code: "invalid_contract" }, "contract_decomposition", "propose_graph_amendment"],
@@ -28,6 +28,14 @@ describe("failure recovery policy", () => {
 
   it.each(["upstream_artifact_unusable", "environment_workspace"] as const)("does not retry %s because retrying cannot change its cause", (failureClass) => {
     expect(recoveryPolicyFor(failureClass).automaticRetryBudget).toBe(0);
+  });
+
+  it("does not repeat an executor timeout with the same prompt, model, and deadline", () => {
+    const policy = recoveryPolicyFor(classifyFailure({ source: "executor", code: "timeout", timedOut: true }));
+
+    expect(policy.automaticRetryBudget).toBe(0);
+    expect(policy.actions).not.toContain("retry_attempt");
+    expect(policy.actions).toEqual(["switch_executor", "propose_graph_amendment", "raise_local_decision"]);
   });
 
   it("compiles classification and allowed recovery into one durable fact", () => {

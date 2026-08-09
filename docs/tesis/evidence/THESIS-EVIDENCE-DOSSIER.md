@@ -254,6 +254,6 @@ negativo no detectaba tests en subdirectorios y la serie se detuvo antes de
 contar; la corrección del fixture dio lugar a un freeze V2 nuevo.
 
 El detalle con SHAs, receipts, hashes, journals y métricas está en
-[`final-experiment/FINAL-REPORT.md`](final-experiment/FINAL-REPORT.md) y en
-`.scratch/final-thesis-experiment-v2/`. Esta sección es la que debe citarse en
-la tesis para la conclusión positiva.
+[`final-experiment/FINAL-REPORT.md`](final-experiment/FINAL-REPORT.md), con los
+artefactos crudos preservados bajo [`final-experiment/`](final-experiment/).
+Esta sección es la que debe citarse en la tesis para la conclusión positiva.

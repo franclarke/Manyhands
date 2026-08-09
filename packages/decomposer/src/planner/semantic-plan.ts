@@ -91,7 +91,9 @@ export const SemanticWorkUnitSchema: z.ZodType<SemanticWorkUnit> = z.lazy(() => 
 export const GoalCriterionSchema = z.object({
   id: EntityIdSchema,
   description: NonEmptyStringSchema,
-  required: z.boolean()
+  required: z.boolean(),
+  /** Paths this criterion explicitly requires contributors to modify. */
+  requiredPaths: z.array(RepoRelativePathSchema).optional()
 }).strict();
 
 export type GoalCriterion = z.infer<typeof GoalCriterionSchema>;
@@ -157,7 +159,6 @@ export const SemanticPlanSchema = z.union([SemanticPlanV2Schema, SemanticPlanV1S
   const criterionIds = new Set(plan.criteria.map((criterion) => criterion.id));
   const evidenceIds = new Set(plan.repositoryEvidence.map((evidence) => evidence.id));
   const pathEvidenceIds = new Set(plan.repositoryEvidence.filter((evidence) => evidence.kind === "path").map((evidence) => evidence.id));
-  const outcomeCountByCriterion = new Map<string, number>();
   const anyOutcomeCountByCriterion = new Map<string, number>();
   // Plans produced by the retired recursive v1 adapter used descriptive,
   // synthetic criterion ids (for example `criterion:domain`) instead of the
@@ -177,24 +178,17 @@ export const SemanticPlanSchema = z.union([SemanticPlanV2Schema, SemanticPlanV1S
         if (!criterionIds.has(criterionId)) unknownCriterionReferences.add(criterionId);
         else if (unit.kind === "leaf") knownLeafCriterionReferences.add(criterionId);
         anyOutcomeCountByCriterion.set(criterionId, (anyOutcomeCountByCriterion.get(criterionId) ?? 0) + 1);
-        // Composite outcomes are an integration roll-up and may repeat the
-        // criterion they prove. Acceptance ownership is the unique executable
-        // leaf outcome, which is the evidence that can actually satisfy it.
-        if (unit.kind === "leaf") {
-          outcomeCountByCriterion.set(criterionId, (outcomeCountByCriterion.get(criterionId) ?? 0) + 1);
-        }
       }
     }
   }
-  const legacyLineage = knownLeafCriterionReferences.size === 0 && unknownCriterionReferences.size > 0;
+  const legacyLineage = plan.schemaVersion === 1 && knownLeafCriterionReferences.size === 0 && unknownCriterionReferences.size > 0;
   if (!legacyLineage) {
     for (const criterionId of unknownCriterionReferences) {
       addIssue(context, `semantic outcome references unknown criterion ${criterionId}`);
     }
     for (const criterion of plan.criteria) {
-      const leafCount = outcomeCountByCriterion.get(criterion.id) ?? 0;
-      const count = leafCount > 0 ? leafCount : (anyOutcomeCountByCriterion.get(criterion.id) ?? 0);
-      if (criterion.required && count !== 1) addIssue(context, `required criterion ${criterion.id} must be owned by exactly one semantic outcome`);
+      const count = anyOutcomeCountByCriterion.get(criterion.id) ?? 0;
+      if (criterion.required && count === 0) addIssue(context, `required criterion ${criterion.id} must be covered by at least one semantic outcome`);
     }
   }
   for (const seam of plan.seams) {
@@ -269,7 +263,7 @@ export function buildSemanticPlanPrompt(input: SemanticPlanPromptInput): { syste
       "You are the semantic Planner for a software implementation system.",
       "Return one JSON object and nothing else after any planning.node progress lines.",
       "Produce a SemanticPlan draft. Do not emit WorkBreakdown, CandidatePlan, scopes, acceptance ownership, artifact lists, seam specifications, contract obligations, or leaf validation lists.",
-      "A semantic unit owns its outcomes. Every required criterion must appear in exactly one outcome. The compiler derives ownership, scopes, artifact requirements, contracts, validation obligations, conflicts, identities, and revisions.",
+      "A semantic unit owns its outcomes. Every required criterion must appear in at least one outcome and may appear in every unit that contributes to a cross-cutting result. The compiler derives the unique owner at the contributors' lowest common ancestor, plus scopes, artifact requirements, contracts, validation obligations, conflicts, identities, and revisions.",
       "Every cross-unit dependency appears once as a seam. A seam holds producer, consumers, promise, compatibility, materialization, verification, and evidence together.",
       "An api, type, or command seam that a consumer compiles or executes against must materialize files, manifest, or commit; logical is only for non-executable facts.",
       "Use only supplied evidence ids. A leaf needs existing path evidence or a concrete planned path. Do not call tools or invent repository state.",

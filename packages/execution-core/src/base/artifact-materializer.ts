@@ -32,7 +32,11 @@ export class ArtifactMaterializer {
       });
     }
 
-    const outcome = await this.git.cherryPick({ cwd: worktreePath, commitSha: artifact.location });
+    const outcome = await this.git.cherryPick({
+      cwd: worktreePath,
+      commitSha: artifact.location,
+      ...(artifact.cherryPickMainline === undefined ? {} : { mainline: artifact.cherryPickMainline })
+    });
     if (outcome.ok) return;
 
     await this.git.cherryPickAbort(worktreePath).catch(() => undefined);

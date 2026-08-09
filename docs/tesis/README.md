@@ -39,8 +39,9 @@ El resultado es `main.pdf`. Los archivos auxiliares (`.aux`, `.out`, `.toc`,
 > `File ended while scanning use of \@@BOOKMARK`, un error que no señala la
 > causa real.
 
-Estado de la última compilación verificada: **36 páginas, sin referencias ni
-citas indefinidas, sin cajas desbordadas y sin advertencias de LaTeX.**
+Estado de la última compilación verificada: **45 páginas, sin referencias ni
+citas indefinidas y sin cajas desbordadas.** El PDF incluye tres capturas del
+run demostrativo y fue revisado visualmente después de renderizar sus páginas.
 
 ---
 
@@ -57,9 +58,9 @@ de tablas.
 | 4 | Descomposición adaptativa | Formalización de $C_{task}$, frontera entre juicio semántico y decisión determinista, críticos de granularidad, **el resultado negativo: la política no puede inventar el corte**, pipeline resultante |
 | 5 | Arquitectura | El run como unidad de producto, grafo de tareas y relaciones tipadas, contratos, eventos de dominio y proyecciones |
 | 6 | Implementación | Organización del código, grounding del repositorio, planificación, planificación de olas, ejecución aislada, validación e integración, entrega, persistencia y recuperación, interfaz de supervisión |
-| 7 | Evaluación | Protocolo, resultados de los runs reales, defectos que la ejecución real detectó, variabilidad observada entre ejecuciones |
-| 8 | Discusión | Frontera entre lo semántico y lo determinista, amenazas a la validez, limitaciones |
-| 9 | Conclusiones | Resultados obtenidos y trabajo futuro |
+| 7 | Evaluación | H-F1/H-F2, protocolo V2, freeze, preflight, 4/4 celdas, demostración visual y evidencia histórica retirada del argumento central |
+| 8 | Discusión | Alcance del 4/4, evidencia independiente, trazabilidad, gap de materialización por archivos y amenazas a la validez |
+| 9 | Conclusiones | Respuestas directas, veredicto final, limitaciones y trabajo futuro priorizado |
 
 Bibliografía en `referencias.bib`.
 
@@ -71,14 +72,11 @@ Los capítulos 7 y 8 se apoyan en la evidencia de `evidence/`, no en prosa:
 
 | Ruta | Contenido |
 |---|---|
-| `evidence/canonical-run/` | Runs canónicos end-to-end: journal de eventos, snapshot, métricas de granularidad y diff entregado |
-| `evidence/experiment/` | Protocolo pre-registrado del estudio comparativo, celdas congeladas y resultados derivados |
+| `evidence/final-experiment/` | Pre-registro, freeze, preflight, cuatro celdas V2, journals, snapshots, receipts y resultados del oráculo externo |
+| `evidence/ui-demo-run/` | Demostración no experimental: run entregado, runs adversos, causa observable y oráculo independiente |
 | `evidence/scripts/` | Drivers reproducibles; **ninguna cifra reportada se transcribe a mano** |
-| `evidence/gates/` | Resultados de los gates G2 y G3 |
-| `evidence/progress-log.md` | Bitácora del cierre, incluidos los runs descartados y por qué |
+| `evidence/warehouse/`, `evidence/g6/` y líneas históricas | Antecedentes adversos o inconclusos; no sostienen H-F1/H-F2 |
 
-Para regenerar tablas y figuras del experimento:
-
-```bash
-node evidence/scripts/derive-metrics.mjs --runs evidence/experiment/runs --out evidence/experiment
-```
+La autoridad del resultado final es
+`evidence/final-experiment/FINAL-REPORT.md`. Warehouse permanece en 1/8; G5,
+G6, G7 y SP2 no se suman al denominador V2.

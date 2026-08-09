@@ -1,0 +1,401 @@
+{
+  "schemaVersion": 2,
+  "runId": "062e496e-572f-48e8-843a-31542082c6a9",
+  "eventSequence": 33,
+  "lastEventId": "062e496e-572f-48e8-843a-31542082c6a9:delivery.published:33",
+  "operationId": "f85adb95-bca7-4ee5-99e7-cd3ce8ebb843",
+  "fencingToken": 5,
+  "projection": {
+    "runId": "062e496e-572f-48e8-843a-31542082c6a9",
+    "goal": "Add and export the pure domain function summarizeInventory(state) from src/domain/orders.mjs. It must derive { totalUnits, occupiedSkus } from state.stockBySku, work for different states without hardcoded values, preserve every existing operation, and include a focused domain test. Do not change application or api.",
+    "lifecycle": "completed",
+    "sequence": 33,
+    "appliedEventIds": [
+      "run:062e496e-572f-48e8-843a-31542082c6a9:created",
+      "repository:sha256:7ff6530116dcce7ad22eccdbbb610dfc0ec442aaa39af320c308bf83a37280f7:inspection:2",
+      "planning:062e496e-572f-48e8-843a-31542082c6a9:unit:root",
+      "planning:062e496e-572f-48e8-843a-31542082c6a9:unit:domain-inventory-summary",
+      "planning:semantic-cdd26719da33cea319111c9c:completed:062e496e-572f-48e8-843a-31542082c6a9",
+      "graph:graph-semantic-cdd26719da33cea319111c9c-40d8b07c14:r1:compiled",
+      "graph:graph-semantic-cdd26719da33cea319111c9c-40d8b07c14:r1:critic:completeness",
+      "graph:graph-semantic-cdd26719da33cea319111c9c-40d8b07c14:r1:critic:atomicity",
+      "graph:graph-semantic-cdd26719da33cea319111c9c-40d8b07c14:r1:critic:contract_compatibility",
+      "graph:graph-semantic-cdd26719da33cea319111c9c-40d8b07c14:r1:critic:dag_validity",
+      "graph:graph-semantic-cdd26719da33cea319111c9c-40d8b07c14:r1:critic:scope_isolation",
+      "graph:graph-semantic-cdd26719da33cea319111c9c-40d8b07c14:r1:critic:artifact_coverage",
+      "graph:graph-semantic-cdd26719da33cea319111c9c-40d8b07c14:r1:critic:risk_uncertainty",
+      "graph:graph-semantic-cdd26719da33cea319111c9c-40d8b07c14:r1:critic:validation_coverage",
+      "graph:graph-semantic-cdd26719da33cea319111c9c-40d8b07c14:r1:proposed",
+      "approve-plan:graph-semantic-cdd26719da33cea319111c9c-40d8b07c14:r1",
+      "planning:semantic-cdd26719da33cea319111c9c:strategy:062e496e-572f-48e8-843a-31542082c6a9",
+      "approve-plan:graph-semantic-cdd26719da33cea319111c9c-40d8b07c14:r1:resolved",
+      "approve-plan:graph-semantic-cdd26719da33cea319111c9c-40d8b07c14:r1:graph-approved",
+      "062e496e-572f-48e8-843a-31542082c6a9:readiness.observed:20",
+      "062e496e-572f-48e8-843a-31542082c6a9:wave.selected:21",
+      "062e496e-572f-48e8-843a-31542082c6a9:attempt:node-domain-inventory-summary-2c985d0ab6:1:started",
+      "062e496e-572f-48e8-843a-31542082c6a9:attempt:node-domain-inventory-summary-2c985d0ab6:1:candidate",
+      "062e496e-572f-48e8-843a-31542082c6a9:attempt:node-domain-inventory-summary-2c985d0ab6:1:validation-completed",
+      "062e496e-572f-48e8-843a-31542082c6a9:attempt:node-domain-inventory-summary-2c985d0ab6:1:artifact-adopted",
+      "062e496e-572f-48e8-843a-31542082c6a9:readiness.observed:26",
+      "062e496e-572f-48e8-843a-31542082c6a9:wave.selected:27",
+      "062e496e-572f-48e8-843a-31542082c6a9:attempt:node-root-e84e8433c9:1:started",
+      "062e496e-572f-48e8-843a-31542082c6a9:attempt:node-root-e84e8433c9:1:integration-completed",
+      "062e496e-572f-48e8-843a-31542082c6a9:attempt:node-root-e84e8433c9:1:artifact-adopted",
+      "062e496e-572f-48e8-843a-31542082c6a9:attempt:node-root-e84e8433c9:1:final-candidate",
+      "062e496e-572f-48e8-843a-31542082c6a9:delivery.started:32",
+      "062e496e-572f-48e8-843a-31542082c6a9:delivery.published:33"
+    ],
+    "decisions": {
+      "approve-plan:graph-semantic-cdd26719da33cea319111c9c-40d8b07c14:r1": {
+        "id": "approve-plan:graph-semantic-cdd26719da33cea319111c9c-40d8b07c14:r1",
+        "kind": "approve_plan",
+        "question": "Approve graph revision 1?",
+        "options": [
+          {
+            "id": "approve",
+            "label": "Approve plan"
+          },
+          {
+            "id": "request_changes",
+            "label": "Request changes"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-root-e84e8433c9"
+        ],
+        "evidenceRefs": [
+          "graph:graph-semantic-cdd26719da33cea319111c9c-40d8b07c14:r1"
+        ],
+        "impact": "acceptance",
+        "status": "resolved",
+        "resolution": {
+          "optionId": "approve"
+        }
+      }
+    },
+    "stoppedNodeIds": [],
+    "readiness": {
+      "readyNodeIds": [
+        "node-root-e84e8433c9"
+      ],
+      "pendingDecisionIds": [],
+      "explanations": [
+        {
+          "nodeId": "node-domain-inventory-summary-2c985d0ab6",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "already_adopted"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-root-e84e8433c9",
+          "ready": true,
+          "reasons": []
+        }
+      ],
+      "effectiveConfig": {
+        "maxParallel": 1,
+        "maxCostUsd": 8,
+        "automaticRetryBudget": 0
+      },
+      "schedulerState": {
+        "materializableNodeIds": [
+          "node-root-e84e8433c9",
+          "node-domain-inventory-summary-2c985d0ab6"
+        ],
+        "activeResourceNodeIds": [],
+        "openCircuitBreakerNodeIds": [],
+        "availableExecutorNodeIds": [
+          "node-root-e84e8433c9",
+          "node-domain-inventory-summary-2c985d0ab6"
+        ],
+        "stoppedNodeIds": [],
+        "budgetAvailable": true
+      },
+      "budgetAvailable": true,
+      "conflictEvidence": [],
+      "evaluatedAt": "2026-08-09T13:51:50.184Z"
+    },
+    "selectedWaves": [
+      {
+        "waveId": "062e496e-572f-48e8-843a-31542082c6a9:wave:1",
+        "nodeIds": [
+          "node-domain-inventory-summary-2c985d0ab6"
+        ],
+        "maxParallel": 1,
+        "blocked": [
+          {
+            "nodeId": "node-root-e84e8433c9",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-domain-inventory-summary-output-1c94a8df22",
+                "requiredRevision": "sha256:cb0bbda7ca2007ad219857846adcc033acaf1d943df1a8b79a29a68c53dc3b79"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 1,
+          "maxCostUsd": 8,
+          "automaticRetryBudget": 0
+        },
+        "conflictEvidence": [],
+        "evaluatedAt": "2026-08-09T13:51:50.184Z"
+      },
+      {
+        "waveId": "062e496e-572f-48e8-843a-31542082c6a9:wave:2",
+        "nodeIds": [
+          "node-root-e84e8433c9"
+        ],
+        "maxParallel": 1,
+        "blocked": [
+          {
+            "nodeId": "node-domain-inventory-summary-2c985d0ab6",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 1,
+          "maxCostUsd": 8,
+          "automaticRetryBudget": 0
+        },
+        "conflictEvidence": [],
+        "evaluatedAt": "2026-08-09T13:51:50.184Z"
+      }
+    ],
+    "attempts": {
+      "062e496e-572f-48e8-843a-31542082c6a9:attempt:node-domain-inventory-summary-2c985d0ab6:1": {
+        "attemptId": "062e496e-572f-48e8-843a-31542082c6a9:attempt:node-domain-inventory-summary-2c985d0ab6:1",
+        "nodeId": "node-domain-inventory-summary-2c985d0ab6",
+        "inputFingerprint": "sha256:8538bb4a6e66378fd1ea3dc60dd8af0f7feb0278d28da0d73a03045feff5bc6c",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "6b00d553680bb4e54e0aea49af2571fe9e4ca1ec",
+        "outputDigest": "sha256:cd94be7c8f66b671a7e687c69de7762124b37d7f9dfb88f9a91139e786c28848",
+        "usage": {
+          "tokensTotal": 8519,
+          "costUsd": 0.0383355,
+          "source": "reported"
+        }
+      },
+      "062e496e-572f-48e8-843a-31542082c6a9:attempt:node-root-e84e8433c9:1": {
+        "attemptId": "062e496e-572f-48e8-843a-31542082c6a9:attempt:node-root-e84e8433c9:1",
+        "nodeId": "node-root-e84e8433c9",
+        "inputFingerprint": "sha256:edb9e2d30a4c74214438aefb7856cd497fc3d1df88870fd5f20bd5a2495fc95c",
+        "kind": "integration",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "dc953bda672b2303b8b70b4ad5dcf2d94a3d7263"
+      }
+    },
+    "adoptedArtifacts": {
+      "artifact-contract-domain-inventory-summary-output-1c94a8df22:062e496e-572f-48e8-843a-31542082c6a9:attempt:node-domain-inventory-summary-2c985d0ab6:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-domain-inventory-summary-output-1c94a8df22:062e496e-572f-48e8-843a-31542082c6a9:attempt:node-domain-inventory-summary-2c985d0ab6:1",
+        "runId": "062e496e-572f-48e8-843a-31542082c6a9",
+        "nodeId": "node-domain-inventory-summary-2c985d0ab6",
+        "digest": "sha256:cd94be7c8f66b671a7e687c69de7762124b37d7f9dfb88f9a91139e786c28848",
+        "producerAttemptId": "062e496e-572f-48e8-843a-31542082c6a9:attempt:node-domain-inventory-summary-2c985d0ab6:1",
+        "contract": {
+          "id": "artifact-contract-domain-inventory-summary-output-1c94a8df22",
+          "revision": "sha256:cb0bbda7ca2007ad219857846adcc033acaf1d943df1a8b79a29a68c53dc3b79"
+        },
+        "kind": "commit",
+        "location": "6b00d553680bb4e54e0aea49af2571fe9e4ca1ec",
+        "adoptedAt": "2026-08-09T13:52:51.181Z"
+      },
+      "artifact-contract-root-output-a8392491e5:062e496e-572f-48e8-843a-31542082c6a9:attempt:node-root-e84e8433c9:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-root-output-a8392491e5:062e496e-572f-48e8-843a-31542082c6a9:attempt:node-root-e84e8433c9:1",
+        "runId": "062e496e-572f-48e8-843a-31542082c6a9",
+        "nodeId": "node-root-e84e8433c9",
+        "digest": "sha256:1c11ba92f87944cc764e99318d53c5b7bfd969033740e083021d31f5c5a30d64",
+        "producerAttemptId": "062e496e-572f-48e8-843a-31542082c6a9:attempt:node-root-e84e8433c9:1",
+        "contract": {
+          "id": "artifact-contract-root-output-a8392491e5",
+          "revision": "sha256:88979528d567d8e6ca370e2d4cf69555604eeefc37c2bf89081793c57782bed2"
+        },
+        "kind": "commit",
+        "location": "dc953bda672b2303b8b70b4ad5dcf2d94a3d7263",
+        "adoptedAt": "2026-08-09T13:53:00.119Z"
+      }
+    },
+    "nodeEvidenceMatrixIds": {
+      "node-domain-inventory-summary-2c985d0ab6": "matrix-6a74666ed87c36bc",
+      "node-root-e84e8433c9": "matrix-5b31b5db81b58e3a"
+    },
+    "integrations": {
+      "node-root-e84e8433c9": {
+        "attemptId": "062e496e-572f-48e8-843a-31542082c6a9:attempt:node-root-e84e8433c9:1",
+        "nodeId": "node-root-e84e8433c9",
+        "requiredArtifactIds": [
+          "artifact-contract-domain-inventory-summary-output-1c94a8df22:062e496e-572f-48e8-843a-31542082c6a9:attempt:node-domain-inventory-summary-2c985d0ab6:1"
+        ],
+        "status": "completed",
+        "repairPasses": 0,
+        "manifestId": "integration-result-integration-request-f3c95ac5840f18ae",
+        "candidateCommit": "dc953bda672b2303b8b70b4ad5dcf2d94a3d7263",
+        "evidenceMatrixId": "matrix-5b31b5db81b58e3a"
+      }
+    },
+    "recoveryHistory": [],
+    "evidenceMatrices": [
+      "matrix-6a74666ed87c36bc",
+      "matrix-5b31b5db81b58e3a"
+    ],
+    "outcomes": {
+      "execution": "succeeded",
+      "artifact": "verified",
+      "delivery": "published"
+    },
+    "evidenceMatrixSummaries": {
+      "matrix-6a74666ed87c36bc": {
+        "candidateCommit": "6b00d553680bb4e54e0aea49af2571fe9e4ca1ec",
+        "outcome": "verified",
+        "validationRecipeDigest": "sha256:1c5564cf0aacc45114953c3e437a15045ebd408cf6ba98a63566047abd51fa58"
+      },
+      "matrix-5b31b5db81b58e3a": {
+        "candidateCommit": "dc953bda672b2303b8b70b4ad5dcf2d94a3d7263",
+        "outcome": "verified",
+        "validationRecipeDigest": "sha256:79f3de67382183de295fb891d96f11f206f3615af200e6104cf6038cfbe91544"
+      }
+    },
+    "graphId": "graph-semantic-cdd26719da33cea319111c9c-40d8b07c14",
+    "graphRevision": 1,
+    "granularityStrategy": {
+      "policyVersion": "adaptive-utility/3.1.0-pilot",
+      "condition": "C",
+      "candidateTreeHash": "sha256:cc170d1d79467f7e8db91a9abf6f5aaa6eb42795df42bddf7589d881e8615394",
+      "config": {
+        "minimumAdvantage": 0.15,
+        "maxLeafContextTokens": 24000,
+        "maxLeafScopePaths": 40,
+        "maxLeafPlannedPaths": 12
+      },
+      "assessments": {
+        "node-domain-inventory-summary-2c985d0ab6": {
+          "unitKey": "domain-inventory-summary",
+          "nodeId": "node-domain-inventory-summary-2c985d0ab6",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.2
+          },
+          "benefit": 0,
+          "cost": 0.05,
+          "splitAdvantage": -0.05,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-2",
+            "path-1",
+            "path-0",
+            "config-package-json",
+            "path-3",
+            "sha256:7ff6530116dcce7ad22eccdbbb610dfc0ec442aaa39af320c308bf83a37280f7"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-root-e84e8433c9": {
+          "unitKey": "root",
+          "nodeId": "node-root-e84e8433c9",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.2
+          },
+          "benefit": 0,
+          "cost": 0.05,
+          "splitAdvantage": -0.05,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-0",
+            "path-1",
+            "path-2",
+            "path-3",
+            "config-package-json",
+            "sha256:7ff6530116dcce7ad22eccdbbb610dfc0ec442aaa39af320c308bf83a37280f7"
+          ],
+          "rationale": "No valid multi-child semantic split is available; leaf remains cohesive."
+        }
+      },
+      "metrics": {
+        "maxGraphDepth": 1,
+        "totalLeafCount": 1,
+        "averageBranchingFactor": 1
+      }
+    },
+    "approvedGraphRevision": 1,
+    "finalCandidate": {
+      "manifestId": "final-21e5eae9604f757e",
+      "commit": "dc953bda672b2303b8b70b4ad5dcf2d94a3d7263",
+      "evidenceMatrixId": "matrix-5b31b5db81b58e3a",
+      "sourceTargetFingerprint": "f05d0e5734d2e599",
+      "targetBranch": "main",
+      "targetHead": "2804e866d6dd30c3defbe4186619ebbba27fe76c",
+      "evidenceEligible": true,
+      "finalManifest": {
+        "commitSha": "dc953bda672b2303b8b70b4ad5dcf2d94a3d7263",
+        "treeSha": "95d57393c0286a3e7276aebb652f563dd7282d7e",
+        "graphRevision": 1,
+        "artifactIds": [
+          "artifact-contract-root-output-a8392491e5"
+        ],
+        "evidenceMatrixId": "matrix-5b31b5db81b58e3a",
+        "validationRecipeDigest": "sha256:79f3de67382183de295fb891d96f11f206f3615af200e6104cf6038cfbe91544",
+        "deliveryTarget": "main",
+        "granularityPolicy": {
+          "policyVersion": "adaptive-utility/3.1.0-pilot",
+          "minimumAdvantage": 0.15,
+          "maxLeafContextTokens": 24000,
+          "maxLeafScopePaths": 40,
+          "maxLeafPlannedPaths": 12
+        }
+      }
+    },
+    "deliveryApproval": {
+      "manifestId": "final-21e5eae9604f757e",
+      "finalSha": "dc953bda672b2303b8b70b4ad5dcf2d94a3d7263",
+      "targetBranch": "main",
+      "targetHead": "2804e866d6dd30c3defbe4186619ebbba27fe76c",
+      "targetFingerprint": "f05d0e5734d2e599",
+      "actor": "thesis-operator",
+      "idempotencyKey": "final-v2-rehearsal-062e496e-572f-48e8-843a-31542082c6a9"
+    },
+    "deliveryReceipt": {
+      "receiptId": "delivery:final-v2-rehearsal-062e496e-572f-48e8-843a-31542082c6a9",
+      "requestFingerprint": "a9c13a382cbe81e3fb2ba0d9bf33159644adc9867c23d853ceb7dd00f3d890c0",
+      "manifestId": "final-21e5eae9604f757e",
+      "finalSha": "dc953bda672b2303b8b70b4ad5dcf2d94a3d7263",
+      "targetBranch": "main",
+      "targetHeadBefore": "2804e866d6dd30c3defbe4186619ebbba27fe76c",
+      "targetHeadAfter": "dc953bda672b2303b8b70b4ad5dcf2d94a3d7263",
+      "disposition": "delivered",
+      "confirmed": true
+    }
+  },
+  "checksum": "4696ae30208d8f62e6671df91c36ce44712fd293e9ca7c6a23f2741ca6739446"
+}

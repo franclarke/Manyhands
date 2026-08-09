@@ -8,6 +8,8 @@ export interface TestIntegrityFinding {
   code: "test_removed" | "test_script_weakened" | "test_configuration_changed" | "test_skipped" | "test_only" | "assertion_removed" | "required_public_surface_unchanged" | "required_public_surface_unrepresented";
   path: string;
   message: string;
+  disposition?: "blocking" | "rebutted";
+  rebuttalEvidenceRefs?: string[];
 }
 
 /**

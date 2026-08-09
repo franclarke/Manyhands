@@ -69,6 +69,7 @@ el aborto, el wrapper vuelve a verificar la lease y falla cerrado.
 | Clase | Política |
 |---|---|
 | transient | retry con backoff y presupuesto del recurso |
+| executor timeout | no retry idéntico; cambiar executor, enmendar el corte o pedir decisión |
 | code/test | una reparación local en el mismo worktree |
 | contract/decomposition | enmienda; no retry idéntico |
 | missing dependency | propuesta de ArtifactRequirement/SeamBinding |
@@ -79,6 +80,12 @@ el aborto, el wrapper vuelve a verificar la lease y falla cerrado.
 
 Los presupuestos son por clase y quedan persistidos. Repetir el mismo input sin
 nueva evidencia no constituye recuperación.
+
+Un timeout de executor no es transitorio por sí mismo: si no cambian el prompt,
+el modelo ni el límite, el siguiente intento reproduce la misma restricción y
+descarta trabajo útil. El presupuesto automático para esa clase es cero. El
+presupuesto por defecto de una hoja es 10 minutos y sigue siendo configurable
+por run; agotarlo produce evidencia adversa, nunca un candidato parcial.
 
 ## Pausa y cancelación
 

@@ -1,0 +1,10 @@
+{
+  "series": "FINAL-THESIS-EXPERIMENT-V1",
+  "cellId": "M-C-r1",
+  "runId": "d6676e86-4778-4120-8479-804f93dfac25",
+  "status": "adverse",
+  "leafValidations": "passed",
+  "rootValidation": "failed",
+  "cause": "The root validation command targeted test/baseline.test.mjs, while the negative control materialized candidate tests in nested directories that baseline.test.mjs did not import. The negative control therefore passed and the evidence matrix correctly rejected the root.",
+  "action": "Stopped the branch, preserved its journal, hardened the final target baseline entry point, added preflight sensitivity coverage, and opened V2 with a new freeze."
+}

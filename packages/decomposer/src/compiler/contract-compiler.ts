@@ -146,12 +146,25 @@ export function compileContractBundles(input: {
   });
 
   const intents = new Map(input.breakdown.acceptanceIntents.map((intent) => [intent.id, intent]));
-  const acceptanceOwnerByIntentId = input.candidatePlan === undefined
-    ? allocateAcceptanceIntents(input.breakdown.root)
-    : Object.fromEntries(input.candidatePlan.acceptanceOwnership
-        .slice()
-        .sort((left, right) => left.intentId.localeCompare(right.intentId) || left.ownerUnitKey.localeCompare(right.ownerUnitKey))
-        .map((ownership) => [ownership.intentId, ownership.ownerUnitKey]));
+  const acceptanceOwnerByIntentId = allocateAcceptanceIntents(input.breakdown.root);
+  if (input.candidatePlan !== undefined) {
+    const declaredOwners = new Map<string, string>();
+    for (const ownership of input.candidatePlan.acceptanceOwnership) {
+      if (declaredOwners.has(ownership.intentId)) {
+        throw new Error(`Candidate acceptance ownership repeats intent ${ownership.intentId}.`);
+      }
+      declaredOwners.set(ownership.intentId, ownership.ownerUnitKey);
+    }
+    for (const intent of input.breakdown.acceptanceIntents) {
+      const expectedOwner = acceptanceOwnerByIntentId[intent.id];
+      const declaredOwner = declaredOwners.get(intent.id);
+      if (expectedOwner === undefined || declaredOwner !== expectedOwner) {
+        throw new Error(
+          `Candidate acceptance ownership for ${intent.id} must be canonical LCA ${expectedOwner ?? "<missing>"}; received ${declaredOwner ?? "<missing>"}.`
+        );
+      }
+    }
+  }
   if (input.candidatePlan === undefined) {
     for (const intent of input.breakdown.acceptanceIntents) acceptanceOwnerByIntentId[intent.id] ??= input.breakdown.root.key;
   }
@@ -233,15 +246,20 @@ function criterionEvidence(
   repositoryEvidence: WorkBreakdown["repositoryEvidence"],
   candidatePlan?: CandidatePlan
 ): ValidationObligation["evidence"] {
-  const explicit = candidatePlan?.leafValidations.find((validation) => validation.unitKey === unit.key);
-  if (explicit !== undefined) {
+  const coveredUnitKeys = new Set(unit.kind === "composite"
+    ? flattenUnits(unit).map((candidate) => candidate.key)
+    : [unit.key]);
+  const explicitReferences = [...new Set(candidatePlan?.leafValidations
+    .filter((validation) => coveredUnitKeys.has(validation.unitKey))
+    .flatMap((validation) => validation.evidenceRefs) ?? [])].sort();
+  if (explicitReferences.length > 0) {
     return criteria.length === 1
-      ? { kind: "focused_command", selectors: explicit.evidenceRefs, references: explicit.evidenceRefs }
+      ? { kind: "focused_command", selectors: explicitReferences, references: explicitReferences }
       : {
           kind: "shared_command",
           criterionIds: criteria.map((criterion) => criterion.id),
-          references: explicit.evidenceRefs,
-          rationale: `The immutable candidate validation command ${explicit.command} proves this unit's owned criteria.`
+          references: explicitReferences,
+          rationale: `The immutable candidate validation commands for this unit tree prove its owned criteria on the integrated candidate.`
         };
   }
   const evidenceById = new Map(repositoryEvidence.map((evidence) => [evidence.id, evidence]));
@@ -250,17 +268,20 @@ function criterionEvidence(
     return evidence?.kind === "path" ? [evidence.reference] : [];
   });
   const plannedReferences = [...new Set((unit.plannedPaths ?? []).filter(isTestReference))].sort();
+  const descendantPlannedReferences = unit.kind === "composite"
+    ? [...new Set(flattenUnits(unit).flatMap((candidate) => candidate.plannedPaths ?? []).filter(isTestReference))].sort()
+    : [];
   const focusedReferences = [...new Set([...plannedReferences, ...citedReferences.filter(isTestReference)])].sort();
   // A composite owns an integration criterion, so existing test paths that it
   // cites are the repository-grounded evidence for the assembled tree. Leaf
   // units keep the stricter authorship rule below: a leaf-level citation alone
   // does not prove that the leaf owns or changes that test.
   const compositeReferences = unit.kind === "composite"
-    ? [...new Set([...plannedReferences, ...citedReferences.filter(isTestReference)])].sort()
+    ? [...new Set([...plannedReferences, ...descendantPlannedReferences, ...citedReferences.filter(isTestReference)])].sort()
     : plannedReferences;
 
   if (criteria.length === 1) {
-    const references = focusedReferences;
+    const references = unit.kind === "composite" ? compositeReferences : focusedReferences;
     if (references.length === 0) return undefined;
     return { kind: "focused_command", selectors: references, references };
   }
