@@ -30,6 +30,7 @@ import {
 } from "./lib/wide-graph-oracle-contract.mjs";
 import { resolveRunsDir } from "./run-experiment-paths.mjs";
 import { executionConfigForG6Cell } from "./lib/g6-cell-protocol.mjs";
+import { requestJson } from "./run-experiment-http.mjs";
 
 const exec = promisify(execFile);
 
@@ -417,19 +418,19 @@ function git(repo, argv) {
 }
 
 async function get(path) {
-  const response = await fetch(`${BASE}${path}`, { headers: { "x-manyhands-session": TOKEN } });
-  if (!response.ok) fail(`GET ${path} -> ${response.status} ${await response.text()}`);
-  return response.json();
+  return requestJson(BASE, path, {
+    token: TOKEN,
+    timeoutMs: config.httpTimeoutMs ?? 15_000
+  });
 }
 
 async function post(path, body) {
-  const response = await fetch(`${BASE}${path}`, {
+  return requestJson(BASE, path, {
     method: "POST",
-    headers: { "content-type": "application/json", "x-manyhands-session": TOKEN },
-    body: JSON.stringify(body)
+    token: TOKEN,
+    body,
+    timeoutMs: config.httpTimeoutMs ?? 15_000
   });
-  if (!response.ok) fail(`POST ${path} -> ${response.status} ${await response.text()}`);
-  return response.json();
 }
 
 function parseArgs(argv) {
