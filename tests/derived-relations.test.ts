@@ -31,7 +31,7 @@ const DOMAIN: PlannedUnit = {
   unit: {
     key: "domain",
     objective: "Record backorders in the domain",
-    criteria: [{ id: "criterion:domain", description: "The domain records the backorder", required: true }],
+    criteria: [CRITERIA[0]!],
     reads: ["src/domain/orders.js"],
     writes: ["src/domain/backorders.js", "test/domain.test.js"]
   }
@@ -43,7 +43,7 @@ const APPLICATION: PlannedUnit = {
   unit: {
     key: "application",
     objective: "Emit the backorder event",
-    criteria: [{ id: "criterion:application", description: "The application emits the event", required: true }],
+    criteria: [CRITERIA[1]!],
     reads: ["src/domain/backorders.js", "src/application/service.js"],
     writes: ["test/application.test.js"]
   }
@@ -56,7 +56,7 @@ const TREE: PlannedUnit = {
   unit: {
     key: "backorders",
     objective: "Add backorders",
-    criteria: [{ id: "criterion-goal", description: "Backorders work end to end", required: true }],
+    criteria: CRITERIA,
     reads: ["src/domain/orders.js", "src/application/service.js"],
     writes: []
   },
@@ -122,13 +122,32 @@ describe("projection to a semantic plan", () => {
     expect(plan.seams.some((seam) => seam.interface.materialization === "logical")).toBe(false);
   });
 
-  it("lets a composite own its own criteria, proven by integrating its children", () => {
+  it("keeps the canonical run criteria on the composite, proven by integrating its children", () => {
     const projected = project();
 
     expect(projected.criteria.map((criterion) => criterion.id).sort())
-      .toEqual(["criterion-goal", "criterion:application", "criterion:domain"]);
-    expect(projected.draft.root.outcomes.flatMap((outcome) => outcome.criterionIds)).toEqual(["criterion-goal"]);
+      .toEqual(["criterion-1", "criterion-2"]);
+    expect(projected.draft.root.outcomes.flatMap((outcome) => outcome.criterionIds)).toEqual(["criterion-1", "criterion-2"]);
     expect(projected.draft.root.outcomes[0]!.verification.kind).toBe("existing");
+  });
+
+  it("keeps the run criteria as one canonical set instead of duplicating inherited lineage", () => {
+    const projected = projectPlannedTree({
+      tree: {
+        ...TREE,
+        unit: { ...TREE.unit, criteria: CRITERIA },
+        children: [
+          { ...DOMAIN, unit: { ...DOMAIN.unit, criteria: [CRITERIA[0]!] } },
+          { ...APPLICATION, unit: { ...APPLICATION.unit, criteria: [CRITERIA[1]!] } }
+        ]
+      },
+      goal: "Add backorders across the slice",
+      criteria: CRITERIA,
+      evidence: EVIDENCE,
+      repositorySnapshotId: "sha256:fixture"
+    });
+
+    expect(projected.criteria).toEqual(CRITERIA);
   });
 
   it("declares a write absent from the snapshot as a planned path, and a present one as evidence", () => {
@@ -172,7 +191,7 @@ describe("projection to a semantic plan", () => {
     const owners = projected.draft.root.children.flatMap((child) =>
       child.outcomes.flatMap((outcome) => outcome.criterionIds));
 
-    expect(owners.sort()).toEqual(["criterion:application", "criterion:domain"]);
+    expect(owners.sort()).toEqual(["criterion-1", "criterion-2"]);
   });
 
   it("refuses to project a tree that still has an unresolved unit", () => {

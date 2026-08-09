@@ -65,7 +65,11 @@ export function criterionIdFor(unitKey: string): string {
 
 function asUnit(child: ChildProposal, parentCriteria: readonly GoalCriterion[]): UnitProposal {
   const criteria = child.criterionIds === undefined
-    ? [{ id: criterionIdFor(child.key), description: child.criterion!, required: true }]
+    ? [parentCriteria.find((criterion) => criterion.description === child.criterion!) ?? {
+      id: criterionIdFor(child.key),
+      description: child.criterion!,
+      required: true
+    }]
     : child.criterionIds.flatMap((criterionId) => {
       const criterion = parentCriteria.find((candidate) => candidate.id === criterionId);
       return criterion === undefined ? [] : [criterion];

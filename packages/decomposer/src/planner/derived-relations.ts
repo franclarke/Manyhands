@@ -72,7 +72,7 @@ export interface ProjectionInput {
 
 export interface ProjectedPlan {
   draft: SemanticPlanDraft;
-  /** Every criterion in the tree: the goal's at the root, one per child below. */
+  /** The canonical run criteria; child units reference these ids as lineage. */
   criteria: GoalCriterion[];
   relations: DerivedRelation[];
 }
@@ -98,9 +98,10 @@ export function projectPlannedTree(input: ProjectionInput): ProjectedPlan {
   const testPathsByKey = new Map(leavesOf(input.tree)
     .map((leaf) => [leaf.unit.key, leaf.unit.writes.filter(isTestPath)] as const));
 
-  // Every unit owns its own criteria, so the plan's criteria are simply the
-  // union over the tree. No id can collide: a child's id comes from its key.
-  const criteria: GoalCriterion[] = flattenPlannedUnits(input.tree).flatMap((unit) => unit.unit.criteria);
+  // Child units inherit criterion objects from their parent. The semantic plan
+  // declares the goal criteria once; flattening the tree here would duplicate
+  // those ids and make a valid lineage fail schema validation.
+  const criteria: GoalCriterion[] = [...input.criteria];
 
   const root = projectUnit(input.tree, evidenceIdByPath, testPathsByKey);
   // The plan must carry the evidence its units cite; a reference to an item the
