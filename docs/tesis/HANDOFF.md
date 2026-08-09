@@ -1661,3 +1661,16 @@ alcance ocurrió en la hoja más chica del corpus**.
 
 La política sabe cuándo dividir mejor que cuándo parar, y ahora eso está dicho
 con datos en vez de por afirmación. No se propuso ningún valor nuevo para el tope.
+
+## Decisión final de alcance experimental — 2026-08-09
+
+La línea Warehouse queda fuera del argumento positivo central. Sus artefactos se
+conservan como resultado adverso y el `1/8` no se usa como evidencia de escala.
+G5, G6 y G7 también quedan como antecedentes históricos, no como soporte de una
+hipótesis positiva.
+
+La única serie nueva es `evidence/final-experiment/`, con dos proposiciones
+operables: H-F1 (delivery end-to-end y oráculo externo en dos tareas y dos
+repeticiones por tarea) y H-F2 (composite domain/application/api para la tarea
+multi-capa y raíz leaf para la tarea cohesiva, en ambas repeticiones). El
+resultado sólo se generaliza al target y configuración congelados.

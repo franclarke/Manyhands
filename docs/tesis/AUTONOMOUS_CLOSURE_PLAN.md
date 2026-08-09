@@ -628,3 +628,16 @@ artefacto o limitación.
 5. Continuar con ticket 08.
 6. No iniciar N=4 hasta revisar las disposiciones de alcance y crear el freeze
    manifest. Ticket 02 puede cerrar después de 12, pero antes de 14.
+
+## Reorganización final de evidencia — 2026-08-09
+
+La ruta histórica queda archivada y no se reabre: Warehouse `1/8`, G6
+inconcluso y G7 fallido no permiten sostener una afirmación positiva común. No
+se ejecuta W2--W8 ni se usa la cadena como prueba de escala.
+
+El cierre pasa a una única serie autocontenida en
+`docs/tesis/evidence/final-experiment/`: dos formas de tarea, dos repeticiones
+adaptativas por forma, `gpt-5.4-mini/medium`, sin retries y oráculo externo sobre
+el candidate SHA exacto. H-F1 mide viabilidad end-to-end y H-F2 mide la
+selección de topología esperada. Ambas hipótesis son acotadas y el cambio de
+alcance se declara, no se presenta como confirmación retroactiva.

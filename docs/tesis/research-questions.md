@@ -245,3 +245,21 @@ determinista no puede inventar el corte semántico es un resultado de este
 trabajo, obtenido por refutación en un run real, no un supuesto de diseño.
 Sostener la formulación fuerte —«la política encuentra los hijos óptimos»— haría
 que la tesis se contradijera con su propio capítulo de metodología.
+
+## Reencuadre final para la entrega — 2026-08-09
+
+Las RQ1--RQ3 y las hipótesis históricas de escala se conservan como registro
+del diseño inicial, pero dejan de gobernar la conclusión principal: sus series
+no constituyen una base completa. La tesis se cierra con las dos proposiciones
+pre-registradas en `evidence/final-experiment/preregistration.md`:
+
+1. **H-F1 — viabilidad end-to-end acotada:** dos tareas y dos repeticiones
+   adaptativas por tarea producen un candidato entregado y verificado por un
+   oráculo externo.
+2. **H-F2 — selección de granularidad según forma:** composite con hojas
+   domain/application/api para la tarea multi-capa y raíz leaf para la tarea
+   cohesiva, en ambas repeticiones.
+
+La serie no contiene controles A/B y no responde superioridad, causalidad ni
+trade-off universal. Warehouse, G5, G6 y G7 pasan a una sección histórica o
+adversa; sus artefactos no se borran y ninguna frase positiva depende de ellos.
