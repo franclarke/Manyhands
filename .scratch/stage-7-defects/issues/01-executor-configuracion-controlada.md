@@ -6,7 +6,7 @@ global, hooks— y esa configuración puede escribir archivos dentro del worktre
 
 **Blocked by:** None — can start immediately.
 
-**Status:** open
+**Status:** closed
 
 ## La observación
 
@@ -84,16 +84,26 @@ esté aislado.
 
 ## Checklist
 
-- [ ] Regresión roja: el perfil de `claude-code-cli` construye sus argumentos sin
+- [x] Regresión roja: el perfil de `claude-code-cli` construye sus argumentos sin
       ninguna restricción de fuentes de configuración. El test falla por eso, no
       por otra cosa.
-- [ ] `buildClaudeCodeArgs` pasa `--setting-sources` excluyendo `user`.
-- [ ] Verificado con un run real que el ejecutor sigue autenticando. Si no,
+- [x] `buildClaudeCodeArgs` pasa `--setting-sources` excluyendo `user`.
+- [x] Verificado con un run real que el ejecutor sigue autenticando. Si no,
       documentar la interacción y elegir la alternativa mínima siguiente.
-- [ ] Verificado contra el caso observado: un leaf equivalente ya no escribe
+- [x] Verificado contra el caso observado: un leaf equivalente ya no escribe
       `docs/superpowers/**` ni ningún otro archivo fuera de su contrato.
-- [ ] La configuración efectiva del ejecutor queda registrada en el freeze y en
+- [x] La configuración efectiva del ejecutor queda registrada en el freeze y en
       la pre-registración.
-- [ ] `agent-env.ts` documenta que la reducción de comportamiento vive en las
+- [x] `agent-env.ts` documenta que la reducción de comportamiento vive en las
       flags del perfil, no en el allowlist de variables — para que el próximo
       lector no busque donde no está.
+
+## Cierre verificado
+
+La regresión de argumentos y el aislamiento de entorno quedan cubiertos por
+los tests del perfil y de `agent-env`. El 2026-08-09 se ejecutó Claude Code en
+un repositorio descartable con `--setting-sources project,local`, sin API keys
+en el entorno y con un contrato de escritura de un solo archivo. El CLI
+autenticó y escribió únicamente `probe.txt`; no apareció `docs/superpowers/**`
+ni ningún otro archivo inesperado. La evidencia completa está en
+[`claude-config-check.json`](../claude-config-check.json).

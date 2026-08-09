@@ -6,7 +6,7 @@ de recuperación.
 
 **Blocked by:** None — can start immediately.
 
-**Status:** open
+**Status:** closed
 
 ## La observación
 
@@ -66,16 +66,25 @@ problema opuesto.
 
 ## Checklist
 
-- [ ] Regresión roja construida desde las **observaciones registradas** de los
+- [x] Regresión roja construida desde las **observaciones registradas** de los
       runs `1bb2b66b` y `209c3e59`, no desde ejemplos inventados. Falla porque
       hoy devuelven `unclassified`.
-- [ ] `classifyFailure` distingue las dos causas por su `source`/`code`.
-- [ ] `recoveryPolicyFor` define ambas, y el test de totalidad de la etapa 5
+- [x] `classifyFailure` distingue las dos causas por su `source`/`code`.
+- [x] `recoveryPolicyFor` define ambas, y el test de totalidad de la etapa 5
       —que exige política para toda clase— sigue verde sin tocarlo.
-- [ ] El presupuesto de retry de las dos es 0, con la razón escrita: reintentar
+- [x] El presupuesto de retry de las dos es 0, con la razón escrita: reintentar
       no cambia ninguna de las dos condiciones.
-- [ ] `upstream_artifact_unusable` nombra al nodo productor en la decisión que
+- [x] `upstream_artifact_unusable` nombra al nodo productor en la decisión que
       levanta.
-- [ ] Verificado que `unclassified` sigue apareciendo para una observación
+- [x] Verificado que `unclassified` sigue apareciendo para una observación
       genuinamente desconocida — si desaparece, se rompió lo que la etapa 5
       construyó.
+
+## Cierre verificado
+
+Las regresiones se construyeron a partir de `artifact_empty` y del rechazo de
+`git update-ref` observado en los ensayos. La clasificación, las políticas de
+recuperación y la preservación de `unclassified` están cubiertas por
+`tests/execution-failure-cause-classification.test.ts`,
+`tests/failure-recovery-policy.test.ts` y la suite completa. Ambas causas
+nombrables quedan con presupuesto de retry cero y decisión local observable.

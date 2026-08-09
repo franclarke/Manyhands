@@ -1,0 +1,12 @@
+{
+  "cellId": "rehearsal-04w-v4",
+  "condition": "semantic-product",
+  "taskId": "SP2-T1",
+  "runId": "3dad2f94-8c33-4f2d-8d95-d5ee79db19af",
+  "started": "2026-08-09T01:11:25.939Z",
+  "finished": "2026-08-09T01:12:23.470Z",
+  "outcome": {
+    "lifecycle": "failed",
+    "receipt": null
+  }
+}

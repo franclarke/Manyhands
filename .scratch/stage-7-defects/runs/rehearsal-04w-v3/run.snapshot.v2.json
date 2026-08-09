@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 2,
+  "runId": "564f3234-f02e-41fb-8a53-b1ee1c352f91",
+  "eventSequence": 4,
+  "lastEventId": "planning:564f3234-f02e-41fb-8a53-b1ee1c352f91:failed:4",
+  "operationId": "80383f8a-576f-4a9f-8c90-e5b3701c8430",
+  "fencingToken": 2,
+  "projection": {
+    "runId": "564f3234-f02e-41fb-8a53-b1ee1c352f91",
+    "goal": "Add express/standard order priority and backorder recording across the existing domain, application and API. `priority` accepts only `standard` or `express`, defaults to `standard` when omitted, and rejects other values with a `priority` error. An order that exceeds available stock must remain cancellable, record a positive backorder, emit exactly one application event of type `backorder-recorded`, and be observable through the API through `currentOrders()`, `currentBackorders()` and `events()`. `currentBackorders()` returns entries shaped exactly as `{ orderId, skuId, missing }`. Preserve existing behavior. Add focused tests beside the modified code.",
+    "lifecycle": "failed",
+    "sequence": 4,
+    "appliedEventIds": [
+      "run:564f3234-f02e-41fb-8a53-b1ee1c352f91:created",
+      "repository:sha256:612681865721208024385c9332f1a6fea9b57b0fb8e80e3c1b43a65db9290ac7:inspection:2",
+      "planning:564f3234-f02e-41fb-8a53-b1ee1c352f91:unit:root:unresolved",
+      "planning:564f3234-f02e-41fb-8a53-b1ee1c352f91:failed:4"
+    ],
+    "decisions": {},
+    "stoppedNodeIds": [],
+    "readiness": {
+      "readyNodeIds": [],
+      "pendingDecisionIds": []
+    },
+    "selectedWaves": [],
+    "attempts": {},
+    "adoptedArtifacts": {},
+    "nodeEvidenceMatrixIds": {},
+    "integrations": {},
+    "recoveryHistory": [],
+    "evidenceMatrices": [],
+    "outcomes": {
+      "execution": "pending",
+      "artifact": "missing",
+      "delivery": "not_started"
+    },
+    "evidenceMatrixSummaries": {},
+    "failureReason": "no_safe_cut: root: children.0.criterionIds: Array must contain at least 1 element(s); children.1.criterionIds: Array must contain at least 1 element(s)"
+  },
+  "checksum": "6f6fc1476fc0a952b36140df85918bffc5e9985f39f572b6408fb3f0130205ef"
+}

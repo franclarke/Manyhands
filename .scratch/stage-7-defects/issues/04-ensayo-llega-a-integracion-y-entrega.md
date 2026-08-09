@@ -8,7 +8,7 @@ final y entrega **no tienen ninguna observación**.
 una hoja puede ser rechazada por un archivo que ManyHands nunca pidió, y el
 ensayo vuelve a parar en el mismo lugar sin haber probado nada nuevo.
 
-**Status:** open
+**Status:** closed
 
 ## Dónde paró cada pasada
 
@@ -27,16 +27,26 @@ después de la segunda hoja.
 No alcanza con «el run terminó». Cada punto es una afirmación que hoy nadie puede
 sostener con un run persistido:
 
-- [ ] Las tres hojas producen candidatos verificados y sus artefactos se adoptan.
-- [ ] El composite de integración consume los tres artefactos hijos y produce un
+- [x] Las tres hojas producen candidatos verificados y sus artefactos se adoptan.
+- [x] El composite de integración consume los tres artefactos hijos y produce un
       candidato raíz.
-- [ ] El candidato raíz se valida sobre su **commit exacto**.
-- [ ] La entrega deja el árbol validado donde el producto dice que lo deja.
-- [ ] El oráculo externo corre sobre el commit candidato exacto, con el
+- [x] El candidato raíz se valida sobre su **commit exacto**.
+- [x] La entrega deja el árbol validado donde el producto dice que lo deja.
+- [x] El oráculo externo corre sobre el commit candidato exacto, con el
       procedimiento de §4.1.2 —worktree descartable, copia congelada del
       evaluador— y da un veredicto.
-- [ ] El instrumento de paralelismo lee las observaciones de un run que llegó
+- [x] El instrumento de paralelismo lee las observaciones de un run que llegó
       hasta el final, no de uno truncado.
+
+## Cierre verificado
+
+El rehearsal `rehearsal-04w-v5` estableció el camino completo sin contar como
+celda. Después, las dos celdas congeladas llegaron a `completed` y `delivered`:
+`sp2-cell-01` y `sp2-cell-02`. Cada candidato fue validado sobre su SHA exacto,
+el oráculo externo se ejecutó desde worktrees descartables y ambas celdas
+produjeron las observaciones de paralelismo y entrega esperadas. La evidencia
+está en [`sp2-result.json`](../sp2-result.json) y en los directorios de cada
+run.
 
 ## Qué no es
 

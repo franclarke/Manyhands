@@ -1,0 +1,54 @@
+{
+  "series": "SP2",
+  "seriesKind": "rehearsal",
+  "cellId": "rehearsal-04w-v4",
+  "taskId": "SP2-T1",
+  "taskLabel": "order priority and backorders across domain, application and API",
+  "condition": "semantic-product",
+  "repetition": 0,
+  "workspaceName": "sp2-rehearsal-04w-v4",
+  "baseUrl": "http://127.0.0.1:3200",
+  "httpTimeoutMs": 15000,
+  "serverRuntime": {
+    "mode": "production",
+    "buildCommand": "pnpm web:build",
+    "workspaceFile": "C:\\mh-sp2\\runtime\\sp2-workspaces-v4.json"
+  },
+  "targetRepo": "C:\\mh-sp2\\rehearsal-04w-v2",
+  "baseSha": "9fee798db9eb700bfba8189bf6a5cbd1984eb44e",
+  "goal": "Add express/standard order priority and backorder recording across the existing domain, application and API. `priority` accepts only `standard` or `express`, defaults to `standard` when omitted, and rejects other values with a `priority` error. An order that exceeds available stock must remain cancellable, record a positive backorder, emit exactly one application event of type `backorder-recorded`, and be observable through the API through `currentOrders()`, `currentBackorders()` and `events()`. `currentBackorders()` returns entries shaped exactly as `{ orderId, skuId, missing }`. Preserve existing behavior. Add focused tests beside the modified code.",
+  "acceptanceCriteria": [
+    "priority accepts only standard or express, defaults to standard when omitted, and invalid values fail with an error that names priority.",
+    "Insufficient stock leaves the order cancellable and records a positive backorder with exact { orderId, skuId, missing } data.",
+    "The application emits exactly one backorder-recorded event for each backorder and preserves non-backorder behavior.",
+    "The API exposes currentOrders(), currentBackorders(), and events(), with currentBackorders entries shaped exactly as { orderId, skuId, missing }."
+  ],
+  "planningSelection": { "executorId": "codex-cli", "model": "gpt-5.4-mini", "effort": "medium" },
+  "executionSelection": { "executorId": "codex-cli", "model": "gpt-5.4-mini", "effort": "medium" },
+  "repairSelection": { "executorId": "codex-cli", "model": "gpt-5.4-mini", "effort": "medium" },
+  "executionConfig": {
+    "maxParallel": 2,
+    "scopePolicy": "strict",
+    "leafTimeoutMs": 1200000,
+    "integrationTimeoutMs": 1200000,
+    "maxPlanningAttempts": 1,
+    "automaticRetryBudget": 0,
+    "maxCostUsd": 8,
+    "unexpectedCommitPolicy": "reject"
+  },
+  "runsDir": "C:\\mh-sp2\\runtime\\runs-v4",
+  "pollIntervalMs": 5000,
+  "wallClockLimitMs": 2700000,
+  "ownerHeartbeatStaleMs": 120000,
+  "freezeProtocolPath": "docs/tesis/evidence/semantic-planning/sp2-protocol.md",
+  "freezePreregistrationPath": "docs/tesis/evidence/semantic-planning/sp2-preregistration.md",
+  "manyhandsCommit": "90fde7a0",
+  "modelDeviation": "Protocol names Claude; this rehearsal uses Codex gpt-5.4-mini for planning, execution and repair as instructed before the freeze.",
+  "templateFileHashes": {
+    "package.json": "963b9393bc242e811a153b88e2b08e8faee82daa8301f4fb9800666ce7a12764",
+    "src/api/warehouse-api.mjs": "85637b88a70bda646b46ab9c3c6202997febef5e6204be852dc91cf3bfe18a00",
+    "src/application/order-service.mjs": "be16aeffc08657edc479fef6fbfd85aae403b91cce0798ba8dacdafe4b799ba0",
+    "src/domain/orders.mjs": "4f602fb943ffe53f17fe506754052170fcf8da42aa3f17e1ae7438a9cc7e4f45",
+    "test/baseline.test.mjs": "80de34ab47454c212b912ab7d9592033b0ba7855ee9679a83518f9422d6254b9"
+  }
+}

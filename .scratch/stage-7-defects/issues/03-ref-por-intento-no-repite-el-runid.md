@@ -5,7 +5,7 @@ en escribir dos veces el mismo identificador.
 
 **Blocked by:** None — can start immediately.
 
-**Status:** open
+**Status:** closed
 
 ## La observación
 
@@ -52,13 +52,21 @@ prefijo.
 
 ## Checklist
 
-- [ ] Regresión roja que falle **por longitud**, con un target en una ruta que
+- [x] Regresión roja que falle **por longitud**, con un target en una ruta que
       hoy rompe y que con el ref corto entra. No un test de formato de string:
       el defecto es el largo, y un test de formato pasaría sin arreglar nada.
-- [ ] Identificado si el arreglo va en el naming del ref o en la proyección del
+- [x] Identificado si el arreglo va en el naming del ref o en la proyección del
       `attemptId`, con la evidencia de cuál es.
-- [ ] Dos intentos del mismo nodo siguen produciendo refs distintos.
-- [ ] Verificado contra el caso observado: un target en una ruta de ~138
+- [x] Dos intentos del mismo nodo siguen produciendo refs distintos.
+- [x] Verificado contra el caso observado: un target en una ruta de ~138
       caracteres completa un intento.
-- [ ] La regla de `CLAUDE.md` se actualiza con el margen nuevo, o se retira si
+- [x] La regla de `CLAUDE.md` se actualiza con el margen nuevo, o se retira si
       deja de hacer falta.
+
+## Cierre verificado
+
+El arreglo está en la proyección del `attemptId` al segmento del ref: el
+namespace `runs/<runId>/` conserva la identidad del run y el segmento de
+intento conserva el discriminante y un hash corto para evitar colisiones. La
+regresión de `tests/ephemeral-execution-workspace.test.ts` reproduce una ruta
+larga equivalente a la observada y comprueba dos intentos del mismo nodo.

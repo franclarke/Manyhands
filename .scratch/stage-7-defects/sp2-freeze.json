@@ -1,0 +1,75 @@
+{
+  "series": "SP2",
+  "frozenAt": "2026-08-09T01:49:16Z",
+  "protocol": "docs/tesis/evidence/semantic-planning/sp2-protocol.md",
+  "preregistration": "docs/tesis/evidence/semantic-planning/sp2-preregistration.md",
+  "manyhandsCommit": "90fde7a057db8a04e0f7cc1021685ca002e6fa8d",
+  "postSeriesCompatibilityFixCommit": "157cb6cadd91e9a2646ea25951b877c942579b3a",
+  "postSeriesCompatibilityFix": "Preserves replay of legacy synthetic criterion ids at the compiler boundary; canonical SP2 lineage remains strict. This fix was discovered by the post-run full-suite verification and was not applied to or retried in either frozen cell.",
+  "targetTemplate": "docs/tesis/evidence/semantic-planning/sp2-target-template",
+  "oracle": {
+    "path": "docs/tesis/evidence/semantic-planning/sp2-oracle/evaluator.mjs",
+    "sha256": "8b03b82b7ce4a7bab084b217093744ebdc87f9fc9d0879ac9e8d0fe7a58ac7f5",
+    "scope": "external checkout only; never indexed or writable by the run"
+  },
+  "model": {
+    "protocolDefault": "Claude (lowest available)",
+    "actual": "Codex gpt-5.4-mini",
+    "executorId": "codex-cli",
+    "effort": "medium",
+    "stages": ["planning", "execution", "repair"],
+    "deviation": "The operator explicitly required the cheapest Codex model; the same model and effort were frozen for both cells."
+  },
+  "stimulus": {
+    "condition": "semantic-product",
+    "taskId": "SP2-T1",
+    "maxParallel": 2,
+    "scopePolicy": "strict",
+    "automaticRetryBudget": 0,
+    "maxPlanningAttempts": 1,
+    "unexpectedCommitPolicy": "reject",
+    "targetTimeoutMs": 1200000,
+    "integrationTimeoutMs": 1200000,
+    "maxCostUsd": 8,
+    "httpTimeoutMs": 15000,
+    "buildBeforeEachRun": "pnpm build",
+    "oracleOrder": ["checkout delivered SHA", "npm test", "node evaluator.mjs"],
+    "retries": 0
+  },
+  "runtime": {
+    "mode": "production",
+    "baseUrl": "http://127.0.0.1:3200",
+    "workspaceFile": "C:\\mh-sp2\\runtime\\sp2-workspaces-v5.json",
+    "runsDir": "C:\\mh-sp2\\runtime\\runs-v5"
+  },
+  "cells": [
+    {
+      "cellId": "sp2-cell-01",
+      "targetRepo": "C:\\mh-sp2\\cell-01",
+      "baseSha": "2dfb64c7d09852cba1d2509d1d4c78a8f2900677",
+      "runId": "657d94bb-38bb-47c7-ae2a-8bb6d130ec23",
+      "candidateSha": "8144bfe8a06a9f3a4d946ca5fa712ce76de262fb",
+      "metrics": { "maxGraphDepth": 1, "totalLeafCount": 3, "averageBranchingFactor": 3 },
+      "targetTests": { "passed": 7, "failed": 0 },
+      "oracle": "pass"
+    },
+    {
+      "cellId": "sp2-cell-02",
+      "targetRepo": "C:\\mh-sp2\\cell-02",
+      "baseSha": "f6b84b085e01c6c57fd2e730f47136152078ec6e",
+      "runId": "c696806e-809a-46a6-9c61-46d68cd6749e",
+      "candidateSha": "50773ec2c9a3c322f9eb5c19757eac8db0b51ec0",
+      "metrics": { "maxGraphDepth": 1, "totalLeafCount": 3, "averageBranchingFactor": 3 },
+      "targetTests": { "passed": 8, "failed": 0 },
+      "oracle": "pass"
+    }
+  ],
+  "rehearsal": {
+    "cellId": "rehearsal-04w-v5",
+    "counted": false,
+    "runId": "9e4695ad-c5fd-430a-a935-21cdd7296088",
+    "candidateSha": "88c2af0fa7055745ffa557ed78965f0ef67d56a1",
+    "oracle": "pass",
+    "purpose": "end-to-end machinery check before freeze"
+  }
+}

@@ -1,6 +1,6 @@
 # SP2 sobre el sistema rediseñado — pre-registración
 
-> **Estado:** pre-registrado, **no ejecutado**. Fecha: 2026-08-07.
+> **Estado:** pre-registrado y ejecutado. Congelamiento: 2026-08-09.
 > **Alcance:** etapa 7 de
 > [`../../../plans/2026-08-05-robust-graph-execution-redesign.md`](../../../plans/2026-08-05-robust-graph-execution-redesign.md).
 > **Relación con [`sp2-protocol.md`](sp2-protocol.md):** el protocolo sigue
@@ -484,3 +484,39 @@ de medición durante la serie.
 - `maxScopePaths` (D8) no se ancla acá. La serie **produce** la medición que
   permitiría anclarlo; anclarlo con estos datos y después medir con él sería
   circular.
+
+---
+
+## 8. Resultado de la serie congelada
+
+Esta sección se agregó después de cerrar la serie y no modifica el objetivo,
+los criterios, los umbrales, los scopes ni las definiciones de medición
+pre-registrados.
+
+| Criterio | Resultado |
+|---|---|
+| Celdas completas | **2/2** |
+| Criterios externos | **5/5 por celda** |
+| Reintentos | **0** |
+| Rehearsal 04w | Ejecutado y excluido del conteo |
+| Veredicto | **PASS** |
+
+Las celdas fueron `sp2-cell-01` (candidato
+`8144bfe8a06a9f3a4d946ca5fa712ce76de262fb`) y `sp2-cell-02` (candidato
+`50773ec2c9a3c322f9eb5c19757eac8db0b51ec0`). El oráculo se mantuvo fuera del
+template y se ejecutó sobre cada commit candidato exacto; su SHA-256 fue
+`8b03b82b7ce4a7bab084b217093744ebdc87f9fc9d0879ac9e8d0fe7a58ac7f5`.
+
+El protocolo indicaba Claude como modelo más barato. Por decisión explícita del
+operador, el congelamiento usó `gpt-5.4-mini` de Codex en planning, execution y
+repair, con esfuerzo `medium`; la desviación está registrada en
+[`sp2-freeze.json`](../../../../.scratch/stage-7-defects/sp2-freeze.json).
+
+La verificación posterior descubrió y corrigió compatibilidad de replay para
+fixtures legacy en el commit `157cb6cadd91e9a2646ea25951b877c942579b3a`. No se
+alteraron ni reintentaron las celdas congeladas. La suite completa, los
+typechecks y ambos builds quedaron verdes sobre el código corregido.
+
+La evidencia operacional completa está en
+[`sp2-result.json`](../../../../.scratch/stage-7-defects/sp2-result.json) y en
+`.scratch/stage-7-defects/runs/`.

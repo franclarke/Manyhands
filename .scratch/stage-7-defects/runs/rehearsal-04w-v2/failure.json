@@ -1,0 +1,21 @@
+{
+  "cellId": "rehearsal-04w-v2",
+  "seriesKind": "rehearsal",
+  "startedAt": "2026-08-09T00:34:59.559Z",
+  "outcome": "adverse",
+  "phase": "driver_pre_run_api",
+  "error": {
+    "name": "TypeError",
+    "message": "fetch failed",
+    "cause": "UND_ERR_HEADERS_TIMEOUT",
+    "detail": "Headers Timeout Error"
+  },
+  "observed": {
+    "runId": null,
+    "candidateCommit": null,
+    "oracle": "not_run",
+    "outputFiles": ["rehearsal-04w-v2.json", "failure.json"],
+    "server": "stopped after the driver exited"
+  },
+  "attribution": "The failure occurred while the experiment driver was waiting for the local ManyHands HTTP server response; no target leaf, planner candidate, executor, integration, or external oracle result was produced. This rehearsal is not a measurement cell."
+}

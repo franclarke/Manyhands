@@ -1,0 +1,751 @@
+{
+  "schemaVersion": 2,
+  "runId": "657d94bb-38bb-47c7-ae2a-8bb6d130ec23",
+  "eventSequence": 49,
+  "lastEventId": "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:delivery.published:49",
+  "operationId": "71110853-efc7-4721-873e-65617a78e8f2",
+  "fencingToken": 5,
+  "projection": {
+    "runId": "657d94bb-38bb-47c7-ae2a-8bb6d130ec23",
+    "goal": "Add express/standard order priority and backorder recording across the existing domain, application and API. `priority` accepts only `standard` or `express`, defaults to `standard` when omitted, and rejects other values with a `priority` error. An order that exceeds available stock must remain cancellable, record a positive backorder, emit exactly one application event of type `backorder-recorded`, and be observable through the API through `currentOrders()`, `currentBackorders()` and `events()`. `currentBackorders()` returns entries shaped exactly as `{ orderId, skuId, missing }`. Preserve existing behavior. Add focused tests beside the modified code.",
+    "lifecycle": "completed",
+    "sequence": 49,
+    "appliedEventIds": [
+      "run:657d94bb-38bb-47c7-ae2a-8bb6d130ec23:created",
+      "repository:sha256:5b11e9cdc254e68185fe1252f757b0dc589e4d34f8f9736e270767f7539d0090:inspection:2",
+      "planning:657d94bb-38bb-47c7-ae2a-8bb6d130ec23:unit:root",
+      "planning:657d94bb-38bb-47c7-ae2a-8bb6d130ec23:unit:domain-priority-and-backorder-data",
+      "planning:657d94bb-38bb-47c7-ae2a-8bb6d130ec23:unit:application-backorder-events",
+      "planning:657d94bb-38bb-47c7-ae2a-8bb6d130ec23:unit:api-backorder-surface",
+      "planning:semantic-a60422d5a8126a9af4fcaf02:completed:657d94bb-38bb-47c7-ae2a-8bb6d130ec23",
+      "graph:graph-semantic-a60422d5a8126a9af4fcaf02-da1eff652f:r1:compiled",
+      "graph:graph-semantic-a60422d5a8126a9af4fcaf02-da1eff652f:r1:critic:completeness",
+      "graph:graph-semantic-a60422d5a8126a9af4fcaf02-da1eff652f:r1:critic:atomicity",
+      "graph:graph-semantic-a60422d5a8126a9af4fcaf02-da1eff652f:r1:critic:contract_compatibility",
+      "graph:graph-semantic-a60422d5a8126a9af4fcaf02-da1eff652f:r1:critic:dag_validity",
+      "graph:graph-semantic-a60422d5a8126a9af4fcaf02-da1eff652f:r1:critic:scope_isolation",
+      "graph:graph-semantic-a60422d5a8126a9af4fcaf02-da1eff652f:r1:critic:artifact_coverage",
+      "graph:graph-semantic-a60422d5a8126a9af4fcaf02-da1eff652f:r1:critic:risk_uncertainty",
+      "graph:graph-semantic-a60422d5a8126a9af4fcaf02-da1eff652f:r1:critic:validation_coverage",
+      "graph:graph-semantic-a60422d5a8126a9af4fcaf02-da1eff652f:r1:proposed",
+      "approve-plan:graph-semantic-a60422d5a8126a9af4fcaf02-da1eff652f:r1",
+      "planning:semantic-a60422d5a8126a9af4fcaf02:strategy:657d94bb-38bb-47c7-ae2a-8bb6d130ec23",
+      "approve-plan:graph-semantic-a60422d5a8126a9af4fcaf02-da1eff652f:r1:resolved",
+      "approve-plan:graph-semantic-a60422d5a8126a9af4fcaf02-da1eff652f:r1:graph-approved",
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:readiness.observed:22",
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:wave.selected:23",
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-domain-priority-and-backorder-data-83ca7a05c0:1:started",
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-domain-priority-and-backorder-data-83ca7a05c0:1:candidate",
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-domain-priority-and-backorder-data-83ca7a05c0:1:validation-completed",
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-domain-priority-and-backorder-data-83ca7a05c0:1:artifact-adopted",
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-domain-priority-and-backorder-data-83ca7a05c0:1:artifact-adopted:1",
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:readiness.observed:29",
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:wave.selected:30",
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-application-backorder-events-e0c87fa1a9:1:started",
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-application-backorder-events-e0c87fa1a9:1:candidate",
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-application-backorder-events-e0c87fa1a9:1:validation-completed",
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-application-backorder-events-e0c87fa1a9:1:artifact-adopted",
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-application-backorder-events-e0c87fa1a9:1:artifact-adopted:1",
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:readiness.observed:36",
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:wave.selected:37",
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-api-backorder-surface-fc11325bf5:1:started",
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-api-backorder-surface-fc11325bf5:1:candidate",
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-api-backorder-surface-fc11325bf5:1:validation-completed",
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-api-backorder-surface-fc11325bf5:1:artifact-adopted",
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:readiness.observed:42",
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:wave.selected:43",
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-root-e84e8433c9:1:started",
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-root-e84e8433c9:1:integration-completed",
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-root-e84e8433c9:1:artifact-adopted",
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-root-e84e8433c9:1:final-candidate",
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:delivery.started:48",
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:delivery.published:49"
+    ],
+    "decisions": {
+      "approve-plan:graph-semantic-a60422d5a8126a9af4fcaf02-da1eff652f:r1": {
+        "id": "approve-plan:graph-semantic-a60422d5a8126a9af4fcaf02-da1eff652f:r1",
+        "kind": "approve_plan",
+        "question": "Approve graph revision 1?",
+        "options": [
+          {
+            "id": "approve",
+            "label": "Approve plan"
+          },
+          {
+            "id": "request_changes",
+            "label": "Request changes"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-root-e84e8433c9"
+        ],
+        "evidenceRefs": [
+          "graph:graph-semantic-a60422d5a8126a9af4fcaf02-da1eff652f:r1"
+        ],
+        "impact": "acceptance",
+        "status": "resolved",
+        "resolution": {
+          "optionId": "approve"
+        }
+      }
+    },
+    "stoppedNodeIds": [],
+    "readiness": {
+      "readyNodeIds": [
+        "node-root-e84e8433c9"
+      ],
+      "pendingDecisionIds": [],
+      "explanations": [
+        {
+          "nodeId": "node-api-backorder-surface-fc11325bf5",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "already_adopted"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-application-backorder-events-e0c87fa1a9",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "already_adopted"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-domain-priority-and-backorder-data-83ca7a05c0",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "already_adopted"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-root-e84e8433c9",
+          "ready": true,
+          "reasons": []
+        }
+      ],
+      "effectiveConfig": {
+        "maxParallel": 1,
+        "maxCostUsd": 8,
+        "automaticRetryBudget": 0
+      },
+      "schedulerState": {
+        "materializableNodeIds": [
+          "node-root-e84e8433c9",
+          "node-domain-priority-and-backorder-data-83ca7a05c0",
+          "node-application-backorder-events-e0c87fa1a9",
+          "node-api-backorder-surface-fc11325bf5"
+        ],
+        "activeResourceNodeIds": [],
+        "openCircuitBreakerNodeIds": [],
+        "availableExecutorNodeIds": [
+          "node-root-e84e8433c9",
+          "node-domain-priority-and-backorder-data-83ca7a05c0",
+          "node-application-backorder-events-e0c87fa1a9",
+          "node-api-backorder-surface-fc11325bf5"
+        ],
+        "stoppedNodeIds": [],
+        "budgetAvailable": true
+      },
+      "budgetAvailable": true,
+      "conflictEvidence": [],
+      "evaluatedAt": "2026-08-09T01:32:41.569Z"
+    },
+    "selectedWaves": [
+      {
+        "waveId": "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:wave:1",
+        "nodeIds": [
+          "node-domain-priority-and-backorder-data-83ca7a05c0"
+        ],
+        "maxParallel": 1,
+        "blocked": [
+          {
+            "nodeId": "node-api-backorder-surface-fc11325bf5",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-seam-application-backorder-events-to-api-backord-63ab465d83",
+                "requiredRevision": "sha256:ceefa7234e430ff7d3563204a9720129cacc0bf60abfc7e3bd8696cfc3697c45"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-seam-domain-priority-and-backorder-data-to-appli-25e77361e8",
+                "requiredRevision": "sha256:bbc82fb4ec64b1201f39d7cf854d92e2e6b6988690e58d256fbd80cbf46e0ccf"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-application-backorder-events-e0c87fa1a9",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-seam-domain-priority-and-backorder-data-to-appli-25e77361e8",
+                "requiredRevision": "sha256:bbc82fb4ec64b1201f39d7cf854d92e2e6b6988690e58d256fbd80cbf46e0ccf"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-root-e84e8433c9",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-domain-priority-and-backorder-data-output-53108115c3",
+                "requiredRevision": "sha256:33a4f18407fb04871217a320b76305082b877e36a4a6714cd892643548a09b29"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-application-backorder-events-output-bdd0fb38d5",
+                "requiredRevision": "sha256:b0740f6e42924d619ed203460719eb5cbbb0e78e15ef57084b7d45447c4c1c1c"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-api-backorder-surface-output-e507b4e5bd",
+                "requiredRevision": "sha256:a005bd31bce47f3fbf77bf38adc5e57c0067356de3dc46135823311371faf389"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 1,
+          "maxCostUsd": 8,
+          "automaticRetryBudget": 0
+        },
+        "conflictEvidence": [],
+        "evaluatedAt": "2026-08-09T01:32:41.569Z"
+      },
+      {
+        "waveId": "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:wave:2",
+        "nodeIds": [
+          "node-application-backorder-events-e0c87fa1a9"
+        ],
+        "maxParallel": 1,
+        "blocked": [
+          {
+            "nodeId": "node-api-backorder-surface-fc11325bf5",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-seam-application-backorder-events-to-api-backord-63ab465d83",
+                "requiredRevision": "sha256:ceefa7234e430ff7d3563204a9720129cacc0bf60abfc7e3bd8696cfc3697c45"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-domain-priority-and-backorder-data-83ca7a05c0",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-root-e84e8433c9",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-application-backorder-events-output-bdd0fb38d5",
+                "requiredRevision": "sha256:b0740f6e42924d619ed203460719eb5cbbb0e78e15ef57084b7d45447c4c1c1c"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-api-backorder-surface-output-e507b4e5bd",
+                "requiredRevision": "sha256:a005bd31bce47f3fbf77bf38adc5e57c0067356de3dc46135823311371faf389"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 1,
+          "maxCostUsd": 8,
+          "automaticRetryBudget": 0
+        },
+        "conflictEvidence": [],
+        "evaluatedAt": "2026-08-09T01:32:41.569Z"
+      },
+      {
+        "waveId": "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:wave:3",
+        "nodeIds": [
+          "node-api-backorder-surface-fc11325bf5"
+        ],
+        "maxParallel": 1,
+        "blocked": [
+          {
+            "nodeId": "node-application-backorder-events-e0c87fa1a9",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-domain-priority-and-backorder-data-83ca7a05c0",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-root-e84e8433c9",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-api-backorder-surface-output-e507b4e5bd",
+                "requiredRevision": "sha256:a005bd31bce47f3fbf77bf38adc5e57c0067356de3dc46135823311371faf389"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 1,
+          "maxCostUsd": 8,
+          "automaticRetryBudget": 0
+        },
+        "conflictEvidence": [],
+        "evaluatedAt": "2026-08-09T01:32:41.569Z"
+      },
+      {
+        "waveId": "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:wave:4",
+        "nodeIds": [
+          "node-root-e84e8433c9"
+        ],
+        "maxParallel": 1,
+        "blocked": [
+          {
+            "nodeId": "node-api-backorder-surface-fc11325bf5",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-application-backorder-events-e0c87fa1a9",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-domain-priority-and-backorder-data-83ca7a05c0",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 1,
+          "maxCostUsd": 8,
+          "automaticRetryBudget": 0
+        },
+        "conflictEvidence": [],
+        "evaluatedAt": "2026-08-09T01:32:41.569Z"
+      }
+    ],
+    "attempts": {
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-domain-priority-and-backorder-data-83ca7a05c0:1": {
+        "attemptId": "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-domain-priority-and-backorder-data-83ca7a05c0:1",
+        "nodeId": "node-domain-priority-and-backorder-data-83ca7a05c0",
+        "inputFingerprint": "sha256:a36f2d71473f9bd7e051b9e644e3a10aafda62eedd96b458c83b2e75be95e201",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "47d107d501fee2fc087ae193812f52c581a703d6",
+        "outputDigest": "sha256:ea4bac015677a13c25d696dd95b03685b68888ad52c71cc2500ea087ad6bc51d",
+        "usage": {
+          "tokensTotal": 38076,
+          "costUsd": 0.171342,
+          "source": "reported"
+        }
+      },
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-application-backorder-events-e0c87fa1a9:1": {
+        "attemptId": "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-application-backorder-events-e0c87fa1a9:1",
+        "nodeId": "node-application-backorder-events-e0c87fa1a9",
+        "inputFingerprint": "sha256:612935b1c27459702b23445915a8502b902864568b030f09fdef261ce98704e8",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "ef1833e914cc6284205166709e62029b09bf7831",
+        "outputDigest": "sha256:07be58220f0fe8758d56b4fcce8a1c7735348dfd3e2d51f3f660f6b6afabe172",
+        "usage": {
+          "tokensTotal": 34559,
+          "costUsd": 0.1555155,
+          "source": "reported"
+        }
+      },
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-api-backorder-surface-fc11325bf5:1": {
+        "attemptId": "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-api-backorder-surface-fc11325bf5:1",
+        "nodeId": "node-api-backorder-surface-fc11325bf5",
+        "inputFingerprint": "sha256:0fbfef30e2c0c958199890b90f8c052f63f80051c7b412f4c9629e49bc6bf31a",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "d3ed1769daba0fa63718e758b77f8b545307554d",
+        "outputDigest": "sha256:7336ee93f480d10f45924ae5189549efe2ff90edfc0e9a108c348fc39f594a45",
+        "usage": {
+          "tokensTotal": 14878,
+          "costUsd": 0.066951,
+          "source": "reported"
+        }
+      },
+      "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-root-e84e8433c9:1": {
+        "attemptId": "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-root-e84e8433c9:1",
+        "nodeId": "node-root-e84e8433c9",
+        "inputFingerprint": "sha256:07cb80c5977304e310ca34e04c179aca295040de4a4023e086f4866021a028cd",
+        "kind": "integration",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "8144bfe8a06a9f3a4d946ca5fa712ce76de262fb"
+      }
+    },
+    "adoptedArtifacts": {
+      "artifact-contract-domain-priority-and-backorder-data-output-53108115c3:657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-domain-priority-and-backorder-data-83ca7a05c0:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-domain-priority-and-backorder-data-output-53108115c3:657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-domain-priority-and-backorder-data-83ca7a05c0:1",
+        "runId": "657d94bb-38bb-47c7-ae2a-8bb6d130ec23",
+        "nodeId": "node-domain-priority-and-backorder-data-83ca7a05c0",
+        "digest": "sha256:ea4bac015677a13c25d696dd95b03685b68888ad52c71cc2500ea087ad6bc51d",
+        "producerAttemptId": "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-domain-priority-and-backorder-data-83ca7a05c0:1",
+        "contract": {
+          "id": "artifact-contract-domain-priority-and-backorder-data-output-53108115c3",
+          "revision": "sha256:33a4f18407fb04871217a320b76305082b877e36a4a6714cd892643548a09b29"
+        },
+        "kind": "commit",
+        "location": "47d107d501fee2fc087ae193812f52c581a703d6",
+        "adoptedAt": "2026-08-09T01:35:29.085Z"
+      },
+      "artifact-contract-seam-domain-priority-and-backorder-data-to-appli-25e77361e8:657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-domain-priority-and-backorder-data-83ca7a05c0:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-seam-domain-priority-and-backorder-data-to-appli-25e77361e8:657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-domain-priority-and-backorder-data-83ca7a05c0:1",
+        "runId": "657d94bb-38bb-47c7-ae2a-8bb6d130ec23",
+        "nodeId": "node-domain-priority-and-backorder-data-83ca7a05c0",
+        "digest": "sha256:ea4bac015677a13c25d696dd95b03685b68888ad52c71cc2500ea087ad6bc51d",
+        "producerAttemptId": "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-domain-priority-and-backorder-data-83ca7a05c0:1",
+        "contract": {
+          "id": "artifact-contract-seam-domain-priority-and-backorder-data-to-appli-25e77361e8",
+          "revision": "sha256:bbc82fb4ec64b1201f39d7cf854d92e2e6b6988690e58d256fbd80cbf46e0ccf"
+        },
+        "kind": "commit",
+        "location": "47d107d501fee2fc087ae193812f52c581a703d6",
+        "adoptedAt": "2026-08-09T01:35:29.085Z"
+      },
+      "artifact-contract-application-backorder-events-output-bdd0fb38d5:657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-application-backorder-events-e0c87fa1a9:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-application-backorder-events-output-bdd0fb38d5:657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-application-backorder-events-e0c87fa1a9:1",
+        "runId": "657d94bb-38bb-47c7-ae2a-8bb6d130ec23",
+        "nodeId": "node-application-backorder-events-e0c87fa1a9",
+        "digest": "sha256:07be58220f0fe8758d56b4fcce8a1c7735348dfd3e2d51f3f660f6b6afabe172",
+        "producerAttemptId": "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-application-backorder-events-e0c87fa1a9:1",
+        "contract": {
+          "id": "artifact-contract-application-backorder-events-output-bdd0fb38d5",
+          "revision": "sha256:b0740f6e42924d619ed203460719eb5cbbb0e78e15ef57084b7d45447c4c1c1c"
+        },
+        "kind": "commit",
+        "location": "ef1833e914cc6284205166709e62029b09bf7831",
+        "adoptedAt": "2026-08-09T01:37:20.648Z"
+      },
+      "artifact-contract-seam-application-backorder-events-to-api-backord-63ab465d83:657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-application-backorder-events-e0c87fa1a9:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-seam-application-backorder-events-to-api-backord-63ab465d83:657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-application-backorder-events-e0c87fa1a9:1",
+        "runId": "657d94bb-38bb-47c7-ae2a-8bb6d130ec23",
+        "nodeId": "node-application-backorder-events-e0c87fa1a9",
+        "digest": "sha256:07be58220f0fe8758d56b4fcce8a1c7735348dfd3e2d51f3f660f6b6afabe172",
+        "producerAttemptId": "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-application-backorder-events-e0c87fa1a9:1",
+        "contract": {
+          "id": "artifact-contract-seam-application-backorder-events-to-api-backord-63ab465d83",
+          "revision": "sha256:ceefa7234e430ff7d3563204a9720129cacc0bf60abfc7e3bd8696cfc3697c45"
+        },
+        "kind": "commit",
+        "location": "ef1833e914cc6284205166709e62029b09bf7831",
+        "adoptedAt": "2026-08-09T01:37:20.648Z"
+      },
+      "artifact-contract-api-backorder-surface-output-e507b4e5bd:657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-api-backorder-surface-fc11325bf5:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-api-backorder-surface-output-e507b4e5bd:657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-api-backorder-surface-fc11325bf5:1",
+        "runId": "657d94bb-38bb-47c7-ae2a-8bb6d130ec23",
+        "nodeId": "node-api-backorder-surface-fc11325bf5",
+        "digest": "sha256:7336ee93f480d10f45924ae5189549efe2ff90edfc0e9a108c348fc39f594a45",
+        "producerAttemptId": "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-api-backorder-surface-fc11325bf5:1",
+        "contract": {
+          "id": "artifact-contract-api-backorder-surface-output-e507b4e5bd",
+          "revision": "sha256:a005bd31bce47f3fbf77bf38adc5e57c0067356de3dc46135823311371faf389"
+        },
+        "kind": "commit",
+        "location": "d3ed1769daba0fa63718e758b77f8b545307554d",
+        "adoptedAt": "2026-08-09T01:38:41.208Z"
+      },
+      "artifact-contract-root-output-a8392491e5:657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-root-e84e8433c9:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-root-output-a8392491e5:657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-root-e84e8433c9:1",
+        "runId": "657d94bb-38bb-47c7-ae2a-8bb6d130ec23",
+        "nodeId": "node-root-e84e8433c9",
+        "digest": "sha256:bf90b4bd46718912897223cfde18ee37097f9e8207cd85ef900efd5a486cace3",
+        "producerAttemptId": "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-root-e84e8433c9:1",
+        "contract": {
+          "id": "artifact-contract-root-output-a8392491e5",
+          "revision": "sha256:23738b45c0855a74d2efaad1f720a6707bb4fbc9b14335346f9e1d82c24024b0"
+        },
+        "kind": "commit",
+        "location": "8144bfe8a06a9f3a4d946ca5fa712ce76de262fb",
+        "adoptedAt": "2026-08-09T01:38:51.588Z"
+      }
+    },
+    "nodeEvidenceMatrixIds": {
+      "node-domain-priority-and-backorder-data-83ca7a05c0": "matrix-6e03a2ac3ce9eeaf",
+      "node-application-backorder-events-e0c87fa1a9": "matrix-04a5e027e4f80fb4",
+      "node-api-backorder-surface-fc11325bf5": "matrix-14a62dd254a622c0",
+      "node-root-e84e8433c9": "matrix-867e4eb1eb71c6a0"
+    },
+    "integrations": {
+      "node-root-e84e8433c9": {
+        "attemptId": "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-root-e84e8433c9:1",
+        "nodeId": "node-root-e84e8433c9",
+        "requiredArtifactIds": [
+          "artifact-contract-domain-priority-and-backorder-data-output-53108115c3:657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-domain-priority-and-backorder-data-83ca7a05c0:1",
+          "artifact-contract-application-backorder-events-output-bdd0fb38d5:657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-application-backorder-events-e0c87fa1a9:1",
+          "artifact-contract-api-backorder-surface-output-e507b4e5bd:657d94bb-38bb-47c7-ae2a-8bb6d130ec23:attempt:node-api-backorder-surface-fc11325bf5:1"
+        ],
+        "status": "completed",
+        "repairPasses": 0,
+        "manifestId": "integration-result-integration-request-c0fb82e7149e66a5",
+        "candidateCommit": "8144bfe8a06a9f3a4d946ca5fa712ce76de262fb",
+        "evidenceMatrixId": "matrix-867e4eb1eb71c6a0"
+      }
+    },
+    "recoveryHistory": [],
+    "evidenceMatrices": [
+      "matrix-6e03a2ac3ce9eeaf",
+      "matrix-04a5e027e4f80fb4",
+      "matrix-14a62dd254a622c0",
+      "matrix-867e4eb1eb71c6a0"
+    ],
+    "outcomes": {
+      "execution": "succeeded",
+      "artifact": "verified",
+      "delivery": "published"
+    },
+    "evidenceMatrixSummaries": {
+      "matrix-6e03a2ac3ce9eeaf": {
+        "candidateCommit": "47d107d501fee2fc087ae193812f52c581a703d6",
+        "outcome": "verified",
+        "validationRecipeDigest": "sha256:f87efdb6c3964f71ce20f8bbe3e441378f7a9ba2d53e1d529a5f3af19a7e95db"
+      },
+      "matrix-04a5e027e4f80fb4": {
+        "candidateCommit": "ef1833e914cc6284205166709e62029b09bf7831",
+        "outcome": "verified",
+        "validationRecipeDigest": "sha256:08b06f141f877f46341221f5663ce0b00d7b40c9776b65709df0f9b39b358c78"
+      },
+      "matrix-14a62dd254a622c0": {
+        "candidateCommit": "d3ed1769daba0fa63718e758b77f8b545307554d",
+        "outcome": "verified",
+        "validationRecipeDigest": "sha256:b1e35efe9b4efa94fe9ddce0c48121d98c5a7422164cd650db753a9c0f3f7d64"
+      },
+      "matrix-867e4eb1eb71c6a0": {
+        "candidateCommit": "8144bfe8a06a9f3a4d946ca5fa712ce76de262fb",
+        "outcome": "verified",
+        "validationRecipeDigest": "sha256:ae97982aa094d55d2767f6d8ff07921dc7e32975a607cac796f6addb71a4fc2a"
+      }
+    },
+    "graphId": "graph-semantic-a60422d5a8126a9af4fcaf02-da1eff652f",
+    "graphRevision": 1,
+    "granularityStrategy": {
+      "policyVersion": "adaptive-utility/3.1.0-pilot",
+      "condition": "C",
+      "candidateTreeHash": "sha256:3bd79dc6e3b15927c024ee9da93c9da7b37b785bb9fef2a903508439458724e9",
+      "config": {
+        "minimumAdvantage": 0.15,
+        "maxLeafContextTokens": 24000,
+        "maxLeafScopePaths": 40,
+        "maxLeafPlannedPaths": 12
+      },
+      "assessments": {
+        "node-domain-priority-and-backorder-data-83ca7a05c0": {
+          "unitKey": "domain-priority-and-backorder-data",
+          "nodeId": "node-domain-priority-and-backorder-data-83ca7a05c0",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.5
+          },
+          "benefit": 0,
+          "cost": 0.125,
+          "splitAdvantage": -0.125,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-2",
+            "path-3",
+            "config-package-json",
+            "sha256:5b11e9cdc254e68185fe1252f757b0dc589e4d34f8f9736e270767f7539d0090"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-application-backorder-events-e0c87fa1a9": {
+          "unitKey": "application-backorder-events",
+          "nodeId": "node-application-backorder-events-e0c87fa1a9",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.4
+          },
+          "benefit": 0,
+          "cost": 0.1,
+          "splitAdvantage": -0.1,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-2",
+            "path-3",
+            "config-package-json",
+            "sha256:5b11e9cdc254e68185fe1252f757b0dc589e4d34f8f9736e270767f7539d0090"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-api-backorder-surface-fc11325bf5": {
+          "unitKey": "api-backorder-surface",
+          "nodeId": "node-api-backorder-surface-fc11325bf5",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.4
+          },
+          "benefit": 0,
+          "cost": 0.1,
+          "splitAdvantage": -0.1,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-0",
+            "path-1",
+            "path-3",
+            "config-package-json",
+            "sha256:5b11e9cdc254e68185fe1252f757b0dc589e4d34f8f9736e270767f7539d0090"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-root-e84e8433c9": {
+          "unitKey": "root",
+          "nodeId": "node-root-e84e8433c9",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": true,
+          "features": {
+            "contextRelief": 0.0902,
+            "parallelism": 0,
+            "faultIsolation": 1,
+            "coordination": 0.6667,
+            "pathOverlap": 0.4048,
+            "validationDuplication": 0,
+            "uncertainty": 0.4333
+          },
+          "benefit": 0.3634,
+          "cost": 0.3762,
+          "splitAdvantage": -0.0128,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-0",
+            "path-1",
+            "path-2",
+            "path-3",
+            "config-package-json",
+            "sha256:5b11e9cdc254e68185fe1252f757b0dc589e4d34f8f9736e270767f7539d0090"
+          ],
+          "rationale": "Split advantage -0.0128 is below minimum 0.1500."
+        }
+      },
+      "metrics": {
+        "maxGraphDepth": 1,
+        "totalLeafCount": 3,
+        "averageBranchingFactor": 3
+      }
+    },
+    "approvedGraphRevision": 1,
+    "finalCandidate": {
+      "manifestId": "final-6184953130ab12f6",
+      "commit": "8144bfe8a06a9f3a4d946ca5fa712ce76de262fb",
+      "evidenceMatrixId": "matrix-867e4eb1eb71c6a0",
+      "sourceTargetFingerprint": "6ca23c965234491a",
+      "targetBranch": "main",
+      "targetHead": "2dfb64c7d09852cba1d2509d1d4c78a8f2900677",
+      "evidenceEligible": true,
+      "finalManifest": {
+        "commitSha": "8144bfe8a06a9f3a4d946ca5fa712ce76de262fb",
+        "treeSha": "31830a0d674799ebb3819f35eae9ebd053c4bdce",
+        "graphRevision": 1,
+        "artifactIds": [
+          "artifact-contract-root-output-a8392491e5"
+        ],
+        "evidenceMatrixId": "matrix-867e4eb1eb71c6a0",
+        "validationRecipeDigest": "sha256:ae97982aa094d55d2767f6d8ff07921dc7e32975a607cac796f6addb71a4fc2a",
+        "deliveryTarget": "main",
+        "granularityPolicy": {
+          "policyVersion": "adaptive-utility/3.1.0-pilot",
+          "minimumAdvantage": 0.15,
+          "maxLeafContextTokens": 24000,
+          "maxLeafScopePaths": 40,
+          "maxLeafPlannedPaths": 12
+        }
+      }
+    },
+    "deliveryApproval": {
+      "manifestId": "final-6184953130ab12f6",
+      "finalSha": "8144bfe8a06a9f3a4d946ca5fa712ce76de262fb",
+      "targetBranch": "main",
+      "targetHead": "2dfb64c7d09852cba1d2509d1d4c78a8f2900677",
+      "targetFingerprint": "6ca23c965234491a",
+      "actor": "thesis-operator",
+      "idempotencyKey": "657d94bb-38bb-47c7-ae2a-8bb6d130ec23:delivery"
+    },
+    "deliveryReceipt": {
+      "receiptId": "delivery:657d94bb-38bb-47c7-ae2a-8bb6d130ec23:delivery",
+      "requestFingerprint": "b31f1c63520797fc04d56426c91b5ca1c3a71414cd839da1eafda4e0ce757deb",
+      "manifestId": "final-6184953130ab12f6",
+      "finalSha": "8144bfe8a06a9f3a4d946ca5fa712ce76de262fb",
+      "targetBranch": "main",
+      "targetHeadBefore": "2dfb64c7d09852cba1d2509d1d4c78a8f2900677",
+      "targetHeadAfter": "8144bfe8a06a9f3a4d946ca5fa712ce76de262fb",
+      "disposition": "delivered",
+      "confirmed": true
+    }
+  },
+  "checksum": "22d8ee8a32b9a9b12f0ec8c7e88c6d5e20f69c38edb7d776b96b5d04937e219e"
+}

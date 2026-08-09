@@ -1,0 +1,64 @@
+{
+  "version": 2,
+  "run": {
+    "runId": "564f3234-f02e-41fb-8a53-b1ee1c352f91",
+    "workspaceId": "cc815075-0c12-43e7-9fba-2bc70a49fc35",
+    "userPrompt": "Add express/standard order priority and backorder recording across the existing domain, application and API. `priority` accepts only `standard` or `express`, defaults to `standard` when omitted, and rejects other values with a `priority` error. An order that exceeds available stock must remain cancellable, record a positive backorder, emit exactly one application event of type `backorder-recorded`, and be observable through the API through `currentOrders()`, `currentBackorders()` and `events()`. `currentBackorders()` returns entries shaped exactly as `{ orderId, skuId, missing }`. Preserve existing behavior. Add focused tests beside the modified code.",
+    "acceptanceCriteria": [],
+    "title": "Add express/standard order priority and backorder recording across the existing domain, application and API. `priority` ",
+    "planningSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.4-mini",
+      "effort": "medium"
+    },
+    "executionSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.4-mini",
+      "effort": "medium"
+    },
+    "repairSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.4-mini",
+      "effort": "medium"
+    },
+    "executionConfig": {
+      "maxParallel": 2,
+      "scopePolicy": "strict",
+      "leafTimeoutMs": 1200000,
+      "integrationTimeoutMs": 1200000,
+      "maxOutputBytes": 65536,
+      "maxValidationCommands": 20,
+      "installTimeoutMs": 300000,
+      "maxPlanningAttempts": 1,
+      "unexpectedCommitPolicy": "reject",
+      "routing": "fixed",
+      "maxCostUsd": 8,
+      "automaticRetryBudget": 0
+    },
+    "targetContext": {
+      "sourceRealPath": "C:\\mh-sp2\\rehearsal-04w-v2",
+      "gitCommonDir": "C:\\mh-sp2\\rehearsal-04w-v2\\.git",
+      "physicalIdentity": {
+        "version": 1,
+        "device": "3156479238",
+        "file": "35465847068145217"
+      },
+      "sourceBranch": "main",
+      "sourceBaseCommit": "9fee798db9eb700bfba8189bf6a5cbd1984eb44e",
+      "fingerprint": "7570a532ea36a254",
+      "capturedAt": "2026-08-09T01:00:10.313Z"
+    },
+    "projection": {
+      "eventSequence": 4,
+      "lifecycle": "failed",
+      "repositorySnapshotId": "sha256:612681865721208024385c9332f1a6fea9b57b0fb8e80e3c1b43a65db9290ac7",
+      "failureReason": "no_safe_cut: root: children.0.criterionIds: Array must contain at least 1 element(s); children.1.criterionIds: Array must contain at least 1 element(s)",
+      "updatedAt": "2026-08-09T01:01:36.032Z"
+    },
+    "version": 25,
+    "mutationFence": 2,
+    "createdAt": "2026-08-09T01:00:10.313Z",
+    "updatedAt": "2026-08-09T01:01:36.043Z",
+    "heartbeatAt": "2026-08-09T01:01:35.456Z"
+  }
+}

@@ -1,0 +1,223 @@
+diff --git a/src/api/warehouse-api.mjs b/src/api/warehouse-api.mjs
+index 919ab00..33f8882 100644
+--- a/src/api/warehouse-api.mjs
++++ b/src/api/warehouse-api.mjs
+@@ -6,6 +6,9 @@ export function createWarehouseApi(service) {
+     currentOrders() {
+       return service.current().orders;
+     },
++    currentBackorders() {
++      return service.currentBackorders();
++    },
+     events() {
+       return service.events();
+     }
+diff --git a/src/application/order-service.mjs b/src/application/order-service.mjs
+index 35af463..9d146f4 100644
+--- a/src/application/order-service.mjs
++++ b/src/application/order-service.mjs
+@@ -6,12 +6,21 @@ export function createOrderService(initialState) {
+   return {
+     place(request) {
+       state = placeOrder(state, request);
+-      events.push({ type: "order-reserved", orderId: request.orderId });
++      const order = state.orders[state.orders.length - 1];
++      if (order.status === "backordered") {
++        const backorder = state.backorders[state.backorders.length - 1];
++        events.push({ type: "backorder-recorded", ...backorder });
++      } else {
++        events.push({ type: "order-reserved", orderId: request.orderId });
++      }
+       return state;
+     },
+     current() {
+       return state;
+     },
++    currentBackorders() {
++      return state.backorders;
++    },
+     events() {
+       return [...events];
+     }
+diff --git a/src/domain/orders.mjs b/src/domain/orders.mjs
+index 5afdcff..a65eb1f 100644
+--- a/src/domain/orders.mjs
++++ b/src/domain/orders.mjs
+@@ -1,30 +1,51 @@
+ export function createWarehouse(stockBySku = {}) {
+   return {
+     stockBySku: { ...stockBySku },
+-    orders: []
++    orders: [],
++    backorders: []
+   };
+ }
+ 
+-export function placeOrder(state, { orderId, skuId, quantity }) {
++function resolvePriority(priority) {
++  if (priority === undefined) return "standard";
++  if (priority === "standard" || priority === "express") return priority;
++  throw new Error("priority must be standard or express");
++}
++
++export function placeOrder(state, { orderId, skuId, quantity, priority }) {
+   if (!Number.isInteger(quantity) || quantity <= 0) throw new Error("quantity must be a positive integer");
+-  if (state.orders.some((order) => order.orderId === orderId)) throw new Error("duplicate order");
++  const orders = state.orders ?? [];
++  const backorders = state.backorders ?? [];
++  if (orders.some((order) => order.orderId === orderId)) throw new Error("duplicate order");
++  const resolvedPriority = resolvePriority(priority);
+   const available = state.stockBySku[skuId] ?? 0;
+-  if (available < quantity) throw new Error("insufficient stock");
+-  const order = { orderId, skuId, quantity, status: "reserved" };
++  if (available < quantity) {
++    return {
++      ...state,
++      orders: [...orders, { orderId, skuId, quantity, priority: resolvedPriority, status: "backordered" }],
++      backorders: [...backorders, { orderId, skuId, missing: quantity - available }]
++    };
++  }
++  const order = { orderId, skuId, quantity, priority: resolvedPriority, status: "reserved" };
+   return {
+     ...state,
+     stockBySku: { ...state.stockBySku, [skuId]: available - quantity },
+-    orders: [...state.orders, order]
++    orders: [...orders, order],
++    backorders
+   };
+ }
+ 
+ export function cancelOrder(state, orderId) {
+-  const order = state.orders.find((candidate) => candidate.orderId === orderId);
++  const orders = state.orders ?? [];
++  const order = orders.find((candidate) => candidate.orderId === orderId);
+   if (order === undefined) throw new Error("unknown order");
+   if (order.status === "cancelled") return state;
++  const nextStockBySku = order.status === "reserved"
++    ? { ...state.stockBySku, [order.skuId]: (state.stockBySku[order.skuId] ?? 0) + order.quantity }
++    : state.stockBySku;
+   return {
+     ...state,
+-    stockBySku: { ...state.stockBySku, [order.skuId]: (state.stockBySku[order.skuId] ?? 0) + order.quantity },
+-    orders: state.orders.map((candidate) => candidate.orderId === orderId ? { ...candidate, status: "cancelled" } : candidate)
++    stockBySku: nextStockBySku,
++    orders: orders.map((candidate) => candidate.orderId === orderId ? { ...candidate, status: "cancelled" } : candidate)
+   };
+ }
+diff --git a/test/domain-orders.test.mjs b/test/domain-orders.test.mjs
+new file mode 100644
+index 0000000..328e01d
+--- /dev/null
++++ b/test/domain-orders.test.mjs
+@@ -0,0 +1,42 @@
++import test from "node:test";
++import assert from "node:assert/strict";
++import { cancelOrder, createWarehouse, placeOrder } from "../src/domain/orders.mjs";
++
++test("defaults priority to standard and reserves available inventory", () => {
++  const next = placeOrder(createWarehouse({ sku: 3 }), { orderId: "o-1", skuId: "sku", quantity: 2 });
++  assert.equal(next.stockBySku.sku, 1);
++  assert.equal(next.orders.length, 1);
++  assert.equal(next.orders[0].orderId, "o-1");
++  assert.equal(next.orders[0].skuId, "sku");
++  assert.equal(next.orders[0].quantity, 2);
++  assert.equal(next.orders[0].priority, "standard");
++  assert.equal(next.orders[0].status, "reserved");
++  assert.deepEqual(next.backorders, []);
++});
++
++test("rejects invalid priority values", () => {
++  assert.throws(
++    () => placeOrder(createWarehouse({ sku: 3 }), { orderId: "o-1", skuId: "sku", quantity: 2, priority: "rush" }),
++    /priority/
++  );
++});
++
++test("records a positive backorder and leaves the order cancellable", () => {
++  const placed = placeOrder(createWarehouse({ sku: 1 }), {
++    orderId: "o-1",
++    skuId: "sku",
++    quantity: 3,
++    priority: "express"
++  });
++
++  assert.equal(placed.stockBySku.sku, 1);
++  assert.equal(placed.orders.length, 1);
++  assert.equal(placed.orders[0].status, "backordered");
++  assert.equal(placed.orders[0].priority, "express");
++  assert.deepEqual(placed.backorders, [{ orderId: "o-1", skuId: "sku", missing: 2 }]);
++
++  const cancelled = cancelOrder(placed, "o-1");
++  assert.equal(cancelled.orders[0].status, "cancelled");
++  assert.equal(cancelled.stockBySku.sku, 1);
++  assert.deepEqual(cancelled.backorders, [{ orderId: "o-1", skuId: "sku", missing: 2 }]);
++});
+diff --git a/test/order-service.test.mjs b/test/order-service.test.mjs
+new file mode 100644
+index 0000000..ba9e4b9
+--- /dev/null
++++ b/test/order-service.test.mjs
+@@ -0,0 +1,28 @@
++import test from "node:test";
++import assert from "node:assert/strict";
++import { createOrderService } from "../src/application/order-service.mjs";
++import { createWarehouse } from "../src/domain/orders.mjs";
++
++test("preserves the non-backorder path", () => {
++  const service = createOrderService(createWarehouse({ sku: 3 }));
++
++  const state = service.place({ orderId: "o-1", skuId: "sku", quantity: 2 });
++
++  assert.equal(state.stockBySku.sku, 1);
++  assert.equal(state.orders.length, 1);
++  assert.equal(state.orders[0].status, "reserved");
++  assert.deepEqual(service.currentBackorders(), []);
++  assert.deepEqual(service.events(), [{ type: "order-reserved", orderId: "o-1" }]);
++});
++
++test("emits exactly one backorder-recorded event per backorder", () => {
++  const service = createOrderService(createWarehouse({ sku: 1 }));
++
++  const state = service.place({ orderId: "o-1", skuId: "sku", quantity: 3, priority: "express" });
++
++  assert.equal(state.orders.length, 1);
++  assert.equal(state.orders[0].status, "backordered");
++  assert.deepEqual(state.backorders, [{ orderId: "o-1", skuId: "sku", missing: 2 }]);
++  assert.deepEqual(service.currentBackorders(), [{ orderId: "o-1", skuId: "sku", missing: 2 }]);
++  assert.deepEqual(service.events(), [{ type: "backorder-recorded", orderId: "o-1", skuId: "sku", missing: 2 }]);
++});
+diff --git a/test/warehouse-api.test.mjs b/test/warehouse-api.test.mjs
+new file mode 100644
+index 0000000..86457b4
+--- /dev/null
++++ b/test/warehouse-api.test.mjs
+@@ -0,0 +1,29 @@
++import test from "node:test";
++import assert from "node:assert/strict";
++import { createWarehouseApi } from "../src/api/warehouse-api.mjs";
++
++test("exposes currentOrders, currentBackorders, and events", () => {
++  const service = {
++    place() {
++      throw new Error("not used");
++    },
++    current() {
++      return {
++        orders: [{ orderId: "o-1", skuId: "sku", quantity: 3, status: "backordered" }],
++        backorders: [{ orderId: "o-1", skuId: "sku", missing: 2 }]
++      };
++    },
++    currentBackorders() {
++      return [{ orderId: "o-1", skuId: "sku", missing: 2 }];
++    },
++    events() {
++      return [{ type: "backorder-recorded", orderId: "o-1", skuId: "sku", missing: 2 }];
++    }
++  };
++
++  const api = createWarehouseApi(service);
++
++  assert.deepEqual(api.currentOrders(), [{ orderId: "o-1", skuId: "sku", quantity: 3, status: "backordered" }]);
++  assert.deepEqual(api.currentBackorders(), [{ orderId: "o-1", skuId: "sku", missing: 2 }]);
++  assert.deepEqual(api.events(), [{ type: "backorder-recorded", orderId: "o-1", skuId: "sku", missing: 2 }]);
++});

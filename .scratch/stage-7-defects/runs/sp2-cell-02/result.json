@@ -1,0 +1,23 @@
+{
+  "cellId": "sp2-cell-02",
+  "condition": "semantic-product",
+  "taskId": "SP2-T1",
+  "runId": "c696806e-809a-46a6-9c61-46d68cd6749e",
+  "started": "2026-08-09T01:42:11.207Z",
+  "finished": "2026-08-09T01:49:16.477Z",
+  "outcome": {
+    "lifecycle": "completed",
+    "finalSha": "50773ec2c9a3c322f9eb5c19757eac8db0b51ec0",
+    "receipt": {
+      "receiptId": "delivery:c696806e-809a-46a6-9c61-46d68cd6749e:delivery",
+      "requestFingerprint": "a462fd5dc473ac502405862e7c566a5352444733168ed14d4dd00e2b9f9ef5ee",
+      "manifestId": "final-4b858821db49600d",
+      "finalSha": "50773ec2c9a3c322f9eb5c19757eac8db0b51ec0",
+      "targetBranch": "main",
+      "targetHeadBefore": "f6b84b085e01c6c57fd2e730f47136152078ec6e",
+      "targetHeadAfter": "50773ec2c9a3c322f9eb5c19757eac8db0b51ec0",
+      "disposition": "delivered",
+      "confirmed": true
+    }
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "version": 2,
+  "run": {
+    "runId": "9e4695ad-c5fd-430a-a935-21cdd7296088",
+    "workspaceId": "46262af0-bc6a-40fa-b7d8-5bf4d81b892f",
+    "userPrompt": "Add express/standard order priority and backorder recording across the existing domain, application and API. `priority` accepts only `standard` or `express`, defaults to `standard` when omitted, and rejects other values with a `priority` error. An order that exceeds available stock must remain cancellable, record a positive backorder, emit exactly one application event of type `backorder-recorded`, and be observable through the API through `currentOrders()`, `currentBackorders()` and `events()`. `currentBackorders()` returns entries shaped exactly as `{ orderId, skuId, missing }`. Preserve existing behavior. Add focused tests beside the modified code.",
+    "acceptanceCriteria": [
+      "priority accepts only standard or express, defaults to standard when omitted, and invalid values fail with an error that names priority.",
+      "Insufficient stock leaves the order cancellable and records a positive backorder with exact { orderId, skuId, missing } data.",
+      "The application emits exactly one backorder-recorded event for each backorder and preserves non-backorder behavior.",
+      "The API exposes currentOrders(), currentBackorders(), and events(), with currentBackorders entries shaped exactly as { orderId, skuId, missing }."
+    ],
+    "title": "Add express/standard order priority and backorder recording across the existing domain, application and API. `priority` ",
+    "planningSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.4-mini",
+      "effort": "medium"
+    },
+    "executionSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.4-mini",
+      "effort": "medium"
+    },
+    "repairSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.4-mini",
+      "effort": "medium"
+    },
+    "executionConfig": {
+      "maxParallel": 2,
+      "scopePolicy": "strict",
+      "leafTimeoutMs": 1200000,
+      "integrationTimeoutMs": 1200000,
+      "maxOutputBytes": 65536,
+      "maxValidationCommands": 20,
+      "installTimeoutMs": 300000,
+      "maxPlanningAttempts": 1,
+      "unexpectedCommitPolicy": "reject",
+      "routing": "fixed",
+      "maxCostUsd": 8,
+      "automaticRetryBudget": 0
+    },
+    "targetContext": {
+      "sourceRealPath": "C:\\mh-sp2\\rehearsal-04w-v2",
+      "gitCommonDir": "C:\\mh-sp2\\rehearsal-04w-v2\\.git",
+      "physicalIdentity": {
+        "version": 1,
+        "device": "3156479238",
+        "file": "35465847068145217"
+      },
+      "sourceBranch": "main",
+      "sourceBaseCommit": "9fee798db9eb700bfba8189bf6a5cbd1984eb44e",
+      "fingerprint": "7570a532ea36a254",
+      "capturedAt": "2026-08-09T01:16:07.848Z"
+    },
+    "projection": {
+      "eventSequence": 49,
+      "lifecycle": "completed",
+      "graphId": "graph-semantic-b808dc7659daa177769dffe9-ca5855f1ce",
+      "graphRevision": 1,
+      "approvedGraphRevision": 1,
+      "repositorySnapshotId": "sha256:612681865721208024385c9332f1a6fea9b57b0fb8e80e3c1b43a65db9290ac7",
+      "finalManifestId": "final-c029fc0ef14d3fc9",
+      "finalCommit": "88c2af0fa7055745ffa557ed78965f0ef67d56a1",
+      "updatedAt": "2026-08-09T01:24:00.741Z"
+    },
+    "version": 128,
+    "mutationFence": 5,
+    "createdAt": "2026-08-09T01:16:07.848Z",
+    "updatedAt": "2026-08-09T01:24:00.750Z",
+    "heartbeatAt": "2026-08-09T01:23:58.961Z"
+  }
+}

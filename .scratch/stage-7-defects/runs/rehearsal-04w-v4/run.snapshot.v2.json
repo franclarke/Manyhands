@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 2,
+  "runId": "3dad2f94-8c33-4f2d-8d95-d5ee79db19af",
+  "eventSequence": 4,
+  "lastEventId": "planning:3dad2f94-8c33-4f2d-8d95-d5ee79db19af:failed:4",
+  "operationId": "eb80b069-3bb3-414d-934d-828e593c095b",
+  "fencingToken": 2,
+  "projection": {
+    "runId": "3dad2f94-8c33-4f2d-8d95-d5ee79db19af",
+    "goal": "Add express/standard order priority and backorder recording across the existing domain, application and API. `priority` accepts only `standard` or `express`, defaults to `standard` when omitted, and rejects other values with a `priority` error. An order that exceeds available stock must remain cancellable, record a positive backorder, emit exactly one application event of type `backorder-recorded`, and be observable through the API through `currentOrders()`, `currentBackorders()` and `events()`. `currentBackorders()` returns entries shaped exactly as `{ orderId, skuId, missing }`. Preserve existing behavior. Add focused tests beside the modified code.",
+    "lifecycle": "failed",
+    "sequence": 4,
+    "appliedEventIds": [
+      "run:3dad2f94-8c33-4f2d-8d95-d5ee79db19af:created",
+      "repository:sha256:612681865721208024385c9332f1a6fea9b57b0fb8e80e3c1b43a65db9290ac7:inspection:2",
+      "planning:3dad2f94-8c33-4f2d-8d95-d5ee79db19af:unit:root:unresolved",
+      "planning:3dad2f94-8c33-4f2d-8d95-d5ee79db19af:failed:4"
+    ],
+    "decisions": {},
+    "stoppedNodeIds": [],
+    "readiness": {
+      "readyNodeIds": [],
+      "pendingDecisionIds": []
+    },
+    "selectedWaves": [],
+    "attempts": {},
+    "adoptedArtifacts": {},
+    "nodeEvidenceMatrixIds": {},
+    "integrations": {},
+    "recoveryHistory": [],
+    "evidenceMatrices": [],
+    "outcomes": {
+      "execution": "pending",
+      "artifact": "missing",
+      "delivery": "not_started"
+    },
+    "evidenceMatrixSummaries": {},
+    "failureReason": "no_safe_cut: root: children.0.criterionIds.0: ids may contain letters, digits, dots, underscores, colons and hyphens; children.1.criterionIds.0: ids may contain letters, digits, dots, underscores, colons and hyphens; children.1.criterionIds.1: ids may contain letters, digits, dots, underscores, colons and hyphens; children.2.criterionIds.0: ids may contain letters, digits, dots, underscores, colons and hyphens"
+  },
+  "checksum": "6e65dfd33151839445f0bdc01c1d4bc053ecbb08ff88aeee840d774c0f6cafd9"
+}

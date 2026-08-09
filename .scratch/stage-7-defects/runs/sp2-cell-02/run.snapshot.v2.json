@@ -1,0 +1,768 @@
+{
+  "schemaVersion": 2,
+  "runId": "c696806e-809a-46a6-9c61-46d68cd6749e",
+  "eventSequence": 50,
+  "lastEventId": "c696806e-809a-46a6-9c61-46d68cd6749e:delivery.published:50",
+  "operationId": "79697d89-97ee-4919-9280-96c073462113",
+  "fencingToken": 5,
+  "projection": {
+    "runId": "c696806e-809a-46a6-9c61-46d68cd6749e",
+    "goal": "Add express/standard order priority and backorder recording across the existing domain, application and API. `priority` accepts only `standard` or `express`, defaults to `standard` when omitted, and rejects other values with a `priority` error. An order that exceeds available stock must remain cancellable, record a positive backorder, emit exactly one application event of type `backorder-recorded`, and be observable through the API through `currentOrders()`, `currentBackorders()` and `events()`. `currentBackorders()` returns entries shaped exactly as `{ orderId, skuId, missing }`. Preserve existing behavior. Add focused tests beside the modified code.",
+    "lifecycle": "completed",
+    "sequence": 50,
+    "appliedEventIds": [
+      "run:c696806e-809a-46a6-9c61-46d68cd6749e:created",
+      "repository:sha256:bdcbb631b228ec654773edcadcf4c100404aad1cb1747716add01011abf8e34f:inspection:2",
+      "planning:c696806e-809a-46a6-9c61-46d68cd6749e:unit:root",
+      "planning:c696806e-809a-46a6-9c61-46d68cd6749e:unit:domain-priority-backorder-state",
+      "planning:c696806e-809a-46a6-9c61-46d68cd6749e:unit:application-backorder-events",
+      "planning:c696806e-809a-46a6-9c61-46d68cd6749e:unit:api-backorder-surface",
+      "planning:semantic-de6257a0d96a00ceb0367d60:completed:c696806e-809a-46a6-9c61-46d68cd6749e",
+      "graph:graph-semantic-de6257a0d96a00ceb0367d60-cb15d536ad:r1:compiled",
+      "graph:graph-semantic-de6257a0d96a00ceb0367d60-cb15d536ad:r1:critic:completeness",
+      "graph:graph-semantic-de6257a0d96a00ceb0367d60-cb15d536ad:r1:critic:atomicity",
+      "graph:graph-semantic-de6257a0d96a00ceb0367d60-cb15d536ad:r1:critic:contract_compatibility",
+      "graph:graph-semantic-de6257a0d96a00ceb0367d60-cb15d536ad:r1:critic:dag_validity",
+      "graph:graph-semantic-de6257a0d96a00ceb0367d60-cb15d536ad:r1:critic:scope_isolation",
+      "graph:graph-semantic-de6257a0d96a00ceb0367d60-cb15d536ad:r1:critic:artifact_coverage",
+      "graph:graph-semantic-de6257a0d96a00ceb0367d60-cb15d536ad:r1:critic:risk_uncertainty",
+      "graph:graph-semantic-de6257a0d96a00ceb0367d60-cb15d536ad:r1:critic:validation_coverage",
+      "graph:graph-semantic-de6257a0d96a00ceb0367d60-cb15d536ad:r1:proposed",
+      "approve-plan:graph-semantic-de6257a0d96a00ceb0367d60-cb15d536ad:r1",
+      "planning:semantic-de6257a0d96a00ceb0367d60:strategy:c696806e-809a-46a6-9c61-46d68cd6749e",
+      "approve-plan:graph-semantic-de6257a0d96a00ceb0367d60-cb15d536ad:r1:resolved",
+      "approve-plan:graph-semantic-de6257a0d96a00ceb0367d60-cb15d536ad:r1:graph-approved",
+      "c696806e-809a-46a6-9c61-46d68cd6749e:readiness.observed:22",
+      "c696806e-809a-46a6-9c61-46d68cd6749e:wave.selected:23",
+      "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-domain-priority-backorder-state-59341c489a:1:started",
+      "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-domain-priority-backorder-state-59341c489a:1:candidate",
+      "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-domain-priority-backorder-state-59341c489a:1:validation-completed",
+      "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-domain-priority-backorder-state-59341c489a:1:artifact-adopted",
+      "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-domain-priority-backorder-state-59341c489a:1:artifact-adopted:1",
+      "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-domain-priority-backorder-state-59341c489a:1:artifact-adopted:2",
+      "c696806e-809a-46a6-9c61-46d68cd6749e:readiness.observed:30",
+      "c696806e-809a-46a6-9c61-46d68cd6749e:wave.selected:31",
+      "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-application-backorder-events-e0c87fa1a9:1:started",
+      "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-application-backorder-events-e0c87fa1a9:1:candidate",
+      "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-application-backorder-events-e0c87fa1a9:1:validation-completed",
+      "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-application-backorder-events-e0c87fa1a9:1:artifact-adopted",
+      "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-application-backorder-events-e0c87fa1a9:1:artifact-adopted:1",
+      "c696806e-809a-46a6-9c61-46d68cd6749e:readiness.observed:37",
+      "c696806e-809a-46a6-9c61-46d68cd6749e:wave.selected:38",
+      "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-api-backorder-surface-fc11325bf5:1:started",
+      "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-api-backorder-surface-fc11325bf5:1:candidate",
+      "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-api-backorder-surface-fc11325bf5:1:validation-completed",
+      "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-api-backorder-surface-fc11325bf5:1:artifact-adopted",
+      "c696806e-809a-46a6-9c61-46d68cd6749e:readiness.observed:43",
+      "c696806e-809a-46a6-9c61-46d68cd6749e:wave.selected:44",
+      "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-root-e84e8433c9:1:started",
+      "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-root-e84e8433c9:1:integration-completed",
+      "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-root-e84e8433c9:1:artifact-adopted",
+      "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-root-e84e8433c9:1:final-candidate",
+      "c696806e-809a-46a6-9c61-46d68cd6749e:delivery.started:49",
+      "c696806e-809a-46a6-9c61-46d68cd6749e:delivery.published:50"
+    ],
+    "decisions": {
+      "approve-plan:graph-semantic-de6257a0d96a00ceb0367d60-cb15d536ad:r1": {
+        "id": "approve-plan:graph-semantic-de6257a0d96a00ceb0367d60-cb15d536ad:r1",
+        "kind": "approve_plan",
+        "question": "Approve graph revision 1?",
+        "options": [
+          {
+            "id": "approve",
+            "label": "Approve plan"
+          },
+          {
+            "id": "request_changes",
+            "label": "Request changes"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-root-e84e8433c9"
+        ],
+        "evidenceRefs": [
+          "graph:graph-semantic-de6257a0d96a00ceb0367d60-cb15d536ad:r1"
+        ],
+        "impact": "acceptance",
+        "status": "resolved",
+        "resolution": {
+          "optionId": "approve"
+        }
+      }
+    },
+    "stoppedNodeIds": [],
+    "readiness": {
+      "readyNodeIds": [
+        "node-root-e84e8433c9"
+      ],
+      "pendingDecisionIds": [],
+      "explanations": [
+        {
+          "nodeId": "node-api-backorder-surface-fc11325bf5",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "already_adopted"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-application-backorder-events-e0c87fa1a9",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "already_adopted"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-domain-priority-backorder-state-59341c489a",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "already_adopted"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-root-e84e8433c9",
+          "ready": true,
+          "reasons": []
+        }
+      ],
+      "effectiveConfig": {
+        "maxParallel": 1,
+        "maxCostUsd": 8,
+        "automaticRetryBudget": 0
+      },
+      "schedulerState": {
+        "materializableNodeIds": [
+          "node-root-e84e8433c9",
+          "node-domain-priority-backorder-state-59341c489a",
+          "node-application-backorder-events-e0c87fa1a9",
+          "node-api-backorder-surface-fc11325bf5"
+        ],
+        "activeResourceNodeIds": [],
+        "openCircuitBreakerNodeIds": [],
+        "availableExecutorNodeIds": [
+          "node-root-e84e8433c9",
+          "node-domain-priority-backorder-state-59341c489a",
+          "node-application-backorder-events-e0c87fa1a9",
+          "node-api-backorder-surface-fc11325bf5"
+        ],
+        "stoppedNodeIds": [],
+        "budgetAvailable": true
+      },
+      "budgetAvailable": true,
+      "conflictEvidence": [],
+      "evaluatedAt": "2026-08-09T01:43:36.168Z"
+    },
+    "selectedWaves": [
+      {
+        "waveId": "c696806e-809a-46a6-9c61-46d68cd6749e:wave:1",
+        "nodeIds": [
+          "node-domain-priority-backorder-state-59341c489a"
+        ],
+        "maxParallel": 1,
+        "blocked": [
+          {
+            "nodeId": "node-api-backorder-surface-fc11325bf5",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-seam-application-backorder-events-to-api-backord-63ab465d83",
+                "requiredRevision": "sha256:ceefa7234e430ff7d3563204a9720129cacc0bf60abfc7e3bd8696cfc3697c45"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-seam-domain-priority-backorder-state-to-api-back-845021aded",
+                "requiredRevision": "sha256:b2546657aa3e959abc88e8650084a8fc5255bbdcd952803e9800223244b70b1f"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-seam-domain-priority-backorder-state-to-applicat-806b798994",
+                "requiredRevision": "sha256:c09ae0907d947b265ba9fc44bc1b60c474b3e10daa9ecfce7995e4a55c46f9ad"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-application-backorder-events-e0c87fa1a9",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-seam-domain-priority-backorder-state-to-applicat-806b798994",
+                "requiredRevision": "sha256:c09ae0907d947b265ba9fc44bc1b60c474b3e10daa9ecfce7995e4a55c46f9ad"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-root-e84e8433c9",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-domain-priority-backorder-state-output-9cd72d29fb",
+                "requiredRevision": "sha256:c29ea0a0c7c98c721d6ec2a220020ff9bdd92c8244d9f8a30c254ee1b8d14638"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-application-backorder-events-output-bdd0fb38d5",
+                "requiredRevision": "sha256:b0740f6e42924d619ed203460719eb5cbbb0e78e15ef57084b7d45447c4c1c1c"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-api-backorder-surface-output-e507b4e5bd",
+                "requiredRevision": "sha256:a005bd31bce47f3fbf77bf38adc5e57c0067356de3dc46135823311371faf389"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 1,
+          "maxCostUsd": 8,
+          "automaticRetryBudget": 0
+        },
+        "conflictEvidence": [],
+        "evaluatedAt": "2026-08-09T01:43:36.168Z"
+      },
+      {
+        "waveId": "c696806e-809a-46a6-9c61-46d68cd6749e:wave:2",
+        "nodeIds": [
+          "node-application-backorder-events-e0c87fa1a9"
+        ],
+        "maxParallel": 1,
+        "blocked": [
+          {
+            "nodeId": "node-api-backorder-surface-fc11325bf5",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-seam-application-backorder-events-to-api-backord-63ab465d83",
+                "requiredRevision": "sha256:ceefa7234e430ff7d3563204a9720129cacc0bf60abfc7e3bd8696cfc3697c45"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-domain-priority-backorder-state-59341c489a",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-root-e84e8433c9",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-application-backorder-events-output-bdd0fb38d5",
+                "requiredRevision": "sha256:b0740f6e42924d619ed203460719eb5cbbb0e78e15ef57084b7d45447c4c1c1c"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-api-backorder-surface-output-e507b4e5bd",
+                "requiredRevision": "sha256:a005bd31bce47f3fbf77bf38adc5e57c0067356de3dc46135823311371faf389"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 1,
+          "maxCostUsd": 8,
+          "automaticRetryBudget": 0
+        },
+        "conflictEvidence": [],
+        "evaluatedAt": "2026-08-09T01:43:36.168Z"
+      },
+      {
+        "waveId": "c696806e-809a-46a6-9c61-46d68cd6749e:wave:3",
+        "nodeIds": [
+          "node-api-backorder-surface-fc11325bf5"
+        ],
+        "maxParallel": 1,
+        "blocked": [
+          {
+            "nodeId": "node-application-backorder-events-e0c87fa1a9",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-domain-priority-backorder-state-59341c489a",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-root-e84e8433c9",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-api-backorder-surface-output-e507b4e5bd",
+                "requiredRevision": "sha256:a005bd31bce47f3fbf77bf38adc5e57c0067356de3dc46135823311371faf389"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 1,
+          "maxCostUsd": 8,
+          "automaticRetryBudget": 0
+        },
+        "conflictEvidence": [],
+        "evaluatedAt": "2026-08-09T01:43:36.168Z"
+      },
+      {
+        "waveId": "c696806e-809a-46a6-9c61-46d68cd6749e:wave:4",
+        "nodeIds": [
+          "node-root-e84e8433c9"
+        ],
+        "maxParallel": 1,
+        "blocked": [
+          {
+            "nodeId": "node-api-backorder-surface-fc11325bf5",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-application-backorder-events-e0c87fa1a9",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-domain-priority-backorder-state-59341c489a",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 1,
+          "maxCostUsd": 8,
+          "automaticRetryBudget": 0
+        },
+        "conflictEvidence": [],
+        "evaluatedAt": "2026-08-09T01:43:36.168Z"
+      }
+    ],
+    "attempts": {
+      "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-domain-priority-backorder-state-59341c489a:1": {
+        "attemptId": "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-domain-priority-backorder-state-59341c489a:1",
+        "nodeId": "node-domain-priority-backorder-state-59341c489a",
+        "inputFingerprint": "sha256:3398073bdb4195d42dbaf9016640e777c7dcc9ca4185c51dc1bc7ebd8b25015a",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "746e156d3708ee6ff9f1746e34f5accc2915e037",
+        "outputDigest": "sha256:0848b6c46c0a5cee6549399776acb635e56a35f958646aad20a4a7e06403a84b",
+        "usage": {
+          "tokensTotal": 35642,
+          "costUsd": 0.160389,
+          "source": "reported"
+        }
+      },
+      "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-application-backorder-events-e0c87fa1a9:1": {
+        "attemptId": "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-application-backorder-events-e0c87fa1a9:1",
+        "nodeId": "node-application-backorder-events-e0c87fa1a9",
+        "inputFingerprint": "sha256:319c621add48c62bd6192577effa64ddfcc49dc9cc7f2432b26c5ab65abc4052",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "41f307b91e7e4572b4c8254df219c322d13c87eb",
+        "outputDigest": "sha256:5b7a5fb3e91688b6c94d74c192a9b4a8e06015d154e6513a3f6fdd823573c4e0",
+        "usage": {
+          "tokensTotal": 34611,
+          "costUsd": 0.1557495,
+          "source": "reported"
+        }
+      },
+      "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-api-backorder-surface-fc11325bf5:1": {
+        "attemptId": "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-api-backorder-surface-fc11325bf5:1",
+        "nodeId": "node-api-backorder-surface-fc11325bf5",
+        "inputFingerprint": "sha256:386e792e514be5310f8b62d55b69bc83f399ebcd48caeb1136fd550a42e70f8e",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "c7a2b2f346fe26fc7384f70b593629ad31c2bff1",
+        "outputDigest": "sha256:2110d4704f103c1fec9673c1532a2ae31130a4e453c57bcb423664df9f074553",
+        "usage": {
+          "tokensTotal": 24235,
+          "costUsd": 0.1090575,
+          "source": "reported"
+        }
+      },
+      "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-root-e84e8433c9:1": {
+        "attemptId": "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-root-e84e8433c9:1",
+        "nodeId": "node-root-e84e8433c9",
+        "inputFingerprint": "sha256:97734e67ec83f70c6b6bdc0516782a4993e4894f9305b0c5a8a48473ca193023",
+        "kind": "integration",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "50773ec2c9a3c322f9eb5c19757eac8db0b51ec0"
+      }
+    },
+    "adoptedArtifacts": {
+      "artifact-contract-domain-priority-backorder-state-output-9cd72d29fb:c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-domain-priority-backorder-state-59341c489a:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-domain-priority-backorder-state-output-9cd72d29fb:c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-domain-priority-backorder-state-59341c489a:1",
+        "runId": "c696806e-809a-46a6-9c61-46d68cd6749e",
+        "nodeId": "node-domain-priority-backorder-state-59341c489a",
+        "digest": "sha256:0848b6c46c0a5cee6549399776acb635e56a35f958646aad20a4a7e06403a84b",
+        "producerAttemptId": "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-domain-priority-backorder-state-59341c489a:1",
+        "contract": {
+          "id": "artifact-contract-domain-priority-backorder-state-output-9cd72d29fb",
+          "revision": "sha256:c29ea0a0c7c98c721d6ec2a220020ff9bdd92c8244d9f8a30c254ee1b8d14638"
+        },
+        "kind": "commit",
+        "location": "746e156d3708ee6ff9f1746e34f5accc2915e037",
+        "adoptedAt": "2026-08-09T01:45:38.821Z"
+      },
+      "artifact-contract-seam-domain-priority-backorder-state-to-applicat-806b798994:c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-domain-priority-backorder-state-59341c489a:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-seam-domain-priority-backorder-state-to-applicat-806b798994:c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-domain-priority-backorder-state-59341c489a:1",
+        "runId": "c696806e-809a-46a6-9c61-46d68cd6749e",
+        "nodeId": "node-domain-priority-backorder-state-59341c489a",
+        "digest": "sha256:0848b6c46c0a5cee6549399776acb635e56a35f958646aad20a4a7e06403a84b",
+        "producerAttemptId": "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-domain-priority-backorder-state-59341c489a:1",
+        "contract": {
+          "id": "artifact-contract-seam-domain-priority-backorder-state-to-applicat-806b798994",
+          "revision": "sha256:c09ae0907d947b265ba9fc44bc1b60c474b3e10daa9ecfce7995e4a55c46f9ad"
+        },
+        "kind": "commit",
+        "location": "746e156d3708ee6ff9f1746e34f5accc2915e037",
+        "adoptedAt": "2026-08-09T01:45:38.821Z"
+      },
+      "artifact-contract-seam-domain-priority-backorder-state-to-api-back-845021aded:c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-domain-priority-backorder-state-59341c489a:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-seam-domain-priority-backorder-state-to-api-back-845021aded:c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-domain-priority-backorder-state-59341c489a:1",
+        "runId": "c696806e-809a-46a6-9c61-46d68cd6749e",
+        "nodeId": "node-domain-priority-backorder-state-59341c489a",
+        "digest": "sha256:0848b6c46c0a5cee6549399776acb635e56a35f958646aad20a4a7e06403a84b",
+        "producerAttemptId": "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-domain-priority-backorder-state-59341c489a:1",
+        "contract": {
+          "id": "artifact-contract-seam-domain-priority-backorder-state-to-api-back-845021aded",
+          "revision": "sha256:b2546657aa3e959abc88e8650084a8fc5255bbdcd952803e9800223244b70b1f"
+        },
+        "kind": "commit",
+        "location": "746e156d3708ee6ff9f1746e34f5accc2915e037",
+        "adoptedAt": "2026-08-09T01:45:38.821Z"
+      },
+      "artifact-contract-application-backorder-events-output-bdd0fb38d5:c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-application-backorder-events-e0c87fa1a9:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-application-backorder-events-output-bdd0fb38d5:c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-application-backorder-events-e0c87fa1a9:1",
+        "runId": "c696806e-809a-46a6-9c61-46d68cd6749e",
+        "nodeId": "node-application-backorder-events-e0c87fa1a9",
+        "digest": "sha256:5b7a5fb3e91688b6c94d74c192a9b4a8e06015d154e6513a3f6fdd823573c4e0",
+        "producerAttemptId": "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-application-backorder-events-e0c87fa1a9:1",
+        "contract": {
+          "id": "artifact-contract-application-backorder-events-output-bdd0fb38d5",
+          "revision": "sha256:b0740f6e42924d619ed203460719eb5cbbb0e78e15ef57084b7d45447c4c1c1c"
+        },
+        "kind": "commit",
+        "location": "41f307b91e7e4572b4c8254df219c322d13c87eb",
+        "adoptedAt": "2026-08-09T01:47:37.242Z"
+      },
+      "artifact-contract-seam-application-backorder-events-to-api-backord-63ab465d83:c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-application-backorder-events-e0c87fa1a9:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-seam-application-backorder-events-to-api-backord-63ab465d83:c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-application-backorder-events-e0c87fa1a9:1",
+        "runId": "c696806e-809a-46a6-9c61-46d68cd6749e",
+        "nodeId": "node-application-backorder-events-e0c87fa1a9",
+        "digest": "sha256:5b7a5fb3e91688b6c94d74c192a9b4a8e06015d154e6513a3f6fdd823573c4e0",
+        "producerAttemptId": "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-application-backorder-events-e0c87fa1a9:1",
+        "contract": {
+          "id": "artifact-contract-seam-application-backorder-events-to-api-backord-63ab465d83",
+          "revision": "sha256:ceefa7234e430ff7d3563204a9720129cacc0bf60abfc7e3bd8696cfc3697c45"
+        },
+        "kind": "commit",
+        "location": "41f307b91e7e4572b4c8254df219c322d13c87eb",
+        "adoptedAt": "2026-08-09T01:47:37.242Z"
+      },
+      "artifact-contract-api-backorder-surface-output-e507b4e5bd:c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-api-backorder-surface-fc11325bf5:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-api-backorder-surface-output-e507b4e5bd:c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-api-backorder-surface-fc11325bf5:1",
+        "runId": "c696806e-809a-46a6-9c61-46d68cd6749e",
+        "nodeId": "node-api-backorder-surface-fc11325bf5",
+        "digest": "sha256:2110d4704f103c1fec9673c1532a2ae31130a4e453c57bcb423664df9f074553",
+        "producerAttemptId": "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-api-backorder-surface-fc11325bf5:1",
+        "contract": {
+          "id": "artifact-contract-api-backorder-surface-output-e507b4e5bd",
+          "revision": "sha256:a005bd31bce47f3fbf77bf38adc5e57c0067356de3dc46135823311371faf389"
+        },
+        "kind": "commit",
+        "location": "c7a2b2f346fe26fc7384f70b593629ad31c2bff1",
+        "adoptedAt": "2026-08-09T01:49:00.440Z"
+      },
+      "artifact-contract-root-output-a8392491e5:c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-root-e84e8433c9:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-root-output-a8392491e5:c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-root-e84e8433c9:1",
+        "runId": "c696806e-809a-46a6-9c61-46d68cd6749e",
+        "nodeId": "node-root-e84e8433c9",
+        "digest": "sha256:9aeca94c8deac124b19efc36e71661064770f604871c12b90ae0685439ccc419",
+        "producerAttemptId": "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-root-e84e8433c9:1",
+        "contract": {
+          "id": "artifact-contract-root-output-a8392491e5",
+          "revision": "sha256:23738b45c0855a74d2efaad1f720a6707bb4fbc9b14335346f9e1d82c24024b0"
+        },
+        "kind": "commit",
+        "location": "50773ec2c9a3c322f9eb5c19757eac8db0b51ec0",
+        "adoptedAt": "2026-08-09T01:49:11.069Z"
+      }
+    },
+    "nodeEvidenceMatrixIds": {
+      "node-domain-priority-backorder-state-59341c489a": "matrix-2604d5045bd888ab",
+      "node-application-backorder-events-e0c87fa1a9": "matrix-3593e6c17a52133d",
+      "node-api-backorder-surface-fc11325bf5": "matrix-12743bf55c27e10d",
+      "node-root-e84e8433c9": "matrix-a592472be401e235"
+    },
+    "integrations": {
+      "node-root-e84e8433c9": {
+        "attemptId": "c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-root-e84e8433c9:1",
+        "nodeId": "node-root-e84e8433c9",
+        "requiredArtifactIds": [
+          "artifact-contract-domain-priority-backorder-state-output-9cd72d29fb:c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-domain-priority-backorder-state-59341c489a:1",
+          "artifact-contract-application-backorder-events-output-bdd0fb38d5:c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-application-backorder-events-e0c87fa1a9:1",
+          "artifact-contract-api-backorder-surface-output-e507b4e5bd:c696806e-809a-46a6-9c61-46d68cd6749e:attempt:node-api-backorder-surface-fc11325bf5:1"
+        ],
+        "status": "completed",
+        "repairPasses": 0,
+        "manifestId": "integration-result-integration-request-0cf9903183e5c91c",
+        "candidateCommit": "50773ec2c9a3c322f9eb5c19757eac8db0b51ec0",
+        "evidenceMatrixId": "matrix-a592472be401e235"
+      }
+    },
+    "recoveryHistory": [],
+    "evidenceMatrices": [
+      "matrix-2604d5045bd888ab",
+      "matrix-3593e6c17a52133d",
+      "matrix-12743bf55c27e10d",
+      "matrix-a592472be401e235"
+    ],
+    "outcomes": {
+      "execution": "succeeded",
+      "artifact": "verified",
+      "delivery": "published"
+    },
+    "evidenceMatrixSummaries": {
+      "matrix-2604d5045bd888ab": {
+        "candidateCommit": "746e156d3708ee6ff9f1746e34f5accc2915e037",
+        "outcome": "verified",
+        "validationRecipeDigest": "sha256:8f7eaf38bfc777cdc1dc80dc09040758de8804589e0f45238a3e0545ebd9060a"
+      },
+      "matrix-3593e6c17a52133d": {
+        "candidateCommit": "41f307b91e7e4572b4c8254df219c322d13c87eb",
+        "outcome": "verified",
+        "validationRecipeDigest": "sha256:7b76d6feca661f17630850231b381292407a2cf3bfa028814b50f64c356aef9e"
+      },
+      "matrix-12743bf55c27e10d": {
+        "candidateCommit": "c7a2b2f346fe26fc7384f70b593629ad31c2bff1",
+        "outcome": "verified",
+        "validationRecipeDigest": "sha256:726a8dcd1d7096c2d566e309870ed05ccda495f6ea8c98b79a53f35b127d80b4"
+      },
+      "matrix-a592472be401e235": {
+        "candidateCommit": "50773ec2c9a3c322f9eb5c19757eac8db0b51ec0",
+        "outcome": "verified",
+        "validationRecipeDigest": "sha256:f0b5829ea521c0baf08844851e08024c6b23478e5c0eaa52033c3be1cb0b1d9b"
+      }
+    },
+    "graphId": "graph-semantic-de6257a0d96a00ceb0367d60-cb15d536ad",
+    "graphRevision": 1,
+    "granularityStrategy": {
+      "policyVersion": "adaptive-utility/3.1.0-pilot",
+      "condition": "C",
+      "candidateTreeHash": "sha256:dfa7eef42c12ca7fc6e58ec3b0686b1f664c91f71a8498e08aa620ff734abd7d",
+      "config": {
+        "minimumAdvantage": 0.15,
+        "maxLeafContextTokens": 24000,
+        "maxLeafScopePaths": 40,
+        "maxLeafPlannedPaths": 12
+      },
+      "assessments": {
+        "node-domain-priority-backorder-state-59341c489a": {
+          "unitKey": "domain-priority-backorder-state",
+          "nodeId": "node-domain-priority-backorder-state-59341c489a",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.3333
+          },
+          "benefit": 0,
+          "cost": 0.0833,
+          "splitAdvantage": -0.0833,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-2",
+            "path-3",
+            "sha256:bdcbb631b228ec654773edcadcf4c100404aad1cb1747716add01011abf8e34f"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-application-backorder-events-e0c87fa1a9": {
+          "unitKey": "application-backorder-events",
+          "nodeId": "node-application-backorder-events-e0c87fa1a9",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.3333
+          },
+          "benefit": 0,
+          "cost": 0.0833,
+          "splitAdvantage": -0.0833,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-2",
+            "sha256:bdcbb631b228ec654773edcadcf4c100404aad1cb1747716add01011abf8e34f"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-api-backorder-surface-fc11325bf5": {
+          "unitKey": "api-backorder-surface",
+          "nodeId": "node-api-backorder-surface-fc11325bf5",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.25
+          },
+          "benefit": 0,
+          "cost": 0.0625,
+          "splitAdvantage": -0.0625,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-0",
+            "path-1",
+            "path-2",
+            "sha256:bdcbb631b228ec654773edcadcf4c100404aad1cb1747716add01011abf8e34f"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-root-e84e8433c9": {
+          "unitKey": "root",
+          "nodeId": "node-root-e84e8433c9",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": true,
+          "features": {
+            "contextRelief": 0.2396,
+            "parallelism": 0,
+            "faultIsolation": 1,
+            "coordination": 0.6667,
+            "pathOverlap": 0.2556,
+            "validationDuplication": 0,
+            "uncertainty": 0.3055
+          },
+          "benefit": 0.4132,
+          "cost": 0.307,
+          "splitAdvantage": 0.1063,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-0",
+            "path-1",
+            "path-2",
+            "path-3",
+            "config-package-json",
+            "sha256:bdcbb631b228ec654773edcadcf4c100404aad1cb1747716add01011abf8e34f"
+          ],
+          "rationale": "Split advantage 0.1063 is below minimum 0.1500."
+        }
+      },
+      "metrics": {
+        "maxGraphDepth": 1,
+        "totalLeafCount": 3,
+        "averageBranchingFactor": 3
+      }
+    },
+    "approvedGraphRevision": 1,
+    "finalCandidate": {
+      "manifestId": "final-4b858821db49600d",
+      "commit": "50773ec2c9a3c322f9eb5c19757eac8db0b51ec0",
+      "evidenceMatrixId": "matrix-a592472be401e235",
+      "sourceTargetFingerprint": "607733d636ca9379",
+      "targetBranch": "main",
+      "targetHead": "f6b84b085e01c6c57fd2e730f47136152078ec6e",
+      "evidenceEligible": true,
+      "finalManifest": {
+        "commitSha": "50773ec2c9a3c322f9eb5c19757eac8db0b51ec0",
+        "treeSha": "5954c5c0afb7bb8f98be016b3cb56befed8263af",
+        "graphRevision": 1,
+        "artifactIds": [
+          "artifact-contract-root-output-a8392491e5"
+        ],
+        "evidenceMatrixId": "matrix-a592472be401e235",
+        "validationRecipeDigest": "sha256:f0b5829ea521c0baf08844851e08024c6b23478e5c0eaa52033c3be1cb0b1d9b",
+        "deliveryTarget": "main",
+        "granularityPolicy": {
+          "policyVersion": "adaptive-utility/3.1.0-pilot",
+          "minimumAdvantage": 0.15,
+          "maxLeafContextTokens": 24000,
+          "maxLeafScopePaths": 40,
+          "maxLeafPlannedPaths": 12
+        }
+      }
+    },
+    "deliveryApproval": {
+      "manifestId": "final-4b858821db49600d",
+      "finalSha": "50773ec2c9a3c322f9eb5c19757eac8db0b51ec0",
+      "targetBranch": "main",
+      "targetHead": "f6b84b085e01c6c57fd2e730f47136152078ec6e",
+      "targetFingerprint": "607733d636ca9379",
+      "actor": "thesis-operator",
+      "idempotencyKey": "c696806e-809a-46a6-9c61-46d68cd6749e:delivery"
+    },
+    "deliveryReceipt": {
+      "receiptId": "delivery:c696806e-809a-46a6-9c61-46d68cd6749e:delivery",
+      "requestFingerprint": "a462fd5dc473ac502405862e7c566a5352444733168ed14d4dd00e2b9f9ef5ee",
+      "manifestId": "final-4b858821db49600d",
+      "finalSha": "50773ec2c9a3c322f9eb5c19757eac8db0b51ec0",
+      "targetBranch": "main",
+      "targetHeadBefore": "f6b84b085e01c6c57fd2e730f47136152078ec6e",
+      "targetHeadAfter": "50773ec2c9a3c322f9eb5c19757eac8db0b51ec0",
+      "disposition": "delivered",
+      "confirmed": true
+    }
+  },
+  "checksum": "203c7977dfd68ebe30e4b98953c86e2f8d7c5d509940426be7abe21f5ec634e1"
+}

@@ -1,0 +1,73 @@
+{
+  "version": 2,
+  "run": {
+    "runId": "c696806e-809a-46a6-9c61-46d68cd6749e",
+    "workspaceId": "c2723969-56c5-4334-8635-8c16a9f9ce93",
+    "userPrompt": "Add express/standard order priority and backorder recording across the existing domain, application and API. `priority` accepts only `standard` or `express`, defaults to `standard` when omitted, and rejects other values with a `priority` error. An order that exceeds available stock must remain cancellable, record a positive backorder, emit exactly one application event of type `backorder-recorded`, and be observable through the API through `currentOrders()`, `currentBackorders()` and `events()`. `currentBackorders()` returns entries shaped exactly as `{ orderId, skuId, missing }`. Preserve existing behavior. Add focused tests beside the modified code.",
+    "acceptanceCriteria": [
+      "priority accepts only standard or express, defaults to standard when omitted, and invalid values fail with an error that names priority.",
+      "Insufficient stock leaves the order cancellable and records a positive backorder with exact { orderId, skuId, missing } data.",
+      "The application emits exactly one backorder-recorded event for each backorder and preserves non-backorder behavior.",
+      "The API exposes currentOrders(), currentBackorders(), and events(), with currentBackorders entries shaped exactly as { orderId, skuId, missing }."
+    ],
+    "title": "Add express/standard order priority and backorder recording across the existing domain, application and API. `priority` ",
+    "planningSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.4-mini",
+      "effort": "medium"
+    },
+    "executionSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.4-mini",
+      "effort": "medium"
+    },
+    "repairSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.4-mini",
+      "effort": "medium"
+    },
+    "executionConfig": {
+      "maxParallel": 2,
+      "scopePolicy": "strict",
+      "leafTimeoutMs": 1200000,
+      "integrationTimeoutMs": 1200000,
+      "maxOutputBytes": 65536,
+      "maxValidationCommands": 20,
+      "installTimeoutMs": 300000,
+      "maxPlanningAttempts": 1,
+      "unexpectedCommitPolicy": "reject",
+      "routing": "fixed",
+      "maxCostUsd": 8,
+      "automaticRetryBudget": 0
+    },
+    "targetContext": {
+      "sourceRealPath": "C:\\mh-sp2\\cell-02",
+      "gitCommonDir": "C:\\mh-sp2\\cell-02\\.git",
+      "physicalIdentity": {
+        "version": 1,
+        "device": "3156479238",
+        "file": "19421773395666857"
+      },
+      "sourceBranch": "main",
+      "sourceBaseCommit": "f6b84b085e01c6c57fd2e730f47136152078ec6e",
+      "fingerprint": "607733d636ca9379",
+      "capturedAt": "2026-08-09T01:42:13.674Z"
+    },
+    "projection": {
+      "eventSequence": 50,
+      "lifecycle": "completed",
+      "graphId": "graph-semantic-de6257a0d96a00ceb0367d60-cb15d536ad",
+      "graphRevision": 1,
+      "approvedGraphRevision": 1,
+      "repositorySnapshotId": "sha256:bdcbb631b228ec654773edcadcf4c100404aad1cb1747716add01011abf8e34f",
+      "finalManifestId": "final-4b858821db49600d",
+      "finalCommit": "50773ec2c9a3c322f9eb5c19757eac8db0b51ec0",
+      "updatedAt": "2026-08-09T01:49:15.759Z"
+    },
+    "version": 116,
+    "mutationFence": 5,
+    "createdAt": "2026-08-09T01:42:13.674Z",
+    "updatedAt": "2026-08-09T01:49:15.776Z",
+    "heartbeatAt": "2026-08-09T01:49:14.087Z"
+  }
+}
