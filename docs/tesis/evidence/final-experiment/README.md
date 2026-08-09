@@ -27,3 +27,7 @@ subdirectorios. Se corrigio el fixture, no se reinterpreto el resultado: el
 baseline ahora importa esos tests y `preflight.mjs` exige que el control
 negativo falle. Esa correccion cambia el baseline y abre una serie V2 con nuevo
 freeze; V1 no cuenta como intento valido ni como PASS.
+El resultado cerrado de V2 está en [`FINAL-REPORT.md`](FINAL-REPORT.md). Los
+journals, snapshots, métricas, receipts y resultados del oráculo se preservan
+en `.scratch/final-thesis-experiment-v2/`; `freeze.json` allí es la autoridad
+para hashes, celdas contadas, modelo y desviación del protocolo original.

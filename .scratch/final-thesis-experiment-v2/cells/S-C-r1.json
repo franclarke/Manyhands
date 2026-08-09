@@ -1,0 +1,18 @@
+{
+  "series": "FINAL-THESIS-EXPERIMENT-V2",
+  "cellId": "S-C-r1",
+  "taskId": "S",
+  "condition": "C",
+  "repetition": 1,
+  "workspaceId": "4ada1eac-3866-4cc8-b103-108a36c9005d",
+  "workspaceName": "final-v2-s-c-r1",
+  "targetRepo": "C:\\mh-final-thesis-v2\\S-C-r1",
+  "baseSha": "790690b6ac57194ed0c08e8f17f4c275bab5f84a",
+  "goal": "Add and export the pure domain function summarizeInventory(state) from src/domain/orders.mjs. It must derive { totalUnits, occupiedSkus } from state.stockBySku, work for different states without hardcoded values, preserve every existing operation, and include a focused domain test. Do not change application or api.",
+  "acceptanceCriteria": [
+    "summarizeInventory is exported from the domain module and returns totalUnits as the sum of stockBySku values.",
+    "summarizeInventory returns occupiedSkus as the count of positive stock entries and works across different states without hardcoded values.",
+    "Existing order and cancellation operations remain unchanged and the focused domain test passes."
+  ],
+  "selection": { "executorId": "codex-cli", "model": "gpt-5.4-mini", "effort": "medium" }
+}

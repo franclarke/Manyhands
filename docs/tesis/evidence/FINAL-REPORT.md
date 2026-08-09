@@ -1,83 +1,67 @@
-# Informe final de evidencia — etapa 12
+# Informe final de evidencia de la tesis
 
-Fecha: 2026-08-02.
+Fecha de cierre: 2026-08-09.
 
-## Estado
+## Autoridad vigente
 
-Las etapas 0 a 12 del plan quedan documentadas en
-[STAGE-LEDGER.md](g6/STAGE-LEDGER.md). No se ejecutó ningún run adicional
-después de G6; por lo tanto, este cierre no agrega una observación experimental
-ni altera el presupuesto de la serie.
+La evidencia positiva central de la tesis es el experimento final V2, descrito
+en [`final-experiment/FINAL-REPORT.md`](final-experiment/FINAL-REPORT.md). Su
+veredicto es **H-F1 PASS 4/4** y **H-F2 PASS 4/4** bajo un freeze explícito.
+Es la única serie que se usa para sostener conjuntamente las dos proposiciones
+operables de la entrega.
 
-La evidencia consolidada está en
-[THESIS-EVIDENCE-DOSSIER.md](THESIS-EVIDENCE-DOSSIER.md). El dossier no es la
-tesis y no modifica `main.tex` ni `presentacion.tex`.
+H-F1 afirma viabilidad end-to-end acotada: cuatro celdas entregadas, con SHA
+no vacío y oráculo externo PASS sobre el commit exacto. H-F2 afirma una forma de
+topología: dos tareas multi-capa con raíz composite y tres hojas, y dos tareas
+cohesivas con una envoltura de raíz y una sola hoja ejecutable.
 
-## Commits locales relevantes
+## Resultado final
 
-- `31f0589`: dossier trazable de evidencia para PI-1, PI-2 y PI-3.
-- `6b433cb`: fila de etapa 11 en el ledger.
-- `8674012`: corrección de tipado fail-safe para el comprobante de takeover,
-  manteniendo la guardia de `allDead`.
-- El resultado G6 derivado, el veredicto, las reviews independientes y el
-  snapshot reproducible están enlazados desde
-  [g6/results.md](g6/results.md),
-  [g6/verdict.md](g6/verdict.md),
-  [g6/stage-10-reviews.md](g6/stage-10-reviews.md) y
-  [g6/canonical-runs/manifest.json](g6/canonical-runs/manifest.json).
+| Celda | Run | Candidate SHA | Lifecycle | Oráculo | Topología |
+|---|---|---|---|---|---|
+| `M-C-r1` | `21f2aebf-9218-4c2e-9e96-b8b60b86fc59` | `6204eeb8b416bda97c9a97d9a82f667726bf0022` | completed, delivered | PASS | 3 hojas |
+| `M-C-r2` | `99c0c50f-8e76-49ef-8bd4-bb020b1240b9` | `73c6b35a5849a2514513fd4bf44139dd91f6537f` | completed, delivered | PASS | 3 hojas |
+| `S-C-r1` | `a74c6959-8981-41b7-9341-899fca9a504e` | `e4caca0b7df98367bb998cb6f40ba95de0b93033` | completed, delivered | PASS | 1 hoja |
+| `S-C-r2` | `d611c700-b392-41d0-88ae-39ebead48119` | `eb3631af68bc1add42d60aa051cf603ed3be7218` | completed, delivered | PASS | 1 hoja |
 
-Todos los commits fueron locales. No se hizo push.
+Modelo efectivo: Codex `gpt-5.4-mini`, esfuerzo `medium`, en planning,
+execution y repair. Se usaron cero retries automáticos y `pnpm build` antes de
+cada run. El rehearsal se excluye del denominador. La cadena de custodia,
+hashes, métricas y journals están en `.scratch/final-thesis-experiment-v2/`.
 
-## Gates ejecutados
+## Evidencia histórica que no se combina
 
-| Comando | Resultado |
-|---|---|
-| `pnpm build` | PASS; ejecutado antes de la suite. |
-| `pnpm test` | PASS en la repetición ampliada: 224 archivos, 1580 tests, 2 skips. Duración reportada: 154,5 s. |
-| `pnpm -r --filter "./packages/*" typecheck` | PASS; 12 paquetes. |
-| `pnpm --filter @manyhands/web exec tsc --noEmit` | PASS después de corregir la inferencia de `allDead`. |
-| `pnpm web:build` | PASS; compilación Next.js, tipos y generación de 3 páginas estáticas. |
-| `pnpm exec vitest run tests/run-operation-authority-atomic.test.ts` | PASS; 1 archivo, 8 tests. |
-| `git diff --check` | PASS antes de los commits de esta etapa. |
+- Warehouse queda en `1/8`; no se presenta como escala demostrada.
+- G5 queda como resultado comparativo negativo.
+- G6 queda inconcluso.
+- G7 no produjo candidatos.
+- SP2 queda como piloto previo y no se suma a V2.
+- V1 queda como resultado adverso por un negative control insensible; después se
+  corrigió el fixture y se creó el freeze V2 independiente.
 
-El primer intento de `pnpm test` agotó 120 s sin salida y fue terminado por el
-wrapper; no fue tratado como fallo de aserciones. La repetición con 600 s
-terminó correctamente. El typecheck web sí encontró un error real: el
-comprobante exigía `allDead: true` pero la propiedad se infería como
-`boolean`. La corrección quedó aislada en
-[run-operation-lease.ts](../../../apps/web/src/lib/server/runs/run-operation-lease.ts)
-y fue verificada por el test de autoridad, el typecheck y el build web.
+Estos resultados no se borran ni se convierten en éxitos. Se conservan para
+explicar límites, defectos encontrados y por qué la serie final fue
+reorganizada.
 
-## Estado de preservación
+## Conclusión defendible
 
-Los runs, journals, worktrees, pools y artefactos originales permanecen
-preservados. El snapshot mínimo comprometido para las seis filas canónicas está
-descripto en [canonical-runs/README.md](g6/canonical-runs/README.md) y sus
-hashes en [canonical-runs/manifest.json](g6/canonical-runs/manifest.json).
-Las carpetas raw no seleccionadas siguen fuera del índice Git por diseño y no
-se borraron.
+ManyHands demostró, en el target y la configuración congelados, un recorrido
+end-to-end que planifica una tarea semántica, ejecuta hojas aisladas, integra,
+valida el commit candidato exacto mediante un oráculo independiente y entrega
+el resultado. También produjo las dos topologías pre-registradas para las
+formas de tarea evaluadas.
 
-## Pendientes y límites
+No se concluye superioridad de una política frente a A/B, causalidad,
+optimalidad, escalabilidad, generalización estadística ni finalización de
+Warehouse. Para sostener cualquiera de esas afirmaciones haría falta un
+estudio distinto, con controles y una base que aquí no se obtuvo.
 
-- G6 termina con veredicto inconcluso: dos repeticiones por condición no
-  confirman ni falsan H-G6 ([verdict.md](g6/verdict.md)).
-- No hay una serie amplia entregada; la cadena longitudinal Warehouse queda en
-  1/8 ([EVIDENCE-BASELINE.md](../EVIDENCE-BASELINE.md)).
-- El motivador de 19 hijos no fue re-medido a su propia anchura y
-  `retry-12` fue planning-only
-  ([retry-12-measure](warehouse/wide-graph/retry-12-measure/README.md)).
-- Los parámetros `minimumAdvantage = 0.15` y
-  `maxLeafPlannedPaths = 12` siguen provisionales
-  ([policy-c-refuses-a-clean-wide-cut](warehouse/pilot/defects/policy-c-refuses-a-clean-wide-cut/README.md)).
-- No se ejecutó una exploración “con menos restricciones”: hacerlo sería un
-  experimento distinto y requeriría una decisión y un protocolo separados; no
-  se lo presenta como evidencia G6.
+## Gates de software
 
-## Qué no se concluye
+La implementación de ManyHands usada en el freeze fue compilada y tipada antes
+de ejecutar las celdas. La corrección del fixture de sensibilidad pasó el
+preflight con template FAIL, referencias PASS y negative-control sensitivity
+PASS. El servidor se detuvo después del cuarto run y el puerto `3200` quedó sin
+listener.
 
-- No se concluye que el sistema entregue confiablemente una serie amplia.
-- No se concluye que una condición de G6 sea superior de manera estadísticamente
-  significativa.
-- No se concluye que los fallos preservados sean éxitos, ceros o evidencia
-  atribuible cuando no tienen candidato.
-- No se concluye que los parámetros provisionales sean óptimos o generalizables.
+No se hizo push.

@@ -875,3 +875,16 @@ Ninguno de los dos se presenta como derivado en la tesis.
   movió** y el resultado no se declara PASS.
 - Los 12 tests rojos que los tickets 23–26 dejaron y que nadie había visto, con
   sus tres defectos de producto, corregidos y documentados en el HANDOFF.
+---
+
+## Autoridad final de claims — experimento V2 (2026-08-09)
+
+La tabla final se deriva exclusivamente de la serie V2; las filas históricas se mantienen para trazabilidad, pero no se combinan con ella.
+
+| Claim | Estado vigente | Evidencia |
+|---|---|---|
+| **H-F1** — viabilidad end-to-end acotada | **PASS 4/4** | Cuatro celdas `completed`/`delivered`, candidate SHA no vacío y oráculo externo PASS sobre el SHA exacto. [`final-experiment/FINAL-REPORT.md`](evidence/final-experiment/FINAL-REPORT.md) |
+| **H-F2** — topología según forma de tarea | **PASS 4/4** | M: raíz composite con 3 hojas en ambas repeticiones. S: envoltura de raíz con 1 hoja ejecutable en ambas repeticiones. [`final-experiment/FINAL-REPORT.md`](evidence/final-experiment/FINAL-REPORT.md) |
+| H1/H2 históricas de escala y superioridad | **retired-from-central-argument** | Warehouse 1/8, G5 negativo, G6 inconcluso y G7 sin candidatos; no son evidencia positiva. |
+
+V2 no contiene A/B y no permite afirmar superioridad, causalidad, optimalidad, escalabilidad ni generalización estadística.

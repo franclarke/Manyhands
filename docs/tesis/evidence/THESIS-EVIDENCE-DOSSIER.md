@@ -1,5 +1,11 @@
 # Dossier de evidencia de ManyHands
 
+> **Autoridad vigente — 2026-08-09:** la conclusión positiva central se deriva
+> exclusivamente de [`final-experiment/FINAL-REPORT.md`](final-experiment/FINAL-REPORT.md).
+> Las secciones históricas que siguen preservan resultados anteriores, pero no
+> se combinan con V2 ni completan sus denominadores. Warehouse (`1/8`), G5, G6,
+> G7, SP2 y V1 son antecedentes adversos, inconclusos o piloto según se indica.
+
 Fecha de cierre de la evidencia: 2026-08-02.
 
 Este documento compila evidencia ya preservada y derivada para responder las
@@ -176,3 +182,78 @@ comprometido en [canonical-runs/manifest.json](g6/canonical-runs/manifest.json).
   óptimos o generalizables.
 - No se convierten fallos pre-candidate, runs sin hecho terminal ni resultados
   adversos en éxitos o ceros.
+
+---
+
+## Reconciliación posterior: SP2
+
+La serie SP2 agrega evidencia end-to-end **compacta y acotada**. La
+reconciliación completa, con la separación entre observación, claim y límite,
+está en [sp2-conclusions.md](semantic-planning/sp2-conclusions.md).
+
+### PI-1
+
+SP2 agrega dos celdas que llegaron a `completed` y `delivered`, con receipts
+confirmados y validación externa sobre los candidatos exactos
+`8144bfe8a06a9f3a4d946ca5fa712ce76de262fb` y
+`50773ec2c9a3c322f9eb5c19757eac8db0b51ec0`. Esto eleva la evidencia de
+integración, delivery y ejecución real para un target pequeño. No cambia el
+límite longitudinal Warehouse de 1/8 ni demuestra entrega amplia sostenida.
+
+### PI-2
+
+Las dos celdas persistieron un grafo de profundidad 1 con tres hojas bajo la
+política C. Esto demuestra que el corte semántico domain → application → API
+puede compilarse y ejecutarse en este objetivo. No compara contra A o B, no
+prueba superioridad y no calibra `minimumAdvantage` ni
+`maxLeafPlannedPaths`.
+
+### PI-3
+
+La evidencia de los defectos de etapa 7 queda cerrada en sus tickets y en sus
+regresiones. SP2 no reintrodujo esas causas. El run independiente de Claude
+confirma autenticación con fuentes `project,local` y escritura acotada en el
+caso de prueba, pero no constituye un sandbox general del sistema operativo.
+
+### Conclusión global reconciliada
+
+ManyHands queda demostrado como un orquestador capaz de llevar un vertical
+slice pequeño desde planificación semántica hasta entrega verificada por un
+oráculo externo, con cadena de custodia reproducible. La evidencia no permite
+afirmar superioridad de la política adaptativa, escalabilidad, generalización
+estadística ni finalización de Warehouse. G6 conserva su veredicto inconcluso y
+los resultados adversos permanecen sin reinterpretar.
+
+| Evidencia nueva | Claim que permite sostener |
+|---|---|
+| [sp2-conclusions.md](semantic-planning/sp2-conclusions.md) | Reconciliación de hechos, claims y límites de SP2 |
+| [sp2-preregistration.md](semantic-planning/sp2-preregistration.md) | Objetivo, criterios, enmiendas y resultado pre-registrado |
+| [sp2-freeze.json](../../.scratch/stage-7-defects/sp2-freeze.json) | Freeze, modelo, executor, SHAs y configuración |
+| [sp2-result.json](../../.scratch/stage-7-defects/sp2-result.json) | Veredicto 2/2 y 5/5 por celda |
+
+---
+
+## Autoridad final: experimento V2 (2026-08-09)
+
+La serie V2 reemplaza cualquier lectura positiva conjunta de las líneas
+históricas. Sus hipótesis son H-F1 (viabilidad end-to-end acotada) y H-F2
+(topología coherente con la forma de tarea), tal como se pre-registraron en
+[`final-experiment/preregistration.md`](final-experiment/preregistration.md).
+
+Las cuatro celdas contadas (`M-C-r1`, `M-C-r2`, `S-C-r1`, `S-C-r2`) llegaron a
+`completed` y `delivered`; cada una produjo un candidate SHA no vacío y obtuvo
+PASS del oráculo externo sobre ese SHA exacto. Las dos celdas M observaron una
+raíz composite con tres hojas; las dos S observaron la envoltura de raíz con una
+sola hoja ejecutable. Por ello, H-F1 y H-F2 son PASS dentro del target y freeze
+de V2.
+
+V2 no contiene controles A/B ni una base grande. No permite inferir
+superioridad, causalidad, optimalidad, escalabilidad o generalización. El
+rehearsal está excluido. V1 se conserva por separado como adverso: su control
+negativo no detectaba tests en subdirectorios y la serie se detuvo antes de
+contar; la corrección del fixture dio lugar a un freeze V2 nuevo.
+
+El detalle con SHAs, receipts, hashes, journals y métricas está en
+[`final-experiment/FINAL-REPORT.md`](final-experiment/FINAL-REPORT.md) y en
+`.scratch/final-thesis-experiment-v2/`. Esta sección es la que debe citarse en
+la tesis para la conclusión positiva.

@@ -148,6 +148,17 @@ evalúa a cada configuración contra su propia vara.
 descomposición de tareas, granularidad adaptativa, worktrees de Git, verificación
 basada en evidencia.
 
+\paragraph{Alcance experimental final.} Las líneas históricas de Warehouse,
+G5, G6, G7 y SP2 se conservan como antecedentes adversos, inconclusos o piloto,
+pero no se combinan para sostener las hipótesis de la entrega. La evidencia
+positiva central es el experimento final V2: cuatro celdas congeladas sobre un
+target Node ESM pequeño, dos formas de tarea, dos repeticiones por forma, un
+modelo fijo y un oráculo externo sobre el commit candidato exacto. V2 sostiene
+únicamente H-F1 (viabilidad end-to-end acotada) y H-F2 (topología coherente con
+la forma de tarea), ambas con PASS 4/4. No contiene controles A/B y por ello no
+permite afirmar superioridad, causalidad, optimalidad, escalabilidad ni
+generalización estadística.
+
 \tableofcontents
 \listoffigures
 \listoftables
@@ -1638,6 +1649,32 @@ verifican, y toda métrica de éxito construida sobre ellos evalúa a cada
 configuración contra su propia vara. Cualquier estudio futuro que compare
 estrategias de granularidad debe fijar un conjunto de criterios externo e
 idéntico antes de descomponer.
+
+\subsection{Veredicto de la serie final V2}
+\label{sec:veredicto-final-v2}
+
+Para evitar que una línea histórica incompleta se lea como una demostración,
+esta sección fija la autoridad de la entrega experimental. V2 ejecutó, en el
+orden pre-registrado, un rehearsal excluido y cuatro celdas contadas:
+\texttt{M-C-r1}, \texttt{M-C-r2}, \texttt{S-C-r1} y \texttt{S-C-r2}. Las cuatro
+llegaron a \texttt{completed} y \texttt{delivered},
+produjeron un commit candidato no vacío y pasaron el oráculo externo sobre el
+SHA exacto. Las dos celdas M compilaron una raíz composite con tres hojas; las
+dos celdas S compilaron una envoltura de raíz con una sola hoja ejecutable.
+
+En consecuencia, H-F1 y H-F2 quedan sostenidas \textbf{dentro del target,
+modelo, política, límites y freeze de V2}. El modelo efectivo fue Codex
+\texttt{gpt-5.4-mini} con esfuerzo \texttt{medium}; se usaron cero retries
+automáticos y se ejecutó \texttt{pnpm build} antes de cada run. El informe
+reproducible, los SHAs, los receipts, los journals y los resultados del oráculo
+están en \texttt{docs/tesis/evidence/final-experiment/FINAL-REPORT.md} y
+\texttt{.scratch/final-thesis-experiment-v2/}.
+
+Este veredicto no confirma las hipótesis históricas de escala ni una ventaja
+frente a otras políticas: V2 no tiene controles A/B y usa un único target
+pequeño. Warehouse conserva el resultado `1/8`; G5 sigue siendo negativo, G6
+inconcluso y G7 no produjo candidatos. Esos resultados forman parte de las
+limitaciones y no se suman a V2 para completar ningún denominador.
 
 \section{Trabajo futuro}
 \label{sec:futuro}

@@ -1,0 +1,211 @@
+{
+  "schemaVersion": 1,
+  "runId": "99c0c50f-8e76-49ef-8bd4-bb020b1240b9",
+  "eventSequence": 21,
+  "projection": {
+    "runId": "99c0c50f-8e76-49ef-8bd4-bb020b1240b9",
+    "goal": "Add express/standard order priority and backorder recording across the existing domain, application and API. priority accepts only standard or express, defaults to standard when omitted, and rejects other values with a priority error. An order that exceeds available stock must remain cancellable, record a positive backorder, emit exactly one application event of type backorder-recorded, and be observable through currentOrders(), currentBackorders(), and events(). currentBackorders() entries must be exactly { orderId, skuId, missing }. Preserve existing behavior. Add focused tests beside modified code.",
+    "lifecycle": "running",
+    "sequence": 21,
+    "appliedEventIds": [
+      "run:99c0c50f-8e76-49ef-8bd4-bb020b1240b9:created",
+      "repository:sha256:dad186c3a2d2f367ebcb9f85e71da405ce1b95d224503b7b30f8b16c753c686f:inspection:2",
+      "planning:99c0c50f-8e76-49ef-8bd4-bb020b1240b9:unit:root",
+      "planning:99c0c50f-8e76-49ef-8bd4-bb020b1240b9:unit:domain-priority-and-backorders",
+      "planning:99c0c50f-8e76-49ef-8bd4-bb020b1240b9:unit:application-backorder-events",
+      "planning:99c0c50f-8e76-49ef-8bd4-bb020b1240b9:unit:api-current-backorders",
+      "planning:semantic-2f3d96d82ba6e1e9aab9995c:completed:99c0c50f-8e76-49ef-8bd4-bb020b1240b9",
+      "graph:graph-semantic-2f3d96d82ba6e1e9aab9995c-be59acf5fb:r1:compiled",
+      "graph:graph-semantic-2f3d96d82ba6e1e9aab9995c-be59acf5fb:r1:critic:completeness",
+      "graph:graph-semantic-2f3d96d82ba6e1e9aab9995c-be59acf5fb:r1:critic:atomicity",
+      "graph:graph-semantic-2f3d96d82ba6e1e9aab9995c-be59acf5fb:r1:critic:contract_compatibility",
+      "graph:graph-semantic-2f3d96d82ba6e1e9aab9995c-be59acf5fb:r1:critic:dag_validity",
+      "graph:graph-semantic-2f3d96d82ba6e1e9aab9995c-be59acf5fb:r1:critic:scope_isolation",
+      "graph:graph-semantic-2f3d96d82ba6e1e9aab9995c-be59acf5fb:r1:critic:artifact_coverage",
+      "graph:graph-semantic-2f3d96d82ba6e1e9aab9995c-be59acf5fb:r1:critic:risk_uncertainty",
+      "graph:graph-semantic-2f3d96d82ba6e1e9aab9995c-be59acf5fb:r1:critic:validation_coverage",
+      "graph:graph-semantic-2f3d96d82ba6e1e9aab9995c-be59acf5fb:r1:proposed",
+      "approve-plan:graph-semantic-2f3d96d82ba6e1e9aab9995c-be59acf5fb:r1",
+      "planning:semantic-2f3d96d82ba6e1e9aab9995c:strategy:99c0c50f-8e76-49ef-8bd4-bb020b1240b9",
+      "approve-plan:graph-semantic-2f3d96d82ba6e1e9aab9995c-be59acf5fb:r1:resolved",
+      "approve-plan:graph-semantic-2f3d96d82ba6e1e9aab9995c-be59acf5fb:r1:graph-approved"
+    ],
+    "decisions": {
+      "approve-plan:graph-semantic-2f3d96d82ba6e1e9aab9995c-be59acf5fb:r1": {
+        "id": "approve-plan:graph-semantic-2f3d96d82ba6e1e9aab9995c-be59acf5fb:r1",
+        "kind": "approve_plan",
+        "question": "Approve graph revision 1?",
+        "options": [
+          {
+            "id": "approve",
+            "label": "Approve plan"
+          },
+          {
+            "id": "request_changes",
+            "label": "Request changes"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-root-e84e8433c9"
+        ],
+        "evidenceRefs": [
+          "graph:graph-semantic-2f3d96d82ba6e1e9aab9995c-be59acf5fb:r1"
+        ],
+        "impact": "acceptance",
+        "status": "resolved",
+        "resolution": {
+          "optionId": "approve"
+        }
+      }
+    },
+    "stoppedNodeIds": [],
+    "readiness": {
+      "readyNodeIds": [],
+      "pendingDecisionIds": []
+    },
+    "selectedWaves": [],
+    "attempts": {},
+    "adoptedArtifacts": {},
+    "nodeEvidenceMatrixIds": {},
+    "integrations": {},
+    "recoveryHistory": [],
+    "evidenceMatrices": [],
+    "outcomes": {
+      "execution": "pending",
+      "artifact": "missing",
+      "delivery": "not_started"
+    },
+    "evidenceMatrixSummaries": {},
+    "graphId": "graph-semantic-2f3d96d82ba6e1e9aab9995c-be59acf5fb",
+    "graphRevision": 1,
+    "granularityStrategy": {
+      "policyVersion": "adaptive-utility/3.1.0-pilot",
+      "condition": "C",
+      "candidateTreeHash": "sha256:b34864c236ae6bbb357130ee949fc33e0961bf8ad7c6871dfc454e409465f702",
+      "config": {
+        "minimumAdvantage": 0.15,
+        "maxLeafContextTokens": 24000,
+        "maxLeafScopePaths": 40,
+        "maxLeafPlannedPaths": 12
+      },
+      "assessments": {
+        "node-domain-priority-and-backorders-a0b7c73381": {
+          "unitKey": "domain-priority-and-backorders",
+          "nodeId": "node-domain-priority-and-backorders-a0b7c73381",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.3333
+          },
+          "benefit": 0,
+          "cost": 0.0833,
+          "splitAdvantage": -0.0833,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-3",
+            "path-2",
+            "sha256:dad186c3a2d2f367ebcb9f85e71da405ce1b95d224503b7b30f8b16c753c686f"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-application-backorder-events-e0c87fa1a9": {
+          "unitKey": "application-backorder-events",
+          "nodeId": "node-application-backorder-events-e0c87fa1a9",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.25
+          },
+          "benefit": 0,
+          "cost": 0.0625,
+          "splitAdvantage": -0.0625,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-2",
+            "path-3",
+            "path-1",
+            "sha256:dad186c3a2d2f367ebcb9f85e71da405ce1b95d224503b7b30f8b16c753c686f"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-api-current-backorders-70f9e6f736": {
+          "unitKey": "api-current-backorders",
+          "nodeId": "node-api-current-backorders-70f9e6f736",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.25
+          },
+          "benefit": 0,
+          "cost": 0.0625,
+          "splitAdvantage": -0.0625,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-3",
+            "path-0",
+            "sha256:dad186c3a2d2f367ebcb9f85e71da405ce1b95d224503b7b30f8b16c753c686f"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-root-e84e8433c9": {
+          "unitKey": "root",
+          "nodeId": "node-root-e84e8433c9",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": true,
+          "features": {
+            "contextRelief": 0.0671,
+            "parallelism": 0,
+            "faultIsolation": 1,
+            "coordination": 0.6667,
+            "pathOverlap": 0.3,
+            "validationDuplication": 0,
+            "uncertainty": 0.2778
+          },
+          "benefit": 0.3557,
+          "cost": 0.3111,
+          "splitAdvantage": 0.0446,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-0",
+            "path-1",
+            "path-2",
+            "path-3",
+            "config-package-json",
+            "sha256:dad186c3a2d2f367ebcb9f85e71da405ce1b95d224503b7b30f8b16c753c686f"
+          ],
+          "rationale": "Split advantage 0.0446 is below minimum 0.1500."
+        }
+      },
+      "metrics": {
+        "maxGraphDepth": 1,
+        "totalLeafCount": 3,
+        "averageBranchingFactor": 3
+      }
+    },
+    "approvedGraphRevision": 1
+  },
+  "checksum": "c8705bd01b51d38f4650458acacb8b994a637b988fae3a0aabfd0c502cd9a221"
+}

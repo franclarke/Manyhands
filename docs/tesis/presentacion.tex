@@ -441,8 +441,32 @@
 % -----------------------------------------------------------------------------
 \section{Cierre}
 
-\begin{frame}{Conclusiones}
+\begin{frame}{La serie final que sí cuenta}
+  \textbf{V2} reemplaza las líneas históricas incompletas como evidencia
+  positiva central.
+
   \begin{itemize}
+    \item Target Node ESM pequeño; tareas M (multi-capa) y S (cohesiva).
+    \item Dos repeticiones adaptativas por tarea; rehearsal excluido.
+    \item Codex \texttt{gpt-5.4-mini/medium}, cero retries, build antes de cada run.
+    \item Oráculo externo sobre el commit candidato exacto.
+  \end{itemize}
+
+  \begin{center}
+    \large H-F1: \textbf{4/4 entregas + 4/4 oráculos} \qquad
+    H-F2: \textbf{4/4 topologías esperadas}
+  \end{center}
+
+  \small La tarea M produjo raíz composite con 3 hojas en ambas repeticiones;
+  la tarea S, una envoltura de raíz con 1 hoja ejecutable en ambas.
+\end{frame}
+
+\begin{frame}[shrink=10]{Conclusiones}
+  \begin{itemize}
+    \item \textbf{Resultado final V2:} H-F1 y H-F2 pasan 4/4 en el target
+      congelado. Las cuatro celdas fueron entregadas y verificadas por oráculo
+      externo sobre sus commits exactos; M produjo 3 hojas y S 1 hoja en ambas
+      repeticiones.
     \item Se construyó un orquestador que lleva un objetivo hasta un resultado
       \textbf{integrado, verificado y entregado}, con evidencia auditable de
       cada paso.

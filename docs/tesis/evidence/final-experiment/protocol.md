@@ -65,3 +65,11 @@ baseline importe recursivamente esos tests; `preflight.mjs` ahora comprueba que
 un test de la nueva superficie falla contra el baseline. La correccion cambia
 la identidad del template, por lo que V1 queda solo como adversa y V2 requiere
 un freeze completo independiente.
+## Enmienda de freeze V2 — 2026-08-09
+
+La serie V1 se detuvo por la insensibilidad del control negativo descrita arriba.
+La corrección cambió el hash del template, por lo que no se reutilizó el freeze.
+V2 abrió un freeze independiente en `.scratch/final-thesis-experiment-v2/freeze.json`
+y usó `C:/mh-final-thesis-v2/<celda>` como raíz corta. El alcance científico,
+el orden de celdas, el modelo, los límites y la regla de PASS permanecieron
+iguales; esta enmienda sólo identifica la nueva serie y su custodia.
