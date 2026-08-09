@@ -100,6 +100,40 @@ describe("V2ExecutionDriver", () => {
     expect(retried?.retryOfAttemptId).toBeDefined();
   });
 
+  it("raises an empty upstream artifact decision against the producer, not the blocked consumer", async () => {
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
+    const harness = coordinatorHarness(compiled.graph.graphId, "run-v2-artifact-empty");
+    const driver = new V2ExecutionDriver({
+      coordinator: harness.coordinator,
+      now: () => at,
+      loadCurrentInputs: staticInputs(compiled),
+      execute: async (input) => input.node.id === compiled.graph.rootId
+        ? ({
+            kind: "failure",
+            reason: "Could not materialize artifact artifact-domain-output: artifact_empty.",
+            failureCause: { source: "artifact", code: "artifact_empty", artifactId: "artifact-domain-output", producerNodeId: "node-domain" }
+          } as unknown as V2NodeExecutionOutcome)
+        : success(input)
+    });
+
+    const state = await driver.run({
+      runId: "run-v2-artifact-empty",
+      graph: compiled.graph,
+      contracts: compiled.contracts,
+      repositoryContextDigest: "sha256:repository",
+      executorProfile: { id: "claude-code-cli", revision: "sonnet" },
+      effectiveConfig: { maxParallel: 1 },
+      materializableNodeIds: Object.keys(compiled.graph.nodes),
+      availableExecutorNodeIds: Object.keys(compiled.graph.nodes),
+      conflictConstraints: [],
+      target: { sourceTargetFingerprint: "sha256:target", targetBranch: "main", targetHead: "base-head" }
+    });
+
+    expect(Object.values(state.decisions)).toEqual([
+      expect.objectContaining({ affectedNodeIds: ["node-booking", "node-domain"], evidenceRefs: expect.arrayContaining(["artifact:artifact-domain-output"]) })
+    ]);
+  });
+
   it("does not retry a transient leaf when the run declares a zero retry budget", async () => {
     const breakdown = bookingBreakdown();
     if (breakdown.root.kind !== "composite") throw new Error("Fixture must start composite.");
@@ -559,6 +593,60 @@ describe("V2ExecutionDriver", () => {
       "event:wave.selected",
       "event:attempt.started"
     ]));
+  });
+
+  it("does not emit a terminal integration failure with decisionRequired=false when recovery needs guidance", async () => {
+    const compiled = compileGraphRevision(
+      { breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() },
+      compilerDependencies
+    );
+    const harness = coordinatorHarness(compiled.graph.graphId);
+    const driver = new V2ExecutionDriver({
+      coordinator: harness.coordinator,
+      now: () => at,
+      loadCurrentInputs: staticInputs(compiled),
+      execute: async (input): Promise<V2NodeExecutionOutcome> => {
+        if (input.node.id !== compiled.graph.rootId) return success(input);
+        const obligation = input.contract.validation.obligations[0]!;
+        return {
+          kind: "failure",
+          integrationManifestId: "integration-root",
+          candidateCommit: "candidate-root",
+          evidenceMatrix: {
+            matrixId: "matrix-root-failed",
+            candidateCommit: "candidate-root",
+            validationContract: { ...input.contract.task.validation },
+            criteria: [{
+              criterionId: obligation.criterionId,
+              obligationId: obligation.id,
+              status: "failed",
+              justification: "Parent criterion is not satisfied.",
+              evidenceRefs: ["evidence-parent-failure"]
+            }],
+            outcome: "failed",
+            validationRecipeDigest: "sha256:recipe-root"
+          },
+          reason: "parent_validation_failed: exact candidate is not verified"
+        };
+      }
+    });
+
+    await driver.run({
+      runId: "run-v2",
+      graph: compiled.graph,
+      contracts: compiled.contracts,
+      repositoryContextDigest: "sha256:repository",
+      executorProfile: { id: "claude-code-cli", revision: "sonnet" },
+      effectiveConfig: { maxParallel: 3 },
+      materializableNodeIds: Object.keys(compiled.graph.nodes),
+      availableExecutorNodeIds: Object.keys(compiled.graph.nodes),
+      conflictConstraints: [],
+      target: { sourceTargetFingerprint: "sha256:target", targetBranch: "main", targetHead: "base-head" }
+    });
+
+    const failed = harness.events().find((event) => event.type === "integration.failed");
+    expect(failed).toMatchObject({ payload: { decisionRequired: true, candidateCommit: "candidate-root", matrix: { matrixId: "matrix-root-failed" } } });
+    expect(harness.events().some((event) => event.type === "decision.raised")).toBe(true);
   });
 
   it("keeps an independent sibling running when another node raises a local decision", async () => {

@@ -57,6 +57,13 @@ export interface V2RepairObservation {
   evidenceRefs: string[];
 }
 
+export interface V2FailureCause {
+  source: "artifact" | "executor" | "scope" | "integration";
+  code: string;
+  artifactId?: string;
+  producerNodeId?: string;
+}
+
 export type V2NodeExecutionOutcome =
   | {
       kind: "success";
@@ -76,6 +83,9 @@ export type V2NodeExecutionOutcome =
       reason: string;
       usage?: AttemptUsage;
       integrationManifestId?: string;
+      candidateCommit?: string;
+      evidenceMatrix?: EvidenceMatrixRecord;
+      failureCause?: V2FailureCause;
       repairObservations?: V2RepairObservation[];
       decision?: DecisionInput;
     };
@@ -377,13 +387,16 @@ export class V2ExecutionDriver {
           discardCandidate: policy.discardCandidate
         }));
       }
+      let failureDecision: DecisionInput | undefined;
       facts.push(isComposite
         ? fact(`${attempt.attemptId}:integration-failed`, at, "integration.failed", {
             attemptId: attempt.attemptId,
             nodeId: attempt.nodeId,
             ...(outcome.integrationManifestId !== undefined ? { manifestId: outcome.integrationManifestId } : {}),
+            ...(outcome.candidateCommit !== undefined ? { candidateCommit: outcome.candidateCommit } : {}),
+            ...(outcome.evidenceMatrix !== undefined ? { matrix: outcome.evidenceMatrix } : {}),
             reason: outcome.reason,
-            decisionRequired: outcome.decision !== undefined
+            decisionRequired: false
           })
         : fact(`${attempt.attemptId}:failed`, at, "attempt.failed", {
             attemptId: attempt.attemptId,
@@ -410,9 +423,13 @@ export class V2ExecutionDriver {
         candidate.nodeId === attempt.nodeId && candidate.status === "failed"
       ).length;
       const retryAllowed = !isComposite && failureClass === "transient" && priorFailures < retryBudget;
-      if (!retryAllowed) {
-        const decision = { ...(outcome.decision ?? defaultFailureDecision(attempt, outcome.reason)), raisedAtGraphRevision: run.graph.revision };
-        facts.push(fact(`${attempt.attemptId}:decision:${decision.id}`, at, "decision.raised", { decision }));
+      if (isComposite || !retryAllowed || outcome.decision !== undefined) {
+        failureDecision = { ...(outcome.decision ?? defaultFailureDecision(attempt, outcome.reason, outcome.failureCause)), raisedAtGraphRevision: run.graph.revision };
+        facts.push(fact(`${attempt.attemptId}:decision:${failureDecision.id}`, at, "decision.raised", { decision: failureDecision }));
+      }
+      if (isComposite) {
+        const integrationEvent = facts.find((fact): fact is Extract<RunEventInput, { type: "integration.failed" }> => fact.type === "integration.failed");
+        if (integrationEvent !== undefined) integrationEvent.payload.decisionRequired = failureDecision !== undefined;
       }
       return Promise.resolve(facts);
     }
@@ -707,11 +724,16 @@ export function orderArtifactRequirementsForMaterialization<T extends GraphRevis
   const remaining = [...requirements];
   const ordered: T[] = [];
   while (remaining.length > 0) {
-    const nextIndex = remaining.findIndex((requirement) => {
+    const ready = remaining.filter((requirement) => {
       const producerDependencies = dependencies.get(requirement.producerNodeId) ?? new Set<string>();
       return !remaining.some((candidate) => candidate !== requirement && producerDependencies.has(candidate.producerNodeId));
     });
-    if (nextIndex < 0) return [...ordered, ...remaining];
+    if (ready.length === 0) return [...ordered, ...remaining];
+    // Independent siblings have no semantic ordering. Tie-break by the
+    // stable requirement id so a crash/restart materializes the same sequence
+    // regardless of how the graph revision was assembled.
+    const next = ready.slice().sort((left, right) => left.id.localeCompare(right.id))[0]!;
+    const nextIndex = remaining.indexOf(next);
     ordered.push(remaining.splice(nextIndex, 1)[0]!);
   }
   return ordered;
@@ -845,7 +867,12 @@ function assertSuccessfulOutcome(attempt: PreparedAttempt, outcome: Extract<V2No
   }
 }
 
-function defaultFailureDecision(attempt: PreparedAttempt, reason: string): DecisionInput {
+function defaultFailureDecision(attempt: PreparedAttempt, reason: string, cause?: V2FailureCause): DecisionInput {
+  const affectedNodeIds = [...new Set([attempt.nodeId, ...(cause?.producerNodeId === undefined ? [] : [cause.producerNodeId])])];
+  const causeEvidence = [
+    ...(cause?.artifactId === undefined ? [] : [`artifact:${cause.artifactId}`]),
+    ...(cause?.code === undefined ? [] : [`failure:${cause.code}`])
+  ];
   return {
     id: `${attempt.attemptId}:decision`,
     kind: "resolve_conflict",
@@ -854,8 +881,8 @@ function defaultFailureDecision(attempt: PreparedAttempt, reason: string): Decis
       { id: "retry", label: "Retry with guidance" },
       { id: "stop", label: "Stop this branch" }
     ],
-    affectedNodeIds: [attempt.nodeId],
-    evidenceRefs: [attempt.attemptId],
+    affectedNodeIds,
+    evidenceRefs: [...causeEvidence, attempt.attemptId, `input-fingerprint:${attempt.executionInput.inputFingerprint}`],
     impact: "behavior"
   };
 }
@@ -878,7 +905,16 @@ function fact<T extends RunEventInput["type"]>(
  * branch — repairing code that was actually rejected for leaving its scope
  * (DECISIONS.md A11).
  */
-export function leafFailureObservation(outcome: { reason: string }): FailureObservation {
+export function leafFailureObservation(outcome: { reason: string; failureCause?: V2FailureCause }): FailureObservation {
+  if (outcome.failureCause !== undefined) {
+    return {
+      source: outcome.failureCause.source,
+      code: outcome.failureCause.code,
+      ...(outcome.failureCause.artifactId === undefined ? {} : { artifactId: outcome.failureCause.artifactId }),
+      ...(outcome.failureCause.producerNodeId === undefined ? {} : { producerNodeId: outcome.failureCause.producerNodeId }),
+      message: outcome.reason
+    };
+  }
   if (outcome.reason.includes("artifact_empty")) {
     return { source: "artifact", code: "artifact_empty", message: outcome.reason };
   }

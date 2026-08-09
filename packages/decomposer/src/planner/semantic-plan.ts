@@ -5,7 +5,7 @@ import { z } from "zod";
 import type { GranularityPlanningBrief } from "../granularity/planning-brief.js";
 import { ComplexitySignalsSchema, RepositoryEvidenceSchema, SemanticCutSchema, WorkQuestionSchema, WorkUncertaintySchema, type ComplexitySignals, type RepositoryEvidence } from "./schema.js";
 
-export const SEMANTIC_PLAN_SCHEMA_VERSION = 1 as const;
+export const SEMANTIC_PLAN_SCHEMA_VERSION = 2 as const;
 
 export type { RepositoryEvidence };
 
@@ -101,6 +101,8 @@ export const SemanticSeamSchema = z.object({
   producerUnitKey: EntityIdSchema,
   consumerUnitKeys: z.array(EntityIdSchema).min(1),
   purpose: NonEmptyStringSchema,
+  /** Exact repository paths that materialize this seam. */
+  paths: z.array(RepoRelativePathSchema).optional(),
   interface: z.object({
     kind: z.enum(["api", "type", "event", "data", "ui", "command"]),
     promise: NonEmptyStringSchema,
@@ -123,8 +125,7 @@ export const SemanticPlanDraftSchema = z.object({
 
 export type SemanticPlanDraft = z.infer<typeof SemanticPlanDraftSchema>;
 
-export const SemanticPlanSchema = z.object({
-  schemaVersion: z.literal(SEMANTIC_PLAN_SCHEMA_VERSION),
+const SemanticPlanShape = {
   planId: EntityIdSchema,
   goal: NonEmptyStringSchema,
   repositorySnapshotId: NonEmptyStringSchema,
@@ -134,7 +135,16 @@ export const SemanticPlanSchema = z.object({
   repositoryEvidence: z.array(RepositoryEvidenceSchema).default([]),
   uncertainties: z.array(WorkUncertaintySchema).default([]),
   questions: z.array(WorkQuestionSchema).default([])
-}).strict().superRefine((plan, context) => {
+};
+
+const SemanticPlanV2Schema = z.object({ schemaVersion: z.literal(2), ...SemanticPlanShape }).strict();
+const SemanticPlanV1Schema = z.object({ schemaVersion: z.literal(1), ...SemanticPlanShape }).strict();
+
+/**
+ * V1 remains parseable for audit/replay, but the productive compiler rejects
+ * it unless an explicit legacy replay path is used. New plans are always V2.
+ */
+export const SemanticPlanSchema = z.union([SemanticPlanV2Schema, SemanticPlanV1Schema]).superRefine((plan, context) => {
   const units = flattenSemanticWorkUnits(plan.root);
   checkUnique(units.map((unit) => unit.key), "semantic unit key", context);
   checkUnique(plan.criteria.map((criterion) => criterion.id), "goal criterion id", context);

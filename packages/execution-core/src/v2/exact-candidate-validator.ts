@@ -8,7 +8,7 @@ import type { RepositorySnapshot } from "@manyhands/repository-index";
 import type { GitRunner } from "../git/runner";
 import { GitCandidateSandboxFactory, validateExactCandidate, type EvidenceValidationCache } from "../validation/candidate-validator";
 import type { EvidenceMatrix } from "../validation/evidence-matrix";
-import { compileValidationRecipe } from "../validation/recipe-compiler";
+import { bindValidationRecipe, compileValidationRecipe, prepareValidationRecipe, type PreparedValidationRecipe } from "../validation/recipe-compiler";
 import { ChildProcessValidationRunner, type ValidationRunner } from "../validation/runner";
 import { detectRequiredPublicSurfaceFindings, detectTestIntegrityFindings, isTestDiscoveryConfigurationPath, isTestFilePath } from "../validation/test-integrity";
 import type { ExecutionWorkspaceProvider } from "../worktree/execution-workspace";
@@ -56,21 +56,53 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
     this.runner = options.runner ?? new ChildProcessValidationRunner();
   }
 
+  prepare(input: { contract: TaskContractBundle }): PreparedValidationRecipe {
+    return prepareValidationRecipe({
+      contract: input.contract.validation,
+      capabilities: this.options.repositorySnapshot.capabilities,
+      repositorySnapshotId: this.options.repositorySnapshot.snapshotId
+    });
+  }
+
   async validate(input: {
     runId: string;
     attemptId: string;
     contract: TaskContractBundle;
+    prepared?: PreparedValidationRecipe;
     candidateCommit: string;
     baselineCommit: string;
     signal?: AbortSignal;
   }): Promise<V2ExecutionEvidenceMatrix> {
-    const recipe = compileValidationRecipe({
-      contract: input.contract.validation,
-      capabilities: this.options.repositorySnapshot.capabilities,
-      repositorySnapshotId: this.options.repositorySnapshot.snapshotId,
-      candidateCommit: input.candidateCommit,
-      baselineCommit: input.baselineCommit
-    });
+    if (input.prepared !== undefined) {
+      const expectedContract = input.contract.task.validation;
+      if (
+        input.prepared.validationContract.id !== expectedContract.id
+        || input.prepared.validationContract.revision !== expectedContract.revision
+      ) {
+        throw new Error(
+          `Prepared validation recipe ${input.prepared.programId} does not match validation contract ${expectedContract.id}@${expectedContract.revision}.`
+        );
+      }
+      if (input.prepared.repositorySnapshotId !== this.options.repositorySnapshot.snapshotId) {
+        throw new Error(
+          `Prepared validation recipe ${input.prepared.programId} targets snapshot ${input.prepared.repositorySnapshotId}, `
+          + `not ${this.options.repositorySnapshot.snapshotId}.`
+        );
+      }
+    }
+    const recipe = input.prepared === undefined
+      ? compileValidationRecipe({
+          contract: input.contract.validation,
+          capabilities: this.options.repositorySnapshot.capabilities,
+          repositorySnapshotId: this.options.repositorySnapshot.snapshotId,
+          candidateCommit: input.candidateCommit,
+          baselineCommit: input.baselineCommit
+        })
+      : bindValidationRecipe({
+          prepared: input.prepared,
+          candidateCommit: input.candidateCommit,
+          baselineCommit: input.baselineCommit
+        });
     // The run id is the real one so `gcRun` can reclaim an orphaned sandbox;
     // what distinguishes concurrent sandboxes is the purpose and the provider's
     // own per-acquisition identity, not a synthesised run.

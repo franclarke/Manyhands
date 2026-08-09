@@ -123,8 +123,37 @@ describe("V2NodeExecutor", () => {
     expect(prompts[0]).toContain("Use the canonical producer's returned state and exported operations as the only source for shared state");
     expect(prompts[0]).toContain("Literal-contract audit");
     expect(prompts[0]).toContain("do not invent a semantically similar name");
-    expect(prompts[0]).toContain("pnpm build");
+    expect(prompts[0]).not.toContain("pnpm build");
     expect(prompts[0]).toContain("Do not commit");
+  });
+
+  it("fails closed when a leaf candidate omits an explicitly declared artifact path", async () => {
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
+    const node = compiled.graph.nodes["node-api"]!;
+    const input = request(compiled, node.id);
+    input.contract = { ...input.contract, scope: { ...input.contract.scope, allowedPaths: ["src/api/**"] } };
+    input.outputArtifactContract = { ...input.outputArtifactContract, expectedPaths: ["src/api/required.ts"] };
+    const git = new FakeGitRunner({
+      commitSha: "b".repeat(40),
+      diffCached: "diff",
+      diffCachedNameOnly: ["src/api/other.ts"]
+    });
+    const agent = successfulAgent();
+    const executor = new V2NodeExecutor({
+      git,
+      repoRoot: "C:/repo/booking",
+      traceStore: new InMemoryTraceStore(),
+      executorFactory: new FixedAgentExecutorFactory(agent),
+      validator: { validate: async (validationInput) => matrix(validationInput.contract, validationInput.candidateCommit) },
+      worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }),
+      writeInstructions: async () => undefined,
+      now: () => at
+    });
+
+    const outcome = await executor.execute(input);
+
+    expect(outcome).toMatchObject({ kind: "failure", reason: expect.stringContaining("src/api/required.ts") });
+    expect(agent.calls).toHaveLength(1);
   });
 
   it("releases a pooled execution base with the successful candidate identity", async () => {
@@ -437,8 +466,9 @@ describe("V2NodeExecutor", () => {
     expect(prompts[0]).toContain("Do not report the conflict resolved from the final summary alone");
     expect(prompts[0]).toContain("Treat the already-integrated canonical producer behavior as authoritative");
     expect(prompts[0]).toContain("Do not add an exception-based fallback or duplicate state");
-    expect(prompts[0]).toContain("Physical child patches");
-    expect(prompts[0]).toContain("Preserve every child addition");
+    expect(prompts[0]).toContain("Child commits are transport");
+    expect(prompts[0]).not.toContain("Physical child patches");
+    expect(prompts[0]).not.toContain("Preserve every child addition verbatim");
     expect(prompts[0]).toContain("existing unrelated state");
     expect(prompts[0]).toContain("Do not create or modify AGENTS.md");
     const abortIndex = git.calls.findIndex((call) => call.op === "cherryPickAbort");
@@ -447,7 +477,7 @@ describe("V2NodeExecutor", () => {
     expect(abortIndex).toBeLessThan(repairStageIndex);
   });
 
-  it("feeds missing physical child additions back into one bounded repair", async () => {
+  it("performs one bounded semantic integration repair", async () => {
     const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
     const root = compiled.graph.nodes[compiled.graph.rootId]!;
     const firstRepairCommit = "a".repeat(40);
@@ -502,11 +532,10 @@ describe("V2NodeExecutor", () => {
 
     const outcome = await executor.execute(input);
 
-    expect(outcome).toMatchObject({ kind: "success", candidateCommit: secondRepairCommit });
-    expect(agent.calls).toHaveLength(2);
-    expect(prompts[1]).toContain("Automated physical-intent audit from the previous repair pass");
-    expect(prompts[1]).toContain("export const required = true;");
-    expect(git.opsInvoked().filter((operation) => operation === "restoreManagedWorktree")).toHaveLength(1);
+    expect(outcome).toMatchObject({ kind: "success", candidateCommit: firstRepairCommit });
+    expect(agent.calls).toHaveLength(1);
+    expect(prompts).toHaveLength(1);
+    expect(git.opsInvoked().filter((operation) => operation === "restoreManagedWorktree")).toHaveLength(0);
   });
 
   it("fails closed when a consumed child patch cannot be materialized", async () => {
@@ -563,7 +592,7 @@ describe("V2NodeExecutor", () => {
     expect(agent.calls).toHaveLength(0);
   });
 
-  it("rejects a repair that drops a physical child deletion", async () => {
+  it("does not gate repair on literal retention of an intermediate deletion", async () => {
     const incomingCommit = "b".repeat(40);
     const firstRepairCommit = "a".repeat(40);
     const secondRepairCommit = "c".repeat(40);
@@ -618,8 +647,8 @@ describe("V2NodeExecutor", () => {
 
     const outcome = await executor.execute(input);
 
-    expect(outcome.kind).toBe("failure");
-    expect(agent.calls).toHaveLength(2);
+    expect(outcome).toMatchObject({ kind: "success", candidateCommit: firstRepairCommit });
+    expect(agent.calls).toHaveLength(1);
   });
 });
 
@@ -696,6 +725,64 @@ describe("ExactCandidateValidatorV2", () => {
     expect(evidence.criteria.every((criterion) => criterion.status === "satisfied")).toBe(true);
     expect(git.opsInvoked().filter((operation) => operation === "worktreeAdd")).toHaveLength(2);
     expect(git.opsInvoked().filter((operation) => operation === "worktreeRemove")).toHaveLength(2);
+  });
+
+  it("rejects a prepared recipe whose contract identity no longer matches the candidate contract", async () => {
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
+    const contract = compiled.contracts.find((bundle) => bundle.task.nodeId === "node-api")!;
+    const candidate = "a".repeat(40);
+    const git = new FakeGitRunner();
+    const validator = new ExactCandidateValidatorV2({
+      git,
+      workspaces: fakeWorkspaceProvider(git),
+      repoRoot: "C:/repo/booking",
+      repositorySnapshot: bookingSnapshot(),
+      runner: { run: async () => ({ passed: true, output: "passed", exitCode: 0 }) }
+    });
+    const prepared = validator.prepare({ contract });
+    const forged = { ...prepared, validationContract: { ...prepared.validationContract, revision: "forged-revision" } };
+
+    await expect(validator.validate({
+      runId: "run-v2-validation",
+      attemptId: "attempt-api-forged",
+      contract,
+      prepared: forged,
+      candidateCommit: candidate,
+      baselineCommit: compiled.graph.baseCommit
+    })).rejects.toThrow(/prepared validation recipe.*contract/i);
+  });
+
+  it("fails closed before agent creation when a required obligation is unmaterialized", async () => {
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
+    const node = compiled.graph.nodes["node-api"]!;
+    const contract = compiled.contracts.find((bundle) => bundle.task.nodeId === node.id)!;
+    const agent = successfulAgent();
+    const executor = new V2NodeExecutor({
+      git: new FakeGitRunner(),
+      repoRoot: "C:/repo/booking",
+      traceStore: new InMemoryTraceStore(),
+      executorFactory: new FixedAgentExecutorFactory(agent),
+      validator: {
+        prepare: () => ({
+          schemaVersion: 1,
+          templateId: "template-unmaterialized",
+          programId: "template-unmaterialized",
+          validationContract: { ...contract.task.validation },
+          repositorySnapshotId: "snapshot-booking",
+          steps: [],
+          unmaterializedObligationIds: [contract.validation.obligations[0]!.id]
+        }),
+        validate: async (input) => matrix(input.contract, input.candidateCommit)
+      },
+      worktrees: new WorktreeManager({ git: new FakeGitRunner(), repoRoot: "C:/repo/booking", now: () => at }),
+      writeInstructions: async () => undefined,
+      now: () => at
+    });
+
+    const outcome = await executor.execute(request(compiled, node.id));
+
+    expect(outcome).toMatchObject({ kind: "failure", reason: expect.stringContaining("cannot be materialized") });
+    expect(agent.calls).toHaveLength(0);
   });
 
   it("rejects a test-only candidate when the task promises a new observable API surface", async () => {

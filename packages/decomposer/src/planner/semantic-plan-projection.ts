@@ -9,7 +9,6 @@ import { flattenSemanticWorkUnits, type SemanticPlan, type SemanticWorkUnit } fr
  * that one source until their historical compiler path is removed.
  */
 export function projectSemanticPlanForLegacyCompiler(plan: SemanticPlan): { breakdown: WorkBreakdown; candidatePlan: CandidatePlan } {
-  const evidenceById = new Map(plan.repositoryEvidence.map((item) => [item.id, item]));
   const units = flattenSemanticWorkUnits(plan.root);
   const ownerByCriterion = new Map<string, SemanticWorkUnit>();
   for (const unit of units) for (const outcome of unit.outcomes) for (const criterionId of outcome.criterionIds) ownerByCriterion.set(criterionId, unit);
@@ -29,6 +28,7 @@ export function projectSemanticPlanForLegacyCompiler(plan: SemanticPlan): { brea
         consumerUnitKeys: seam.consumerUnitKeys,
         purpose: seam.purpose,
         materializationHint: seam.interface.materialization,
+        ...(seam.paths === undefined ? {} : { expectedPaths: [...seam.paths] }),
         evidenceIds: seam.evidenceIds
       })),
     candidateSeams: plan.seams.map((seam) => ({
@@ -37,6 +37,7 @@ export function projectSemanticPlanForLegacyCompiler(plan: SemanticPlan): { brea
       specification: seam.interface.promise,
       producerUnitKey: seam.producerUnitKey,
       consumerUnitKeys: seam.consumerUnitKeys,
+      ...(seam.paths === undefined ? {} : { paths: [...seam.paths] }),
       evidenceIds: seam.evidenceIds
     })),
     repositoryEvidence: plan.repositoryEvidence,
@@ -45,11 +46,12 @@ export function projectSemanticPlanForLegacyCompiler(plan: SemanticPlan): { brea
   });
   const scopes = units.map((unit) => ({
     unitKey: unit.key,
-    paths: unit.evidenceIds
-      .map((evidenceId) => evidenceById.get(evidenceId))
-      .filter((evidence): evidence is NonNullable<typeof evidence> => evidence?.kind === "path")
-      .map((evidence) => evidence.reference)
-      .concat(unit.plannedPaths ?? [])
+    // Evidence and reads are grounding context, not mutation authority. A V2
+    // plan must carry the complete existing+new write set explicitly. Older
+    // semantic plans only had `plannedPaths`; those paths are already an
+    // explicit declaration of files the unit intends to create, so preserve
+    // them as the compatibility fallback instead of making the scope empty.
+    paths: [...new Set(unit.writePaths ?? unit.plannedPaths ?? [])]
   })).filter((scope) => scope.paths.length > 0);
   const acceptanceOwnership = plan.criteria.map((criterion) => {
     const owner = ownerByCriterion.get(criterion.id);
@@ -73,6 +75,7 @@ export function projectSemanticPlanForLegacyCompiler(plan: SemanticPlan): { brea
     seamId: seam.id,
     producerUnitKey: seam.producerUnitKey,
     consumerUnitKeys: seam.consumerUnitKeys,
+    paths: [...(seam.paths ?? [])],
     compatibility: seam.interface.compatibility,
     materialization: seam.interface.materialization,
     validation: seam.interface.verification.references.join(", ")

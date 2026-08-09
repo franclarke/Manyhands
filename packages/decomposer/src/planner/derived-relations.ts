@@ -113,6 +113,7 @@ export function projectPlannedTree(input: ProjectionInput): ProjectedPlan {
       producerUnitKey: relation.producerKey,
       consumerUnitKeys: [relation.consumerKey],
       purpose: `${relation.consumerKey} reads ${relation.paths.join(", ")} produced by ${relation.producerKey}.`,
+      paths: [...new Set(relation.paths)],
       interface: {
         kind: seamKindFor(relation.paths),
         promise: `${relation.producerKey} writes ${relation.paths.join(", ")}.`,

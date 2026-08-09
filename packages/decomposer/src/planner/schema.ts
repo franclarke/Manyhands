@@ -110,6 +110,8 @@ export const CandidateArtifactSchema = z.object({
   consumerUnitKeys: z.array(EntityIdSchema).min(1),
   purpose: NonEmptyStringSchema,
   materializationHint: z.enum(["logical", "files", "manifest", "commit"]),
+  /** Exact files promised by the producer; evidenceIds are citations only. */
+  expectedPaths: z.array(RepoRelativePathSchema).optional(),
   evidenceIds: z.array(EntityIdSchema).default([])
 }).strict();
 
@@ -119,6 +121,8 @@ export const CandidateSeamSchema = z.object({
   specification: NonEmptyStringSchema,
   producerUnitKey: EntityIdSchema,
   consumerUnitKeys: z.array(EntityIdSchema).min(1),
+  /** Exact files binding the producer and consumer. */
+  paths: z.array(RepoRelativePathSchema).optional(),
   evidenceIds: z.array(EntityIdSchema).default([])
 }).strict();
 

@@ -369,6 +369,21 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       const integration = requireIntegration(next, event.payload.attemptId, event.payload.nodeId);
       integration.status = event.payload.decisionRequired ? "decision_required" : "failed";
       if (event.payload.manifestId !== undefined) integration.manifestId = event.payload.manifestId;
+      if (event.payload.candidateCommit !== undefined) {
+        integration.candidateCommit = event.payload.candidateCommit;
+        const attempt = requireAttempt(next, event.payload.attemptId, event.payload.nodeId);
+        attempt.candidateCommit = event.payload.candidateCommit;
+      }
+      if (event.payload.matrix !== undefined) {
+        integration.evidenceMatrixId = event.payload.matrix.matrixId;
+        next.nodeEvidenceMatrixIds[event.payload.nodeId] = event.payload.matrix.matrixId;
+        if (!next.evidenceMatrices.includes(event.payload.matrix.matrixId)) next.evidenceMatrices.push(event.payload.matrix.matrixId);
+        next.evidenceMatrixSummaries[event.payload.matrix.matrixId] = {
+          candidateCommit: event.payload.matrix.candidateCommit,
+          outcome: event.payload.matrix.outcome,
+          ...(event.payload.matrix.validationRecipeDigest !== undefined ? { validationRecipeDigest: event.payload.matrix.validationRecipeDigest } : {})
+        };
+      }
       integration.failureReason = event.payload.reason;
       const attempt = requireAttempt(next, event.payload.attemptId, event.payload.nodeId);
       attempt.status = "failed";

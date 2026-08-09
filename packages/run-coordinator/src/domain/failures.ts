@@ -1,3 +1,4 @@
+import { EntityIdSchema } from "@manyhands/shared";
 import { z } from "zod";
 
 export const FailureClassSchema = z.enum([
@@ -25,6 +26,8 @@ export type FailureClass = z.infer<typeof FailureClassSchema>;
 export const FailureObservationSchema = z.object({
   source: z.enum(["executor", "validation", "planning", "artifact", "scope", "integration"]),
   code: z.string().min(1).optional(),
+  artifactId: EntityIdSchema.optional(),
+  producerNodeId: EntityIdSchema.optional(),
   exitCode: z.number().int().optional(),
   timedOut: z.boolean().optional(),
   message: z.string().optional()

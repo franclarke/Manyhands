@@ -88,7 +88,14 @@ export interface IntegrationManifest {
   childArtifacts: IntegrationChildArtifact[];
   seamRevisions: IntegrationRequestManifest["seamRevisions"];
   operations: Array<{ artifactId: string; operation: "cherry_pick"; preSha: string; resultSha?: string; outcome: "applied" | "conflict" | "error" }>;
-  repairAttempt?: { pass: 1; artifactId: string; outcome: "succeeded" | "failed"; evidenceRefs: string[] };
+  repairAttempt?: {
+    pass: 1;
+    cause: "materialization_conflict" | "parent_validation_failed";
+    artifactId: string;
+    outcome: "succeeded" | "failed";
+    candidateSha?: string;
+    evidenceRefs: string[];
+  };
   candidateSha?: string;
   parentEvidence?: { matrixId: string; outcome: "verified" | "unverified" | "failed" };
   outputArtifacts: Array<{ artifactId: string; digest: string; contract: { id: string; revision: string }; kind: "commit"; location: string }>;
@@ -98,8 +105,24 @@ export interface IntegrationManifest {
 
 export interface IntegrationManifestExecutorDeps {
   git: GitRunner;
-  validate(input: { request: IntegrationRequestManifest; candidateSha: string; worktreePath: string }): Promise<{ matrixId: string; outcome: "verified" | "unverified" | "failed" }>;
-  repair?(input: { requestManifestId: string; artifactId: string; parentGoal: string; seamRevisions: IntegrationRequestManifest["seamRevisions"]; childArtifacts: IntegrationChildArtifact[]; conflictFiles: string[]; conflictOutput: string; worktreePath: string; pass: 1 }): Promise<{ success: boolean; candidateSha?: string; evidenceRefs: string[] }>;
+  validate(input: { request: IntegrationRequestManifest; candidateSha: string; worktreePath: string }): Promise<{
+    matrixId: string;
+    outcome: "verified" | "unverified" | "failed";
+    failedCriteria?: Array<{ criterionId: string; obligationId: string; justification: string }>;
+  }>;
+  repair?(input: {
+    requestManifestId: string;
+    artifactId: string;
+    parentGoal: string;
+    seamRevisions: IntegrationRequestManifest["seamRevisions"];
+    childArtifacts: IntegrationChildArtifact[];
+    conflictFiles: string[];
+    conflictOutput: string;
+    worktreePath: string;
+    pass: 1;
+    cause: "materialization_conflict" | "parent_validation_failed";
+    parentValidation?: { matrixId: string; outcome: "unverified" | "failed"; failedCriteria: Array<{ criterionId: string; obligationId: string; justification: string }> };
+  }): Promise<{ success: boolean; candidateSha?: string; evidenceRefs: string[] }>;
   digestCandidate(input: { candidateSha: string; worktreePath: string }): Promise<string>;
 }
 
@@ -156,13 +179,8 @@ export class IntegrationManifestExecutor {
         const sourceDiff = await this.deps.git.diffRange({ cwd: worktreePath, from: sourceParent, to: startedChild.commitSha });
         const appliedDiff = await this.deps.git.diffRange({ cwd: worktreePath, from: startedFromSha, to: initialHead });
         const currentParent = await this.deps.git.revParse(worktreePath, `${initialHead}^1`);
-        const sourceMessage = await this.deps.git.commitMessage(worktreePath, startedChild.commitSha);
-        const currentMessage = await this.deps.git.commitMessage(worktreePath, initialHead);
-        const hasCherryPickProvenance = currentMessage.includes(`cherry picked from commit ${startedChild.commitSha}`)
-          && sourceMessage.length > 0;
         if (clean
           && currentParent === startedFromSha
-          && hasCherryPickProvenance
           && await this.deps.git.isAncestor({ cwd: worktreePath, ancestor: startedFromSha, descendant: initialHead })
           && sourceDiff === appliedDiff) {
           journalOperation = await input.integrationOperation!.journal.update(journalOperation, {
@@ -176,20 +194,21 @@ export class IntegrationManifestExecutor {
       }
     }
     const lastAppliedSha = [...(journalOperation?.children ?? [])]
-      .filter((child) => child.state === "applied" && child.resultSha !== undefined)
+      .filter((child) => (child.state === "applied" || child.state === "repaired") && child.resultSha !== undefined)
       .at(-1)?.resultSha;
-    if (initialHead !== request.base.resultingCommit && initialHead !== lastAppliedSha) {
+    const recoverableRepairSha = journalOperation?.repairAttempt?.candidateSha ?? journalOperation?.finalSha;
+    if (initialHead !== request.base.resultingCommit && initialHead !== lastAppliedSha && initialHead !== recoverableRepairSha) {
       return { ...base, disposition: "failed", errors: [{ code: "base_mismatch", message: `Integration base is ${initialHead}, expected ${request.base.resultingCommit}.` }] };
     }
 
     const operations: IntegrationManifest["operations"] = [];
-    let repairAttempt: IntegrationManifest["repairAttempt"];
+    let repairAttempt: IntegrationManifest["repairAttempt"] = journalOperation?.repairAttempt;
     for (const artifact of request.childArtifacts) {
       signal?.throwIfAborted();
       if (artifact.kind !== "commit") return { ...base, operations, disposition: "failed", errors: [{ code: "unsupported_artifact", artifactId: artifact.artifactId, message: `Artifact ${artifact.artifactId} requires a ${artifact.kind} materializer.` }] };
       const preSha = await this.deps.git.head(worktreePath);
       const recordedChild = journalOperation?.children.find((child) => child.taskId === artifact.artifactId);
-      if (recordedChild?.state === "applied" && recordedChild.resultSha !== undefined) {
+      if ((recordedChild?.state === "applied" || recordedChild?.state === "repaired") && recordedChild.resultSha !== undefined) {
         if (preSha !== recordedChild.resultSha) {
           return { ...base, operations, disposition: "failed", errors: [{ code: "base_mismatch", artifactId: artifact.artifactId, message: `Recovered child ${artifact.artifactId} expected HEAD ${recordedChild.resultSha}, found ${preSha}.` }] };
         }
@@ -232,9 +251,34 @@ export class IntegrationManifestExecutor {
         await this.deps.git.cherryPickAbort(worktreePath).catch(() => undefined);
         return { ...base, operations, disposition: "decision_required", errors: [{ code: "materialization_failed", artifactId: artifact.artifactId, message: outcome.output }] };
       }
-      const repaired = await this.deps.repair({ requestManifestId: request.manifestId, artifactId: artifact.artifactId, parentGoal: request.parentGoal, seamRevisions: request.seamRevisions, childArtifacts: request.childArtifacts, conflictFiles: outcome.conflictFiles, conflictOutput: outcome.output, worktreePath, pass: 1 });
+      if (journalOperation !== undefined) {
+        journalOperation = await input.integrationOperation!.journal.update(journalOperation, {
+          state: "conflict_detected",
+          currentChildId: artifact.artifactId,
+          children: journalOperation.children.map((child) => child.taskId === artifact.artifactId
+            ? { ...child, state: "conflict" as const }
+            : child)
+        });
+        journalOperation = await input.integrationOperation!.journal.update(journalOperation, { state: "repair_started" });
+      }
+      const repaired = await this.deps.repair({ requestManifestId: request.manifestId, artifactId: artifact.artifactId, parentGoal: request.parentGoal, seamRevisions: request.seamRevisions, childArtifacts: request.childArtifacts, conflictFiles: outcome.conflictFiles, conflictOutput: outcome.output, worktreePath, pass: 1, cause: "materialization_conflict" });
       signal?.throwIfAborted();
-      repairAttempt = { pass: 1, artifactId: artifact.artifactId, outcome: repaired.success ? "succeeded" : "failed", evidenceRefs: repaired.evidenceRefs };
+      repairAttempt = { pass: 1, cause: "materialization_conflict", artifactId: artifact.artifactId, outcome: repaired.success ? "succeeded" : "failed", ...(repaired.candidateSha === undefined ? {} : { candidateSha: repaired.candidateSha }), evidenceRefs: repaired.evidenceRefs };
+      if (journalOperation !== undefined) {
+        const repairedSha = repaired.candidateSha;
+        const repairedChildren: typeof journalOperation.children = repaired.success && repairedSha !== undefined
+          ? journalOperation.children.map((child) => child.taskId === artifact.artifactId
+            ? { ...child, state: "repaired" as const, resultSha: repairedSha, application: "repaired" as const }
+            : child)
+          : journalOperation.children;
+        journalOperation = await input.integrationOperation!.journal.update(journalOperation, {
+          state: "repair_finished",
+          ...(repairedSha === undefined ? {} : { finalSha: repairedSha }),
+          repairAttempt,
+          currentChildId: artifact.artifactId,
+          children: repairedChildren
+        });
+      }
       if (!repaired.success || repaired.candidateSha === undefined) {
         await this.deps.git.cherryPickAbort(worktreePath).catch(() => undefined);
         return { ...base, operations, repairAttempt, disposition: "decision_required", errors: [{ code: "materialization_failed", artifactId: artifact.artifactId, message: "The single semantic repair attempt failed." }] };
@@ -242,31 +286,67 @@ export class IntegrationManifestExecutor {
       operations[operations.length - 1] = { ...operations.at(-1)!, resultSha: repaired.candidateSha, outcome: "applied" };
     }
 
-    const candidateSha = await this.deps.git.head(worktreePath);
-    const droppedIntent = await this.findDroppedChildIntent(request, candidateSha, worktreePath);
-    if (droppedIntent.length > 0) {
-      const message = `Final integration dropped child changes: ${droppedIntent.join(" | ")}`;
-      if (journalOperation !== undefined) {
-        await input.integrationOperation!.journal.update(journalOperation, { state: "failed", finalSha: candidateSha });
-      }
-      return {
-        ...base,
-        operations,
-        ...(repairAttempt !== undefined ? { repairAttempt } : {}),
-        candidateSha,
-        disposition: "failed",
-        errors: [{ code: "child_intent_not_retained", message }]
-      };
-    }
+    let candidateSha = await this.deps.git.head(worktreePath);
+    // A child commit is transport, not a semantic proof. A later child may
+    // legitimately supersede an intermediate line while preserving the
+    // behavior. The exact candidate validation below is the authority for
+    // semantic retention; structural provenance is checked by the journal and
+    // operation receipts above.
     if (journalOperation !== undefined) {
       journalOperation = await input.integrationOperation!.journal.update(journalOperation, { state: "validation_started" });
     }
-    const parentEvidence = await this.deps.validate({ request, candidateSha, worktreePath });
+    let parentEvidence = await this.deps.validate({ request, candidateSha, worktreePath });
     signal?.throwIfAborted();
     if (parentEvidence.outcome !== "verified") {
-      const failed = { ...base, operations, ...(repairAttempt !== undefined ? { repairAttempt } : {}), candidateSha, parentEvidence, disposition: "failed" as const, errors: [{ code: "parent_validation_failed" as const, message: `Parent validation outcome is ${parentEvidence.outcome}.` }] };
-      if (journalOperation !== undefined) await input.integrationOperation!.journal.update(journalOperation, { state: "failed", finalSha: candidateSha });
-      return failed;
+      if (this.deps.repair !== undefined && repairAttempt === undefined) {
+        const parentValidation = {
+          matrixId: parentEvidence.matrixId,
+          outcome: parentEvidence.outcome,
+          failedCriteria: parentEvidence.failedCriteria ?? []
+        } as const;
+        if (journalOperation !== undefined) {
+          journalOperation = await input.integrationOperation!.journal.update(journalOperation, { state: "validation_failed", finalSha: candidateSha });
+          journalOperation = await input.integrationOperation!.journal.update(journalOperation, { state: "repair_started" });
+        }
+        const repaired = await this.deps.repair({
+          requestManifestId: request.manifestId,
+          artifactId: "parent-validation",
+          parentGoal: request.parentGoal,
+          seamRevisions: request.seamRevisions,
+          childArtifacts: request.childArtifacts,
+          conflictFiles: [],
+          conflictOutput: `Parent validation ${parentEvidence.outcome}: ${parentEvidence.matrixId}`,
+          worktreePath,
+          pass: 1,
+          cause: "parent_validation_failed",
+          parentValidation
+        });
+        signal?.throwIfAborted();
+        repairAttempt = {
+          pass: 1,
+          cause: "parent_validation_failed",
+          artifactId: "parent-validation",
+          outcome: repaired.success ? "succeeded" : "failed",
+          ...(repaired.candidateSha === undefined ? {} : { candidateSha: repaired.candidateSha }),
+          evidenceRefs: repaired.evidenceRefs
+        };
+        if (journalOperation !== undefined) {
+          journalOperation = await input.integrationOperation!.journal.update(journalOperation, { state: "repair_finished", finalSha: repaired.candidateSha ?? candidateSha, repairAttempt });
+        }
+        if (repaired.success && repaired.candidateSha !== undefined) {
+          candidateSha = repaired.candidateSha;
+          if (journalOperation !== undefined) {
+            journalOperation = await input.integrationOperation!.journal.update(journalOperation, { state: "validation_started", finalSha: candidateSha });
+          }
+          parentEvidence = await this.deps.validate({ request, candidateSha, worktreePath });
+          signal?.throwIfAborted();
+        }
+      }
+      if (parentEvidence.outcome !== "verified") {
+        const failed = { ...base, operations, ...(repairAttempt !== undefined ? { repairAttempt } : {}), candidateSha, parentEvidence, disposition: "failed" as const, errors: [{ code: "parent_validation_failed" as const, message: `Parent validation outcome is ${parentEvidence.outcome}.` }] };
+        if (journalOperation !== undefined) await input.integrationOperation!.journal.update(journalOperation, { state: "failed", finalSha: candidateSha });
+        return failed;
+      }
     }
     if (journalOperation !== undefined) {
       journalOperation = await input.integrationOperation!.journal.update(journalOperation, { state: "validation_finished" });
@@ -290,27 +370,6 @@ export class IntegrationManifestExecutor {
     return result;
   }
 
-  private async findDroppedChildIntent(
-    request: IntegrationRequestManifest,
-    candidateSha: string,
-    worktreePath: string
-  ): Promise<string[]> {
-    const finalDiff = await this.deps.git.diffRange({
-      cwd: worktreePath,
-      from: request.base.resultingCommit,
-      to: candidateSha
-    });
-    const finalChangedLines = new Set(patchChangedLines(finalDiff));
-    const dropped: string[] = [];
-    for (const artifact of request.childArtifacts) {
-      const sourceParent = await this.deps.git.revParse(worktreePath, `${artifact.location}^1`);
-      const sourceDiff = await this.deps.git.diffRange({ cwd: worktreePath, from: sourceParent, to: artifact.location });
-      for (const line of patchChangedLines(sourceDiff)) {
-        if (!finalChangedLines.has(line)) dropped.push(`${artifact.nodeId}: ${line}`);
-      }
-    }
-    return dropped.slice(0, 12);
-  }
 }
 
 function manifestBase(request: IntegrationRequestManifest): Omit<IntegrationManifest, "operations" | "disposition" | "errors"> & { operations: []; outputArtifacts: [] } {
@@ -325,15 +384,4 @@ function manifestBase(request: IntegrationRequestManifest): Omit<IntegrationMani
     operations: [],
     outputArtifacts: []
   };
-}
-
-function patchChangedLines(diff: string): string[] {
-  return diff
-    .split(/\r?\n/u)
-    .filter((line) =>
-      (line.startsWith("+") && !line.startsWith("+++")) ||
-      (line.startsWith("-") && !line.startsWith("---"))
-    )
-    .map((line) => line.slice(1))
-    .filter((line) => line.trim().length > 0);
 }

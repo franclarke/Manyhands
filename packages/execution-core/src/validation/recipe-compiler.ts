@@ -30,24 +30,44 @@ export interface ValidationRecipeAttribution {
   rationale: string;
 }
 
-export interface ValidationRecipe {
-  schemaVersion: 1;
-  recipeId: string;
-  validationContract: { id: string; revision: string };
+/** Inputs used to prepare the command program before a candidate exists. */
+export interface ValidationRecipePreparationInput {
+  contract: ValidationContract;
+  capabilities: RepositoryCapabilities;
   repositorySnapshotId: string;
+}
+
+/** The candidate-specific identity added after a prepared recipe is available. */
+export interface ValidationRecipeBindingInput {
+  prepared: PreparedValidationRecipe;
   candidateCommit: string;
   baselineCommit?: string;
+}
+
+/**
+ * Candidate-independent validation program.
+ *
+ * Commands and repository snapshot identity are authoritative here. Binding a
+ * candidate must not re-resolve either from a second source.
+ */
+export interface PreparedValidationRecipe {
+  schemaVersion: 1;
+  templateId: string;
+  /** Compatibility alias for callers that refer to the prepared program. */
+  programId: string;
+  validationContract: { id: string; revision: string };
+  repositorySnapshotId: string;
   steps: ValidationRecipeStep[];
   unmaterializedObligationIds: string[];
 }
 
-export function compileValidationRecipe(input: {
-  contract: ValidationContract;
-  capabilities: RepositoryCapabilities;
-  repositorySnapshotId: string;
+export interface ValidationRecipe extends PreparedValidationRecipe {
+  recipeId: string;
   candidateCommit: string;
   baselineCommit?: string;
-}): ValidationRecipe {
+}
+
+export function prepareValidationRecipe(input: ValidationRecipePreparationInput): PreparedValidationRecipe {
   const steps: ValidationRecipeStep[] = [];
   const unmaterializedObligationIds: string[] = [];
   for (const obligation of input.contract.obligations) {
@@ -99,16 +119,85 @@ export function compileValidationRecipe(input: {
       attributions: [attribution]
     });
   }
-  const identity = JSON.stringify({ contract: { id: input.contract.id, revision: input.contract.revision }, snapshot: input.repositorySnapshotId, candidate: input.candidateCommit, baseline: input.baselineCommit, steps, unmaterializedObligationIds });
-  return {
-    schemaVersion: 1,
-    recipeId: `recipe-${createHash("sha256").update(identity).digest("hex").slice(0, 16)}`,
-    validationContract: { id: input.contract.id, revision: input.contract.revision },
-    repositorySnapshotId: input.repositorySnapshotId,
-    candidateCommit: input.candidateCommit,
-    ...(input.baselineCommit !== undefined ? { baselineCommit: input.baselineCommit } : {}),
+  const templateIdentity = JSON.stringify({
+    contract: { id: input.contract.id, revision: input.contract.revision },
+    snapshot: input.repositorySnapshotId,
     steps,
     unmaterializedObligationIds
+  });
+  const templateId = `template-${createHash("sha256").update(templateIdentity).digest("hex").slice(0, 16)}`;
+  return {
+    schemaVersion: 1,
+    templateId,
+    // Keep one canonical prepared identity while supporting both vocabulary
+    // names during the transition to prepare/bind.
+    programId: templateId,
+    validationContract: { id: input.contract.id, revision: input.contract.revision },
+    repositorySnapshotId: input.repositorySnapshotId,
+    steps,
+    unmaterializedObligationIds
+  };
+}
+
+export function bindValidationRecipe(input: ValidationRecipeBindingInput): ValidationRecipe;
+export function bindValidationRecipe(
+  prepared: PreparedValidationRecipe,
+  input: Omit<ValidationRecipeBindingInput, "prepared">
+): ValidationRecipe;
+export function bindValidationRecipe(
+  input: ValidationRecipeBindingInput | PreparedValidationRecipe,
+  binding?: Omit<ValidationRecipeBindingInput, "prepared">
+): ValidationRecipe {
+  const resolved = "prepared" in input
+    ? input
+    : { prepared: input, ...(binding ?? {}) };
+  if (resolved.candidateCommit === undefined) {
+    throw new Error("Cannot bind a validation recipe without a candidate commit.");
+  }
+  const identity = JSON.stringify({
+    templateId: resolved.prepared.templateId,
+    candidate: resolved.candidateCommit,
+    baseline: resolved.baselineCommit
+  });
+  const prepared = clonePreparedRecipe(resolved.prepared);
+  return {
+    ...prepared,
+    recipeId: `recipe-${createHash("sha256").update(identity).digest("hex").slice(0, 16)}`,
+    candidateCommit: resolved.candidateCommit,
+    ...(resolved.baselineCommit !== undefined ? { baselineCommit: resolved.baselineCommit } : {})
+  };
+}
+
+/** Backward-compatible one-shot API. */
+export function compileValidationRecipe(input: {
+  contract: ValidationContract;
+  capabilities: RepositoryCapabilities;
+  repositorySnapshotId: string;
+  candidateCommit: string;
+  baselineCommit?: string;
+}): ValidationRecipe {
+  return bindValidationRecipe({
+    prepared: prepareValidationRecipe({
+      contract: input.contract,
+      capabilities: input.capabilities,
+      repositorySnapshotId: input.repositorySnapshotId
+    }),
+    candidateCommit: input.candidateCommit,
+    ...(input.baselineCommit !== undefined ? { baselineCommit: input.baselineCommit } : {})
+  });
+}
+
+function clonePreparedRecipe(recipe: PreparedValidationRecipe): PreparedValidationRecipe {
+  return {
+    ...recipe,
+    steps: recipe.steps.map((step) => ({
+      ...step,
+      command: { ...step.command, args: [...step.command.args] },
+      ...(step.attributions === undefined
+        ? {}
+        : { attributions: step.attributions.map((attribution) => ({ ...attribution, references: [...attribution.references] })) })
+    })),
+    unmaterializedObligationIds: [...recipe.unmaterializedObligationIds]
   };
 }
 

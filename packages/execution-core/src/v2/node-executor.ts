@@ -24,6 +24,7 @@ import {
 import type { IntegrationOperationJournal } from "../integration/operation-journal";
 import { ResultRecorder } from "../result/recorder";
 import type { ExecutionConfig, WorktreeRecord } from "../types";
+import type { PreparedValidationRecipe } from "../validation/recipe-compiler";
 import { WorktreeManager } from "../worktree/manager";
 
 export interface V2ExecutionArtifact {
@@ -67,14 +68,24 @@ export interface V2ExecutionEvidenceMatrix {
 }
 
 export interface V2NodeValidationPort {
+  /** Prepare the immutable command program before any agent is created. */
+  prepare?(input: { contract: TaskContractBundle }): PreparedValidationRecipe;
   validate(input: {
     runId: string;
     attemptId: string;
     contract: TaskContractBundle;
+    prepared?: PreparedValidationRecipe;
     candidateCommit: string;
     baselineCommit: string;
     signal?: AbortSignal;
   }): Promise<V2ExecutionEvidenceMatrix>;
+}
+
+export interface V2FailureCause {
+  source: "artifact" | "executor" | "scope" | "integration";
+  code: string;
+  artifactId?: string;
+  producerNodeId?: string;
 }
 
 export interface V2FinalCandidatePort {
@@ -139,6 +150,9 @@ export type V2PhysicalNodeExecutionOutcome =
       reason: string;
       usage?: V2AttemptUsage;
       integrationManifestId?: string;
+      candidateCommit?: string;
+      evidenceMatrix?: V2ExecutionEvidenceMatrix;
+      failureCause?: V2FailureCause;
       repairObservations?: Array<{ kind: "code" | "integration"; pass: number; evidenceRefs: string[] }>;
     };
 
@@ -181,18 +195,27 @@ export class V2NodeExecutor {
 
   async execute(input: V2PhysicalNodeExecutionInput): Promise<V2PhysicalNodeExecutionOutcome> {
     try {
+      const prepared = this.options.validator.prepare?.({ contract: input.contract });
+      const unmaterialized = requiredUnmaterializedObligations(input.contract, prepared);
+      if (unmaterialized.length > 0) {
+        return {
+          kind: "failure",
+          reason: `Required validation obligations cannot be materialized: ${unmaterialized.join(", ")}.`
+        };
+      }
       const hasChildren = Object.values(input.graph.nodes).some((node) => node.parentId === input.node.id);
       return await (
         (input.node.kind === "root" || input.node.kind === "composite") && hasChildren
-          ? this.executeComposite(input)
-          : this.executeLeaf(input)
+          ? this.executeComposite(input, prepared)
+          : this.executeLeaf(input, prepared)
       );
     } catch (error) {
-      return { kind: "failure", reason: describe(error) };
+      const failureCause = failureCauseFor(input, error);
+      return { kind: "failure", reason: describe(error), ...(failureCause === undefined ? {} : { failureCause }) };
     }
   }
 
-  private async executeLeaf(input: V2PhysicalNodeExecutionInput): Promise<V2PhysicalNodeExecutionOutcome> {
+  private async executeLeaf(input: V2PhysicalNodeExecutionInput, prepared?: PreparedValidationRecipe): Promise<V2PhysicalNodeExecutionOutcome> {
     let base: BuiltExecutionBase;
     try {
       base = await this.baseBuilder.build({
@@ -204,12 +227,13 @@ export class V2NodeExecutor {
         inputFingerprint: input.inputFingerprint
       });
     } catch (error) {
-      return { kind: "failure", reason: describe(error) };
+      const failureCause = failureCauseFor(input, error);
+      return { kind: "failure", reason: describe(error), ...(failureCause === undefined ? {} : { failureCause }) };
     }
     const instructionPath = instructionFilePath(input, "execute");
     let candidateToAnchor: string | undefined;
     try {
-      await this.writeInstructions(instructionPath, buildV2NodeInstructions(input));
+      await this.writeInstructions(instructionPath, buildV2NodeInstructions(input, prepared));
       const executor = this.options.executorFactory.create(input.selection);
       const executorOutcome = await executor.execute({
         cwd: base.worktree.path,
@@ -256,6 +280,7 @@ export class V2NodeExecutor {
             runId: input.runId,
             attemptId: input.attemptId,
             contract: input.contract,
+            ...(prepared === undefined ? {} : { prepared }),
             candidateCommit: result.currentHead,
             baselineCommit: input.graph.baseCommit,
             ...(input.signal !== undefined ? { signal: input.signal } : {})
@@ -269,12 +294,25 @@ export class V2NodeExecutor {
         }
         return { kind: "failure", reason: executionFailureReason(result), usage: usageOf(result) };
       }
+      const missingArtifactPaths = missingExpectedArtifactPaths(
+        input.outputArtifactContract.expectedPaths,
+        result.changedFiles,
+        result.noOp === true ? result.baselineEvidence?.verifiedPaths : undefined
+      );
+      if (missingArtifactPaths.length > 0) {
+        return {
+          kind: "failure",
+          reason: `Candidate omitted declared artifact paths: ${missingArtifactPaths.join(", ")}.`,
+          usage: usageOf(result)
+        };
+      }
       const candidateCommit = result.commitSha ?? result.currentHead;
       candidateToAnchor = candidateCommit;
       const evidenceMatrix = await this.options.validator.validate({
         runId: input.runId,
         attemptId: input.attemptId,
         contract: input.contract,
+        ...(prepared === undefined ? {} : { prepared }),
         candidateCommit,
         baselineCommit: input.graph.baseCommit,
         ...(input.signal !== undefined ? { signal: input.signal } : {})
@@ -282,7 +320,7 @@ export class V2NodeExecutor {
       let success: Extract<V2PhysicalNodeExecutionOutcome, { kind: "success" }> =
         { ...successOutcome(candidateCommit, result.changedFiles, evidenceMatrix), usage: usageOf(result) };
       if (evidenceMatrix.outcome === "failed") {
-        const repaired = await this.repairLeaf(input, base.worktree, candidateCommit, evidenceMatrix);
+        const repaired = await this.repairLeaf(input, base.worktree, candidateCommit, evidenceMatrix, prepared);
         if (repaired.kind === "failure") return repaired;
         success = repaired;
         candidateToAnchor = repaired.candidateCommit;
@@ -315,7 +353,7 @@ export class V2NodeExecutor {
     }
   }
 
-  private async executeComposite(input: V2PhysicalNodeExecutionInput): Promise<V2PhysicalNodeExecutionOutcome> {
+  private async executeComposite(input: V2PhysicalNodeExecutionInput, prepared?: PreparedValidationRecipe): Promise<V2PhysicalNodeExecutionOutcome> {
     let base: BuiltExecutionBase;
     try {
       base = await this.baseBuilder.build({
@@ -365,13 +403,26 @@ export class V2NodeExecutor {
             runId: input.runId,
             attemptId: input.attemptId,
             contract: input.contract,
+            ...(prepared === undefined ? {} : { prepared }),
             candidateCommit: candidateSha,
             baselineCommit: input.graph.baseCommit,
             ...(input.signal !== undefined ? { signal: input.signal } : {})
           });
-          return { matrixId: evidenceMatrix.matrixId, outcome: evidenceMatrix.outcome };
+          return {
+            matrixId: evidenceMatrix.matrixId,
+            outcome: evidenceMatrix.outcome,
+            ...(evidenceMatrix.outcome === "verified" ? {} : {
+              failedCriteria: evidenceMatrix.criteria
+                .filter((criterion) => criterion.status === "failed" || criterion.status === "uncovered" || criterion.status === "flaky")
+                .map((criterion) => ({
+                  criterionId: criterion.criterionId,
+                  obligationId: criterion.obligationId,
+                  justification: criterion.justification
+                }))
+            })
+          };
         },
-        repair: async (repair) => this.repairIntegration(input, base.worktree, repair, integrationSignal),
+        repair: async (repair) => this.repairIntegration(input, base.worktree, repair, integrationSignal, prepared),
         digestCandidate: async ({ candidateSha }) => digest(candidateSha)
       });
       let manifest: IntegrationManifest;
@@ -387,6 +438,7 @@ export class V2NodeExecutor {
         return {
           kind: "failure",
           integrationManifestId: `integration-result-${request.manifestId}`,
+          ...(evidenceMatrix === undefined ? {} : { evidenceMatrix }),
           reason: describe(error)
         };
       }
@@ -405,6 +457,8 @@ export class V2NodeExecutor {
         return {
           kind: "failure",
           integrationManifestId: manifest.manifestId,
+          ...(manifest.candidateSha === undefined ? {} : { candidateCommit: manifest.candidateSha }),
+          ...(evidenceMatrix === undefined ? {} : { evidenceMatrix }),
           ...(repairObservations !== undefined ? { repairObservations } : {}),
           reason:
             manifest.errors.map((error) => error.message).join("; ") ||
@@ -492,8 +546,15 @@ export class V2NodeExecutor {
       conflictOutput: string;
       pass: 1;
       childArtifacts: IntegrationChildArtifact[];
+      cause: "materialization_conflict" | "parent_validation_failed";
+      parentValidation?: {
+        matrixId: string;
+        outcome: "unverified" | "failed";
+        failedCriteria: Array<{ criterionId: string; obligationId: string; justification: string }>;
+      };
     },
-    signal: AbortSignal
+    signal: AbortSignal,
+    prepared?: PreparedValidationRecipe
   ): Promise<{ success: boolean; candidateSha?: string; evidenceRefs: string[] }> {
     const instructionPath = instructionFilePath(input, "repair");
     if (await this.options.git.cherryPickHead(worktree.path) !== undefined) {
@@ -501,60 +562,39 @@ export class V2NodeExecutor {
     }
     const expectedHead = await this.options.git.head(worktree.path);
     try {
-      const childPatches = await Promise.all(repair.childArtifacts.map(async (artifact) => {
-        const sourceParent = await this.options.git.revParse(worktree.path, `${artifact.location}^1`);
-        const diff = await this.options.git.diffRange({ cwd: worktree.path, from: sourceParent, to: artifact.location });
-        return { nodeId: artifact.nodeId, artifactId: artifact.artifactId, location: artifact.location, diff };
-      }));
-      let repairFeedback: string | undefined;
-      for (let pass = 1; pass <= 2; pass++) {
-        await this.writeInstructions(instructionPath, buildV2RepairInstructions(input, { ...repair, childPatches }, repairFeedback));
-        const executor = this.options.executorFactory.create(input.repairSelection);
-        const outcome = await executor.execute({
-          cwd: worktree.path,
-          instructionFilePath: instructionPath,
-          model: input.repairSelection.model,
-          timeoutMs: input.config.integrationTimeoutMs,
-          bypassApprovals: true,
-          processOwnerId: input.runId,
-          attemptId: stableUuid(`${input.attemptId}:repair:${repair.pass}:pass-${pass}`),
-          ...(input.repairSelection.effort !== undefined ? { reasoningEffort: input.repairSelection.effort } : {}),
-          signal
-        });
-        const result = await this.recorder.record({
-          worktree,
-          executorOutcome: outcome,
-          expectedHead,
-          scopeContract: input.contract.scope,
-          scopePolicy: input.config.scopePolicy,
-          unexpectedCommitPolicy: input.config.unexpectedCommitPolicy,
-          commitMessage: `mh-v2-repair: ${input.node.id}`,
-          usageSource: usageSourceForSelection(input.repairSelection)
-        });
-        const evidenceRefs = [`repair:${input.attemptId}:${repair.pass}`, ...repair.conflictFiles.map((file) => `file:${file}`)];
-        if (result.status !== "success" || result.commitSha === undefined) return { success: false, evidenceRefs };
-
-        const repairedDiff = await this.options.git.diffRange({
-          cwd: worktree.path,
-          from: input.graph.baseCommit,
-          to: result.commitSha
-        });
-        const missingAdditions = missingChildPatchAdditions(childPatches, repairedDiff);
-        if (missingAdditions.length === 0) return { success: true, candidateSha: result.commitSha, evidenceRefs };
-        if (pass === 2) {
-          await this.options.git.restoreManagedWorktree(worktree.path, expectedHead);
-          return { success: false, evidenceRefs };
-        }
-
-        repairFeedback = [
-          "Automated physical-intent audit from the previous repair pass:",
-          "The committed repair still omitted these exact child changes (additions or deletions) from the base-to-repair diff:",
-          ...missingAdditions.map((addition) => `- ${addition}`),
-          "Restore every listed line verbatim while retaining the existing sibling behavior before staging the next pass."
-        ].join("\n");
-        await this.options.git.restoreManagedWorktree(worktree.path, expectedHead);
+      // Verify that each incoming commit is inspectable before spending the
+      // single integration-repair budget. The commit itself is transport;
+      // exact parent validation, not a line-by-line diff comparison, decides
+      // whether the composed behavior is retained.
+      for (const artifact of repair.childArtifacts) {
+        await this.options.git.revParse(worktree.path, `${artifact.location}^1`);
       }
-      return { success: false, evidenceRefs: [`repair:${input.attemptId}:${repair.pass}`, ...repair.conflictFiles.map((file) => `file:${file}`)] };
+      await this.writeInstructions(instructionPath, buildV2RepairInstructions(input, repair, prepared));
+      const executor = this.options.executorFactory.create(input.repairSelection);
+      const outcome = await executor.execute({
+        cwd: worktree.path,
+        instructionFilePath: instructionPath,
+        model: input.repairSelection.model,
+        timeoutMs: input.config.integrationTimeoutMs,
+        bypassApprovals: true,
+        processOwnerId: input.runId,
+        attemptId: stableUuid(`${input.attemptId}:repair:${repair.pass}`),
+        ...(input.repairSelection.effort !== undefined ? { reasoningEffort: input.repairSelection.effort } : {}),
+        signal
+      });
+      const result = await this.recorder.record({
+        worktree,
+        executorOutcome: outcome,
+        expectedHead,
+        scopeContract: input.contract.scope,
+        scopePolicy: input.config.scopePolicy,
+        unexpectedCommitPolicy: input.config.unexpectedCommitPolicy,
+        commitMessage: `mh-v2-repair: ${input.node.id}`,
+        usageSource: usageSourceForSelection(input.repairSelection)
+      });
+      const evidenceRefs = [`repair:${input.attemptId}:${repair.pass}`, ...repair.conflictFiles.map((file) => `file:${file}`)];
+      if (result.status !== "success" || result.commitSha === undefined) return { success: false, evidenceRefs };
+      return { success: true, candidateSha: result.commitSha, evidenceRefs };
     } catch {
       return {
         success: false,
@@ -572,14 +612,15 @@ export class V2NodeExecutor {
     input: V2PhysicalNodeExecutionInput,
     worktree: WorktreeRecord,
     candidateCommit: string,
-    failedMatrix: V2ExecutionEvidenceMatrix
+    failedMatrix: V2ExecutionEvidenceMatrix,
+    prepared?: PreparedValidationRecipe
   ): Promise<Extract<V2PhysicalNodeExecutionOutcome, { kind: "success" | "failure" }>> {
     const pass = 1;
     const evidenceRefs = [failedMatrix.matrixId, ...failedMatrix.criteria.flatMap((criterion) => criterion.evidenceRefs)];
     const repairObservation = { kind: "code" as const, pass, evidenceRefs: [...new Set(evidenceRefs)] };
     const instructionPath = instructionFilePath(input, "code-repair");
     try {
-      await this.writeInstructions(instructionPath, buildV2CodeRepairInstructions(input, failedMatrix));
+      await this.writeInstructions(instructionPath, buildV2CodeRepairInstructions(input, failedMatrix, prepared));
       const executor = this.options.executorFactory.create(input.repairSelection);
       const outcome = await executor.execute({
         cwd: worktree.path,
@@ -610,6 +651,7 @@ export class V2NodeExecutor {
         runId: input.runId,
         attemptId: input.attemptId,
         contract: input.contract,
+        ...(prepared === undefined ? {} : { prepared }),
         candidateCommit: repairedCommit,
         baselineCommit: input.graph.baseCommit,
         ...(input.signal !== undefined ? { signal: input.signal } : {})
@@ -627,7 +669,10 @@ export class V2NodeExecutor {
   }
 }
 
-export function buildV2NodeInstructions(input: Pick<V2PhysicalNodeExecutionInput, "node" | "contract" | "consumedArtifacts">): string {
+export function buildV2NodeInstructions(
+  input: Pick<V2PhysicalNodeExecutionInput, "node" | "contract" | "consumedArtifacts">,
+  prepared?: PreparedValidationRecipe
+): string {
   const { task, scope, seams } = input.contract;
   const lines = [
     `Implement: ${input.node.title}`,
@@ -673,6 +718,7 @@ export function buildV2NodeInstructions(input: Pick<V2PhysicalNodeExecutionInput
       for (const [key, value] of Object.entries(seam.semanticFacts)) lines.push(`  - ${key}: ${value}`);
     }
   }
+  lines.push(...validationProgramInstructions(prepared));
   if (input.consumedArtifacts.length > 0) {
     lines.push("", "Declared upstream artifacts already materialized in this worktree:", ...input.consumedArtifacts.map((artifact) => `- ${artifact.contract.id}@${artifact.contract.revision} (${artifact.digest})`));
   }
@@ -686,7 +732,7 @@ export function buildV2NodeInstructions(input: Pick<V2PhysicalNodeExecutionInput
     "Import canonical symbols across layers instead of declaring a second local shape for a domain, application, API, presentation, or probe contract.",
     "Before implementing a consumer leaf, inspect the current canonical producer implementation and its tests; do not reimplement behavior already supplied by that producer.",
     "Use the canonical producer's returned state and exported operations as the only source for shared state; never add a consumer-side exception fallback or duplicate map or store.",
-    "Verify the repository before finishing: run `pnpm build` first, fix every build/type error, and only then run `pnpm test`.",
+    "Verify the repository using the validation command selected by the orchestrator from the frozen repository snapshot. Do not substitute a package manager, add scripts, or modify configuration to invent a command.",
     "",
     AGENT_STATUS_PROTOCOL_INSTRUCTIONS,
     "",
@@ -702,33 +748,49 @@ function buildV2RepairInstructions(
     conflictFiles: string[];
     conflictOutput: string;
     childArtifacts: IntegrationChildArtifact[];
-    childPatches: Array<{ nodeId: string; artifactId: string; location: string; diff: string }>;
+    cause: "materialization_conflict" | "parent_validation_failed";
+    parentValidation?: {
+      matrixId: string;
+      outcome: "unverified" | "failed";
+      failedCriteria: Array<{ criterionId: string; obligationId: string; justification: string }>;
+    };
   },
-  repairFeedback?: string
+  prepared?: PreparedValidationRecipe
 ): string {
   const incomingCommit = repair.childArtifacts.find((artifact) => artifact.artifactId === repair.artifactId)?.location;
+  const semanticFailure = repair.parentValidation === undefined ? [] : [
+    `The exact parent candidate failed validation matrix ${repair.parentValidation.matrixId} with outcome ${repair.parentValidation.outcome}.`,
+    "Repair the composed behavior, not the validation command or its configuration.",
+    ...repair.parentValidation.failedCriteria.map((criterion) => `- ${criterion.criterionId}/${criterion.obligationId}: ${criterion.justification}`)
+  ];
   return [
-    `Resolve the integration conflict for ${input.node.title}.`,
+    repair.cause === "parent_validation_failed"
+      ? `Repair the semantically invalid integrated candidate for ${input.node.title}.`
+      : `Resolve the integration conflict for ${input.node.title}.`,
     "",
     `Parent objective: ${input.contract.task.goal}`,
+    `Repair cause: ${repair.cause}`,
     `Conflicting artifact: ${repair.artifactId}`,
     "Conflict files:",
     ...repair.conflictFiles.map((file) => `- ${file}`),
     "",
+    ...semanticFailure,
     "Preserve every child intent and the shared contracts below:",
     ...input.contract.seams.map((seam) => `- ${seam.id}@${seam.revision}: ${seam.specification}`),
     ...repair.childArtifacts.map((artifact) => `- child ${artifact.nodeId}: ${artifact.contract.id}@${artifact.contract.revision} (${artifact.digest})`),
     "",
-    "Physical child patches (source of truth for every concrete addition):",
-    ...repair.childPatches.flatMap((patch) => [
-      `--- child ${patch.nodeId} (${patch.artifactId}, ${patch.location}) ---`,
-      patch.diff
-    ]),
-    "Preserve every child addition from these patches; if two changes overlap, reconcile them semantically without dropping either child intent.",
+    "Child commits are transport, not a semantic proof. Inspect each incoming commit and reconcile overlapping changes against the shared contracts and exact parent objective.",
     "",
-    "The orchestrator has aborted the active cherry-pick before this repair, so the worktree is clean at the already-integrated parent state.",
-    ...(incomingCommit === undefined ? [] : [`Incoming commit to apply semantically: ${incomingCommit}`]),
-    "Start by inspecting the current files and the incoming commit with git show. Apply the incoming commit's intended changes while retaining the already-integrated sibling behavior.",
+    ...(repair.cause === "materialization_conflict"
+      ? [
+        "The orchestrator has aborted the active cherry-pick before this repair, so the worktree is clean at the already-integrated parent state.",
+        ...(incomingCommit === undefined ? [] : [`Incoming commit to apply semantically: ${incomingCommit}`]),
+        "Start by inspecting the current files and the incoming commit with git show. Apply the incoming commit's intended changes while retaining the already-integrated sibling behavior."
+      ]
+      : [
+        "The worktree is at the exact integrated candidate that failed the parent evidence matrix.",
+        "Inspect the composed implementation and the failed obligations, then make the smallest semantic correction within the declared parent scope."
+      ]),
     "Do not use a blanket checkout of only ours or only theirs: that would discard one child's behavior.",
     "Treat the already-integrated canonical producer behavior as authoritative when reconciling a consumer leaf.",
     "Run a literal-contract audit against the parent objective and child acceptance criteria: preserve every quoted identifier, enum literal, field name, and return shape verbatim; do not resolve a mismatch by inventing a semantically similar name or alias.",
@@ -736,10 +798,10 @@ function buildV2RepairInstructions(
     "Do not add an exception-based fallback or duplicate state to compensate for a changed canonical API; consume its returned state and exported operations instead.",
     "The only accepted repair is a non-empty working-tree diff that applies the incoming intent while preserving the current sibling behavior.",
     "Do not report the conflict resolved from the final summary alone: inspect `git status --short` and `git diff --stat`, and keep editing until the actual diff is present.",
-    "Before staging, compare the final base-to-worktree diff with every physical child patch above. Each non-empty child addition must appear verbatim; do not replace it with a synonym or omit it because the surrounding implementation was reconciled.",
-    ...(repairFeedback === undefined ? [] : ["", repairFeedback]),
+    "Before staging, verify the structural result: the incoming commits were inspected, the worktree contains the intended files, and no sibling contract was discarded. The parent validator will decide semantic retention on the exact candidate.",
     "Before finishing, run git diff --check and verify that no <<<<<<<, =======, or >>>>>>> conflict markers remain.",
-    "Then run `pnpm build` before `pnpm test`; fix any type or build error before reporting the repair complete.",
+    "The orchestrator will run the frozen validation program on the exact candidate; do not invent a build or test command in this repair.",
+    ...validationProgramInstructions(prepared),
     "Do not create or modify AGENTS.md, CLAUDE.md, CODEX.md, or other agent-instruction files; report a durable lesson in your final summary instead.",
     "",
     "Git conflict output:",
@@ -751,7 +813,8 @@ function buildV2RepairInstructions(
 
 export function buildV2CodeRepairInstructions(
   input: Pick<V2PhysicalNodeExecutionInput, "node" | "contract">,
-  failedMatrix: V2ExecutionEvidenceMatrix
+  failedMatrix: V2ExecutionEvidenceMatrix,
+  prepared?: PreparedValidationRecipe
 ): string {
   const observableStateTerms = [...new Set([...input.contract.task.goal.matchAll(/\bbackorders?\b/giu)].map((match) => match[0].toLowerCase()))];
   return [
@@ -776,8 +839,19 @@ export function buildV2CodeRepairInstructions(
       "Do not resolve this by adding only a test, returning the state from a mutation, or relying on an existing generic operation."
     ]),
     "Do not create or modify AGENTS.md, CLAUDE.md, CODEX.md, or other agent-instruction files; they are outside this repair scope.",
+    ...validationProgramInstructions(prepared),
     "Do not commit; the orchestrator will revalidate and commit the repair."
   ].join("\n");
+}
+
+function validationProgramInstructions(prepared: PreparedValidationRecipe | undefined): string[] {
+  if (prepared === undefined) return [];
+  return [
+    "",
+    `Frozen validation program ${prepared.programId} (selected from the repository snapshot ${prepared.repositorySnapshotId}):`,
+    ...prepared.steps.map((step) => `- ${step.obligationId}: cwd=${step.command.cwd} argv=${JSON.stringify([step.command.command, ...step.command.args])}`),
+    "Use these commands only for repository validation. Inspection commands such as git status and rg remain allowed; do not substitute a package manager or edit scripts/configuration to make a different validation command exist."
+  ];
 }
 
 function executionArtifactInput(artifact: V2ExecutionArtifact) {
@@ -786,28 +860,6 @@ function executionArtifactInput(artifact: V2ExecutionArtifact) {
 
 function integrationArtifact(artifact: V2ExecutionArtifact): IntegrationChildArtifact {
   return { schemaVersion: 1, ...artifact, contract: { ...artifact.contract } };
-}
-
-function missingChildPatchAdditions(
-  childPatches: readonly { nodeId: string; diff: string }[],
-  finalDiff: string
-): string[] {
-  const finalChangedLines = new Set(patchChangedLines(finalDiff));
-  return childPatches
-    .flatMap((patch) => patchChangedLines(patch.diff).map((line) => `${patch.nodeId}: ${line}`))
-    .filter((entry) => !finalChangedLines.has(entry.slice(entry.indexOf(": ") + 2)))
-    .slice(0, 24);
-}
-
-function patchChangedLines(diff: string): string[] {
-  return diff
-    .split(/\r?\n/u)
-    .filter((line) =>
-      (line.startsWith("+") && !line.startsWith("+++")) ||
-      (line.startsWith("-") && !line.startsWith("---"))
-    )
-    .map((line) => line.slice(1))
-    .filter((line) => line.trim().length > 0);
 }
 
 /**
@@ -892,7 +944,57 @@ function describe(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function failureCauseFor(input: V2PhysicalNodeExecutionInput, error: unknown): V2FailureCause | undefined {
+  if (typeof error !== "object" || error === null || !("evidence" in error)) return undefined;
+  const evidence = (error as { evidence?: unknown }).evidence;
+  if (typeof evidence !== "object" || evidence === null) return undefined;
+  const code = (evidence as { code?: unknown }).code;
+  const artifactId = (evidence as { artifactId?: unknown }).artifactId;
+  if (typeof code !== "string" || typeof artifactId !== "string") return undefined;
+  const producerNodeId = input.consumedArtifacts.find((artifact) => artifact.artifactId === artifactId)?.nodeId;
+  return {
+    source: "artifact",
+    code,
+    artifactId,
+    ...(producerNodeId === undefined ? {} : { producerNodeId })
+  };
+}
+
 function requiredValidationRecipeDigest(matrix: Pick<V2ExecutionEvidenceMatrix, "validationRecipeDigest">): string {
   if (matrix.validationRecipeDigest === undefined) throw new Error("Verified root evidence has no validation recipe digest.");
   return matrix.validationRecipeDigest;
+}
+
+function requiredUnmaterializedObligations(
+  contract: TaskContractBundle,
+  prepared: PreparedValidationRecipe | undefined
+): string[] {
+  if (prepared === undefined) return [];
+  const required = new Set(contract.validation.obligations
+    .filter((obligation) => obligation.severity === "required")
+    .map((obligation) => obligation.id));
+  return prepared.unmaterializedObligationIds.filter((id) => required.has(id));
+}
+
+function missingExpectedArtifactPaths(
+  expectedPaths: readonly string[],
+  changedFiles: readonly string[],
+  verifiedBaselinePaths: readonly string[] | undefined
+): string[] {
+  if (expectedPaths.length === 0) return [];
+  const observed = [...new Set([...(changedFiles ?? []), ...(verifiedBaselinePaths ?? [])].map(normalizePath))];
+  return expectedPaths.filter((expected) => !observed.some((actual) => pathMatches(expected, actual)));
+}
+
+function normalizePath(value: string): string {
+  return value.replaceAll("\\", "/").replace(/^\.\//u, "");
+}
+
+function pathMatchesLegacy(pattern: string, value: string): boolean {
+  const escaped = normalizePath(pattern).replace(/[.+?^${}()|[\]\\]/gu, "\\$&").replaceAll("**", "§§DOUBLE_STAR§§").replaceAll("*", "[^/]*").replaceAll("§§DOUBLE_STAR§§", ".*");
+  return new RegExp(`^${escaped}$`, "u").test(value);
+}
+
+function pathMatches(pattern: string, value: string): boolean {
+  return pathMatchesLegacy(pattern, value);
 }

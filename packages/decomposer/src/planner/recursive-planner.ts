@@ -3,6 +3,7 @@ import { EntityIdSchema, NonEmptyStringSchema } from "@manyhands/shared";
 import { z } from "zod";
 
 import { parseJsonObjectCandidates } from "../llm/recursive/json.js";
+import { CutFeasibilityCritic, type CutFeasibilityCriticPort } from "./cut-feasibility-critic.js";
 import { GoalCriterionSchema, type GoalCriterion } from "./semantic-plan.js";
 import type { RepositoryEvidence } from "./schema.js";
 
@@ -41,10 +42,20 @@ export type UnitProposal = z.infer<typeof UnitProposalSchema>;
 export const ChildProposalSchema = z.object({
   key: EntityIdSchema,
   objective: NonEmptyStringSchema,
-  criterion: NonEmptyStringSchema,
+  /** Parent criterion ids are the acceptance lineage for this child. */
+  criterionIds: z.array(EntityIdSchema).min(1).optional(),
+  /** Legacy v1 field. New cuts must use criterionIds. */
+  criterion: NonEmptyStringSchema.optional(),
   reads: z.array(RepoRelativePathSchema).default([]),
   writes: z.array(RepoRelativePathSchema).default([])
-}).strict();
+}).strict().superRefine((child, context) => {
+  if (child.criterionIds === undefined && child.criterion === undefined) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["criterionIds"], message: "Child must declare criterionIds for parent acceptance lineage." });
+  }
+  if (child.criterionIds !== undefined && child.criterion !== undefined) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["criterionIds"], message: "Declare criterionIds or legacy criterion, not both." });
+  }
+});
 
 export type ChildProposal = z.infer<typeof ChildProposalSchema>;
 
@@ -52,11 +63,17 @@ export function criterionIdFor(unitKey: string): string {
   return `criterion:${unitKey}`;
 }
 
-function asUnit(child: ChildProposal): UnitProposal {
+function asUnit(child: ChildProposal, parentCriteria: readonly GoalCriterion[]): UnitProposal {
+  const criteria = child.criterionIds === undefined
+    ? [{ id: criterionIdFor(child.key), description: child.criterion!, required: true }]
+    : child.criterionIds.flatMap((criterionId) => {
+      const criterion = parentCriteria.find((candidate) => candidate.id === criterionId);
+      return criterion === undefined ? [] : [criterion];
+    });
   return {
     key: child.key,
     objective: child.objective,
-    criteria: [{ id: criterionIdFor(child.key), description: child.criterion, required: true }],
+    criteria,
     reads: child.reads,
     writes: child.writes
   };
@@ -141,6 +158,8 @@ export interface ExecutionBudget {
 export interface RecursivePlannerOptions {
   model: CutModel;
   budget: ExecutionBudget;
+  /** Optional read-only semantic check after deterministic cut validation. */
+  feasibilityCritic?: CutFeasibilityCriticPort;
   /** Attempts per unit, including the first. Repairs are the attempts after it. */
   maxAttemptsPerUnit?: number;
   /** Hard stop against a model that keeps proposing cuts that never shrink. */
@@ -176,6 +195,7 @@ export class RecursivePlanner {
   private readonly maxAttempts: number;
   private readonly maxDepth: number;
   private readonly isTestPath: (path: string) => boolean;
+  private readonly feasibilityCritic: CutFeasibilityCriticPort;
 
   constructor(options: RecursivePlannerOptions) {
     this.model = options.model;
@@ -183,6 +203,7 @@ export class RecursivePlanner {
     this.maxAttempts = positive(options.maxAttemptsPerUnit ?? 2, "maxAttemptsPerUnit");
     this.maxDepth = positive(options.maxDepth ?? 8, "maxDepth");
     this.isTestPath = options.isTestPath ?? isConventionalTestPath;
+    this.feasibilityCritic = options.feasibilityCritic ?? new CutFeasibilityCritic();
   }
 
   async plan(input: RecursivePlanInput): Promise<RecursivePlanResult> {
@@ -252,7 +273,7 @@ export class RecursivePlanner {
     for (const child of cut.proposal.children) claimedKeys.add(child.key);
     for (const [siblingIndex, child] of cut.proposal.children.entries()) {
       children.push(await this.resolve(
-        asUnit(child),
+        asUnit(child, unit.criteria),
         depth + 1,
         { parentKey: unit.key, siblingIndex, siblingCount },
         input,
@@ -318,20 +339,21 @@ export class RecursivePlanner {
         repairIssues = [error instanceof Error ? error.message : String(error)];
         continue;
       }
-      const parsed = this.validate(raw, unit, snapshotPaths, claimedKeys, claimedWrites);
+      const parsed = await this.validate(raw, unit, input.evidence, snapshotPaths, claimedKeys, claimedWrites);
       if (parsed.kind === "ok") return parsed;
       repairIssues = parsed.diagnostics;
     }
     return { kind: "failed", diagnostics: repairIssues };
   }
 
-  private validate(
+  private async validate(
     raw: unknown,
     parent: UnitProposal,
+    evidence: readonly RepositoryEvidence[],
     snapshotPaths: ReadonlySet<string>,
     claimedKeys: ReadonlySet<string>,
     claimedWrites: ReadonlyMap<string, string>
-  ): { kind: "ok"; proposal: CutProposal } | { kind: "failed"; diagnostics: string[] } {
+  ): Promise<{ kind: "ok"; proposal: CutProposal } | { kind: "failed"; diagnostics: string[] }> {
     const candidates = objectCandidates(raw);
     if (candidates.kind === "failed") return candidates;
 
@@ -345,6 +367,17 @@ export class RecursivePlanner {
       const violations = this.cutViolations(parsed.data, parent, snapshotPaths, claimedKeys, claimedWrites);
       if (violations.length > 0) {
         failures.push(...violations);
+        continue;
+      }
+      let feasibility: Awaited<ReturnType<CutFeasibilityCriticPort["review"]>>;
+      try {
+        feasibility = await this.feasibilityCritic.review({ parent, proposal: parsed.data, evidence });
+      } catch (error) {
+        failures.push(`scope_feasibility: ${error instanceof Error ? error.message : String(error)}`);
+        continue;
+      }
+      if (!feasibility.ok) {
+        failures.push(...feasibility.issues);
         continue;
       }
       return { kind: "ok", proposal: parsed.data };
@@ -368,6 +401,12 @@ export class RecursivePlanner {
     const inherited = new Set(parent.reads.map(normalize));
     const producedBySibling = new Map<string, string[]>();
     const keys = new Set<string>();
+    const parentCriterionIds = new Set(parent.criteria.map((criterion) => criterion.id));
+    // A v2 cut carries parent criterion ids. Legacy v1 responses carry only a
+    // prose criterion and are accepted on the compatibility path; they cannot
+    // establish lineage and therefore remain unproven until projected again.
+    const hasLineage = children.some((child) => child.criterionIds !== undefined);
+    const assignedCriterionCounts = new Map<string, number>();
 
     for (const child of children) {
       for (const written of child.writes) {
@@ -382,6 +421,23 @@ export class RecursivePlanner {
       if (child.key === parent.key) issues.push(`children: ${child.key} repeats its parent's key`);
       else if (claimedKeys.has(child.key)) {
         issues.push(`children: the key ${child.key} is already used by another unit in this plan; every unit needs its own key.`);
+      }
+
+      if (hasLineage) {
+        if (child.criterionIds === undefined) {
+          issues.push(`lineage ${child.key}: missing criterionIds; every child must inherit at least one criterion from ${parent.key}.`);
+        } else {
+          const childIds = new Set<string>();
+          for (const criterionId of child.criterionIds) {
+            if (childIds.has(criterionId)) issues.push(`lineage ${child.key}: duplicate criterion ${criterionId} within one child.`);
+            childIds.add(criterionId);
+            if (!parentCriterionIds.has(criterionId)) {
+              issues.push(`lineage ${child.key}: unknown parent criterion ${criterionId}.`);
+              continue;
+            }
+            assignedCriterionCounts.set(criterionId, (assignedCriterionCounts.get(criterionId) ?? 0) + 1);
+          }
+        }
       }
 
       // P1 — a child that already fits the budget will be a leaf, and a leaf
@@ -405,6 +461,14 @@ export class RecursivePlanner {
       // reads one file and writes its test already costs what the parent cost.
       if (!this.fitsBudget(parent) && scopeSize(child) >= scopeSize(parent)) {
         issues.push(`scope ${child.key}: a cut must shrink its children; ${child.key} carries ${scopeSize(child)} paths and ${parent.key} carries ${scopeSize(parent)}.`);
+      }
+    }
+
+    if (hasLineage) {
+      for (const criterionId of parentCriterionIds) {
+        const count = assignedCriterionCounts.get(criterionId) ?? 0;
+        if (count === 0) issues.push(`lineage ${parent.key}: missing child assignment for parent criterion ${criterionId}.`);
+        else if (count > 1) issues.push(`lineage ${parent.key}: duplicate child assignment for parent criterion ${criterionId}; assigned ${count} times.`);
       }
     }
 
@@ -501,7 +565,7 @@ export function buildCutPrompt(input: CutPromptInput): { system: string; user: s
       "- Every `read` must already exist in the repository evidence below, be written by a sibling, or be one the parent already reads.",
       "- Together the children must write every path the parent promised to write.",
       "- Every child must carry strictly fewer paths than this unit; a cut that does not shrink is not a cut.",
-      "- `criterion` is what that child alone claims, in one sentence. Do not repeat this unit's claim: this unit proves it by integrating its children.",
+      "- `criterionIds` assigns each parent criterion to exactly one child. Reuse the parent's ids; do not invent child criterion ids. The legacy `criterion` string is accepted only for v1 compatibility.",
       "- `rationale` states the boundary that justifies this cut in one sentence.",
       "- Do not declare abstract interfaces or ordering between children. Relations are derived only from the exact file reads and writes."
     ].join("\n"),
@@ -525,7 +589,7 @@ const CUT_OUTPUT_SHAPE = `{
     {
       "key": "kebab-case-unit-key",
       "objective": "the observable outcome this child owns",
-      "criterion": "the single claim this child proves on its own",
+      "criterionIds": ["criterion-id"],
       "reads": ["src/domain/orders.js"],
       "writes": ["src/domain/backorders.js", "test/backorders.test.js"]
     }

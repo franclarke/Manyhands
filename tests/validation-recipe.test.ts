@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { compileValidationRecipe } from "@manyhands/execution-core";
+import {
+  bindValidationRecipe,
+  compileValidationRecipe,
+  prepareValidationRecipe
+} from "@manyhands/execution-core";
 import type { RepositoryCapabilities } from "@manyhands/repository-index";
 import type { ValidationContract } from "@manyhands/contracts";
 
@@ -61,6 +65,67 @@ describe("compileValidationRecipe", () => {
 
     expect(recipe.steps).toEqual([]);
     expect(recipe.unmaterializedObligationIds).toEqual(["obligation-order", "obligation-values"]);
+  });
+
+  it("separates stable command preparation from candidate binding", () => {
+    const prepared = prepareValidationRecipe({
+      contract,
+      capabilities,
+      repositorySnapshotId: "snapshot-1"
+    });
+    const compiled = compileValidationRecipe({
+      contract,
+      capabilities,
+      repositorySnapshotId: "snapshot-1",
+      candidateCommit: "abc",
+      baselineCommit: "base"
+    });
+    const bound = bindValidationRecipe({
+      prepared,
+      candidateCommit: "abc",
+      baselineCommit: "base"
+    });
+
+    expect(prepared.templateId).toBe(prepared.programId);
+    expect(prepared.templateId).toBe(
+      prepareValidationRecipe({ contract, capabilities, repositorySnapshotId: "snapshot-1" }).templateId
+    );
+    expect(prepared).not.toHaveProperty("candidateCommit");
+    expect(bound).toEqual(compiled);
+    expect(bound.repositorySnapshotId).toBe("snapshot-1");
+    expect(bound.templateId).toBe(prepared.templateId);
+    expect(bound.programId).toBe(prepared.programId);
+    expect(bound.steps).toEqual(prepared.steps);
+
+    const otherCandidate = bindValidationRecipe({
+      prepared,
+      candidateCommit: "different",
+      baselineCommit: "base"
+    });
+    expect(otherCandidate.steps).toEqual(bound.steps);
+    expect(otherCandidate.repositorySnapshotId).toBe(bound.repositorySnapshotId);
+    expect(otherCandidate.recipeId).not.toBe(bound.recipeId);
+  });
+
+  it("keeps unmaterialized obligations in the prepared and bound recipe", () => {
+    const contractWithoutBinding = {
+      ...contract,
+      obligations: [{
+        ...contract.obligations[1]!,
+        id: "obligation-unmaterialized",
+        criterionId: "criterion-unmaterialized",
+        evidence: undefined
+      }]
+    } as ValidationContract;
+    const prepared = prepareValidationRecipe({
+      contract: contractWithoutBinding,
+      capabilities,
+      repositorySnapshotId: "snapshot-1"
+    });
+
+    expect(prepared.unmaterializedObligationIds).toEqual(["obligation-unmaterialized"]);
+    expect(bindValidationRecipe({ prepared, candidateCommit: "abc" }).unmaterializedObligationIds)
+      .toEqual(["obligation-unmaterialized"]);
   });
 
   it("labels a command with the evidence kind its binding produces", () => {

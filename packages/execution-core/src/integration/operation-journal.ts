@@ -13,6 +13,7 @@ export type IntegrationOperationState =
   | "repair_started"
   | "repair_finished"
   | "validation_started"
+  | "validation_failed"
   | "validation_finished"
   | "integration_commit_recorded"
   | "result_persisted"
@@ -55,6 +56,8 @@ export interface IntegrationOperation {
   result?: IntegrationResult;
   /** Complete V2 integration manifest persisted before the operation is closed. */
   resultManifest?: IntegrationManifest;
+  /** Repair receipt persisted before revalidation so a crash cannot spend it twice. */
+  repairAttempt?: IntegrationManifest["repairAttempt"];
   error?: { code: string; message: string };
   createdAt: string;
   updatedAt: string;

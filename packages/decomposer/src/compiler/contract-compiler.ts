@@ -76,13 +76,14 @@ export function compileContractBundles(input: {
     const producerUnit = units.find((unit) => unit.key === candidate.producerUnitKey);
     if (producerUnit === undefined) throw new Error(`Artifact producer ${candidate.producerUnitKey} does not exist.`);
     const producerEvidenceIds = new Set(producerUnit.evidenceIds);
-    const expectedPaths = candidate.evidenceIds
+    const expectedPaths = (candidate.expectedPaths ?? candidate.evidenceIds
       .filter((id) => producerEvidenceIds.has(id))
       .map((id) => evidence.get(id))
       .filter((item): item is NonNullable<typeof item> => item?.kind === "path")
       .map((item) => normalizeRepositoryPath(item.reference, repositoryRoot))
       .filter((path) => indexedPaths.has(path))
-      .concat((producerUnit.plannedPaths ?? []).map((path) => normalizeRepositoryPath(path, repositoryRoot)));
+      .concat((producerUnit.plannedPaths ?? []).map((path) => normalizeRepositoryPath(path, repositoryRoot))))
+      .map((path) => normalizeRepositoryPath(path, repositoryRoot));
     const base = {
       schemaVersion: 2 as const,
       id: dependencies.idFor("artifact-contract", candidate.id),
@@ -112,7 +113,9 @@ export function compileContractBundles(input: {
       artifactType: parentKey === undefined ? "final-candidate" : "node-result",
       mediaType: "application/vnd.manyhands.git-commit",
       materialization: "commit" as const,
-      expectedPaths: scopePathsByNodeId[producerNodeId] ?? []
+      // Output artifacts are mutation receipts. Reads/evidence remain in the
+      // task context, but they are not proof that this node produced a file.
+      expectedPaths: writePathsByNodeId[producerNodeId] ?? []
     };
     return { ...base, revision: revisionFor(base) } satisfies ArtifactContract;
   });
@@ -134,6 +137,7 @@ export function compileContractBundles(input: {
       consumerNodeIds: candidate.consumerUnitKeys.map((key) => requireNodeId(input.nodeIdByUnitKey, key)),
       semanticFacts: Object.fromEntries([
         ...candidate.evidenceIds.map((id, index) => [`evidence.${index}`, id] as const),
+        ...(candidate.paths ?? []).map((path, index) => [`path.${index}`, normalizeRepositoryPath(path, repositoryRoot)] as const),
         ...obligations.map((obligation, index) => [`obligation.${index}`, `${obligation.obligationId}: ${obligation.validation}`] as const)
       ]),
       compatibility: { mode: "exact" as const, rules: [explicit?.compatibility ?? "All participants bind the same compiled revision."] }

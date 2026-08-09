@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createSemanticPlan,
   deriveRelations,
+  projectSemanticPlanForLegacyCompiler,
   projectPlannedTree,
   type PlannedUnit
 } from "@manyhands/decomposer";
@@ -136,6 +137,34 @@ describe("projection to a semantic plan", () => {
 
     expect(domain.plannedPaths).toEqual(["src/domain/backorders.js", "test/domain.test.js"]);
     expect(domain.evidenceIds).toEqual(["path-0"]);
+  });
+
+  it("derives productive mutation scope from writePaths, never from read evidence", () => {
+    const projected = project();
+    const packageEvidence = {
+      id: "package-json",
+      kind: "path" as const,
+      reference: "package.json",
+      observation: "package manifest used as repository context",
+      confidence: 1
+    };
+    const domain = projected.draft.root.children[0]!;
+    domain.evidenceIds = [...domain.evidenceIds, packageEvidence.id];
+    projected.draft.repositoryEvidence = [...projected.draft.repositoryEvidence, packageEvidence];
+    const plan = createSemanticPlan({
+      goal: "Add backorders across the slice",
+      repositorySnapshotId: "sha256:fixture",
+      criteria: [...projected.criteria],
+      draft: projected.draft
+    });
+
+    const compiledProjection = projectSemanticPlanForLegacyCompiler(plan);
+    expect(compiledProjection.candidatePlan.scopes.find((scope) => scope.unitKey === "domain")?.paths)
+      .toEqual(["src/domain/backorders.js", "test/domain.test.js"]);
+    expect(compiledProjection.breakdown.candidateArtifacts[0]?.expectedPaths)
+      .toEqual(["src/domain/backorders.js"]);
+    expect(compiledProjection.breakdown.candidateSeams[0]?.paths)
+      .toEqual(["src/domain/backorders.js"]);
   });
 
   it("keeps each declared criterion owned by exactly one leaf outcome", () => {

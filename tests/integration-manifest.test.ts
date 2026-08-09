@@ -7,6 +7,7 @@ import {
   JsonIntegrationOperationJournal,
   createIntegrationRequestManifest
 } from "@manyhands/execution-core";
+import type { IntegrationOperation, IntegrationOperationJournal } from "@manyhands/execution-core";
 import { FakeGitRunner } from "./helpers/fake-git-runner";
 import { decideIntegrationAdoption } from "@manyhands/run-coordinator";
 
@@ -127,7 +128,7 @@ describe("IntegrationManifestExecutor", () => {
     );
   });
 
-  it("rejects a candidate that drops an added line from an adopted child patch", async () => {
+  it("validates the final candidate when a later composition supersedes an intermediate line", async () => {
     const git = new IntentDiffGit({
       heads: { "/wt": "BASE" },
       cherryPickResultShas: ["PICK_A"]
@@ -143,9 +144,107 @@ describe("IntegrationManifestExecutor", () => {
       digestCandidate: async () => "digest-parent"
     }).integrate({ request: built, worktreePath: "/wt" });
 
+    expect(result.disposition).toBe("success");
+    expect(result.errors).toEqual([]);
+    expect(validated).toBe(true);
+  });
+
+  it("reports semantic loss through parent validation instead of a text heuristic", async () => {
+    const git = new IntentDiffGit({
+      heads: { "/wt": "BASE" },
+      cherryPickResultShas: ["PICK_A"]
+    });
+    const built = request([artifact("a", "node-a", "SHA_A")], ["a"]);
+    let validated = false;
+    const result = await new IntegrationManifestExecutor({
+      git,
+      validate: async () => {
+        validated = true;
+        return { matrixId: "matrix-1", outcome: "failed" as const };
+      },
+      digestCandidate: async () => "digest-parent"
+    }).integrate({ request: built, worktreePath: "/wt" });
+
     expect(result.disposition).toBe("failed");
-    expect(result.errors).toEqual([expect.objectContaining({ code: "child_intent_not_retained" })]);
-    expect(validated).toBe(false);
+    expect(result.errors).toEqual([expect.objectContaining({ code: "parent_validation_failed" })]);
+    expect(validated).toBe(true);
+  });
+
+  it("uses the single semantic repair budget after parent validation fails, then revalidates the repaired candidate", async () => {
+    const repairCommit = "REPAIRED";
+    const git = new FakeGitRunner({
+      heads: { "/wt": "BASE" },
+      cherryPickResultShas: ["PICK_A"],
+      commitSha: repairCommit
+    });
+    const built = request([artifact("a", "node-a", "SHA_A")], ["a"]);
+    const outcomes: Array<"failed" | "verified"> = ["failed", "verified"];
+    const validated: string[] = [];
+    const repair = async (input: { cause: string; artifactId: string; worktreePath: string }) => {
+      expect(input.cause).toBe("parent_validation_failed");
+      expect(input.artifactId).toBe("parent-validation");
+      await git.addAll(input.worktreePath);
+      const candidateSha = await git.commit({ cwd: input.worktreePath, message: "semantic repair" });
+      return { success: true, candidateSha, evidenceRefs: ["repair:semantic"] };
+    };
+    const result = await new IntegrationManifestExecutor({
+      git,
+      repair,
+      validate: async ({ candidateSha }) => {
+        validated.push(candidateSha);
+        return { matrixId: `matrix-${validated.length}`, outcome: outcomes.shift()! };
+      },
+      digestCandidate: async () => "digest-parent"
+    }).integrate({ request: built, worktreePath: "/wt" });
+
+    expect(result).toMatchObject({ disposition: "success", candidateSha: repairCommit });
+    expect(validated).toEqual(["PICK_A", repairCommit]);
+    expect(result.repairAttempt).toMatchObject({
+      cause: "parent_validation_failed",
+      artifactId: "parent-validation",
+      outcome: "succeeded",
+      candidateSha: repairCommit
+    });
+  });
+
+  it("recovers after persisting a repair commit without launching that repair twice", async () => {
+    const journalDirectory = await mkdtemp(join(tmpdir(), "mh-integration-repair-journal-"));
+    try {
+      const git = new FakeGitRunner({
+        heads: { "/wt": "BASE" },
+        cherryPickOutcomes: [{ ok: false, kind: "conflict", conflictFiles: ["src/a.ts"], output: "CONFLICT" }],
+        commitSha: "REPAIRED"
+      });
+      const persisted = new JsonIntegrationOperationJournal(journalDirectory);
+      const journal: IntegrationOperationJournal = new CrashAfterRepairFinishedJournal(persisted);
+      const built = request([artifact("a", "node-a", "SHA_A")], ["a"]);
+      let repairs = 0;
+      const deps = {
+        git,
+        repair: async (input: { worktreePath: string }) => {
+          repairs += 1;
+          await git.addAll(input.worktreePath);
+          const candidateSha = await git.commit({ cwd: input.worktreePath, message: "semantic repair" });
+          return { success: true, candidateSha, evidenceRefs: ["repair:semantic"] };
+        },
+        validate: async () => ({ matrixId: "matrix-1", outcome: "verified" as const }),
+        digestCandidate: async () => "digest-parent"
+      };
+      const firstOperation = { journal, runId: "run-1", operationId: "op-1", fencingToken: 1 };
+      await expect(new IntegrationManifestExecutor(deps).integrate({ request: built, worktreePath: "/wt", integrationOperation: firstOperation })).rejects.toThrow("simulated crash after repair");
+
+      const recovered = await new IntegrationManifestExecutor(deps).integrate({
+        request: built,
+        worktreePath: "/wt",
+        integrationOperation: { journal, runId: "run-1", operationId: "op-2", fencingToken: 2, allowTakeover: true }
+      });
+
+      expect(recovered.disposition).toBe("success");
+      expect(repairs).toBe(1);
+      expect(git.calls.filter((call) => call.op === "cherryPick")).toHaveLength(1);
+    } finally {
+      await rm(journalDirectory, { recursive: true, force: true });
+    }
   });
 
   it("fails before Git mutation when a required artifact is omitted", async () => {
@@ -176,5 +275,24 @@ class IntentDiffGit extends FakeGitRunner {
     if (params.to === "SHA_A") return "diff --git a/src/a.ts b/src/a.ts\n+export const required = true;";
     if (params.to === "PICK_A") return "diff --git a/src/a.ts b/src/a.ts\n+export const unrelated = true;";
     return super.diffRange(params);
+  }
+}
+
+class CrashAfterRepairFinishedJournal implements IntegrationOperationJournal {
+  private crashed = false;
+
+  constructor(private readonly delegate: IntegrationOperationJournal) {}
+
+  open(input: Parameters<IntegrationOperationJournal["open"]>[0]): ReturnType<IntegrationOperationJournal["open"]> {
+    return this.delegate.open(input);
+  }
+
+  async update(operation: IntegrationOperation, patch: Partial<IntegrationOperation>): Promise<IntegrationOperation> {
+    const next = await this.delegate.update(operation, patch);
+    if (!this.crashed && patch.state === "repair_finished") {
+      this.crashed = true;
+      throw new Error("simulated crash after repair");
+    }
+    return next;
   }
 }

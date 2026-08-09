@@ -315,7 +315,7 @@ export const RunEventSchema = z.discriminatedUnion("type", [
   }).strict()),
   event("integration.repair_attempted", z.object({ attemptId: EntityIdSchema, nodeId: EntityIdSchema, pass: z.number().int().positive(), evidenceRefs: z.array(NonEmptyStringSchema) }).strict()),
   event("integration.completed", z.object({ attemptId: EntityIdSchema, nodeId: EntityIdSchema, manifestId: EntityIdSchema, candidateCommit: NonEmptyStringSchema, matrix: EvidenceMatrixRecordSchema }).strict()),
-  event("integration.failed", z.object({ attemptId: EntityIdSchema, nodeId: EntityIdSchema, manifestId: EntityIdSchema.optional(), reason: NonEmptyStringSchema, decisionRequired: z.boolean() }).strict()),
+  event("integration.failed", z.object({ attemptId: EntityIdSchema, nodeId: EntityIdSchema, manifestId: EntityIdSchema.optional(), candidateCommit: NonEmptyStringSchema.optional(), matrix: EvidenceMatrixRecordSchema.optional(), reason: NonEmptyStringSchema, decisionRequired: z.boolean() }).strict()),
   event("graph.revision.proposed", z.object({ graphId: EntityIdSchema, revision: z.number().int().positive() }).strict()),
   event("graph.revision.approved", z.object({ graphId: EntityIdSchema, revision: z.number().int().positive() }).strict()),
   event("decision.raised", z.object({ decision: DecisionInputSchema }).strict()),

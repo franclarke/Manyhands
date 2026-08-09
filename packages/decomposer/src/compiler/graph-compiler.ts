@@ -57,6 +57,9 @@ export function compileGraphRevision(
   if (hasSemanticPlan && rawInput.breakdown !== undefined) throw new Error("Graph compilation accepts either semanticPlan or legacy breakdown, not both.");
   if (!hasSemanticPlan && rawInput.breakdown === undefined) throw new Error("Graph compilation requires a semanticPlan or legacy breakdown.");
   const semanticPlan = hasSemanticPlan ? SemanticPlanSchema.parse(rawInput.semanticPlan) : undefined;
+  if (semanticPlan?.schemaVersion !== undefined && semanticPlan.schemaVersion !== 2) {
+    throw new Error("SemanticPlan v1 is legacy_unproven and cannot enter the productive graph compiler; replay it through an explicit legacy audit path.");
+  }
   const semanticProjection = semanticPlan === undefined ? undefined : projectSemanticPlanForLegacyCompiler(semanticPlan);
   const breakdown = WorkBreakdownSchema.parse(semanticProjection?.breakdown ?? rawInput.breakdown!);
   const candidatePlan = semanticProjection?.candidatePlan ?? rawInput.candidatePlan;

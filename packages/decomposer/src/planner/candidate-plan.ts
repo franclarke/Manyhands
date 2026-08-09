@@ -38,6 +38,7 @@ export interface CandidateSeamSpecification {
   seamId: string;
   producerUnitKey: string;
   consumerUnitKeys: string[];
+  paths: string[];
   compatibility: string;
   materialization: "logical" | "files" | "manifest" | "commit";
   validation: string;

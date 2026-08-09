@@ -1570,6 +1570,7 @@ export type {
 } from "./planner/semantic-plan.js";
 export { PlanningModule } from "./planner/planning-module.js";
 export * from "./planner/recursive-planner.js";
+export * from "./planner/cut-feasibility-critic.js";
 export * from "./planner/derived-relations.js";
 export * from "./planner/semantic-plan-projection.js";
 export type {
