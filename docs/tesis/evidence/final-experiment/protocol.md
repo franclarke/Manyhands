@@ -54,3 +54,14 @@ faltantes.
 Después de evaluar `S-C-r2`, detener el servidor y comprobar que no queda ningún
 listener de ManyHands. Derivar `FINAL-REPORT.md` únicamente desde los artefactos
 de `.scratch/final-thesis-experiment/` y adjuntar el hash del freeze.
+
+### Enmienda posterior a V1
+
+V1 se detuvo en M-C-r1. La causa no fue una hipotesis sobre el cambio: las
+tres hojas fueron verificadas, pero el control negativo del root no detecto una
+regresion porque el comando `test/baseline.test.mjs` no importaba los tests
+autores en subdirectorios. El fixture se corrigio para que el entry point del
+baseline importe recursivamente esos tests; `preflight.mjs` ahora comprueba que
+un test de la nueva superficie falla contra el baseline. La correccion cambia
+la identidad del template, por lo que V1 queda solo como adversa y V2 requiere
+un freeze completo independiente.

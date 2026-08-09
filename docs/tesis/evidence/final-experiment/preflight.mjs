@@ -1,4 +1,4 @@
-import { cp, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
@@ -15,13 +15,16 @@ try {
   await writeMultiReference(multi);
   const cohesive = await copyCase("cohesive");
   await writeCohesiveReference(cohesive);
+  const sensitivity = await copyCase("sensitivity");
+  await writeSensitivityProbe(sensitivity);
   const results = [
     ["template", await run(untouched, "M")],
     ["reference-M", await run(multi, "M")],
-    ["reference-S", await run(cohesive, "S")]
+    ["reference-S", await run(cohesive, "S")],
+    ["negative-control-sensitivity", !(await runCommand(sensitivity, ["test", "test/baseline.test.mjs"]))]
   ];
   for (const [name, result] of results) console.log(`${name}: ${result ? "PASS" : "FAIL"}`);
-  if (results[0][1] || !results[1][1] || !results[2][1]) process.exitCode = 1;
+  if (results[0][1] || !results[1][1] || !results[2][1] || !results[3][1]) process.exitCode = 1;
 } finally {
   await rm(scratch, { recursive: true, force: true });
 }
@@ -44,9 +47,22 @@ async function writeCohesiveReference(target) {
   await writeFile(file, `${current}\nexport function summarizeInventory(state) {\n  const entries = Object.values(state.stockBySku);\n  return { totalUnits: entries.reduce((sum, units) => sum + units, 0), occupiedSkus: entries.filter((units) => units > 0).length };\n}\n`, "utf8");
 }
 
+async function writeSensitivityProbe(target) {
+  await mkdir(path.join(target, "test", "sensitivity"), { recursive: true });
+  await writeFile(path.join(target, "test", "sensitivity", "probe.test.mjs"), `import test from "node:test";\nimport assert from "node:assert/strict";\nimport { summarizeInventory } from "../../src/domain/orders.mjs";\ntest("baseline lacks the new domain surface", () => assert.equal(typeof summarizeInventory, "function"));\n`, "utf8");
+}
+
 function run(target, task) {
   return new Promise((resolve) => {
     const child = spawn(process.execPath, [oracle, "--task", task], { cwd: target, stdio: ["ignore", "pipe", "pipe"] });
+    child.on("close", (code) => resolve(code === 0));
+  });
+}
+
+function runCommand(target, args) {
+  return new Promise((resolve) => {
+    const command = process.platform === "win32" ? "npm.cmd" : "npm";
+    const child = spawn(command, args, { cwd: target, shell: true, stdio: ["ignore", "pipe", "pipe"] });
     child.on("close", (code) => resolve(code === 0));
   });
 }

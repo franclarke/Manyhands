@@ -19,3 +19,11 @@ raíz cohesiva necesitaba una envoltura de un solo hijo, pero el contrato sólo
 aceptaba cortes de dos hijos. La corrección TDD está en el runtime congelado de
 la serie final; la rehearsal anterior sigue siendo evidencia adversa del
 instrumento y no se cuenta.
+
+La primera celda M de V1 tambien se conserva como adversa. Las tres hojas
+pasaron, pero la validacion del root no fue sensible: su comando ejecutaba
+`test/baseline.test.mjs` y el control negativo no cargaba los tests nuevos en
+subdirectorios. Se corrigio el fixture, no se reinterpreto el resultado: el
+baseline ahora importa esos tests y `preflight.mjs` exige que el control
+negativo falle. Esa correccion cambia el baseline y abre una serie V2 con nuevo
+freeze; V1 no cuenta como intento valido ni como PASS.
