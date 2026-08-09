@@ -3,7 +3,7 @@
   "frozenAt": "2026-08-09T13:07:06.9923179Z",
   "protocol": "docs/tesis/evidence/final-experiment/protocol.md",
   "preregistration": "docs/tesis/evidence/final-experiment/preregistration.md",
-  "manyhandsCommit": "8ff19c96f909f79c095b6bb27682be745e27ac01",
+  "manyhandsCommit": "16e4673d701b1b938dd2f97d05ab2bd2e7fd1ebd",
   "targetTemplate": "docs/tesis/evidence/final-experiment/target-template",
   "targetTemplateFileHashes": {
     "package.json": "08a98bb7b712cfb271cae55561c9940e370a8881f8b6dfed0e726b183fd91e4d",
