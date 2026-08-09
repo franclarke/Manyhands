@@ -31,6 +31,7 @@ import {
 import { resolveRunsDir } from "./run-experiment-paths.mjs";
 import { executionConfigForG6Cell } from "./lib/g6-cell-protocol.mjs";
 import { requestJson } from "./run-experiment-http.mjs";
+import { buildRunRequest } from "./run-experiment-request.mjs";
 
 const exec = promisify(execFile);
 
@@ -82,20 +83,12 @@ if (runId === undefined) {
   await assertCleanBaseline(config.targetRepo, config.baseSha);
   const workspaceId = await ensureWorkspace();
   log(`workspace ${workspaceId}`);
-  const run = await post("/api/runs", {
-    workspaceId,
-    userPrompt: config.goal,
-    planningSelection: config.planningSelection,
-    executionSelection: config.executionSelection,
-    repairSelection: config.repairSelection ?? config.executionSelection,
-    ...(config.candidateCount !== undefined ? { candidateCount: config.candidateCount } : {}),
+  const run = await post("/api/runs", buildRunRequest({
+    ...config,
     // The condition is persisted on the run, so the journal names the policy
     // that shaped the plan instead of leaving it to the operator's notes.
-    ...(config.granularityCondition !== undefined
-      ? { granularityCondition: config.granularityCondition }
-      : {}),
     executionConfig
-  });
+  }, workspaceId));
   runId = run.runId ?? run.run?.runId ?? run.id;
   log(`run ${runId}`);
 } else {
