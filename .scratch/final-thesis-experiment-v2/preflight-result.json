@@ -1,7 +1,0 @@
-{
-  "template": "FAIL",
-  "reference-M": "PASS",
-  "reference-S": "PASS",
-  "negative-control-sensitivity": "PASS",
-  "interpretation": "The untouched target fails the external task oracle, references pass, and a candidate test injected into a baseline checkout makes test/baseline.test.mjs fail as required."
-}
