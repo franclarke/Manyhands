@@ -32,7 +32,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.1747,
+    "splitAdvantage": 0.0126,
     "minimumAdvantage": 0.15
   },
   {
@@ -65,10 +65,10 @@
   {
     "caseId": "final-experiment/runs/M-C-r2/99c0c50f-8e76-49ef-8bd4-bb020b1240b9.events.v2.jsonl",
     "unitKey": "root",
-    "selected": "leaf",
+    "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.0446,
+    "splitAdvantage": 0.0231,
     "minimumAdvantage": 0.15
   },
   {
@@ -104,7 +104,7 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0656,
+    "splitAdvantage": -0.1225,
     "minimumAdvantage": 0.15
   },
   {
@@ -122,7 +122,7 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0239,
+    "splitAdvantage": -0.0809,
     "minimumAdvantage": 0.15
   },
   {
@@ -194,7 +194,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.5362,
+    "splitAdvantage": 0.527,
     "minimumAdvantage": 0.15
   },
   {
@@ -266,7 +266,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.7283,
+    "splitAdvantage": 0.6071,
     "minimumAdvantage": 0.15
   },
   {
@@ -338,7 +338,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.4539,
+    "splitAdvantage": 0.305,
     "minimumAdvantage": 0.15
   },
   {
@@ -401,7 +401,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.4992,
+    "splitAdvantage": 0.4104,
     "minimumAdvantage": 0.15
   },
   {
@@ -536,7 +536,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.2867,
+    "splitAdvantage": 0.3364,
     "minimumAdvantage": 0.15
   },
   {
@@ -581,7 +581,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.4237,
+    "splitAdvantage": 0.4153,
     "minimumAdvantage": 0.15
   },
   {
@@ -680,7 +680,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.6941,
+    "splitAdvantage": 0.74,
     "minimumAdvantage": 0.15
   },
   {
@@ -752,7 +752,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.5039,
+    "splitAdvantage": 0.4625,
     "minimumAdvantage": 0.15
   },
   {
@@ -815,7 +815,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.5362,
+    "splitAdvantage": 0.527,
     "minimumAdvantage": 0.15
   },
   {
@@ -887,7 +887,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.482,
+    "splitAdvantage": 0.5077,
     "minimumAdvantage": 0.15
   },
   {
@@ -959,7 +959,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.2022,
+    "splitAdvantage": 0.225,
     "minimumAdvantage": 0.15
   },
   {
@@ -1013,7 +1013,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.6044,
+    "splitAdvantage": 0.7062,
     "minimumAdvantage": 0.15
   },
   {
@@ -1067,7 +1067,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.4968,
+    "splitAdvantage": 0.5444,
     "minimumAdvantage": 0.15
   },
   {
@@ -1166,7 +1166,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.4458,
+    "splitAdvantage": 0.4747,
     "minimumAdvantage": 0.15
   },
   {
@@ -1238,7 +1238,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.125,
+    "splitAdvantage": 0.1727,
     "minimumAdvantage": 0.15
   },
   {
@@ -1301,7 +1301,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.685,
+    "splitAdvantage": 0.7413,
     "minimumAdvantage": 0.15
   },
   {
@@ -1355,7 +1355,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.7015,
+    "splitAdvantage": 0.7765,
     "minimumAdvantage": 0.15
   },
   {
@@ -1436,7 +1436,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.7484,
+    "splitAdvantage": 0.7655,
     "minimumAdvantage": 0.15
   },
   {
@@ -1499,7 +1499,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.765,
+    "splitAdvantage": 0.782,
     "minimumAdvantage": 0.15
   },
   {
@@ -1580,7 +1580,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.6951,
+    "splitAdvantage": 0.7492,
     "minimumAdvantage": 0.15
   },
   {
@@ -1652,7 +1652,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.3896,
+    "splitAdvantage": 0.4391,
     "minimumAdvantage": 0.15
   },
   {
@@ -1724,7 +1724,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.7553,
+    "splitAdvantage": 0.7867,
     "minimumAdvantage": 0.15
   },
   {
@@ -1796,7 +1796,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.485,
+    "splitAdvantage": 0.3898,
     "minimumAdvantage": 0.15
   },
   {
@@ -1868,7 +1868,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.7347,
+    "splitAdvantage": 0.6153,
     "minimumAdvantage": 0.15
   },
   {
@@ -1940,7 +1940,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.644,
+    "splitAdvantage": 0.5082,
     "minimumAdvantage": 0.15
   },
   {
@@ -1949,7 +1949,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.5458,
+    "splitAdvantage": 0.4285,
     "minimumAdvantage": 0.15
   },
   {
@@ -2084,7 +2084,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.5431,
+    "splitAdvantage": 0.4259,
     "minimumAdvantage": 0.15
   },
   {
@@ -2147,7 +2147,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.4234,
+    "splitAdvantage": 0.3486,
     "minimumAdvantage": 0.15
   },
   {
@@ -2201,7 +2201,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.5197,
+    "splitAdvantage": 0.3935,
     "minimumAdvantage": 0.15
   },
   {
@@ -2273,7 +2273,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.4259,
+    "splitAdvantage": 0.4254,
     "minimumAdvantage": 0.15
   },
   {
@@ -2363,7 +2363,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.249,
+    "splitAdvantage": 0.1306,
     "minimumAdvantage": 0.15
   },
   {
@@ -2435,7 +2435,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.5161,
+    "splitAdvantage": 0.3622,
     "minimumAdvantage": 0.15
   },
   {
@@ -2507,7 +2507,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.2334,
+    "splitAdvantage": 0.1072,
     "minimumAdvantage": 0.15
   },
   {
@@ -2579,7 +2579,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.7353,
+    "splitAdvantage": 0.5966,
     "minimumAdvantage": 0.15
   },
   {
@@ -2651,7 +2651,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.3768,
+    "splitAdvantage": 0.2464,
     "minimumAdvantage": 0.15
   },
   {
@@ -2714,7 +2714,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.5095,
+    "splitAdvantage": 0.4028,
     "minimumAdvantage": 0.15
   },
   {
@@ -2777,7 +2777,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.3547,
+    "splitAdvantage": 0.2308,
     "minimumAdvantage": 0.15
   },
   {
@@ -2858,7 +2858,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.7283,
+    "splitAdvantage": 0.6071,
     "minimumAdvantage": 0.15
   },
   {
@@ -2912,7 +2912,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.5526,
+    "splitAdvantage": 0.4127,
     "minimumAdvantage": 0.15
   },
   {
@@ -2984,7 +2984,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.1995,
+    "splitAdvantage": 0.1856,
     "minimumAdvantage": 0.15
   },
   {
@@ -3056,7 +3056,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.2822,
+    "splitAdvantage": 0.3229,
     "minimumAdvantage": 0.15
   },
   {
@@ -3128,7 +3128,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.5065,
+    "splitAdvantage": 0.5606,
     "minimumAdvantage": 0.15
   },
   {
@@ -3200,7 +3200,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.3542,
+    "splitAdvantage": 0.4014,
     "minimumAdvantage": 0.15
   },
   {
@@ -3263,7 +3263,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.7396,
+    "splitAdvantage": 0.7537,
     "minimumAdvantage": 0.15
   },
   {
@@ -3326,7 +3326,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.3613,
+    "splitAdvantage": 0.4332,
     "minimumAdvantage": 0.15
   },
   {
@@ -3398,7 +3398,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.5133,
+    "splitAdvantage": 0.5292,
     "minimumAdvantage": 0.15
   },
   {
@@ -3470,7 +3470,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.4539,
+    "splitAdvantage": 0.305,
     "minimumAdvantage": 0.15
   },
   {
@@ -3542,7 +3542,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.6107,
+    "splitAdvantage": 0.485,
     "minimumAdvantage": 0.15
   },
   {
@@ -3632,7 +3632,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.3086,
+    "splitAdvantage": 0.1648,
     "minimumAdvantage": 0.15
   },
   {
@@ -3704,7 +3704,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.2821,
+    "splitAdvantage": 0.1559,
     "minimumAdvantage": 0.15
   },
   {
@@ -3776,7 +3776,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.7119,
+    "splitAdvantage": 0.6177,
     "minimumAdvantage": 0.15
   },
   {
@@ -3839,7 +3839,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.3542,
+    "splitAdvantage": 0.2324,
     "minimumAdvantage": 0.15
   },
   {
@@ -3857,7 +3857,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.5694,
+    "splitAdvantage": 0.4381,
     "minimumAdvantage": 0.15
   },
   {
@@ -3929,7 +3929,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.3359,
+    "splitAdvantage": 0.1935,
     "minimumAdvantage": 0.15
   },
   {
@@ -4046,7 +4046,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.4992,
+    "splitAdvantage": 0.4104,
     "minimumAdvantage": 0.15
   },
   {
@@ -4091,7 +4091,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.1746,
+    "splitAdvantage": 0.0364,
     "minimumAdvantage": 0.15
   },
   {
@@ -4124,10 +4124,10 @@
   {
     "caseId": "stage-7-rehearsals/runs/sp2-cell-01/run.events.v2.jsonl",
     "unitKey": "root",
-    "selected": "leaf",
+    "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": -0.0128,
+    "splitAdvantage": -0.0419,
     "minimumAdvantage": 0.15
   },
   {
@@ -4160,10 +4160,10 @@
   {
     "caseId": "stage-7-rehearsals/runs/sp2-cell-02/run.events.v2.jsonl",
     "unitKey": "root",
-    "selected": "leaf",
+    "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.1063,
+    "splitAdvantage": 0.0289,
     "minimumAdvantage": 0.15
   },
   {
@@ -4226,7 +4226,7 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": -0.2218,
+    "splitAdvantage": -0.345,
     "minimumAdvantage": 0.15
   },
   {
@@ -4253,7 +4253,7 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": -0.1902,
+    "splitAdvantage": -0.2985,
     "minimumAdvantage": 0.15
   },
   {
@@ -4271,7 +4271,7 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": -0.3677,
+    "splitAdvantage": -0.4089,
     "minimumAdvantage": 0.15
   },
   {
@@ -4361,7 +4361,7 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": -0.3188,
+    "splitAdvantage": -0.3616,
     "minimumAdvantage": 0.15
   },
   {
@@ -4424,7 +4424,7 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.0448,
+    "splitAdvantage": -0.0455,
     "minimumAdvantage": 0.15
   },
   {
@@ -4505,7 +4505,7 @@
     "selected": "split",
     "leafFeasible": false,
     "splitViable": true,
-    "splitAdvantage": 0.0656,
+    "splitAdvantage": -0.0198,
     "minimumAdvantage": 0.15
   },
   {
@@ -4532,7 +4532,7 @@
     "selected": "split",
     "leafFeasible": false,
     "splitViable": true,
-    "splitAdvantage": 0.0444,
+    "splitAdvantage": -0.0326,
     "minimumAdvantage": 0.15
   },
   {
@@ -4640,7 +4640,7 @@
     "selected": "split",
     "leafFeasible": false,
     "splitViable": true,
-    "splitAdvantage": 0.0444,
+    "splitAdvantage": -0.0326,
     "minimumAdvantage": 0.15
   },
   {
@@ -4784,7 +4784,7 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.0448,
+    "splitAdvantage": -0.0455,
     "minimumAdvantage": 0.15
   },
   {
@@ -4820,7 +4820,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.171,
+    "splitAdvantage": 0.2068,
     "minimumAdvantage": 0.15
   },
   {
@@ -4964,7 +4964,7 @@
     "selected": "split",
     "leafFeasible": false,
     "splitViable": true,
-    "splitAdvantage": 0.3275,
+    "splitAdvantage": 0.1489,
     "minimumAdvantage": 0.15
   },
   {
@@ -5000,7 +5000,7 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.171,
+    "splitAdvantage": 0.2068,
     "minimumAdvantage": 0.15
   },
   {
@@ -5144,7 +5144,7 @@
     "selected": "split",
     "leafFeasible": false,
     "splitViable": true,
-    "splitAdvantage": 0.3275,
+    "splitAdvantage": 0.1489,
     "minimumAdvantage": 0.15
   },
   {

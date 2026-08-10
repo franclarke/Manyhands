@@ -27,7 +27,7 @@ describe("C utility strategy selection", () => {
     expect(result.assessments.small).toMatchObject({ selected: "leaf", leafFeasible: true });
   });
 
-  it("selects independent children when context relief and parallelism outweigh cost", () => {
+  it("selects independent children when parallelism and isolation outweigh cost", () => {
     const breakdown = candidate(composite("root", [
       leaf("domain", ["src/domain.ts"], ["intent-a"]),
       leaf("web", ["src/web.ts"], ["intent-b"])
@@ -42,8 +42,12 @@ describe("C utility strategy selection", () => {
 
     expect(result.selectedBreakdown.root.kind).toBe("composite");
     expect(result.assessments.root?.selected).toBe("split");
-    expect(result.assessments.root?.features.contextRelief).toBe(0.5);
+    // 2000 tokens split into two of 1000 relieves a twelfth of one leaf's
+    // budget: real, and correctly negligible. What carries this cut is that the
+    // children neither order nor invalidate each other.
+    expect(result.assessments.root?.features.contextRelief).toBe(0.0417);
     expect(result.assessments.root?.features.parallelism).toBe(1);
+    expect(result.assessments.root?.features.faultIsolation).toBe(1);
     expect(result.assessments.root?.splitAdvantage).toBeGreaterThanOrEqual(0.15);
   });
 
@@ -111,8 +115,12 @@ describe("C utility strategy selection", () => {
 
     expect(result.selectedBreakdown.root.kind).toBe("leaf");
     expect(result.assessments.root?.selected).toBe("leaf");
+    // Two units editing the same file are held together by the file they both
+    // claim and by the criterion neither owns alone — not by the seam, which
+    // compiles to no requirement and orders nothing.
     expect(result.assessments.root?.features.pathOverlap).toBe(1);
-    expect(result.assessments.root?.features.coordination).toBeGreaterThan(0);
+    expect(result.assessments.root?.features.faultIsolation).toBe(0);
+    expect(result.assessments.root?.features.coordination).toBe(0);
     expect(result.selectedBreakdown.candidateSeams).toEqual([]);
   });
 
@@ -346,11 +354,160 @@ describe("C policy — concurrency and coupling of a cut", () => {
   });
 });
 
-function assessRoot(breakdown: WorkBreakdown) {
+/**
+ * Context relief is what a cut removes from the execution budget, not how the
+ * planner happened to distribute files.
+ *
+ * The final experiment measured `1 - maxChildTokens / parentTokens` on a target
+ * whose entire source is 999 tokens — 4% of `maxLeafContextTokens`. The two
+ * repetitions of the same multi-layer task scored 0.5075 and 0.0671, and that
+ * difference alone was 100% of the gap between `split` and `leaf`. The term was
+ * reading file distribution as if it were context pressure, on a repository
+ * where no context pressure exists.
+ *
+ * Anchoring to the budget makes the term say what it is named after: how much of
+ * the parent's overflow the cut actually removes.
+ */
+describe("C policy — context relief is measured against the execution budget", () => {
+  it("credits no relief when the whole unit already fits the budget", () => {
+    // Three children of 100 tokens each: 1.25% of the budget between them.
+    const assessment = assessRoot(cutWithSizes([400, 400, 400]));
+
+    expect(assessment.features.contextRelief).toBeLessThan(0.05);
+  });
+
+  it("credits relief in proportion to the overflow the cut removes", () => {
+    // Parent at 2x the budget, best child at half of it.
+    const assessment = assessRoot(cutWithSizes([64_000, 64_000, 64_000]));
+
+    expect(assessment.features.contextRelief).toBeGreaterThan(0.9);
+  });
+
+  it("does not change its verdict because the same files were distributed differently", () => {
+    const even = assessRoot(cutWithSizes([400, 400, 400]));
+    const skewed = assessRoot(cutWithSizes([1120, 40, 40]));
+
+    expect(Math.abs(even.features.contextRelief - skewed.features.contextRelief)).toBeLessThan(0.05);
+  });
+});
+
+/**
+ * The policy prices the graph the compiler will actually build.
+ *
+ * `compileGraphRevision` creates an execution-blocking `ArtifactRequirement`
+ * only for a candidate artifact whose materialization is not `logical`, and
+ * `explainReadiness` blocks a consumer on those requirements alone. A seam
+ * compiles to no requirement at all. Charging either of them as coordination
+ * prices a constraint the scheduler will never impose — and made declaring an
+ * interface contract strictly worsen the score of the cut that declared it.
+ */
+describe("C policy — coordination prices the relations that compile", () => {
+  it("does not charge coordination for a seam, which compiles to no requirement", () => {
+    const throughSeams = assessRoot(cutOf(3, [[0, 1], [1, 2]], { asSeams: true }));
+
+    expect(throughSeams.features.coordination).toBe(0);
+  });
+
+  it("does not serialize on a logical artifact, which compiles to no requirement", () => {
+    const logical = assessRoot(cutOf(3, [[0, 1], [1, 2]], { materialization: "logical" }));
+
+    expect(logical.features.parallelism).toBe(1);
+    expect(logical.features.coordination).toBe(0);
+  });
+
+  it("still serializes on a materialized artifact, which does block the consumer", () => {
+    const materialized = assessRoot(cutOf(3, [[0, 1], [1, 2]]));
+
+    expect(materialized.features.parallelism).toBe(0);
+    expect(materialized.features.coordination).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * Fault isolation admits a cut on its own.
+ *
+ * Averaging isolation with two other benefits dilutes a perfect result to a
+ * third, so a cut whose children cannot invalidate each other's evidence could
+ * still be collapsed for want of concurrency it was never going to have. Layered
+ * work is the case: `domain -> application -> api` is a chain, so its
+ * concurrency is genuinely zero, and on a small repository its context relief is
+ * genuinely zero too. What splitting buys there is that a failure in one layer
+ * does not void the verified evidence of another.
+ *
+ * The floor is 1 rather than a tuned value because only 1 has a meaning that is
+ * not a magnitude: every child owns acceptance criteria no sibling shares.
+ */
+describe("C policy — perfect fault isolation admits a cut", () => {
+  it("admits a viable cut whose children own disjoint acceptance criteria", () => {
+    // A layered chain that also touches a common file: no concurrency, no
+    // relief, and enough overlap that the aggregate falls short. Only the
+    // disjoint ownership of criteria distinguishes it.
+    const disjoint = assessRoot(cutWithSizes([400, 400, 400], {
+      edges: [[0, 1], [1, 2]],
+      sharedPath: true
+    }));
+
+    expect(disjoint.features.faultIsolation).toBe(1);
+    expect(disjoint.splitAdvantage).toBeLessThan(disjoint.minimumAdvantage);
+    expect(disjoint.selected).toBe("split");
+  });
+
+  it("does not admit a cut on isolation grounds when the children share criteria", () => {
+    const shared = assessRoot(cutWithSizes([400, 400, 400], {
+      edges: [[0, 1], [1, 2]],
+      sharedIntent: true
+    }));
+
+    expect(shared.features.faultIsolation).toBeLessThan(1);
+    expect(shared.selected).toBe("leaf");
+  });
+});
+
+/** A one-level cut whose children own existing files of the given byte sizes. */
+function cutWithSizes(
+  byteSizes: readonly number[],
+  options: {
+    edges?: ReadonlyArray<readonly [number, number]>;
+    sharedIntent?: boolean;
+    sharedPath?: boolean;
+  } = {}
+) {
+  const childKeys = byteSizes.map((_, index) => `child-${index}`);
+  const paths = childKeys.map((key) => `src/${key}.ts`);
+  const shared = options.sharedPath === true ? ["src/shared.ts"] : [];
+  const children = childKeys.map((key, index) =>
+    leaf(key, [paths[index]!, ...shared], options.sharedIntent === true
+      ? [INTENTS[0]!, INTENTS[index % INTENTS.length]!]
+      : [INTENTS[index % INTENTS.length]!])
+  );
+  const relations = (options.edges ?? []).map(([producer, consumer], index) => ({
+    id: `relation-${index}`,
+    producerUnitKey: childKeys[producer]!,
+    consumerUnitKeys: [childKeys[consumer]!],
+    evidenceIds: [],
+    artifactType: "module",
+    purpose: "Hand work to the consumer",
+    materializationHint: "files" as const
+  }));
+  const breakdown = candidate(
+    composite("root", children, [...new Set(children.flatMap((child) => child.acceptanceIntentIds))]),
+    { candidateArtifacts: relations }
+  );
+  const sizes = Object.fromEntries([
+    ...paths.map((path, index) => [path, byteSizes[index]!] as const),
+    ...shared.map((path) => [path, 40] as const)
+  ]);
+  return { breakdown, snapshot: snapshot(sizes) };
+}
+
+function assessRoot(input: WorkBreakdown | { breakdown: WorkBreakdown; snapshot: RepositorySnapshot }) {
+  const { breakdown, repositorySnapshot } = "breakdown" in input
+    ? { breakdown: input.breakdown, repositorySnapshot: input.snapshot }
+    : { breakdown: input, repositorySnapshot: snapshot({}) };
   const result = selectGranularityStrategy({
     condition: "C",
     breakdown,
-    repositorySnapshot: snapshot({}),
+    repositorySnapshot,
     config: PILOT_UTILITY_POLICY
   });
   const assessment = result.assessments.root;
@@ -362,7 +519,7 @@ function assessRoot(breakdown: WorkBreakdown) {
 function cutOf(
   childCount: number,
   edges: ReadonlyArray<readonly [number, number]>,
-  options: { asSeams?: boolean } = {}
+  options: { asSeams?: boolean; materialization?: "logical" | "files" } = {}
 ): WorkBreakdown {
   const childKeys = Array.from({ length: childCount }, (_, index) => `child-${index}`);
   const children = childKeys.map((key, index) =>
@@ -387,7 +544,7 @@ function cutOf(
           ...relation,
           artifactType: "module",
           purpose: "Hand work to the consumer",
-          materializationHint: "files" as const
+          materializationHint: options.materialization ?? "files"
         }))
       }
   );

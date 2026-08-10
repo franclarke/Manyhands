@@ -14,6 +14,7 @@ import {
   loadWideGraphOracleContract
 } from "../docs/tesis/evidence/scripts/lib/wide-graph-oracle-contract.mjs";
 import { metricsFor } from "../docs/tesis/evidence/scripts/lib/wide-graph-metrics.mjs";
+import { SUPERSEDED_UTILITY_POLICY_VERSIONS } from "@manyhands/decomposer";
 
 const execFileAsync = promisify(execFile);
 const temporaryRoots: string[] = [];
@@ -144,9 +145,13 @@ describe("frozen wide graph oracle contract", () => {
     // the wide-graph series measured, at ticket 20's commit. Any later product
     // change necessarily diverges from it, and updating the freeze to match
     // would rewrite evidence to fit a result. What stays live is the freeze's
-    // own consistency and that the policy it names is still the one shipped.
+    // own consistency and that the policy it names is one this repository still
+    // accounts for — either the version shipped today, or one explicitly retired
+    // in `SUPERSEDED_UTILITY_POLICY_VERSIONS`. A frozen series whose policy was
+    // replaced silently would otherwise keep reading as current.
     expect(typeof freeze.policy.distSha256).toBe("string");
-    expect(dist.toString("utf8")).toContain(freeze.policy.version);
+    const shipped = dist.toString("utf8").includes(freeze.policy.version);
+    expect(shipped || SUPERSEDED_UTILITY_POLICY_VERSIONS.includes(freeze.policy.version)).toBe(true);
     expect(createHash("sha256").update(lockfile).digest("hex")).toBe(freeze.toolchain.pnpmLockSha256);
     expect(await git(process.cwd(), ["rev-parse", `${freeze.source.commit}^{tree}`])).toBe(freeze.source.tree);
     await expect(git(process.cwd(), ["merge-base", "--is-ancestor", freeze.source.commit, "HEAD"]))

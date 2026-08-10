@@ -165,7 +165,8 @@ function selectUnit(input: {
   const splitFeatures = cutFeatures(
     input.unit,
     input.breakdown,
-    input.profiles
+    input.profiles,
+    input.config
   );
   const benefit = mean([
     splitFeatures.contextRelief,
@@ -188,7 +189,15 @@ function selectUnit(input: {
   } else if (!leafFeasible) {
     selected = splitViable ? "split" : "semantic_replan";
   } else {
-    selected = splitViable && splitAdvantage >= input.config.minimumAdvantage
+    // A cut whose children own acceptance criteria no sibling shares is admitted
+    // on that ground alone. Averaging isolation with two other benefits dilutes a
+    // perfect result to a third, so layered work — a chain, therefore genuinely
+    // without concurrency, and on a small repository genuinely without context
+    // relief — could be collapsed despite being the case decomposition exists to
+    // serve: a failure in one layer must not void another layer's verified
+    // evidence.
+    const isolationAdmits = splitFeatures.faultIsolation >= input.config.minimumFaultIsolation;
+    selected = splitViable && (splitAdvantage >= input.config.minimumAdvantage || isolationAdmits)
       ? "split"
       : "leaf";
   }
@@ -219,26 +228,34 @@ function selectUnit(input: {
 function cutFeatures(
   unit: Extract<WorkUnit, { kind: "composite" }>,
   breakdown: WorkBreakdown,
-  profiles: Record<string, RepositoryContextProfile>
+  profiles: Record<string, RepositoryContextProfile>,
+  config: UtilityPolicyConfig
 ): GranularityStrategyFeatures {
   const parent = requireProfile(profiles, unit.key);
   const childProfiles = unit.children.map((child) => requireProfile(profiles, child.key));
   const maxChildTokens = Math.max(0, ...childProfiles.map((profile) => profile.measuredExistingTokens));
-  const contextRelief = parent.measuredExistingTokens === 0
-    ? 0
-    : clamp01(1 - maxChildTokens / parent.measuredExistingTokens);
+  // Relief is the budget pressure the cut removes, not the share of the parent
+  // the largest child happens to hold. Measured against the parent, the term
+  // reported two thirds of a maximum on a repository whose entire source is 4%
+  // of one leaf's budget, and moved with nothing but how the planner distributed
+  // files: the two repetitions of the same task scored 0.5075 and 0.0671, and
+  // that gap alone decided split against leaf.
+  const contextRelief = clamp01(
+    (parent.measuredExistingTokens - maxChildTokens) / config.maxLeafContextTokens
+  );
   const childKeys = unit.children.map((child) => child.key);
-  const parallelism = concurrency(
-    childKeys,
-    crossChildEdges(unit.children, breakdown.candidateArtifacts)
+  // Only these compile to an execution-blocking ArtifactRequirement: see
+  // `compileGraphRevision`, which skips a `logical` materialization entirely, and
+  // `explainReadiness`, which blocks a consumer on those requirements alone. A
+  // seam compiles to no requirement, so it neither orders the work nor is a
+  // handoff the children must coordinate directly — charging it made declaring
+  // an interface contract strictly worsen the cut that declared it.
+  const serializing = crossChildEdges(
+    unit.children,
+    breakdown.candidateArtifacts.filter((artifact) => artifact.materializationHint !== "logical")
   );
-  const coordination = coupling(
-    childKeys,
-    crossChildEdges(unit.children, [
-      ...breakdown.candidateArtifacts,
-      ...breakdown.candidateSeams
-    ])
-  );
+  const parallelism = concurrency(childKeys, serializing);
+  const coordination = coupling(childKeys, serializing);
   const pathOverlap = averagePairwise(
     childProfiles.map((profile) => new Set(profile.scopePaths)),
     jaccard

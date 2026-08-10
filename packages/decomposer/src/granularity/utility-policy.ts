@@ -15,8 +15,40 @@
  * what they are named after — the depth of the production order and the share of
  * child pairs that must coordinate directly, net of dependencies another already
  * implies. See `strategy-selector.ts` for the derivation.
+ *
+ * 3.2.0 makes the policy price the graph the compiler will build, and gives
+ * fault isolation a decision of its own.
+ *
+ *  - `contextRelief` is measured against the execution budget rather than
+ *    against the parent. Against the parent it reported two thirds of a maximum
+ *    on a target whose entire source is 4% of one leaf's budget, and its value
+ *    moved with nothing but how the planner distributed files.
+ *  - `coordination` is charged on the relations that compile to an
+ *    execution-blocking requirement. It previously included seams, which compile
+ *    to no requirement, so declaring an interface contract strictly worsened the
+ *    score of the cut that declared it.
+ *  - `minimumFaultIsolation` admits a cut whose children own disjoint acceptance
+ *    criteria. Averaged with two other benefits, a perfect isolation was diluted
+ *    to a third and layered work could be collapsed for want of concurrency a
+ *    chain was never going to have.
  */
-export const ADAPTIVE_UTILITY_POLICY_VERSION = "adaptive-utility/3.1.0-pilot";
+export const ADAPTIVE_UTILITY_POLICY_VERSION = "adaptive-utility/3.2.0-pilot";
+
+/**
+ * Versions this build no longer implements, newest first.
+ *
+ * Frozen experimental assets name the policy version they measured. That name is
+ * a historical fact and is never rewritten to match a later build — but a series
+ * whose policy has been superseded must say so somewhere the compiler can see,
+ * or the only thing standing between a silent policy change and a stale freeze
+ * is that someone remembers. Retiring a version is therefore an edit here, and
+ * assets pinned to a retired version are read as historical rather than current.
+ */
+export const SUPERSEDED_UTILITY_POLICY_VERSIONS: readonly string[] = Object.freeze([
+  "adaptive-utility/3.1.0-pilot",
+  "adaptive-utility/3.0.0-pilot",
+  "adaptive-utility/2.0.0-pilot"
+]);
 
 export interface UtilityPolicyConfig {
   policyVersion: string;
@@ -25,6 +57,14 @@ export interface UtilityPolicyConfig {
   maxLeafScopePaths: number;
   /** Upper bound on paths a single leaf may bring into existence. */
   maxLeafPlannedPaths: number;
+  /**
+   * Isolation at or above which a viable cut is admitted regardless of its
+   * aggregate advantage. Set at 1 — every child owning acceptance criteria no
+   * sibling shares — because that is the only value on the scale whose meaning
+   * is categorical rather than a magnitude, and so the only one that is not a
+   * threshold fitted to an observation.
+   */
+  minimumFaultIsolation: number;
 }
 
 export const PILOT_UTILITY_POLICY: Readonly<UtilityPolicyConfig> = Object.freeze({
@@ -35,7 +75,8 @@ export const PILOT_UTILITY_POLICY: Readonly<UtilityPolicyConfig> = Object.freeze
   // Provisional. W1 delivered with 10 planned paths and W2 failed with 6, so
   // these observations cannot anchor a discriminating value. Keep this fixed
   // pilot ceiling rather than tuning it per run.
-  maxLeafPlannedPaths: 12
+  maxLeafPlannedPaths: 12,
+  minimumFaultIsolation: 1
 });
 
 export interface GranularityStrategyFeatures {
@@ -71,7 +112,13 @@ export function validateUtilityPolicyConfig(config: UtilityPolicyConfig): Utilit
   assertNonNegative(config.maxLeafContextTokens, "maxLeafContextTokens");
   assertPositiveInteger(config.maxLeafScopePaths, "maxLeafScopePaths");
   assertPositiveInteger(config.maxLeafPlannedPaths, "maxLeafPlannedPaths");
+  assertUnitInterval(config.minimumFaultIsolation, "minimumFaultIsolation");
   return { ...config };
+}
+
+function assertUnitInterval(value: number, label: string): void {
+  assertFinite(value, label);
+  if (value < 0 || value > 1) throw new RangeError(`${label} must lie in [0, 1].`);
 }
 
 function assertNonEmpty(value: string, label: string): void {
