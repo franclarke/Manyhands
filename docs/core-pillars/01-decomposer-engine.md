@@ -1,73 +1,131 @@
-# PILAR 1 — MOTOR DE DESCOMPOSICIÓN ADAPTATIVA DE GRANULARIDAD (DECOMPOSER V3)
+# PILAR 1 — DECOMPOSER: PLANIFICACIÓN SEMÁNTICA Y POLÍTICA DE GRANULARIDAD
 
-> **Ubicación del código**: `packages/decomposer`  
-> **Responsabilidad**: Transformar objetivos de software en un DAG jerárquico inmutable resolviendo dinámicamente el nivel de granularidad óptima.
-
----
-
-## 1. EL PARADOJA DE LA GRANULARIDAD Y PROPÓSITO
-
-En la orquestación multiagente de código, la división arbitraria de tareas genera dos patologías graves:
-- **Under-splitting (Granularidad gruesa)**: Un objetivo complejo se asigna como hoja única a un agente. El agente desborda su ventana de contexto, comete errores de compilación y sufre desviación de alcance (*scope creep*).
-- **Over-splitting (Granularidad fina)**: Una tarea simple (ej. exportar un tipo en un archivo) se divide artificialmente en 4 sub-nodos. Genera latencia excesiva, sobrecosto de orquestación y fricción en los contratos de interfaz (*SeamBindings*).
-
-**Solución de ManyHands V3**: Para cada tarea, calcular el **Índice de Complejidad Intrínseca ($C_{task}$)** y aplicar un umbral adaptativo que decide si la tarea se declara hoja ejecutable (*Leaf*) o nodo composite con factor de ramificación óptimo ($k^*$).
+> **Ubicación del código**: `packages/decomposer`
+> **Responsabilidad**: convertir un objetivo en un plan semántico fundado en el
+> repositorio, y decidir de forma determinista qué frontera de ese plan se
+> ejecuta.
 
 ---
 
-## 2. ARQUITECTURA EN DOS FASES: ARCHITECT PASS + GRAPH COMPILER
+## 1. Las dos patologías de la granularidad
+
+- **Grano grueso.** Un objetivo complejo se asigna como hoja única. El agente
+  desborda su ventana de contexto, y un fallo en cualquier parte invalida la
+  evidencia de todas las demás.
+- **Grano fino.** Una tarea cohesiva se parte en unidades que comparten archivos
+  y criterios de aceptación. Se paga coordinación e integración sin comprar
+  independencia: ninguna de las partes se puede verificar por separado.
+
+La decisión de granularidad es la elección entre esas dos formas de error.
+
+---
+
+## 2. Quién decide qué
+
+La separación es la contribución central, y es estricta:
 
 ```mermaid
 flowchart TD
-    TaskInput[Objetivo & Snapshot del Repo] --> ArchPass[Fase 1: Architect Pass\n(Evaluación Semántica de Complejidad LLM)]
-    ArchPass --> ComplexityScore[C_task: Score 1.0 a 10.0]
-    ComplexityScore --> ThresholdCheck{C_task <= Umbral_Hoja?}
-    
-    ThresholdCheck -->|Sí (C_task <= 3.5)| LeafNode[Declara Leaf Node Cohesivo\n(Detiene Descomposición)]
-    ThresholdCheck -->|No (C_task > 3.5)| BranchingFactor[Calcula Factor de Ramificación Óptimo k*]
-    
-    BranchingFactor --> ProposedUnits[Propuesta de Sub-Objetivos]
-    ProposedUnits --> GranularityCritic[Fase 2: Granularity & Scope Critics]
-    
-    GranularityCritic -->|Fusión de sub-tareas triviales| Coalesce[Coalescencia / Merge]
-    GranularityCritic -->|Sub-tarea demasiado amplia| ReSplit[Sub-división Forzada]
-    
-    Coalesce & ReSplit & LeafNode --> GraphCompiler[Graph Compiler\n(Generación de Contratos Zod & Relaciones)]
-    GraphCompiler --> FinalRevision[GraphRevision v3 Validado]
+    Snapshot[Snapshot del repositorio] --> Planner[RecursivePlanner - modelo]
+    Planner --> Cuts[Cortes semanticos propuestos]
+    Cuts --> Critic[CutFeasibilityCritic]
+    Critic --> Plan[SemanticPlan - punto fijo]
+    Plan --> Policy[selectGranularityStrategy - determinista]
+    Policy --> Apply[applyGranularitySelection]
+    Apply --> Compiler[compileGraphRevision]
+    Compiler --> Revision[GraphRevision]
 ```
 
----
+**El planificador propone los cortes; la política elige cuáles se ejecutan.**
 
-## 3. MODELO DE EVALUACIÓN DE COMPLEJIDAD INTRÍNSECA ($C_{task}$)
+Una política determinista puede detectar que una unidad no conviene partida, o
+que no entra en un intento. No puede decidir *cómo* se parte: un corte es una
+decisión sobre qué responsabilidad oculta cada módulo, en el sentido de Parnas,
+y no se deriva de un escalar. Fabricar particiones repartiendo rutas produce
+unidades cuyo alcance no corresponde a ningún trabajo coherente.
 
-$$C_{task} = w_1 \cdot S_r + w_2 \cdot I_i + w_3 \cdot V_s + w_4 \cdot T_m$$
-
-### Dimensiones de Evaluación:
-1. **Scope Radius ($S_r$)**: Cantidad de archivos, módulos o paquetes afectados o creados.
-2. **Interface Impact ($I_i$)**: Grado de modificación de firmas exported, contratos de interfaz o API pública (alto $I_i$) vs. refactorización interna (bajo $I_i$).
-3. **Validation Surface ($V_s$)**: Cantidad de obligaciones de validación y suites de prueba que deben pasar para verificar la corrección.
-4. **Context Token Mass ($T_m$)**: Masa estimada de tokens de código/contexto necesarios para completar el trabajo.
-
-### Regla de Decisión:
-- **$C_{task} \le 3.5$**: Declara **Leaf Node Cohesivo**. Se prohíbe la sub-división.
-- **$C_{task} > 3.5$**: Declara **Composite Node** y calcula el factor de ramificación ideal ($k^* \in [2, 5]$).
+Por eso la política sólo puede **conservar** un corte propuesto, **colapsarlo**,
+o **rechazar** el plan por no tener frontera ejecutable. Nunca inventa uno.
 
 ---
 
-## 4. CRITICS Y COMPRESIÓN DE CONTEXTO
+## 3. La política: `adaptive-utility/3.2.0-pilot`
 
-- **Over-splitting Critic (Coalescencia)**: Si dos sub-unidades propuestas modifican el mismo archivo o módulo pequeño sin dependencias cruzadas, el critic las **fusiona** en una sola hoja.
-- **Under-splitting Critic (Re-división)**: Si el Architect declara `isLeaf: true` pero el `ScopeRadius` abarca más de 3 módulos independientes, el critic rechaza la hoja y exige una división en 2 sub-composites.
-- **Compresor de Contexto (`context-compressor.ts`)**:
-  - **Scope Tree Summarizer**: Envía al agente únicamente el sub-árbol de archivos declarado en su `ScopeContract`.
-  - **Interface Signature Extractor**: Extrae solo tipos e interfaces (`type`, `interface`, `function`), suprimiendo código interno.
-  - **System-Prompt Channeling**: Inyecta instrucciones en el parámetro `system` oficial de Claude/Codex.
-  - **Input Fingerprint**: Reutiliza la caché inmutable si las entradas no cambian.
+Para cada composite se compara el beneficio del corte contra su costo:
+
+$$\text{ventaja} = \overline{(\text{alivio de contexto},\ \text{paralelismo},\ \text{aislamiento})} - \overline{(\text{coordinación},\ \text{solape de rutas},\ \text{duplicación de validación},\ \text{incertidumbre})}$$
+
+Se divide cuando la ventaja alcanza `minimumAdvantage`, **o** cuando el
+aislamiento es perfecto (§3.2).
+
+### 3.1 Qué mide cada término
+
+| Término | Medida |
+|---|---|
+| `contextRelief` | Presión de presupuesto que el corte elimina: `(tokens del padre − tokens del hijo mayor) / maxLeafContextTokens`. Anclado al presupuesto, no al padre: sobre un repositorio que entra holgado, partir no alivia nada y el término es correctamente ~0. |
+| `parallelism` | Profundidad del orden de producción. `n` unidades en `L` rondas; independientes puntúan 1, una cadena estricta 0. |
+| `faultIsolation` | Cuánto se solapan los criterios de aceptación entre hermanos. 1 significa que ninguno comparte criterio con otro. |
+| `coordination` | Proporción de pares de hijos que deben coordinar directamente, neta de dependencias que otra ya implica. |
+| `pathOverlap` | Jaccard medio de las rutas que los hijos reclaman. |
+| `validationDuplication` | Proporción de asignaciones de criterios repetidas entre hijos. |
+| `uncertainty` | Cuánto de la superficie declarada no pudo medirse contra el snapshot. |
+
+`parallelism` y `coordination` se calculan sobre **las relaciones que compilan a
+un `ArtifactRequirement` bloqueante**. Un seam no compila a ninguno, y un
+artefacto `logical` tampoco: cobrarlos sería tasar restricciones que el
+scheduler nunca impone, y hacía que declarar un contrato de interfaz empeorara
+el score del corte que lo declaraba.
+
+### 3.2 El aislamiento admite un corte por sí solo
+
+Promediado con otros dos beneficios, un aislamiento perfecto se diluye a un
+tercio. Pero el trabajo en capas —`domain → application → api`— es una cadena:
+su paralelismo es genuinamente cero, y sobre un repositorio chico su alivio de
+contexto también. Lo que compra partirlo es que el fallo de una capa no anule la
+evidencia verificada de otra.
+
+`minimumFaultIsolation` está en **1**, no en un valor ajustado: es el único
+punto de la escala cuyo significado es categórico —cada hijo dueño de criterios
+que ningún hermano comparte— y por lo tanto el único que no está calibrado
+contra una observación.
+
+### 3.3 Factibilidad de la hoja
+
+Independiente de la ventaja, una unidad no es una hoja ejecutable si excede
+`maxLeafContextTokens`, `maxLeafScopePaths` o `maxLeafPlannedPaths`. Leer y
+producir son límites distintos: el tercero existe porque una raíz sobre un
+repositorio casi vacío pasa los dos primeros y aun así tiene que crear una
+aplicación entera.
+
+Si una unidad es infactible y no hay corte semántico que la divida, el run falla
+de forma visible en vez de despachar trabajo que la política juzgó imposible.
 
 ---
 
-## 5. MÉTRICAS CIENTÍFICAS PARA LA HIPÓTESIS DE TESIS ($GEI$)
+## 4. Condiciones y evidencia
 
-$$\text{GEI} = \frac{\text{Tasa de Éxito de Intentos de Agentes (\%)}}{\text{Tiempo Total de Ejecución (s)} \times \text{Coste de Tokens}}$$
+`A` colapsa el objetivo a una hoja por instrucción, `B` expande la frontera
+semántica más fina, `C` aplica la política. La condición es configuración que el
+run registra sobre sí mismo, no una edición de código entre corridas.
 
-Persiste en cada corrida: `max_graph_depth`, `total_leaf_count`, `average_branching_factor`, `coalesced_units_count`, y la matriz de éxito por score de complejidad.
+`planning.granularity_strategy_selected` persiste, para cada run:
+
+- el **árbol candidato** que la política recibió,
+- la evaluación por unidad —features, beneficio, costo, ventaja, decisión y
+  justificación—,
+- y las **métricas del árbol que efectivamente compiló**:
+  `maxGraphDepth`, `totalLeafCount`, `averageBranchingFactor`.
+
+Entrada y resultado se registran por separado a propósito: sin el árbol
+candidato, un colapso no se distingue de un planificador que propuso una sola
+unidad, y la decisión deja de ser auditable después del hecho.
+
+---
+
+## 5. Banco de regresión
+
+Todo cambio a la política se mide contra las decisiones que tomaron los runs
+reales, sin gastar llamadas al modelo. `tests/granularity-regression-bank.test.ts`
+reconstruye los casos desde los journals de `docs/tesis/evidence` y compara
+contra una tabla congelada; `UPDATE_GRANULARITY_BANK=1` la regenera y el `git
+diff` resultante es la superficie de revisión del cambio.
