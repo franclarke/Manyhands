@@ -124,13 +124,53 @@ es precisamente el régimen que ningún experimento previo tocó.
 
 ---
 
-## 3. Orden de trabajo
+## 3. Resultado de la ablación
 
-1. **Ablación sobre el banco, antes de escribir nada nuevo.** Correr la política
-   actual contra sí misma mutilada —sin piso de aislamiento, sin términos de
-   costo, siempre hoja— y ver cuánto aporta cada parte. Si la política completa
-   y "siempre partir si es viable" coinciden en la mayoría de los 87 casos, la
-   regla actual es decorativa y conviene saberlo antes de reemplazarla.
+Ejecutada sobre los 83 cortes viables del banco
+(`tests/granularity-ablation.test.ts`), evaluando todo bajo condición C:
+
+| Variante | split | leaf |
+|---|---|---|
+| completa | 73 | **10** |
+| sin regla de aislamiento | 68 | 15 |
+| sin modelo de costo (partir si es viable) | 83 | 0 |
+| siempre hoja | 0 | 83 |
+
+**La política completa coincide con "partir siempre que sea viable" en 73 de 83
+casos (88 %).** Todo lo que aporta la regla —siete features, beneficio, costo,
+umbral y piso de aislamiento— son **10 colapsos**. Y de los 83, cinco están
+forzados por infactibilidad de la hoja, que no es una decisión del modelo de
+costo: el espacio en el que la regla decide libremente son 78 casos.
+
+Tres lecturas, todas incómodas:
+
+**La política es un filtro, no un diseñador de topología.** Sólo puede quitar
+cortes que el planificador propuso; nunca agrega uno. El techo es "partir si es
+viable" y la regla se aparta de él un 12 %. Quien decide la granularidad, en
+este corpus, es el planificador.
+
+**Sus dos reglas se contradicen.** El modelo de costo rechaza 15 cortes; el piso
+de aislamiento reinstala 5 de ellos. No es un refinamiento: es una segunda regla
+que anula a la primera en un tercio de los casos donde la primera se pronunció.
+
+**Y el efecto no es reducible a una feature.** La mejor regla de una sola
+variable (`faultIsolation` con umbral) reproduce 77 de las 83 decisiones, contra
+73 del baseline trivial. Ninguna feature explica los 10 colapsos por sí sola:
+vienen de features distintas en casos distintos. El efecto es chico **y**
+disperso, que es la peor combinación para justificarlo o validarlo.
+
+Nada de esto dice que los 10 colapsos estén mal. Dice que son pocos, que están
+repartidos, y que **el corpus no tiene verdad de referencia para saber si
+acertaron**. La ablación caracteriza; no valida.
+
+Esto confirma la decisión de la sección 1 y le agrega urgencia: no hay que
+buscar una mejor forma de promediar siete proxies, hay que cambiar de modelo.
+
+---
+
+## 4. Orden de trabajo
+
+1. ~~Ablación sobre el banco.~~ **Hecha** — ver sección 3.
 2. **Instrumentar `c(u)` y `p_falla`** en el journal, si falta algo.
 3. **Construir el target del experimento** (ver [el diseño del
    experimento](granularity-experiment.md)), porque sin él `p_falla` no se puede
