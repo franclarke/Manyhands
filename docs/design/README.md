@@ -35,3 +35,6 @@ Toda implementación en el repositorio debe ser consistente con la especificaci�
 - [`granularity-experiment.md`](granularity-experiment.md) — cómo evaluarla:
   ablación offline sobre el banco, y comparación A/C sobre un target donde el
   trabajo no entre en un intento.
+- [`longitudinal-demonstration.md`](longitudinal-demonstration.md) — el plan de
+  trabajo: qué construir, en cuántas iteraciones, con qué oráculo y qué se mide
+  en cada una.
