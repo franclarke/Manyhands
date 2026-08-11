@@ -34,6 +34,7 @@ export * from "./granularity/policy.js";
 export * from "./granularity/repository-context-profile.js";
 export * from "./granularity/utility-policy.js";
 export * from "./granularity/strategy-selector.js";
+export * from "./granularity/apply-granularity-selection.js";
 export * from "./granularity/planning-brief.js";
 export * from "./context-compressor.js";
 export * from "./llm/architect-pass.js";

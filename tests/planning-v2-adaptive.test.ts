@@ -91,17 +91,18 @@ describe("adaptive granularity in the productive planning pipeline", () => {
 
   /**
    * D13, and a precondition of stage 7: depth reached is the headline number the
-   * measurement cells report, and it is read from this event.
+   * measurement cells report, and it is read from this event. It must describe
+   * the tree that ran.
    *
-   * The test above pins the equality on a fixture where the policy happens to
-   * agree with the fixpoint, so it cannot see the divergence. Condition A makes
-   * the divergence deterministic instead of fitted: it collapses the root to a
-   * single leaf by definition, while the tree that compiles — and therefore the
-   * tree that executes — is still the fixpoint's. If `metrics` follows the
-   * policy, the journal reports depth 0 and one leaf for a run with three, and
-   * the thesis measures a tree that never ran.
+   * The test above pins the equality on a fixture where the policy leaves the
+   * fixpoint's cut alone, so it cannot see a divergence. Condition A makes one
+   * deterministic instead of fitted: it collapses the root to a single leaf by
+   * definition. Now that the policy governs, the collapse is what compiles and
+   * what executes, so the journal must report one leaf — and the candidate tree
+   * it also records must still show the three the planner proposed, or the
+   * decision becomes unauditable.
    */
-  it("measures the tree that compiled even when the policy prefers another one", async () => {
+  it("compiles the tree the policy selected, and records both it and the input", async () => {
     const events = new JsonlRunEventStore({ directory });
     const snapshots = new RunSnapshotStore({ directory, events });
     const compile = vi.fn((input: GraphCompilerInput) => compileGraphRevision(input, compilerDependencies));
@@ -131,10 +132,20 @@ describe("adaptive granularity in the productive planning pipeline", () => {
     expect(replayed.granularityStrategy!.assessments["node-root"]?.selected).toBe("leaf");
 
     const compiledNodes = Object.values(compile.mock.results[0]!.value.graph.nodes) as Array<{ kind: string }>;
-    expect(compiledNodes.filter((node) => node.kind === "leaf")).toHaveLength(3);
+    expect(compiledNodes.filter((node) => node.kind === "leaf")).toHaveLength(1);
 
-    expect(replayed.granularityStrategy!.metrics.totalLeafCount).toBe(3);
-    expect(replayed.granularityStrategy!.metrics.maxGraphDepth).toBe(1);
+    expect(replayed.granularityStrategy!.metrics.totalLeafCount).toBe(1);
+    expect(replayed.granularityStrategy!.metrics.maxGraphDepth).toBe(0);
+
+    // The input survives alongside the outcome: without the tree the policy was
+    // given, a collapse cannot be told from a planner that only ever proposed
+    // one unit, and the decision stops being auditable after the fact.
+    const recorded = (await events.load("run-condition-a"))
+      .find((entry) => entry.type === "planning.granularity_strategy_selected");
+    const candidateRoot = (recorded!.payload as {
+      candidateTree: { root: { children?: unknown[] } };
+    }).candidateTree.root;
+    expect(candidateRoot.children).toHaveLength(3);
 
     // The journal event and the diagnostic artifact describe the same run, so
     // they must describe the same tree. They read from different variables

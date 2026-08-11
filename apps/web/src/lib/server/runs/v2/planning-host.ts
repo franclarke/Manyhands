@@ -2,7 +2,7 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { CompiledGraphRevision, GoalCriterion, GranularityStrategyResult, GraphCompilerInput, RecursivePlanner, SemanticPlan, WorkBreakdown, WorkUnit } from "@manyhands/decomposer";
 import type { RepositorySnapshot } from "@manyhands/repository-index";
-import { PLAN_CRITIC_KINDS, PILOT_UTILITY_POLICY, createSemanticPlan, projectPlannedTree, projectSemanticPlanForLegacyCompiler, resolveGranularityCondition, selectGranularityStrategy } from "@manyhands/decomposer";
+import { PLAN_CRITIC_KINDS, PILOT_UTILITY_POLICY, applyGranularitySelection, createSemanticPlan, projectPlannedTree, projectSemanticPlanForLegacyCompiler, resolveGranularityCondition, selectGranularityStrategy } from "@manyhands/decomposer";
 import { foldRun, supersededDecisionIds, type RunEventInput, type RunProjection } from "@manyhands/run-coordinator";
 import type { FencingAuthority, JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
 import {
@@ -162,19 +162,11 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
       criteria: [...projected.criteria],
       draft: projected.draft
     });
-    const compiled = dependencies.compile({
-      semanticPlan,
-      repositorySnapshot,
-      sourceContract: {
-        goal: input.goal,
-        acceptanceCriteria: criteria.map((criterion) => criterion.description),
-        constraints: input.constraints ?? []
-      }
-    });
-    // Stage 3D: the utility formula keeps being measured because it is what
-    // lets the thesis say why a scalar could not decide granularity — but the
-    // tree that compiles is the one the fixpoint produced. Its
-    // `selectedBreakdown` is deliberately discarded.
+    // The planner proposes the cuts; the policy decides which of them execute.
+    // It runs before compilation because the tree it selects is the tree that
+    // compiles — measuring it and discarding its selection, as stage 3D did,
+    // left a decision nothing could act on: cell M-C-r2 of the final experiment
+    // selected `leaf` and the run executed three.
     const observedBreakdown = projectSemanticPlanForLegacyCompiler(semanticPlan).breakdown;
     const observed = selectGranularityStrategy({
       condition: resolveGranularityCondition(input.granularityCondition),
@@ -182,14 +174,31 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
       repositorySnapshot,
       config: PILOT_UTILITY_POLICY
     });
+    if (observed.requiresSemanticReplan) {
+      throw new Error(
+        "no_executable_frontier: the policy found a unit that exceeds one attempt's budget and no semantic cut "
+        + "that would divide it. Executing the plan anyway would dispatch work the policy judged infeasible."
+      );
+    }
+    const selection = applyGranularitySelection({ plan: semanticPlan, assessments: observed.assessments });
+    const selectedBreakdown = projectSemanticPlanForLegacyCompiler(selection.plan).breakdown;
+    const compiled = dependencies.compile({
+      semanticPlan: selection.plan,
+      repositorySnapshot,
+      sourceContract: {
+        goal: input.goal,
+        acceptanceCriteria: criteria.map((criterion) => criterion.description),
+        constraints: input.constraints ?? []
+      }
+    });
     const drafts = [
-      ...semanticSuccessEvents(input.runId, semanticPlan, compiled, dependencies.now),
-      strategySelectedEvent(input.runId, observed, observedBreakdown, nodeIdFor, dependencies.now)
+      ...semanticSuccessEvents(input.runId, selection.plan, compiled, dependencies.now),
+      strategySelectedEvent(input.runId, observed, observedBreakdown, selectedBreakdown, nodeIdFor, dependencies.now)
     ];
     events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, drafts)];
     state = foldRun(events);
     await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, events.at(-1)!.eventId);
-    await writeStrategyDiagnostics(dependencies, input.runId, observed, observedBreakdown);
+    await writeStrategyDiagnostics(dependencies, input.runId, observed, selectedBreakdown);
     return state;
   } catch (error) {
     let recordedState: RunProjection | undefined;
@@ -267,6 +276,7 @@ function strategySelectedEvent(
   runId: string,
   strategy: GranularityStrategyResult,
   candidateBreakdown: WorkBreakdown,
+  selectedBreakdown: WorkBreakdown,
   nodeIdFor: (key: string) => string,
   now: () => string
 ): RunEventInput {
@@ -303,11 +313,11 @@ function strategySelectedEvent(
         evidenceRefs: assessment.evidenceRefs,
         rationale: assessment.rationale
       })),
-      // The tree that compiled, never `strategy.selectedBreakdown`. Since 3D the
-      // policy decides nothing, so its preferred tree is not the one that runs —
-      // and depth reached is read from here. Measuring the policy's tree would
-      // report a run that never happened, silently, whenever the two diverge.
-      metrics: structuralMetrics(candidateBreakdown.root)
+      // `candidateTree` above is what the policy was handed; `metrics` is what
+      // ran. They are read from different trees on purpose: the policy may
+      // collapse a composite, and depth reached is read from here, so measuring
+      // its input would report a run that never happened whenever it does.
+      metrics: structuralMetrics(selectedBreakdown.root)
     }
   };
 }
