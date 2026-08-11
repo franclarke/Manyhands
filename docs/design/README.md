@@ -10,7 +10,6 @@ Este directorio contiene la especificación de diseño canónica y actualizada p
 |---|---|---|
 | 📄 **[01-system-overview.md](01-system-overview.md)** | General Architecture & Product Model | Visión general del sistema, modelo local/single-user, matriz de confianza e invariantes. |
 | 📄 **[02-task-graph-and-contracts.md](02-task-graph-and-contracts.md)** | TaskGraph V3 & Canonical Relations | Modelo de grafo jerárquico, relaciones tipadas (`parentId`, `ArtifactRequirement`, `SeamBinding`, `ConflictConstraint`), reductor CAS e inmutabilidad profunda. |
-| 📄 **[03-adaptive-decomposer.md](03-adaptive-decomposer.md)** | Adaptive Granularity Decomposer Engine V3 | Planificación en 2 fases (Architect + Compiler), cálculo de complejidad intrínseca ($C_{task}$), critics de coalescencia y métricas de tesis ($GEI$). |
 | 📄 **[04-orchestration-and-scheduler.md](04-orchestration-and-scheduler.md)** | Event-Driven Scheduler & Execution Driver | Scheduler continuo por eventos, deferral de `ConflictConstraints`, `V2ExecutionDriver` y `recordQueue` atómico. |
 | 📄 **[05-execution-core-and-sandboxing.md](05-execution-core-and-sandboxing.md)** | Worktree Pool & Host Security | Pool de reciclaje de worktrees (`git reset --hard`), guard de traversal OS-aware (`ScopeChecker`), supervisión de procesos (`LiveProcessRegistry`) y saneamiento de entorno. |
 | 📄 **[06-persistence-durability-recovery.md](06-persistence-durability-recovery.md)** | Persistence, Durability & Recovery | Motor de escrituras atómicas con `fsync`, writer $O(1)$, compactación por generaciones, SQLite WAL y recuperador ante fallos de energía. |
@@ -27,3 +26,12 @@ Este directorio contiene la especificación de diseño canónica y actualizada p
 4. **`docs/system/`**: Contratos técnicos de la API y esquemas de datos.
 
 Toda implementación en el repositorio debe ser consistente con la especificación de estos documentos.
+
+## Política de granularidad
+
+- [`granularity-policy-redesign.md`](granularity-policy-redesign.md) — qué se
+  conserva de la política actual, qué se reemplaza y por qué; la dirección de
+  costo esperado en unidades reales.
+- [`granularity-experiment.md`](granularity-experiment.md) — cómo evaluarla:
+  ablación offline sobre el banco, y comparación A/C sobre un target donde el
+  trabajo no entre en un intento.
