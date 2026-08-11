@@ -153,6 +153,17 @@ export const RunEventSchema = z.discriminatedUnion("type", [
     depth: z.number().int().nonnegative(),
     diagnostics: z.array(NonEmptyStringSchema).min(1)
   }).strict()),
+  /**
+   * Recorded history only. No code emits this event.
+   *
+   * It carries the `C_task` complexity index — four weighted dimensions against
+   * a threshold — which was replaced by the utility policy and whose
+   * implementation has been removed. Eighteen journals under
+   * `docs/tesis/evidence` contain it, and a journal that cannot be folded is
+   * evidence that has been destroyed, so the schema and its reducer case stay.
+   * Nothing here should be extended: `planning.granularity_strategy_selected`
+   * is where a granularity decision is recorded now.
+   */
   event("planning.granularity_assessed", z.object({
     formulaVersion: NonEmptyStringSchema,
     weights: z.object({

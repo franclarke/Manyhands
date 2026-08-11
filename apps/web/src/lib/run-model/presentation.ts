@@ -325,6 +325,12 @@ const SIGNAL_SOURCE_LABELS: Record<"llm" | "clamped" | "derived", string> = {
  * Turns the persisted C_task evidence into the human explanation of why a node
  * became a leaf or a composite. It never re-derives the policy: every number
  * comes from the `planning.granularity_assessed` domain event.
+ *
+ * That event belongs to runs recorded before the utility policy replaced the
+ * complexity index, and nothing emits it now — a current run has no such event,
+ * so this returns null and `granularityStrategyExplanation` answers instead.
+ * It stays because those runs are still openable, and a run whose inspector
+ * cannot explain its own decisions is evidence the operator cannot read.
  */
 export function granularityExplanation(
   granularity: GranularityProjection | undefined,

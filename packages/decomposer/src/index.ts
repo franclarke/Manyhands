@@ -26,10 +26,7 @@ export * from "./compiler/acceptance-allocation.js";
 export * from "./compiler/graph-compiler.js";
 export * from "./compiler/validation-obligations.js";
 export * from "./critics/review.js";
-export * from "./granularity/complexity-evaluator.js";
-export * from "./granularity/coalescing-critic.js";
 export * from "./granularity/thesis-metrics.js";
-export * from "./granularity/adaptive-planning.js";
 export * from "./granularity/policy.js";
 export * from "./granularity/repository-context-profile.js";
 export * from "./granularity/utility-policy.js";
@@ -37,8 +34,6 @@ export * from "./granularity/strategy-selector.js";
 export * from "./granularity/apply-granularity-selection.js";
 export * from "./granularity/planning-brief.js";
 export * from "./context-compressor.js";
-export * from "./llm/architect-pass.js";
-export * from "./compiler/graph-compiler-v3.js";
 
 export const FeatureRequestSchema = z.object({
   id: EntityIdSchema,
