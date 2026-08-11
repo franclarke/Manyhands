@@ -38,3 +38,5 @@ Toda implementación en el repositorio debe ser consistente con la especificaci�
 - [`longitudinal-demonstration.md`](longitudinal-demonstration.md) — el plan de
   trabajo: qué construir, en cuántas iteraciones, con qué oráculo y qué se mide
   en cada una.
+- [`codex-demonstration-brief.md`](codex-demonstration-brief.md) — la instrucción
+  completa para el agente que ejecuta la demostración de forma autónoma.
