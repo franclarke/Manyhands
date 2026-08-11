@@ -69,6 +69,13 @@ export interface UtilityPolicyConfig {
 
 export const PILOT_UTILITY_POLICY: Readonly<UtilityPolicyConfig> = Object.freeze({
   policyVersion: ADAPTIVE_UTILITY_POLICY_VERSION,
+  // Swept across the 83 viable cuts in the regression bank: every value in
+  // [0, 0.20] produces the identical 67 split / 16 leaf split, and the first
+  // decision moves at 0.25. The recorded corpus therefore cannot discriminate
+  // within that region, and this value is inherited rather than derived — what
+  // decides these cases is whether the planner proposed a multi-child cut at
+  // all, and the isolation floor. Calibrating it needs a corpus separate from
+  // the one used to evaluate, on targets where context pressure is real.
   minimumAdvantage: 0.15,
   maxLeafContextTokens: 24_000,
   maxLeafScopePaths: 40,
