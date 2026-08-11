@@ -208,18 +208,30 @@ describe("V2ExecutionDriver - Concurrency", () => {
 
   it("2. serializes completions and processes failures correctly", async () => {
     let decisionsMap: Record<string, any> = {};
+    // The double records failed attempts as well as decisions. Without them the
+    // projection never shows a prior failure, the retry budget can never be
+    // spent, and a node that always fails is retried for ever — a stall the
+    // real reducer cannot produce, and one the driver used to be shielded from
+    // only because it refused to retry anything but a transient failure.
+    let attemptsMap: Record<string, any> = {};
+    const state = () => mockState({ decisions: decisionsMap, attempts: attemptsMap });
     const coordinator = {
-      load: vi.fn().mockImplementation(() => Promise.resolve(mockState({ decisions: decisionsMap }))),
-      execute: vi.fn().mockImplementation(() => Promise.resolve(mockState({ decisions: decisionsMap }))),
+      load: vi.fn().mockImplementation(() => Promise.resolve(state())),
+      execute: vi.fn().mockImplementation(() => Promise.resolve(state())),
       record: vi.fn().mockImplementation((runId, facts) => {
         const nextDecisions = { ...decisionsMap };
+        const nextAttempts = { ...attemptsMap };
         for (const f of facts) {
           if (f.type === "decision.raised") {
             nextDecisions[f.payload.decision.id] = { status: "pending", id: f.payload.decision.id, affectedNodeIds: f.payload.decision.affectedNodeIds };
           }
+          if (f.type === "attempt.failed" || f.type === "integration.failed") {
+            nextAttempts[f.payload.attemptId] = { attemptId: f.payload.attemptId, nodeId: f.payload.nodeId, status: "failed" };
+          }
         }
         decisionsMap = nextDecisions;
-        return Promise.resolve(mockState({ decisions: decisionsMap }));
+        attemptsMap = nextAttempts;
+        return Promise.resolve(state());
       })
     };
 

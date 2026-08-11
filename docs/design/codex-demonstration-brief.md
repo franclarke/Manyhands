@@ -55,7 +55,18 @@ distinto de lo que el enunciado pide, o falla sobre una solución de referencia
 correcta escrita a mano— se corrige y **se registra en el ledger como corrección
 de instrumento**, con la evidencia de por qué era un defecto.
 
-### 2.2 Cuándo parar y pedir ayuda
+### 2.2 Un límite conocido del reintento
+
+Un reintento **vuelve a invocar al ejecutor sin contarle qué falló la vez
+anterior**. Para un fallo transitorio alcanza; para tests que fallan es repetir
+el mismo pedido y esperar otro resultado.
+
+Si se observa que los reintentos de `code_test` fallan siempre igual, **ése es el
+defecto a corregir**: hacer que el intento de reparación reciba el motivo del
+fallo previo. Está identificado y no implementado; es candidato natural a ser el
+primer defecto del ledger.
+
+### 2.3 Cuándo parar y pedir ayuda
 
 - La misma iteración falla **5 veces** por causas distintas.
 - La causa está fuera de ManyHands (cuota del proveedor, red, disco).
@@ -98,7 +109,34 @@ La demostración es sobre el orquestador, no sobre la capacidad del modelo.
 tenían en 0 para que el experimento fuera limpio, y por eso el sistema nunca se
 recuperaba de nada. **Acá se busca justamente que se recupere.**
 
-### 3.3 Trampas operativas conocidas
+Ese número **sólo aplica a las clases de fallo que admiten reintento**. La tabla
+de `recovery-policy.ts` declara, por clase, si repetir la llamada puede cambiar
+algo: cero para una credencial rechazada o un artefacto no declarado, uno para
+tests que fallan. Subir el presupuesto del run no resucita las clases que la
+política puso en cero, porque repetir una llamada sin sentido más veces sigue sin
+tenerlo.
+
+### 3.3 La compuerta de aprobación del plan
+
+**Todo run para en `needs_approval` esperando la decisión `approve_plan`.** Se
+levanta siempre, en cada iteración. No es un fallo: es la compuerta de revisión
+del plan.
+
+Hay que resolverla por la API antes de que el run avance:
+
+```
+POST /api/runs/<runId>/decisions/<decisionId>   { "optionId": "approve" }
+```
+
+El `decisionId` sale del evento `decision.raised` del journal, o de
+`GET /api/runs/<runId>`. Si Codex no lo hace, la iteración 0 se queda esperando
+para siempre y va a parecer un cuelgue.
+
+**Antes de aprobar hay que mirar el plan**, y si tiene algo evidentemente mal
+—una hoja sin criterios propios, un corte que no corresponde— eso **es un
+defecto del sistema** y va al ledger: la política debió haberlo rechazado.
+
+### 3.4 Trampas operativas conocidas
 
 Estas ya costaron sesiones enteras. No hace falta redescubrirlas.
 
@@ -110,7 +148,7 @@ Estas ya costaron sesiones enteras. No hace falta redescubrirlas.
 | `/` tarda minutos con datos reales | Para inspeccionar, abrir `/runs/<runId>` directamente (~10 s). |
 | El store compartido de pnpm da `EPERM` | Instalar con `--store-dir <store propio>`. |
 
-### 3.4 Antes de la iteración 0
+### 3.5 Antes de la iteración 0
 
 **Verificación de la condición A.** Correr una vez cualquier objetivo con
 `granularityCondition: "A"` y confirmar, **leyendo el árbol compilado en el

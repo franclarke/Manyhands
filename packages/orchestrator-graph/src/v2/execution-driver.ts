@@ -10,6 +10,7 @@ import {
   adoptAttemptResult,
   classifyFailure,
   recoveryPolicyFor,
+  type RecoveryPolicy,
   type AdoptedArtifact,
   type AttemptUsage,
   type DecisionInput,
@@ -358,7 +359,7 @@ export class V2ExecutionDriver {
         failureClass,
         observation,
         allowedActions: policy.actions,
-        automaticRetryBudget: retryBudgetFor(run, policy.automaticRetryBudget),
+        automaticRetryBudget: retryBudgetFor(run.effectiveConfig.automaticRetryBudget, policy),
         discardCandidate: policy.discardCandidate
       }));
       const payload = {
@@ -384,7 +385,7 @@ export class V2ExecutionDriver {
           failureClass,
           observation,
           allowedActions: policy.actions,
-          automaticRetryBudget: retryBudgetFor(run, policy.automaticRetryBudget),
+          automaticRetryBudget: retryBudgetFor(run.effectiveConfig.automaticRetryBudget, policy),
           discardCandidate: policy.discardCandidate
         }));
       }
@@ -419,11 +420,15 @@ export class V2ExecutionDriver {
           reason: `Candidate discarded after ${failureClass}: ${outcome.reason}`
         }));
       }
-      const retryBudget = retryBudgetFor(run, policy.automaticRetryBudget);
+      const retryBudget = retryBudgetFor(run.effectiveConfig.automaticRetryBudget, policy);
       const priorFailures = Object.values(current.attempts).filter((candidate) =>
         candidate.nodeId === attempt.nodeId && candidate.status === "failed"
       ).length;
-      const retryAllowed = !isComposite && failureClass === "transient" && priorFailures < retryBudget;
+      // The class decides whether a retry is meaningful; the count decides
+      // whether one is left. Requiring `transient` here on top of both ignored
+      // the policy table entirely and escalated every failing test suite to a
+      // human on its first attempt.
+      const retryAllowed = priorFailures < retryBudget;
       if (isComposite || !retryAllowed || outcome.decision !== undefined) {
         failureDecision = { ...(outcome.decision ?? defaultFailureDecision(attempt, outcome.reason, outcome.failureCause)), raisedAtGraphRevision: run.graph.revision };
         facts.push(fact(`${attempt.attemptId}:decision:${failureDecision.id}`, at, "decision.raised", { decision: failureDecision }));
@@ -701,8 +706,19 @@ function schedulerConfigFor(config: PreparedExecutionRunInput["effectiveConfig"]
     : config;
 }
 
-function retryBudgetFor(input: PreparedExecutionRunInput, policyDefault: number): number {
-  return input.effectiveConfig.automaticRetryBudget ?? policyDefault;
+/**
+ * How many automatic retries this failure gets.
+ *
+ * The per-class budget is not a quantity, it is a judgement about whether
+ * repeating the same call can change anything: zero for a refused credential or
+ * an undeclared artifact, one for failing tests, which is the expected outcome
+ * the repair loop exists for. A run-level budget tunes the classes that admit
+ * retries; it cannot resurrect the ones the policy ruled out, because repeating
+ * a meaningless call more times is still meaningless.
+ */
+export function retryBudgetFor(runBudget: number | undefined, policy: RecoveryPolicy): number {
+  if (policy.automaticRetryBudget === 0) return 0;
+  return runBudget ?? policy.automaticRetryBudget;
 }
 
 function pendingSchedulerDecision(explanations: ReadinessExplanationV2[]): boolean {
