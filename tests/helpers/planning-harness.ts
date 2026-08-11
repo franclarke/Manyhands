@@ -16,7 +16,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 
 import {
-  PILOT_UTILITY_POLICY,
+  DEFAULT_GRANULARITY_POLICY,
   PlanningModule,
   RecursivePlanner,
   buildGranularityPlanningBrief,
@@ -168,7 +168,7 @@ export async function runPlanning(input: RunPlanningInput): Promise<PlanningRun>
       },
       granularityBrief: buildGranularityPlanningBrief({
         repositorySnapshot: snapshot,
-        config: PILOT_UTILITY_POLICY,
+        config: DEFAULT_GRANULARITY_POLICY,
         candidateCount: input.candidateCount ?? 2
       }),
       candidateCount: input.candidateCount ?? 2

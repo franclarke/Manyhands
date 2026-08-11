@@ -3,7 +3,7 @@ import type { RepositorySnapshot } from "@manyhands/repository-index";
 import {
   allocateAcceptanceIntents,
   compileContractBundles,
-  PILOT_UTILITY_POLICY,
+  DEFAULT_GRANULARITY_POLICY,
   selectGranularityStrategy,
   WorkBreakdownSchema,
   type WorkBreakdown,
@@ -15,12 +15,12 @@ describe("acceptance intent allocation", () => {
     const breakdown = fiveIntentBreakdown();
     const repositorySnapshot = snapshot();
 
-    for (const condition of ["A", "B", "C"] as const) {
+    for (const condition of ["A", "C"] as const) {
       const selected = selectGranularityStrategy({
         condition,
         breakdown,
         repositorySnapshot,
-        config: PILOT_UTILITY_POLICY
+        config: DEFAULT_GRANULARITY_POLICY
       }).selectedBreakdown;
       const compiled = compileContractBundles({
         breakdown: selected,

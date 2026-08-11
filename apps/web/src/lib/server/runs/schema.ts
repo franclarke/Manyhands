@@ -1,5 +1,4 @@
 import { EXECUTOR_IDS, ExecutionConfigSchema, ReasoningEffortSchema } from "@manyhands/execution-core";
-import { GRANULARITY_CONDITIONS } from "@manyhands/decomposer";
 import { RunLifecycleSchema } from "@manyhands/run-coordinator";
 import { z } from "zod";
 
@@ -7,8 +6,8 @@ import { RUN_USER_PROMPT_MAX_LENGTH } from "@/lib/run-limits";
 
 export const RUN_FILE_VERSION = 2;
 
-export const GranularityConditionSchema = z.enum(GRANULARITY_CONDITIONS);
-const StoredGranularityConditionSchema = z.enum(["A", "B", "C", "C1", "C2"]);
+export const GranularityConditionSchema = z.enum(["A", "C"]);
+const StoredGranularityConditionSchema = z.enum(["A", "C"]);
 
 export const StageSelectionSchema = z.object({
   executorId: z.enum(EXECUTOR_IDS),

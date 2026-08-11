@@ -45,12 +45,15 @@ describe("V2 run-record schema", () => {
     expect(RunCreateRequestSchema.safeParse(CANONICAL_CREATE).success).toBe(true);
     const canonical = CANONICAL_CREATE;
     expect(RunCreateRequestSchema.safeParse({ ...canonical, granularity: "balanced" }).success).toBe(false);
-    for (const granularityCondition of ["A", "B", "C"]) {
+    // A collapses the goal by instruction; C applies the policy. The historical
+    // labels named policies this build no longer implements, so a run cannot be
+    // planned under them.
+    for (const granularityCondition of ["A", "C"]) {
       expect(RunCreateRequestSchema.safeParse({ ...canonical, granularityCondition }).success).toBe(true);
     }
-    for (const granularityCondition of ["C1", "C2"]) {
+    for (const granularityCondition of ["B", "C1", "C2"]) {
       expect(RunCreateRequestSchema.safeParse({ ...canonical, granularityCondition }).success).toBe(false);
-      expect(RunRecordSchema.safeParse({ ...makeRunRecordV2(), granularityCondition }).success).toBe(true);
+      expect(RunRecordSchema.safeParse({ ...makeRunRecordV2(), granularityCondition }).success).toBe(false);
     }
   });
 

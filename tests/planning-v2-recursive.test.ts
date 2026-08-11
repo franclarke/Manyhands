@@ -117,7 +117,7 @@ describe("productive planning with the recursive planner", () => {
    * thesis say why a scalar could not decide granularity — but it no longer
    * decides anything. The tree that compiles is the one the fixpoint produced.
    */
-  it("persists a granularity assessment without letting it change the plan", async () => {
+  it("persists a granularity assessment and applies it to the plan that compiles", async () => {
     const paths = snapshotPaths();
     const { journal, types } = await planWith("run-recursive-observed", {
       root: {
@@ -132,7 +132,7 @@ describe("productive planning with the recursive planner", () => {
     expect(types).toContain("planning.granularity_strategy_selected");
     const assessed = journal.find((entry) => entry.type === "planning.granularity_strategy_selected")!
       .payload as { assessments: { unitKey: string }[]; policyVersion: string };
-    expect(assessed.policyVersion).toContain("adaptive-utility");
+    expect(assessed.policyVersion).toContain("granularity/");
     expect(assessed.assessments.map((item) => item.unitKey).sort()).toEqual(["domain", "root", "surface"]);
 
     // The compiled graph is the fixpoint's tree, whatever the formula scored:

@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { ChildProcess } from "node:child_process";
 import { buildAgentEnvironment } from "@manyhands/execution-core";
-import { NonRetryablePlanningError, PILOT_UTILITY_POLICY, PlanningCapacityError, RecursivePlanner, compileGraphRevision, type CutRequest } from "@manyhands/decomposer";
+import { NonRetryablePlanningError, DEFAULT_GRANULARITY_POLICY, PlanningCapacityError, RecursivePlanner, compileGraphRevision, type CutRequest } from "@manyhands/decomposer";
 import { foldRun } from "@manyhands/run-coordinator";
 import { buildFastRepositorySnapshot } from "@manyhands/repository-index";
 import { EventStoreCompactor, JsonlRunEventStore, RunSnapshotStore, verifyAndRecoverRunStore } from "@manyhands/run-store";
@@ -82,7 +82,7 @@ export async function runPlanningV2Pipeline(runId: string): Promise<void> {
             request
           )
         },
-        budget: { maxScopePaths: PILOT_UTILITY_POLICY.maxLeafScopePaths },
+        budget: { maxScopePaths: DEFAULT_GRANULARITY_POLICY.maxLeafScopePaths },
         maxAttemptsPerUnit: run.executionConfig.maxPlanningAttempts ?? 2
       });
       const state = await runPlanningV2({

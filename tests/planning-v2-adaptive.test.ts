@@ -2,18 +2,18 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ADAPTIVE_UTILITY_POLICY_VERSION, compileGraphRevision, type GraphCompilerInput } from "@manyhands/decomposer";
+import { GRANULARITY_POLICY_VERSION, compileGraphRevision, type GraphCompilerInput } from "@manyhands/decomposer";
 import { foldRun } from "@manyhands/run-coordinator";
 import { JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
 import { bookingSnapshot, compilerDependencies, scriptedPlanner } from "./helpers/target-planning-fixtures";
 import { runPlanningV2 } from "@/lib/server/runs/v2/planning-host";
 
 /**
- * The adaptive utility policy is still measured on every productive run, and
- * the measurement still has to survive replay — but since stage 3D it no longer
- * chooses anything: the tree that compiles is the one the fixpoint produced.
- * This file fixes the surviving obligation, which is that the measurement is
- * persisted, replayable and side-effect free.
+ * The granularity policy on the productive planning path.
+ *
+ * Two obligations, and the second only became real when the policy started to
+ * govern: the decision has to survive replay with the reasons that carried it,
+ * and the tree it selects has to be the tree that compiles.
  */
 
 let directory: string;
@@ -56,20 +56,21 @@ describe("adaptive granularity in the productive planning pipeline", () => {
     expect(types).toContain("planning.granularity_strategy_selected");
     expect(types).toContain("graph.compiled");
 
-    // 2. The compiler received the fixpoint's plan, not a policy-selected tree.
+    // 2. The compiler received the tree the policy selected. Here it keeps the
+    //    planner's cut, so the two coincide; the test below makes them differ.
     expect(compile).toHaveBeenCalledTimes(1);
     expect(compile.mock.calls[0]![0].semanticPlan?.root.key).toBe("root");
 
     // 3. Replay from the journal reconstructs the policy and its assessments.
     const replayed = foldRun(persisted);
-    expect(replayed.granularityStrategy?.policyVersion).toBe(ADAPTIVE_UTILITY_POLICY_VERSION);
+    expect(replayed.granularityStrategy?.policyVersion).toBe(GRANULARITY_POLICY_VERSION);
     expect(replayed.granularityStrategy?.condition).toBe("C");
     expect(Object.keys(replayed.granularityStrategy!.assessments).sort())
       .toEqual(["node-api", "node-domain", "node-root", "node-ui"]);
 
-    // The metrics describe the tree that actually compiled. Measuring the
-    // policy's own preferred tree instead would let a formula that decides
-    // nothing still be the thing the thesis reports on.
+    // The metrics describe the tree that actually compiled, which is what the
+    // policy selected. Reading them from its input would over-report the moment
+    // it collapses anything.
     const compiledLeaves = Object.values(compile.mock.results[0]!.value.graph.nodes)
       .filter((node) => (node as { kind: string }).kind === "leaf").length;
     expect(compiledLeaves).toBe(3);
@@ -84,7 +85,7 @@ describe("adaptive granularity in the productive planning pipeline", () => {
     const metricsRaw = await readFile(path.join(directory, "run-adaptive.granularity-metrics.json"), "utf8");
     const metrics = JSON.parse(metricsRaw) as Record<string, unknown>;
     expect(metrics.runId).toBe("run-adaptive");
-    expect(metrics.policyVersion).toBe(ADAPTIVE_UTILITY_POLICY_VERSION);
+    expect(metrics.policyVersion).toBe(GRANULARITY_POLICY_VERSION);
     expect(metrics.condition).toBe("C");
     expect((metrics.metrics as Record<string, unknown>).totalLeafCount).toBe(3);
   });

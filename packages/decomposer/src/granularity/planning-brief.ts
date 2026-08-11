@@ -1,8 +1,8 @@
 import type { RepositorySnapshot } from "@manyhands/repository-index";
 import {
-  type UtilityPolicyConfig,
-  validateUtilityPolicyConfig
-} from "./utility-policy.js";
+  type GranularityPolicyConfig,
+  validateGranularityPolicyConfig
+} from "./granularity-policy.js";
 
 export const GRANULARITY_PLANNING_BRIEF_VERSION = 1 as const;
 
@@ -38,10 +38,10 @@ export interface GranularityPlanningBrief {
 
 export function buildGranularityPlanningBrief(input: {
   repositorySnapshot: RepositorySnapshot;
-  config: UtilityPolicyConfig;
+  config: GranularityPolicyConfig;
   candidateCount?: number;
 }): GranularityPlanningBrief {
-  const config = validateUtilityPolicyConfig(input.config);
+  const config = validateGranularityPolicyConfig(input.config);
   const candidateCount = input.candidateCount ?? 3;
   if (!Number.isSafeInteger(candidateCount) || candidateCount < 2 || candidateCount > 3) {
     throw new RangeError("candidateCount must be an integer between 2 and 3.");

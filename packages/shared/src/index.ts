@@ -19,7 +19,6 @@ export type EntityId = z.infer<typeof EntityIdSchema>;
 
 export const GranularityPolicyManifestSchema = z.object({
   policyVersion: NonEmptyStringSchema,
-  minimumAdvantage: z.number().finite(),
   maxLeafContextTokens: z.number().int().nonnegative(),
   maxLeafScopePaths: z.number().int().positive(),
   maxLeafPlannedPaths: z.number().int().positive()

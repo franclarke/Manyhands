@@ -10,30 +10,42 @@ import {
   type RepositoryContextProfile
 } from "./repository-context-profile.js";
 import {
-  type GranularityStrategyAssessment,
-  type GranularityStrategyDecision,
-  type GranularityStrategyFeatures,
-  type UtilityPolicyConfig,
-  validateUtilityPolicyConfig
-} from "./utility-policy.js";
+  anyReasonHolds,
+  describeDecision,
+  NO_SPLIT_REASONS,
+  validateGranularityPolicyConfig,
+  type GranularityAssessment,
+  type GranularityDecision,
+  type GranularityPolicyConfig,
+  type GranularitySplitReasons
+} from "./granularity-policy.js";
 
-export type UtilityGranularityCondition = "A" | "B" | "C";
+/** `A` collapses the goal by instruction; `C` applies the policy. */
+export type GranularityCondition = "A" | "C";
+
+export const GRANULARITY_CONDITIONS: readonly GranularityCondition[] = ["A", "C"];
 
 export interface SelectGranularityStrategyInput {
-  condition: UtilityGranularityCondition;
+  condition: GranularityCondition;
   breakdown: WorkBreakdown;
   repositorySnapshot: RepositorySnapshot;
-  config: UtilityPolicyConfig;
+  config: GranularityPolicyConfig;
 }
 
 export interface GranularityStrategyResult {
-  condition: UtilityGranularityCondition;
+  condition: GranularityCondition;
   policyVersion: string;
   candidateTreeHash: string;
-  config: UtilityPolicyConfig;
+  config: GranularityPolicyConfig;
   selectedBreakdown: WorkBreakdown;
-  assessments: Record<string, GranularityStrategyAssessment>;
+  assessments: Record<string, GranularityAssessment>;
   requiresSemanticReplan: boolean;
+}
+
+export function resolveGranularityCondition(condition: string | undefined): GranularityCondition {
+  if (condition === undefined || condition === "C") return "C";
+  if (condition === "A") return "A";
+  throw new Error(`Unknown granularity condition "${condition}"; expected A or C.`);
 }
 
 export function candidateBreakdownHash(breakdown: WorkBreakdown): string {
@@ -42,7 +54,7 @@ export function candidateBreakdownHash(breakdown: WorkBreakdown): string {
 
 interface SelectedUnit {
   unit: WorkUnit;
-  decision: GranularityStrategyDecision;
+  decision: GranularityDecision;
 }
 
 interface RelationLike {
@@ -58,7 +70,7 @@ interface ChildEdge {
 export function selectGranularityStrategy(
   input: SelectGranularityStrategyInput
 ): GranularityStrategyResult {
-  const config = validateUtilityPolicyConfig(input.config);
+  const config = validateGranularityPolicyConfig(input.config);
   const breakdown = WorkBreakdownSchema.parse(input.breakdown);
   const candidateTreeHash = stableHash({
     root: breakdown.root,
@@ -69,7 +81,7 @@ export function selectGranularityStrategy(
     breakdown,
     repositorySnapshot: input.repositorySnapshot
   });
-  const assessments: Record<string, GranularityStrategyAssessment> = {};
+  const assessments: Record<string, GranularityAssessment> = {};
   const selected = selectUnit({
     unit: breakdown.root,
     condition: input.condition,
@@ -85,16 +97,8 @@ export function selectGranularityStrategy(
   const remapped = WorkBreakdownSchema.parse({
     ...breakdown,
     root: selected.unit,
-    candidateArtifacts: remapRelations(
-      breakdown.candidateArtifacts,
-      selectedKeys,
-      parentByKey
-    ),
-    candidateSeams: remapRelations(
-      breakdown.candidateSeams,
-      selectedKeys,
-      parentByKey
-    )
+    candidateArtifacts: remapRelations(breakdown.candidateArtifacts, selectedKeys, parentByKey),
+    candidateSeams: remapRelations(breakdown.candidateSeams, selectedKeys, parentByKey)
   });
 
   return {
@@ -110,172 +114,143 @@ export function selectGranularityStrategy(
 
 function selectUnit(input: {
   unit: WorkUnit;
-  condition: UtilityGranularityCondition;
+  condition: GranularityCondition;
   isRoot: boolean;
   breakdown: WorkBreakdown;
   profiles: Record<string, RepositoryContextProfile>;
-  config: UtilityPolicyConfig;
+  config: GranularityPolicyConfig;
   candidateTreeHash: string;
-  assessments: Record<string, GranularityStrategyAssessment>;
+  assessments: Record<string, GranularityAssessment>;
 }): SelectedUnit {
   const profile = requireProfile(input.profiles, input.unit.key);
   const leafFeasible = isLeafFeasible(profile, input.config);
-  const emptyFeatures = features({ uncertainty: profile.uncertainty });
 
-  if (input.condition === "A" && input.isRoot) {
-    input.assessments[input.unit.key] = assessment({
-      unitKey: input.unit.key,
-      candidateTreeHash: input.candidateTreeHash,
-      selected: "leaf",
-      leafFeasible,
-      splitViable: input.unit.kind === "composite" && input.unit.children.length >= 2,
-      features: emptyFeatures,
-      minimumAdvantage: input.config.minimumAdvantage,
-      evidenceRefs: profile.evidenceRefs,
-      rationale: "Condition A keeps the complete goal as one leaf."
-    });
-    return { unit: collapseToLeaf(input.unit), decision: "leaf" };
-  }
-
-  if (input.unit.kind === "leaf") {
-    const selected = input.condition === "C" && !leafFeasible
-      ? "semantic_replan"
-      : "leaf";
-    input.assessments[input.unit.key] = assessment({
+  const record = (
+    selected: GranularityDecision,
+    splitViable: boolean,
+    reasons: GranularitySplitReasons,
+    rationale?: string
+  ): void => {
+    input.assessments[input.unit.key] = {
       unitKey: input.unit.key,
       candidateTreeHash: input.candidateTreeHash,
       selected,
       leafFeasible,
-      splitViable: false,
-      features: emptyFeatures,
-      minimumAdvantage: input.config.minimumAdvantage,
-      evidenceRefs: profile.evidenceRefs,
-      rationale: selected === "semantic_replan"
-        ? "Leaf exceeds the effective execution budget and has no semantic cut."
-        : "Semantic leaf remains one executable unit."
-    });
+      splitViable,
+      reasons,
+      evidenceRefs: [...profile.evidenceRefs],
+      rationale: rationale ?? describeDecision(selected, reasons, splitViable)
+    };
+  };
+
+  if (input.condition === "A" && input.isRoot) {
+    record("leaf", input.unit.kind === "composite" && input.unit.children.length >= 2, NO_SPLIT_REASONS,
+      "Condition A keeps the complete goal as one unit, by instruction rather than by judgement.");
+    return { unit: collapseToLeaf(input.unit), decision: "leaf" };
+  }
+
+  if (input.unit.kind === "leaf") {
+    const selected: GranularityDecision = leafFeasible ? "leaf" : "semantic_replan";
+    record(selected, false, { ...NO_SPLIT_REASONS, doesNotFit: !leafFeasible });
     return { unit: input.unit, decision: selected };
   }
 
-  const children = input.unit.children.map((child) => selectUnit({
-    ...input,
-    unit: child,
-    isRoot: false
-  }));
-  const splitFeatures = cutFeatures(
-    input.unit,
-    input.breakdown,
-    input.profiles,
-    input.config
-  );
-  const benefit = mean([
-    splitFeatures.contextRelief,
-    splitFeatures.parallelism,
-    splitFeatures.faultIsolation
-  ]);
-  const cost = mean([
-    splitFeatures.coordination,
-    splitFeatures.pathOverlap,
-    splitFeatures.validationDuplication,
-    splitFeatures.uncertainty
-  ]);
-  const splitAdvantage = round4(benefit - cost);
+  const children = input.unit.children.map((child) => selectUnit({ ...input, unit: child, isRoot: false }));
   const splitViable = input.unit.children.length >= 2 &&
     children.every((child) => child.decision !== "semantic_replan");
+  const reasons: GranularitySplitReasons = {
+    doesNotFit: !leafFeasible,
+    runsInParallel: splitViable && runsInParallel(input.unit, input.breakdown),
+    verifiableApart: splitViable && verifiableApart(input.unit)
+  };
 
-  let selected: GranularityStrategyDecision;
-  if (input.condition === "B") {
-    selected = splitViable ? "split" : "leaf";
-  } else if (!leafFeasible) {
-    selected = splitViable ? "split" : "semantic_replan";
-  } else {
-    // A cut whose children own acceptance criteria no sibling shares is admitted
-    // on that ground alone. Averaging isolation with two other benefits dilutes a
-    // perfect result to a third, so layered work — a chain, therefore genuinely
-    // without concurrency, and on a small repository genuinely without context
-    // relief — could be collapsed despite being the case decomposition exists to
-    // serve: a failure in one layer must not void another layer's verified
-    // evidence.
-    const isolationAdmits = splitFeatures.faultIsolation >= input.config.minimumFaultIsolation;
-    selected = splitViable && (splitAdvantage >= input.config.minimumAdvantage || isolationAdmits)
-      ? "split"
-      : "leaf";
-  }
+  const selected: GranularityDecision = splitViable
+    ? (anyReasonHolds(reasons) ? "split" : "leaf")
+    : (leafFeasible ? "leaf" : "semantic_replan");
 
-  input.assessments[input.unit.key] = assessment({
-    unitKey: input.unit.key,
-    candidateTreeHash: input.candidateTreeHash,
-    selected,
-    leafFeasible,
-    splitViable,
-    features: splitFeatures,
-    benefit,
-    cost,
-    splitAdvantage,
-    minimumAdvantage: input.config.minimumAdvantage,
-    evidenceRefs: profile.evidenceRefs,
-    rationale: rationaleFor(input.condition, selected, leafFeasible, splitViable, splitAdvantage, input.config)
-  });
+  record(selected, splitViable, reasons);
 
   if (selected === "leaf") return { unit: collapseToLeaf(input.unit), decision: selected };
   if (selected === "semantic_replan") return { unit: input.unit, decision: selected };
-  return {
-    unit: { ...input.unit, children: children.map((child) => child.unit) },
-    decision: selected
-  };
+  return { unit: { ...input.unit, children: children.map((child) => child.unit) }, decision: selected };
 }
 
-function cutFeatures(
+/**
+ * Whether two children can start at the same time.
+ *
+ * Only a materialized artifact orders the work: `compileGraphRevision` creates
+ * an execution-blocking `ArtifactRequirement` for every candidate artifact whose
+ * materialization is not `logical`, and `explainReadiness` holds a consumer
+ * until that artifact exists. A seam compiles to no requirement — it is an
+ * interface both sides agree on before either is written, so it constrains WHAT
+ * they build, not WHEN.
+ *
+ * The cut offers concurrency when its production order is shallower than its
+ * child count: `n` units needing fewer than `n` rounds means at least two share
+ * a round. A strict chain needs exactly `n`, which is why layered work buys
+ * isolation rather than speed.
+ */
+function runsInParallel(
   unit: Extract<WorkUnit, { kind: "composite" }>,
-  breakdown: WorkBreakdown,
-  profiles: Record<string, RepositoryContextProfile>,
-  config: UtilityPolicyConfig
-): GranularityStrategyFeatures {
-  const parent = requireProfile(profiles, unit.key);
-  const childProfiles = unit.children.map((child) => requireProfile(profiles, child.key));
-  const maxChildTokens = Math.max(0, ...childProfiles.map((profile) => profile.measuredExistingTokens));
-  // Relief is the budget pressure the cut removes, not the share of the parent
-  // the largest child happens to hold. Measured against the parent, the term
-  // reported two thirds of a maximum on a repository whose entire source is 4%
-  // of one leaf's budget, and moved with nothing but how the planner distributed
-  // files: the two repetitions of the same task scored 0.5075 and 0.0671, and
-  // that gap alone decided split against leaf.
-  const contextRelief = clamp01(
-    (parent.measuredExistingTokens - maxChildTokens) / config.maxLeafContextTokens
-  );
+  breakdown: WorkBreakdown
+): boolean {
   const childKeys = unit.children.map((child) => child.key);
-  // Only these compile to an execution-blocking ArtifactRequirement: see
-  // `compileGraphRevision`, which skips a `logical` materialization entirely, and
-  // `explainReadiness`, which blocks a consumer on those requirements alone. A
-  // seam compiles to no requirement, so it neither orders the work nor is a
-  // handoff the children must coordinate directly — charging it made declaring
-  // an interface contract strictly worsen the cut that declared it.
-  const serializing = crossChildEdges(
+  if (childKeys.length < 2) return false;
+  const edges = crossChildEdges(
     unit.children,
     breakdown.candidateArtifacts.filter((artifact) => artifact.materializationHint !== "logical")
   );
-  const parallelism = concurrency(childKeys, serializing);
-  const coordination = coupling(childKeys, serializing);
-  const pathOverlap = averagePairwise(
-    childProfiles.map((profile) => new Set(profile.scopePaths)),
-    jaccard
-  );
-  const intentSets = unit.children.map((child) => new Set(child.acceptanceIntentIds));
-  const faultIsolation = averagePairwise(intentSets, (left, right) => 1 - jaccard(left, right));
-  const allAssignments = unit.children.flatMap((child) => child.acceptanceIntentIds);
-  const validationDuplication = allAssignments.length === 0
-    ? 0
-    : (allAssignments.length - new Set(allAssignments).size) / allAssignments.length;
+  const rounds = productionRounds(childKeys, edges);
+  // A cut its own dependencies cannot schedule offers no concurrency.
+  return rounds !== undefined && rounds < childKeys.length;
+}
 
-  return features({
-    contextRelief,
-    parallelism,
-    faultIsolation,
-    coordination,
-    pathOverlap,
-    validationDuplication,
-    uncertainty: mean(childProfiles.map((profile) => profile.uncertainty))
-  });
+/**
+ * Whether every child owns an acceptance criterion no sibling owns.
+ *
+ * A child with no criterion of its own cannot be shown to have succeeded
+ * independently of its siblings, so separating it buys no evidence — its
+ * failure and their failure are the same observation.
+ */
+function verifiableApart(unit: Extract<WorkUnit, { kind: "composite" }>): boolean {
+  if (unit.children.length < 2) return false;
+  const owners = new Map<string, number>();
+  for (const child of unit.children) {
+    for (const intentId of new Set(child.acceptanceIntentIds)) {
+      owners.set(intentId, (owners.get(intentId) ?? 0) + 1);
+    }
+  }
+  return unit.children.every((child) =>
+    child.acceptanceIntentIds.some((intentId) => owners.get(intentId) === 1)
+  );
+}
+
+/** Rounds the cut needs when every unit starts as soon as its inputs exist, or `undefined` if cyclic. */
+function productionRounds(
+  nodes: readonly string[],
+  edges: readonly ChildEdge[]
+): number | undefined {
+  const remaining = new Map(nodes.map((key) => [key, 0]));
+  const outgoing = new Map(nodes.map((key) => [key, [] as string[]]));
+  for (const edge of edges) {
+    outgoing.get(edge.from)?.push(edge.to);
+    remaining.set(edge.to, (remaining.get(edge.to) ?? 0) + 1);
+  }
+
+  const level = new Map(nodes.map((key) => [key, 1]));
+  const ready = nodes.filter((key) => remaining.get(key) === 0);
+  let ordered = 0;
+  while (ready.length > 0) {
+    const key = ready.shift()!;
+    ordered += 1;
+    for (const next of outgoing.get(key) ?? []) {
+      level.set(next, Math.max(level.get(next)!, level.get(key)! + 1));
+      const pending = (remaining.get(next) ?? 0) - 1;
+      remaining.set(next, pending);
+      if (pending === 0) ready.push(next);
+    }
+  }
+  return ordered === nodes.length ? Math.max(...level.values()) : undefined;
 }
 
 /** Distinct producer→consumer dependencies between two different children. */
@@ -302,109 +277,16 @@ function crossChildEdges(children: WorkUnit[], relations: readonly RelationLike[
 }
 
 /**
- * How much of a cut can proceed at the same time.
+ * A leaf is one unit an agent completes inside one budgeted attempt.
  *
- * Concurrency is a property of the DEPTH of the production order, not of the
- * number of dependencies. Layering the children by longest path gives the number
- * of rounds the cut needs; `n` units in `L` rounds is normalized so that fully
- * independent children score 1 and a strict chain scores 0.
- *
- * Counting edges instead — `1 - edges / (children - 1)` — divided by the edge
- * count of a spanning tree, which is the fewest edges a connected cut can have.
- * Every connected cut therefore scored zero, and a fan-out, where every consumer
- * proceeds at once behind one producer, was indistinguishable from a chain,
- * where nothing does. Layered software is connected by construction, so the term
- * contributed nothing to any decomposition it was meant to judge.
- *
- * Only artifacts order the work. A seam is an interface both sides agree on
- * before either is written: it constrains WHAT they build, not WHEN.
+ * Reading and producing are separate limits: the first two bounds cover what a
+ * unit must hold in context, `maxLeafPlannedPaths` covers what it must bring
+ * into existence.
  */
-function concurrency(childKeys: readonly string[], edges: readonly ChildEdge[]): number {
-  if (childKeys.length < 2) return 0;
-  const levels = criticalPathLength(childKeys, edges);
-  // A cut its own dependencies cannot order offers no concurrency to schedule.
-  if (levels === undefined) return 0;
-  return clamp01((childKeys.length - levels) / (childKeys.length - 1));
-}
-
-/**
- * How coupled a cut leaves its children, as the share of child pairs that must
- * coordinate directly.
- *
- * Two corrections over counting edges per child. A dependency that another
- * already implies is not a second handoff, so the count is taken on the
- * transitive reduction. And it is expressed as a share of the pairs that COULD
- * be coupled, so a clean decomposition does not become more expensive merely by
- * being larger: under `edges / children`, an eight-way chain cost 0.875 and a
- * four-way chain 0.75, which is backwards, and any connected cut was already
- * charged at least `(n-1)/n`.
- */
-function coupling(childKeys: readonly string[], edges: readonly ChildEdge[]): number {
-  if (childKeys.length < 2) return 0;
-  const reduced = independentDependencyCount(childKeys, edges);
-  // Children that depend on each other in a cycle are coupled to every other.
-  if (reduced === undefined) return 1;
-  return clamp01((2 * reduced) / (childKeys.length * (childKeys.length - 1)));
-}
-
-/** Rounds the cut needs when every unit starts as soon as its inputs exist, or `undefined` if cyclic. */
-function criticalPathLength(
-  nodes: readonly string[],
-  edges: readonly ChildEdge[]
-): number | undefined {
-  const remaining = new Map(nodes.map((key) => [key, 0]));
-  const outgoing = outgoingMap(nodes, edges);
-  for (const edge of edges) remaining.set(edge.to, (remaining.get(edge.to) ?? 0) + 1);
-
-  const level = new Map(nodes.map((key) => [key, 1]));
-  const ready = nodes.filter((key) => remaining.get(key) === 0);
-  let ordered = 0;
-  while (ready.length > 0) {
-    const key = ready.shift()!;
-    ordered += 1;
-    for (const next of outgoing.get(key) ?? []) {
-      level.set(next, Math.max(level.get(next)!, level.get(key)! + 1));
-      const pending = (remaining.get(next) ?? 0) - 1;
-      remaining.set(next, pending);
-      if (pending === 0) ready.push(next);
-    }
-  }
-  return ordered === nodes.length ? Math.max(...level.values()) : undefined;
-}
-
-/** Dependencies no other path already implies, or `undefined` if the graph is cyclic. */
-function independentDependencyCount(
-  nodes: readonly string[],
-  edges: readonly ChildEdge[]
-): number | undefined {
-  if (criticalPathLength(nodes, edges) === undefined) return undefined;
-  const outgoing = outgoingMap(nodes, edges);
-  const reachable = new Map<string, Set<string>>();
-  // Safe to memoize before filling: the graph is known acyclic, so no node is
-  // re-entered from its own descendants.
-  const reach = (key: string): Set<string> => {
-    const cached = reachable.get(key);
-    if (cached !== undefined) return cached;
-    const output = new Set<string>();
-    reachable.set(key, output);
-    for (const next of outgoing.get(key) ?? []) {
-      output.add(next);
-      for (const far of reach(next)) output.add(far);
-    }
-    return output;
-  };
-  return edges.filter((edge) => !(outgoing.get(edge.from) ?? []).some((next) =>
-    next !== edge.to && reach(next).has(edge.to)
-  )).length;
-}
-
-function outgoingMap(
-  nodes: readonly string[],
-  edges: readonly ChildEdge[]
-): Map<string, string[]> {
-  const outgoing = new Map(nodes.map((key) => [key, [] as string[]]));
-  for (const edge of edges) outgoing.get(edge.from)?.push(edge.to);
-  return outgoing;
+function isLeafFeasible(profile: RepositoryContextProfile, config: GranularityPolicyConfig): boolean {
+  return profile.measuredExistingTokens <= config.maxLeafContextTokens &&
+    profile.scopePaths.length <= config.maxLeafScopePaths &&
+    profile.plannedPathCount <= config.maxLeafPlannedPaths;
 }
 
 function collapseToLeaf(unit: WorkUnit): WorkUnit {
@@ -465,103 +347,6 @@ function parentMap(root: WorkUnit): Map<string, string> {
   return output;
 }
 
-function assessment(input: {
-  unitKey: string;
-  candidateTreeHash: string;
-  selected: GranularityStrategyDecision;
-  leafFeasible: boolean;
-  splitViable: boolean;
-  features: GranularityStrategyFeatures;
-  minimumAdvantage: number;
-  evidenceRefs: string[];
-  rationale: string;
-  benefit?: number;
-  cost?: number;
-  splitAdvantage?: number;
-}): GranularityStrategyAssessment {
-  const benefit = round4(input.benefit ?? mean([
-    input.features.contextRelief,
-    input.features.parallelism,
-    input.features.faultIsolation
-  ]));
-  const cost = round4(input.cost ?? mean([
-    input.features.coordination,
-    input.features.pathOverlap,
-    input.features.validationDuplication,
-    input.features.uncertainty
-  ]));
-  return {
-    unitKey: input.unitKey,
-    candidateTreeHash: input.candidateTreeHash,
-    selected: input.selected,
-    leafFeasible: input.leafFeasible,
-    splitViable: input.splitViable,
-    features: input.features,
-    benefit,
-    cost,
-    splitAdvantage: round4(input.splitAdvantage ?? benefit - cost),
-    minimumAdvantage: input.minimumAdvantage,
-    evidenceRefs: [...input.evidenceRefs],
-    rationale: input.rationale
-  };
-}
-
-function features(input: Partial<GranularityStrategyFeatures>): GranularityStrategyFeatures {
-  return {
-    contextRelief: round4(clamp01(input.contextRelief ?? 0)),
-    parallelism: round4(clamp01(input.parallelism ?? 0)),
-    faultIsolation: round4(clamp01(input.faultIsolation ?? 0)),
-    coordination: round4(clamp01(input.coordination ?? 0)),
-    pathOverlap: round4(clamp01(input.pathOverlap ?? 0)),
-    validationDuplication: round4(clamp01(input.validationDuplication ?? 0)),
-    uncertainty: round4(clamp01(input.uncertainty ?? 0))
-  };
-}
-
-function rationaleFor(
-  condition: UtilityGranularityCondition,
-  selected: GranularityStrategyDecision,
-  leafFeasible: boolean,
-  splitViable: boolean,
-  splitAdvantage: number,
-  config: UtilityPolicyConfig
-): string {
-  if (condition === "B") {
-    return selected === "split"
-      ? "Condition B expands the finest valid semantic frontier."
-      : "Condition B found no valid multi-child semantic cut."
-  }
-  if (selected === "semantic_replan") {
-    return "Leaf is infeasible and the candidate contains no viable semantic split."
-  }
-  if (selected === "split" && !leafFeasible) {
-    return "Leaf is infeasible; C selected the available semantic split."
-  }
-  if (selected === "split") {
-    return `Split advantage ${splitAdvantage.toFixed(4)} meets minimum ${config.minimumAdvantage.toFixed(4)}.`;
-  }
-  return splitViable
-    ? `Split advantage ${splitAdvantage.toFixed(4)} is below minimum ${config.minimumAdvantage.toFixed(4)}.`
-    : "No valid multi-child semantic split is available; leaf remains cohesive.";
-}
-
-/**
- * A leaf is one unit an agent completes inside one budgeted attempt.
- *
- * Reading and producing are separate limits. The first two bounds cover what a
- * unit must hold in context; `maxLeafPlannedPaths` covers what it must bring
- * into existence. Warehouse pilot W2 showed why the third is not optional: after
- * W1 the repository was tiny, so the root read almost nothing and passed both
- * context bounds, yet it had to create a whole Vite/React application. It was
- * judged feasible, the Architect's three-way cut was collapsed, and the merged
- * leaf spent a thirty-minute budget without delivering.
- */
-function isLeafFeasible(profile: RepositoryContextProfile, config: UtilityPolicyConfig): boolean {
-  return profile.measuredExistingTokens <= config.maxLeafContextTokens &&
-    profile.scopePaths.length <= config.maxLeafScopePaths &&
-    profile.plannedPathCount <= config.maxLeafPlannedPaths;
-}
-
 function requireProfile(
   profiles: Record<string, RepositoryContextProfile>,
   unitKey: string
@@ -573,28 +358,6 @@ function requireProfile(
 
 function flattenUnits(root: WorkUnit): WorkUnit[] {
   return root.kind === "leaf" ? [root] : [root, ...root.children.flatMap(flattenUnits)];
-}
-
-function averagePairwise<T>(
-  values: readonly T[],
-  compare: (left: T, right: T) => number
-): number {
-  if (values.length < 2) return 0;
-  const comparisons: number[] = [];
-  for (let left = 0; left < values.length; left += 1) {
-    for (let right = left + 1; right < values.length; right += 1) {
-      comparisons.push(compare(values[left]!, values[right]!));
-    }
-  }
-  return mean(comparisons);
-}
-
-function jaccard(left: ReadonlySet<string>, right: ReadonlySet<string>): number {
-  const union = new Set([...left, ...right]);
-  if (union.size === 0) return 0;
-  let intersection = 0;
-  for (const value of left) if (right.has(value)) intersection += 1;
-  return intersection / union.size;
 }
 
 function stableHash(value: unknown): string {
@@ -615,16 +378,4 @@ function canonicalize(value: unknown): unknown {
 
 function unique<T>(values: readonly T[]): T[] {
   return [...new Set(values)];
-}
-
-function mean(values: readonly number[]): number {
-  return values.length === 0 ? 0 : values.reduce((sum, value) => sum + value, 0) / values.length;
-}
-
-function clamp01(value: number): number {
-  return Math.min(1, Math.max(0, value));
-}
-
-function round4(value: number): number {
-  return Math.round((value + Number.EPSILON) * 10_000) / 10_000;
 }

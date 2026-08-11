@@ -5,11 +5,11 @@ import {
   type SemanticSeam,
   type SemanticWorkUnit
 } from "../planner/semantic-plan.js";
-import type { GranularityStrategyAssessment } from "./utility-policy.js";
+import type { GranularityAssessment } from "./granularity-policy.js";
 
 export interface ApplyGranularitySelectionInput {
   plan: SemanticPlan;
-  assessments: Record<string, GranularityStrategyAssessment>;
+  assessments: Record<string, GranularityAssessment>;
 }
 
 export interface ApplyGranularitySelectionResult {
@@ -52,7 +52,7 @@ export function applyGranularitySelection(
 
 function select(
   unit: SemanticWorkUnit,
-  assessments: Record<string, GranularityStrategyAssessment>,
+  assessments: Record<string, GranularityAssessment>,
   collapsedUnitKeys: string[]
 ): SemanticWorkUnit {
   if (unit.kind === "leaf") return unit;

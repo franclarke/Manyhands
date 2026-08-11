@@ -304,32 +304,36 @@ function NodeDetails({ node, contract, granularity, onClose }: { node: ReturnTyp
   );
 }
 
-/** Explains why the adaptive policy made this node a leaf or a composite. */
+/** Explains why the policy made this node one unit or a cut, reason by reason. */
 function GranularityDetails({ granularity }: { granularity: GranularityExplanationView }): React.ReactElement {
+  const carried = granularity.reasons.filter((reason) => reason.holds).length;
   return (
     <details className="mt-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-3 text-xs">
       <summary className="cursor-pointer select-none font-medium">
         Granularidad: {granularity.decisionLabel}{" "}
-        <span className="tabular-nums text-[var(--color-text-muted)]">({granularity.comparison})</span>
+        <span className="tabular-nums text-[var(--color-text-muted)]">
+          ({carried} de {granularity.reasons.length} razones)
+        </span>
       </summary>
-      <p className="mt-2 leading-5 text-[var(--color-text-muted)]">
-        Señales {granularity.signalSourceLabel}
-        {granularity.branchingFactor === undefined ? "" : `; ramificación sugerida ${granularity.branchingFactor}`}.
-      </p>
-      <dl className="mt-3 space-y-1">
-        {granularity.dimensions.map((dimension) => (
-          <div key={dimension.label} className="flex items-baseline justify-between gap-3">
-            <dt className="text-[var(--color-text-muted)]">{dimension.label}</dt>
-            <dd className="tabular-nums">
-              {dimension.value} {dimension.weight === undefined ? null : <span className="text-[var(--color-text-subtle)]">× {dimension.weight}</span>}
-            </dd>
-          </div>
+      <ul className="mt-3 space-y-2">
+        {granularity.reasons.map((reason) => (
+          <li key={reason.label} className="flex items-baseline gap-2">
+            <span aria-hidden="true" className={reason.holds ? "text-[var(--color-text)]" : "text-[var(--color-text-subtle)]"}>
+              {reason.holds ? "✓" : "–"}
+            </span>
+            <span>
+              <span className={reason.holds ? "font-medium" : "text-[var(--color-text-muted)]"}>
+                {reason.label}
+              </span>
+              <span className="sr-only">{reason.holds ? " (aplica)" : " (no aplica)"}</span>
+              <span className="block leading-5 text-[var(--color-text-subtle)]">{reason.explanation}</span>
+            </span>
+          </li>
         ))}
-      </dl>
-      {granularity.benefit === undefined ? null : <p className="mt-3 tabular-nums text-[var(--color-text-muted)]">Beneficio {granularity.benefit}; costo {granularity.cost}.</p>}
+      </ul>
       <p className="mt-3 leading-5 text-[var(--color-text-muted)]">{granularity.rationale}</p>
-      {(granularity.evidenceRefs?.length ?? 0) === 0 ? null : <p className="mt-2 break-all text-[var(--color-text-subtle)]">Evidencia: {granularity.evidenceRefs?.join(", ")}</p>}
-      <p className="mt-3 text-[var(--color-text-subtle)]">Fórmula {granularity.formulaVersion}</p>
+      {granularity.evidenceRefs.length === 0 ? null : <p className="mt-2 break-all text-[var(--color-text-subtle)]">Evidencia: {granularity.evidenceRefs.join(", ")}</p>}
+      <p className="mt-3 text-[var(--color-text-subtle)]">Política {granularity.policyVersion}</p>
     </details>
   );
 }

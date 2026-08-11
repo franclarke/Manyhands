@@ -2,8 +2,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { RepositorySnapshot } from "@manyhands/repository-index";
 import type {
-  GranularityStrategyAssessment,
-  UtilityGranularityCondition,
+  GranularityAssessment,
+  GranularityCondition,
   WorkBreakdown
 } from "@manyhands/decomposer";
 
@@ -26,7 +26,7 @@ const CORPUS_PATH = join(process.cwd(), "tests", "fixtures", "granularity-corpus
  */
 export interface GranularityCorpusCase {
   caseId: string;
-  condition: UtilityGranularityCondition;
+  condition: GranularityCondition;
   breakdown: WorkBreakdown;
   repositorySnapshot: RepositorySnapshot;
 }
@@ -53,13 +53,14 @@ export interface GranularityDecisionRow {
   selected: string;
   leafFeasible: boolean;
   splitViable: boolean;
-  splitAdvantage: number;
-  minimumAdvantage: number;
+  doesNotFit: boolean;
+  runsInParallel: boolean;
+  verifiableApart: boolean;
 }
 
 export function decisionRows(
   caseId: string,
-  assessments: Record<string, GranularityStrategyAssessment>
+  assessments: Record<string, GranularityAssessment>
 ): GranularityDecisionRow[] {
   return Object.values(assessments)
     .map((assessment) => ({
@@ -68,8 +69,9 @@ export function decisionRows(
       selected: assessment.selected,
       leafFeasible: assessment.leafFeasible,
       splitViable: assessment.splitViable,
-      splitAdvantage: assessment.splitAdvantage,
-      minimumAdvantage: assessment.minimumAdvantage
+      doesNotFit: assessment.reasons.doesNotFit,
+      runsInParallel: assessment.reasons.runsInParallel,
+      verifiableApart: assessment.reasons.verifiableApart
     }))
     .sort((left, right) => left.unitKey.localeCompare(right.unitKey));
 }

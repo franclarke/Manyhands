@@ -38,29 +38,18 @@ export interface GranularityStrategyAssessmentProjection {
   selected: "leaf" | "split" | "semantic_replan";
   leafFeasible: boolean;
   splitViable: boolean;
-  features: {
-    contextRelief: number;
-    parallelism: number;
-    faultIsolation: number;
-    coordination: number;
-    pathOverlap: number;
-    validationDuplication: number;
-    uncertainty: number;
-  };
-  benefit: number;
-  cost: number;
-  splitAdvantage: number;
-  minimumAdvantage: number;
+  /** Which of the three reasons carried the decision. */
+  reasons: { doesNotFit: boolean; runsInParallel: boolean; verifiableApart: boolean };
   evidenceRefs: string[];
   rationale: string;
 }
 
 export interface GranularityStrategyProjection {
   policyVersion: string;
-  condition: "A" | "B" | "C" | "C2";
+  condition: "A" | "C";
   candidateTreeHash: string;
   candidateSourceHash?: string;
-  config: { minimumAdvantage: number; maxLeafContextTokens: number; maxLeafScopePaths: number; maxLeafPlannedPaths?: number | undefined };
+  config: { maxLeafContextTokens: number; maxLeafScopePaths: number; maxLeafPlannedPaths: number };
   assessments: Record<string, GranularityStrategyAssessmentProjection>;
   metrics: { maxGraphDepth: number; totalLeafCount: number; averageBranchingFactor: number };
 }
@@ -186,7 +175,7 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
         config: { ...event.payload.config },
         assessments: Object.fromEntries(event.payload.assessments.map((assessment) => [assessment.nodeId, {
           ...assessment,
-          features: { ...assessment.features },
+          reasons: { ...assessment.reasons },
           evidenceRefs: [...assessment.evidenceRefs]
         }])),
         metrics: { ...event.payload.metrics }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  PILOT_UTILITY_POLICY,
+  DEFAULT_GRANULARITY_POLICY,
   buildGranularityPlanningBrief
 } from "@manyhands/decomposer";
 import { bookingSnapshot } from "./helpers/target-planning-fixtures";
@@ -9,13 +9,13 @@ describe("granularity planning brief", () => {
   it("places exact policy budgets and semantic hard gates before planning", () => {
     const brief = buildGranularityPlanningBrief({
       repositorySnapshot: bookingSnapshot(),
-      config: PILOT_UTILITY_POLICY,
+      config: DEFAULT_GRANULARITY_POLICY,
       candidateCount: 3
     });
 
     expect(brief).toMatchObject({
       schemaVersion: 1,
-      policyVersion: PILOT_UTILITY_POLICY.policyVersion,
+      policyVersion: DEFAULT_GRANULARITY_POLICY.policyVersion,
       candidateCount: 3,
       leafBudget: {
         maxContextTokens: 24_000,

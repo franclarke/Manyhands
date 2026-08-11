@@ -2,7 +2,7 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { CompiledGraphRevision, GoalCriterion, GranularityStrategyResult, GraphCompilerInput, RecursivePlanner, SemanticPlan, WorkBreakdown, WorkUnit } from "@manyhands/decomposer";
 import type { RepositorySnapshot } from "@manyhands/repository-index";
-import { PLAN_CRITIC_KINDS, PILOT_UTILITY_POLICY, applyGranularitySelection, createSemanticPlan, projectPlannedTree, projectSemanticPlanForLegacyCompiler, resolveGranularityCondition, selectGranularityStrategy } from "@manyhands/decomposer";
+import { PLAN_CRITIC_KINDS, DEFAULT_GRANULARITY_POLICY, applyGranularitySelection, createSemanticPlan, projectPlannedTree, projectSemanticPlanForLegacyCompiler, resolveGranularityCondition, selectGranularityStrategy } from "@manyhands/decomposer";
 import { foldRun, supersededDecisionIds, type RunEventInput, type RunProjection } from "@manyhands/run-coordinator";
 import type { FencingAuthority, JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
 import {
@@ -172,7 +172,7 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
       condition: resolveGranularityCondition(input.granularityCondition),
       breakdown: observedBreakdown,
       repositorySnapshot,
-      config: PILOT_UTILITY_POLICY
+      config: DEFAULT_GRANULARITY_POLICY
     });
     if (observed.requiresSemanticReplan) {
       throw new Error(
@@ -294,7 +294,6 @@ function strategySelectedEvent(
         candidateSeams: candidateBreakdown.candidateSeams.map(asRecord)
       },
       config: {
-        minimumAdvantage: strategy.config.minimumAdvantage,
         maxLeafContextTokens: strategy.config.maxLeafContextTokens,
         maxLeafScopePaths: strategy.config.maxLeafScopePaths,
         maxLeafPlannedPaths: strategy.config.maxLeafPlannedPaths
@@ -305,11 +304,7 @@ function strategySelectedEvent(
         selected: assessment.selected,
         leafFeasible: assessment.leafFeasible,
         splitViable: assessment.splitViable,
-        features: assessment.features,
-        benefit: assessment.benefit,
-        cost: assessment.cost,
-        splitAdvantage: assessment.splitAdvantage,
-        minimumAdvantage: assessment.minimumAdvantage,
+        reasons: { ...assessment.reasons },
         evidenceRefs: assessment.evidenceRefs,
         rationale: assessment.rationale
       })),

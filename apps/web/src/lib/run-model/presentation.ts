@@ -246,41 +246,51 @@ function humanizeEventType(type: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-export interface GranularityDimensionView {
+/** One of the three reasons, and whether it carried this decision. */
+export interface GranularityReasonView {
   label: string;
-  value: number;
-  weight?: number;
+  holds: boolean;
+  explanation: string;
 }
 
 export interface GranularityExplanationView {
   decisionLabel: string;
-  score: number;
-  threshold: number;
-  /** Reads as "C_task 0.78 ≤ 3.5" so the decision is legible at a glance. */
-  comparison: string;
-  dimensions: GranularityDimensionView[];
-  signalSourceLabel: string;
+  reasons: GranularityReasonView[];
   rationale: string;
-  formulaVersion: string;
-  branchingFactor?: number;
-  benefit?: number;
-  cost?: number;
-  evidenceRefs?: string[];
+  policyVersion: string;
+  evidenceRefs: string[];
 }
 
-const STRATEGY_FEATURE_LABELS: ReadonlyArray<{
-  key: keyof GranularityStrategyProjection["assessments"][string]["features"];
+const REASON_LABELS: ReadonlyArray<{
+  key: "doesNotFit" | "runsInParallel" | "verifiableApart";
   label: string;
+  explanation: string;
 }> = [
-  { key: "contextRelief", label: "Alivio de contexto" },
-  { key: "parallelism", label: "Paralelismo" },
-  { key: "faultIsolation", label: "Aislamiento de fallos" },
-  { key: "coordination", label: "Coordinación" },
-  { key: "pathOverlap", label: "Solapamiento de paths" },
-  { key: "validationDuplication", label: "Duplicación de validación" },
-  { key: "uncertainty", label: "Incertidumbre" }
+  {
+    key: "doesNotFit",
+    label: "No entra en un intento",
+    explanation: "La unidad excede lo que un agente puede sostener o producir de una vez."
+  },
+  {
+    key: "runsInParallel",
+    label: "Corre en paralelo",
+    explanation: "Al menos dos hijos pueden empezar al mismo tiempo, así que partir gana tiempo."
+  },
+  {
+    key: "verifiableApart",
+    label: "Se verifica por separado",
+    explanation: "Cada hijo posee un criterio que ningún hermano posee, así que un fallo no invalida al resto."
+  }
 ];
 
+/**
+ * Explains why a node received its granularity, from the decision the run
+ * recorded rather than by re-deriving the policy.
+ *
+ * The decision is no longer a number against a threshold: it is which of three
+ * reasons held. Showing them as a checklist is the whole explanation, and it is
+ * what the operator can argue with.
+ */
 export function granularityStrategyExplanation(
   strategy: GranularityStrategyProjection | undefined,
   nodeId: string | null
@@ -292,18 +302,16 @@ export function granularityStrategyExplanation(
     ? "División semántica"
     : assessment.selected === "semantic_replan"
       ? "Replan semántico"
-      : "Hoja cohesiva";
+      : "Unidad cohesiva";
   return {
     decisionLabel,
-    score: assessment.splitAdvantage,
-    threshold: assessment.minimumAdvantage,
-    comparison: `Ventaja ${assessment.splitAdvantage} ${assessment.selected === "split" ? "≥" : "<"} ${assessment.minimumAdvantage}`,
-    dimensions: STRATEGY_FEATURE_LABELS.map(({ key, label }) => ({ label, value: assessment.features[key] })),
-    signalSourceLabel: "medidas sobre el árbol candidato y el repositorio",
+    reasons: REASON_LABELS.map(({ key, label, explanation }) => ({
+      label,
+      holds: assessment.reasons[key],
+      explanation
+    })),
     rationale: assessment.rationale,
-    formulaVersion: strategy.policyVersion,
-    benefit: assessment.benefit,
-    cost: assessment.cost,
+    policyVersion: strategy.policyVersion,
     evidenceRefs: [...assessment.evidenceRefs]
   };
 }

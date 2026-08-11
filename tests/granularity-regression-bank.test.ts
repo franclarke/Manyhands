@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { PILOT_UTILITY_POLICY, selectGranularityStrategy } from "@manyhands/decomposer";
+import { DEFAULT_GRANULARITY_POLICY, selectGranularityStrategy } from "@manyhands/decomposer";
 import { loadGranularityCorpus, decisionRows, type GranularityDecisionRow } from "./helpers/granularity-corpus.js";
 
 const BASELINE_PATH = join(process.cwd(), "tests", "fixtures", "granularity-bank-baseline.json");
@@ -42,7 +42,7 @@ describe("granularity regression bank", () => {
         condition: item.condition,
         breakdown: item.breakdown,
         repositorySnapshot: item.repositorySnapshot,
-        config: PILOT_UTILITY_POLICY
+        config: DEFAULT_GRANULARITY_POLICY
       });
       const known = new Set(unitKeys(item.breakdown.root));
       if (replayed.assessments[item.breakdown.root.key] === undefined) {
@@ -71,7 +71,7 @@ describe("granularity regression bank", () => {
         condition: item.condition,
         breakdown: item.breakdown,
         repositorySnapshot: item.repositorySnapshot,
-        config: PILOT_UTILITY_POLICY
+        config: DEFAULT_GRANULARITY_POLICY
       });
       return decisionRows(item.caseId, replayed.assessments);
     });

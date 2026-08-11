@@ -155,7 +155,7 @@ export const RunEventSchema = z.discriminatedUnion("type", [
   }).strict()),
   event("planning.granularity_strategy_selected", z.object({
     policyVersion: NonEmptyStringSchema,
-    condition: z.enum(["A", "B", "C", "C2"]),
+    condition: z.enum(["A", "C"]),
     candidateTreeHash: NonEmptyStringSchema,
     candidateTree: z.object({
       root: z.unknown(),
@@ -164,12 +164,9 @@ export const RunEventSchema = z.discriminatedUnion("type", [
     }).strict().optional(),
     candidateSourceHash: NonEmptyStringSchema.optional(),
     config: z.object({
-      minimumAdvantage: z.number().min(-1).max(1),
       maxLeafContextTokens: z.number().int().positive(),
       maxLeafScopePaths: z.number().int().positive(),
-      // Added after the first pilot; optional keeps historical strategy
-      // events replayable while new runs persist the effective ceiling.
-      maxLeafPlannedPaths: z.number().int().positive().optional()
+      maxLeafPlannedPaths: z.number().int().positive()
     }).strict(),
     assessments: z.array(z.object({
       unitKey: EntityIdSchema,
@@ -177,19 +174,12 @@ export const RunEventSchema = z.discriminatedUnion("type", [
       selected: z.enum(["leaf", "split", "semantic_replan"]),
       leafFeasible: z.boolean(),
       splitViable: z.boolean(),
-      features: z.object({
-        contextRelief: z.number().min(0).max(1),
-        parallelism: z.number().min(0).max(1),
-        faultIsolation: z.number().min(0).max(1),
-        coordination: z.number().min(0).max(1),
-        pathOverlap: z.number().min(0).max(1),
-        validationDuplication: z.number().min(0).max(1),
-        uncertainty: z.number().min(0).max(1)
+      /** Which of the three reasons carried the decision. */
+      reasons: z.object({
+        doesNotFit: z.boolean(),
+        runsInParallel: z.boolean(),
+        verifiableApart: z.boolean()
       }).strict(),
-      benefit: z.number().min(0).max(1),
-      cost: z.number().min(0).max(1),
-      splitAdvantage: z.number().min(-1).max(1),
-      minimumAdvantage: z.number().min(-1).max(1),
       evidenceRefs: z.array(NonEmptyStringSchema),
       rationale: NonEmptyStringSchema
     }).strict()).min(1),

@@ -5,8 +5,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0625,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "final-experiment/runs/M-C-r1/21f2aebf-9218-4c2e-9e96-b8b60b86fc59.events.v2.jsonl",
@@ -14,8 +15,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "final-experiment/runs/M-C-r1/21f2aebf-9218-4c2e-9e96-b8b60b86fc59.events.v2.jsonl",
@@ -23,8 +25,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "final-experiment/runs/M-C-r1/21f2aebf-9218-4c2e-9e96-b8b60b86fc59.events.v2.jsonl",
@@ -32,8 +35,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.0126,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": true
   },
   {
     "caseId": "final-experiment/runs/M-C-r2/99c0c50f-8e76-49ef-8bd4-bb020b1240b9.events.v2.jsonl",
@@ -41,8 +45,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0625,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "final-experiment/runs/M-C-r2/99c0c50f-8e76-49ef-8bd4-bb020b1240b9.events.v2.jsonl",
@@ -50,8 +55,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0625,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "final-experiment/runs/M-C-r2/99c0c50f-8e76-49ef-8bd4-bb020b1240b9.events.v2.jsonl",
@@ -59,8 +65,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "final-experiment/runs/M-C-r2/99c0c50f-8e76-49ef-8bd4-bb020b1240b9.events.v2.jsonl",
@@ -68,8 +75,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.0231,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": true
   },
   {
     "caseId": "final-experiment/runs/rehearsal/062e496e-572f-48e8-843a-31542082c6a9.events.v2.jsonl",
@@ -77,8 +85,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.05,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "final-experiment/runs/rehearsal/062e496e-572f-48e8-843a-31542082c6a9.events.v2.jsonl",
@@ -86,8 +95,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.05,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "final-experiment/runs/S-C-r1/a74c6959-8981-41b7-9341-899fca9a504e.events.v2.jsonl",
@@ -95,8 +105,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "final-experiment/runs/S-C-r1/a74c6959-8981-41b7-9341-899fca9a504e.events.v2.jsonl",
@@ -104,8 +115,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1225,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "final-experiment/runs/S-C-r2/d611c700-b392-41d0-88ae-39ebead48119.events.v2.jsonl",
@@ -113,8 +125,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "final-experiment/runs/S-C-r2/d611c700-b392-41d0-88ae-39ebead48119.events.v2.jsonl",
@@ -122,8 +135,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0809,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-01-T1-A-r1-codex-medium/run.events.v2.jsonl",
@@ -131,8 +145,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": -0.0417,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-02-T1-C-r1-remediation-6/run.events.v2.jsonl",
@@ -140,8 +155,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-02-T1-C-r1-remediation-6/run.events.v2.jsonl",
@@ -149,8 +165,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-02-T1-C-r1-remediation-6/run.events.v2.jsonl",
@@ -158,8 +175,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-02-T1-C-r1-remediation-6/run.events.v2.jsonl",
@@ -167,8 +185,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-02-T1-C-r1-remediation-6/run.events.v2.jsonl",
@@ -176,8 +195,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-02-T1-C-r1-remediation-6/run.events.v2.jsonl",
@@ -185,8 +205,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0625,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-02-T1-C-r1-remediation-6/run.events.v2.jsonl",
@@ -194,8 +215,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.527,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
@@ -203,8 +225,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
@@ -212,8 +235,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
@@ -221,8 +245,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
@@ -230,8 +255,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
@@ -239,8 +265,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
@@ -248,8 +275,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
@@ -257,8 +285,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
@@ -266,8 +295,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.6071,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
   },
   {
     "caseId": "g6/canonical-runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
@@ -275,8 +305,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
@@ -284,8 +315,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
@@ -293,8 +325,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
@@ -302,8 +335,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
@@ -311,8 +345,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
@@ -320,8 +355,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
@@ -329,8 +365,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
@@ -338,8 +375,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.305,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-05-T1-A-r2-full/run.events.v2.jsonl",
@@ -347,8 +385,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": -0.0417,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-06-T1-B-r2-remediation-39-full/run.events.v2.jsonl",
@@ -356,8 +395,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-06-T1-B-r2-remediation-39-full/run.events.v2.jsonl",
@@ -365,8 +405,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-06-T1-B-r2-remediation-39-full/run.events.v2.jsonl",
@@ -374,8 +415,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-06-T1-B-r2-remediation-39-full/run.events.v2.jsonl",
@@ -383,8 +425,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-06-T1-B-r2-remediation-39-full/run.events.v2.jsonl",
@@ -392,8 +435,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-06-T1-B-r2-remediation-39-full/run.events.v2.jsonl",
@@ -401,8 +445,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.4104,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/canonical-runs/g6-06-T1-B-r2-remediation-39-full/run.events.v2.jsonl",
@@ -410,8 +455,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.075,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/binding-check/run.events.v2.jsonl",
@@ -419,8 +465,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": -0.0395,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/discarded-c52f823e/c52f823e-2979-4869-b5ec-9963e05d05d0.events.v2.jsonl",
@@ -428,8 +475,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": -0.0375,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/discarded-c52f823e/run.events.v2.jsonl",
@@ -437,8 +485,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": -0.0375,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-01-T1-A-r1-codex-medium/run.events.v2.jsonl",
@@ -446,8 +495,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": -0.0417,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-01-T1-A-r1/run.events.v2.jsonl",
@@ -455,8 +505,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": -0.0375,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-01-T1-A-r1/runtime/5a5cb4e7-398d-4981-86db-391d68a524fe.events.v2.jsonl",
@@ -464,8 +515,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": -0.0375,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-planning/run.events.v2.jsonl",
@@ -473,8 +525,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-planning/run.events.v2.jsonl",
@@ -482,8 +535,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-planning/run.events.v2.jsonl",
@@ -491,8 +545,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-planning/run.events.v2.jsonl",
@@ -500,8 +555,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-planning/run.events.v2.jsonl",
@@ -509,8 +565,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-planning/run.events.v2.jsonl",
@@ -518,8 +575,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-planning/run.events.v2.jsonl",
@@ -527,8 +585,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0357,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-planning/run.events.v2.jsonl",
@@ -536,8 +595,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.3364,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1-planning/run.events.v2.jsonl",
@@ -545,8 +605,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1-planning/run.events.v2.jsonl",
@@ -554,8 +615,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1-planning/run.events.v2.jsonl",
@@ -563,8 +625,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1-planning/run.events.v2.jsonl",
@@ -572,8 +635,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1-planning/run.events.v2.jsonl",
@@ -581,8 +645,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.4153,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1-planning/run.events.v2.jsonl",
@@ -590,8 +655,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1-planning/run.events.v2.jsonl",
@@ -599,8 +665,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1-planning/run.events.v2.jsonl",
@@ -608,8 +675,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1/run.events.v2.jsonl",
@@ -617,8 +685,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1/run.events.v2.jsonl",
@@ -626,8 +695,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1/run.events.v2.jsonl",
@@ -635,8 +705,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1/run.events.v2.jsonl",
@@ -644,8 +715,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1/run.events.v2.jsonl",
@@ -653,8 +725,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1/run.events.v2.jsonl",
@@ -662,8 +735,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1/run.events.v2.jsonl",
@@ -671,8 +745,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.075,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1/run.events.v2.jsonl",
@@ -680,8 +755,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.74,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-2-planning/run.events.v2.jsonl",
@@ -689,8 +765,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-2-planning/run.events.v2.jsonl",
@@ -698,8 +775,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-2-planning/run.events.v2.jsonl",
@@ -707,8 +785,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-2-planning/run.events.v2.jsonl",
@@ -716,8 +795,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-2-planning/run.events.v2.jsonl",
@@ -725,8 +805,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-2-planning/run.events.v2.jsonl",
@@ -734,8 +815,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-2-planning/run.events.v2.jsonl",
@@ -743,8 +825,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.15,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-2-planning/run.events.v2.jsonl",
@@ -752,8 +835,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.4625,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-6/run.events.v2.jsonl",
@@ -761,8 +845,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-6/run.events.v2.jsonl",
@@ -770,8 +855,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-6/run.events.v2.jsonl",
@@ -779,8 +865,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-6/run.events.v2.jsonl",
@@ -788,8 +875,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-6/run.events.v2.jsonl",
@@ -797,8 +885,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-6/run.events.v2.jsonl",
@@ -806,8 +895,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0625,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1-remediation-6/run.events.v2.jsonl",
@@ -815,8 +905,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.527,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1/run.events.v2.jsonl",
@@ -824,8 +915,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1/run.events.v2.jsonl",
@@ -833,8 +925,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1/run.events.v2.jsonl",
@@ -842,8 +935,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1/run.events.v2.jsonl",
@@ -851,8 +945,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1/run.events.v2.jsonl",
@@ -860,8 +955,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1/run.events.v2.jsonl",
@@ -869,8 +965,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1/run.events.v2.jsonl",
@@ -878,8 +975,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0577,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-02-T1-C-r1/run.events.v2.jsonl",
@@ -887,8 +985,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.5077,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1-planning/run.events.v2.jsonl",
@@ -896,8 +995,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1-planning/run.events.v2.jsonl",
@@ -905,8 +1005,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1-planning/run.events.v2.jsonl",
@@ -914,8 +1015,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1-planning/run.events.v2.jsonl",
@@ -923,8 +1025,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1-planning/run.events.v2.jsonl",
@@ -932,8 +1035,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1-planning/run.events.v2.jsonl",
@@ -941,8 +1045,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1-planning/run.events.v2.jsonl",
@@ -950,8 +1055,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0938,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1-planning/run.events.v2.jsonl",
@@ -959,8 +1065,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.225,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1/run.events.v2.jsonl",
@@ -968,8 +1075,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1/run.events.v2.jsonl",
@@ -977,8 +1085,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1/run.events.v2.jsonl",
@@ -986,8 +1095,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1/run.events.v2.jsonl",
@@ -995,8 +1105,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1/run.events.v2.jsonl",
@@ -1004,8 +1115,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1/run.events.v2.jsonl",
@@ -1013,8 +1125,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.7062,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1/run.events.v2.jsonl",
@@ -1022,8 +1135,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-full/run.events.v2.jsonl",
@@ -1031,8 +1145,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-full/run.events.v2.jsonl",
@@ -1040,8 +1155,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-full/run.events.v2.jsonl",
@@ -1049,8 +1165,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.05,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-full/run.events.v2.jsonl",
@@ -1058,8 +1175,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-full/run.events.v2.jsonl",
@@ -1067,8 +1185,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.5444,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-full/run.events.v2.jsonl",
@@ -1076,8 +1195,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-full/run.events.v2.jsonl",
@@ -1085,8 +1205,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-full/run.events.v2.jsonl",
@@ -1094,8 +1215,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-planning/run.events.v2.jsonl",
@@ -1103,8 +1225,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-planning/run.events.v2.jsonl",
@@ -1112,8 +1235,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-planning/run.events.v2.jsonl",
@@ -1121,8 +1245,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-planning/run.events.v2.jsonl",
@@ -1130,8 +1255,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-planning/run.events.v2.jsonl",
@@ -1139,8 +1265,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-planning/run.events.v2.jsonl",
@@ -1148,8 +1275,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-planning/run.events.v2.jsonl",
@@ -1157,8 +1285,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0682,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-planning/run.events.v2.jsonl",
@@ -1166,8 +1295,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.4747,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-full/run.events.v2.jsonl",
@@ -1175,8 +1305,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-full/run.events.v2.jsonl",
@@ -1184,8 +1315,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-full/run.events.v2.jsonl",
@@ -1193,8 +1325,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-full/run.events.v2.jsonl",
@@ -1202,8 +1335,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-full/run.events.v2.jsonl",
@@ -1211,8 +1345,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-full/run.events.v2.jsonl",
@@ -1220,8 +1355,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-full/run.events.v2.jsonl",
@@ -1229,8 +1365,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-full/run.events.v2.jsonl",
@@ -1238,8 +1375,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.1727,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-planning/run.events.v2.jsonl",
@@ -1247,8 +1385,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-planning/run.events.v2.jsonl",
@@ -1256,8 +1395,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-planning/run.events.v2.jsonl",
@@ -1265,8 +1405,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-planning/run.events.v2.jsonl",
@@ -1274,8 +1415,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-planning/run.events.v2.jsonl",
@@ -1283,8 +1425,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-planning/run.events.v2.jsonl",
@@ -1292,8 +1435,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.15,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-planning/run.events.v2.jsonl",
@@ -1301,8 +1445,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.7413,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-full/run.events.v2.jsonl",
@@ -1310,8 +1455,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-full/run.events.v2.jsonl",
@@ -1319,8 +1465,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-full/run.events.v2.jsonl",
@@ -1328,8 +1475,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.025,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-full/run.events.v2.jsonl",
@@ -1337,8 +1485,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-full/run.events.v2.jsonl",
@@ -1346,8 +1495,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-full/run.events.v2.jsonl",
@@ -1355,8 +1505,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.7765,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-full/run.events.v2.jsonl",
@@ -1364,8 +1515,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-planning/run.events.v2.jsonl",
@@ -1373,8 +1525,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-planning/run.events.v2.jsonl",
@@ -1382,8 +1535,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-planning/run.events.v2.jsonl",
@@ -1391,8 +1545,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-planning/run.events.v2.jsonl",
@@ -1400,8 +1555,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-planning/run.events.v2.jsonl",
@@ -1409,8 +1565,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-planning/run.events.v2.jsonl",
@@ -1418,8 +1575,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1072,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-planning/run.events.v2.jsonl",
@@ -1427,8 +1585,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-planning/run.events.v2.jsonl",
@@ -1436,8 +1595,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.7655,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-full/run.events.v2.jsonl",
@@ -1445,8 +1605,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-full/run.events.v2.jsonl",
@@ -1454,8 +1615,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-full/run.events.v2.jsonl",
@@ -1463,8 +1625,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0278,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-full/run.events.v2.jsonl",
@@ -1472,8 +1635,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-full/run.events.v2.jsonl",
@@ -1481,8 +1645,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-full/run.events.v2.jsonl",
@@ -1490,8 +1655,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-full/run.events.v2.jsonl",
@@ -1499,8 +1665,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.782,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-full/run.events.v2.jsonl",
@@ -1508,8 +1675,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-planning/run.events.v2.jsonl",
@@ -1517,8 +1685,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-planning/run.events.v2.jsonl",
@@ -1526,8 +1695,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-planning/run.events.v2.jsonl",
@@ -1535,8 +1705,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-planning/run.events.v2.jsonl",
@@ -1544,8 +1715,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-planning/run.events.v2.jsonl",
@@ -1553,8 +1725,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-planning/run.events.v2.jsonl",
@@ -1562,8 +1735,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-planning/run.events.v2.jsonl",
@@ -1571,8 +1745,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0227,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-planning/run.events.v2.jsonl",
@@ -1580,8 +1755,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.7492,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-full/run.events.v2.jsonl",
@@ -1589,8 +1765,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-full/run.events.v2.jsonl",
@@ -1598,8 +1775,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-full/run.events.v2.jsonl",
@@ -1607,8 +1785,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-full/run.events.v2.jsonl",
@@ -1616,8 +1795,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-full/run.events.v2.jsonl",
@@ -1625,8 +1805,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-full/run.events.v2.jsonl",
@@ -1634,8 +1815,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-full/run.events.v2.jsonl",
@@ -1643,8 +1825,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0577,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-full/run.events.v2.jsonl",
@@ -1652,8 +1835,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.4391,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-planning/run.events.v2.jsonl",
@@ -1661,8 +1845,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-planning/run.events.v2.jsonl",
@@ -1670,8 +1855,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-planning/run.events.v2.jsonl",
@@ -1679,8 +1865,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-planning/run.events.v2.jsonl",
@@ -1688,8 +1875,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-planning/run.events.v2.jsonl",
@@ -1697,8 +1885,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-planning/run.events.v2.jsonl",
@@ -1706,8 +1895,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-planning/run.events.v2.jsonl",
@@ -1715,8 +1905,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-planning/run.events.v2.jsonl",
@@ -1724,8 +1915,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.7867,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-full/run.events.v2.jsonl",
@@ -1733,8 +1925,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-full/run.events.v2.jsonl",
@@ -1742,8 +1935,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-full/run.events.v2.jsonl",
@@ -1751,8 +1945,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-full/run.events.v2.jsonl",
@@ -1760,8 +1955,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-full/run.events.v2.jsonl",
@@ -1769,8 +1965,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-full/run.events.v2.jsonl",
@@ -1778,8 +1975,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-full/run.events.v2.jsonl",
@@ -1787,8 +1985,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-full/run.events.v2.jsonl",
@@ -1796,8 +1995,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.3898,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-planning/run.events.v2.jsonl",
@@ -1805,8 +2005,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-planning/run.events.v2.jsonl",
@@ -1814,8 +2015,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-planning/run.events.v2.jsonl",
@@ -1823,8 +2025,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-planning/run.events.v2.jsonl",
@@ -1832,8 +2035,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-planning/run.events.v2.jsonl",
@@ -1841,8 +2045,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-planning/run.events.v2.jsonl",
@@ -1850,8 +2055,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-planning/run.events.v2.jsonl",
@@ -1859,8 +2065,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0682,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-planning/run.events.v2.jsonl",
@@ -1868,8 +2075,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.6153,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-full/run.events.v2.jsonl",
@@ -1877,8 +2085,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-full/run.events.v2.jsonl",
@@ -1886,8 +2095,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-full/run.events.v2.jsonl",
@@ -1895,8 +2105,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-full/run.events.v2.jsonl",
@@ -1904,8 +2115,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-full/run.events.v2.jsonl",
@@ -1913,8 +2125,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-full/run.events.v2.jsonl",
@@ -1922,8 +2135,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-full/run.events.v2.jsonl",
@@ -1931,8 +2145,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-full/run.events.v2.jsonl",
@@ -1940,8 +2155,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.5082,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-planning/run.events.v2.jsonl",
@@ -1949,8 +2165,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.4285,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-planning/run.events.v2.jsonl",
@@ -1958,8 +2175,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-planning/run.events.v2.jsonl",
@@ -1967,8 +2185,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-planning/run.events.v2.jsonl",
@@ -1976,8 +2195,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-planning/run.events.v2.jsonl",
@@ -1985,8 +2205,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-planning/run.events.v2.jsonl",
@@ -1994,8 +2215,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-planning/run.events.v2.jsonl",
@@ -2003,8 +2225,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-planning/run.events.v2.jsonl",
@@ -2012,8 +2235,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0625,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-full/run.events.v2.jsonl",
@@ -2021,8 +2245,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-full/run.events.v2.jsonl",
@@ -2030,8 +2255,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-full/run.events.v2.jsonl",
@@ -2039,8 +2265,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-full/run.events.v2.jsonl",
@@ -2048,8 +2275,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-full/run.events.v2.jsonl",
@@ -2057,8 +2285,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-full/run.events.v2.jsonl",
@@ -2066,8 +2295,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-full/run.events.v2.jsonl",
@@ -2075,8 +2305,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-full/run.events.v2.jsonl",
@@ -2084,8 +2315,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.4259,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-planning/run.events.v2.jsonl",
@@ -2093,8 +2325,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-planning/run.events.v2.jsonl",
@@ -2102,8 +2335,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-planning/run.events.v2.jsonl",
@@ -2111,8 +2345,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-planning/run.events.v2.jsonl",
@@ -2120,8 +2355,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-planning/run.events.v2.jsonl",
@@ -2129,8 +2365,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-planning/run.events.v2.jsonl",
@@ -2138,8 +2375,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0625,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-planning/run.events.v2.jsonl",
@@ -2147,8 +2385,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.3486,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-19-planning/run.events.v2.jsonl",
@@ -2156,8 +2395,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-19-planning/run.events.v2.jsonl",
@@ -2165,8 +2405,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-19-planning/run.events.v2.jsonl",
@@ -2174,8 +2415,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-19-planning/run.events.v2.jsonl",
@@ -2183,8 +2425,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-19-planning/run.events.v2.jsonl",
@@ -2192,8 +2435,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-19-planning/run.events.v2.jsonl",
@@ -2201,8 +2445,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.3935,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-19-planning/run.events.v2.jsonl",
@@ -2210,8 +2455,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-19-planning/run.events.v2.jsonl",
@@ -2219,8 +2465,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0682,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-2/run.events.v2.jsonl",
@@ -2228,8 +2475,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-2/run.events.v2.jsonl",
@@ -2237,8 +2485,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-2/run.events.v2.jsonl",
@@ -2246,8 +2495,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-2/run.events.v2.jsonl",
@@ -2255,8 +2505,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-2/run.events.v2.jsonl",
@@ -2264,8 +2515,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-2/run.events.v2.jsonl",
@@ -2273,8 +2525,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.4254,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-2/run.events.v2.jsonl",
@@ -2282,8 +2535,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-2/run.events.v2.jsonl",
@@ -2291,8 +2545,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1072,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-full/run.events.v2.jsonl",
@@ -2300,8 +2555,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-full/run.events.v2.jsonl",
@@ -2309,8 +2565,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-full/run.events.v2.jsonl",
@@ -2318,8 +2575,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-full/run.events.v2.jsonl",
@@ -2327,8 +2585,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-full/run.events.v2.jsonl",
@@ -2336,8 +2595,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-full/run.events.v2.jsonl",
@@ -2345,8 +2605,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-full/run.events.v2.jsonl",
@@ -2354,8 +2615,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0625,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-full/run.events.v2.jsonl",
@@ -2363,8 +2625,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.1306,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-planning/run.events.v2.jsonl",
@@ -2372,8 +2635,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-planning/run.events.v2.jsonl",
@@ -2381,8 +2645,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-planning/run.events.v2.jsonl",
@@ -2390,8 +2655,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-planning/run.events.v2.jsonl",
@@ -2399,8 +2665,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-planning/run.events.v2.jsonl",
@@ -2408,8 +2675,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-planning/run.events.v2.jsonl",
@@ -2417,8 +2685,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-planning/run.events.v2.jsonl",
@@ -2426,8 +2695,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.15,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-planning/run.events.v2.jsonl",
@@ -2435,8 +2705,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.3622,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-full/run.events.v2.jsonl",
@@ -2444,8 +2715,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-full/run.events.v2.jsonl",
@@ -2453,8 +2725,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-full/run.events.v2.jsonl",
@@ -2462,8 +2735,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-full/run.events.v2.jsonl",
@@ -2471,8 +2745,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-full/run.events.v2.jsonl",
@@ -2480,8 +2755,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-full/run.events.v2.jsonl",
@@ -2489,8 +2765,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-full/run.events.v2.jsonl",
@@ -2498,8 +2775,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0357,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-full/run.events.v2.jsonl",
@@ -2507,8 +2785,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.1072,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-planning/run.events.v2.jsonl",
@@ -2516,8 +2795,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-planning/run.events.v2.jsonl",
@@ -2525,8 +2805,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-planning/run.events.v2.jsonl",
@@ -2534,8 +2815,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-planning/run.events.v2.jsonl",
@@ -2543,8 +2825,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-planning/run.events.v2.jsonl",
@@ -2552,8 +2835,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-planning/run.events.v2.jsonl",
@@ -2561,8 +2845,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-planning/run.events.v2.jsonl",
@@ -2570,8 +2855,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0682,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-planning/run.events.v2.jsonl",
@@ -2579,8 +2865,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.5966,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-full/run.events.v2.jsonl",
@@ -2588,8 +2875,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-full/run.events.v2.jsonl",
@@ -2597,8 +2885,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-full/run.events.v2.jsonl",
@@ -2606,8 +2895,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-full/run.events.v2.jsonl",
@@ -2615,8 +2905,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-full/run.events.v2.jsonl",
@@ -2624,8 +2915,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-full/run.events.v2.jsonl",
@@ -2633,8 +2925,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-full/run.events.v2.jsonl",
@@ -2642,8 +2935,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-full/run.events.v2.jsonl",
@@ -2651,8 +2945,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.2464,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-planning/run.events.v2.jsonl",
@@ -2660,8 +2955,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-planning/run.events.v2.jsonl",
@@ -2669,8 +2965,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-planning/run.events.v2.jsonl",
@@ -2678,8 +2975,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-planning/run.events.v2.jsonl",
@@ -2687,8 +2985,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-planning/run.events.v2.jsonl",
@@ -2696,8 +2995,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-planning/run.events.v2.jsonl",
@@ -2705,8 +3005,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0938,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-planning/run.events.v2.jsonl",
@@ -2714,8 +3015,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.4028,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-25-planning/run.events.v2.jsonl",
@@ -2723,8 +3025,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-25-planning/run.events.v2.jsonl",
@@ -2732,8 +3035,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-25-planning/run.events.v2.jsonl",
@@ -2741,8 +3045,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-25-planning/run.events.v2.jsonl",
@@ -2750,8 +3055,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-25-planning/run.events.v2.jsonl",
@@ -2759,8 +3065,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-25-planning/run.events.v2.jsonl",
@@ -2768,8 +3075,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-25-planning/run.events.v2.jsonl",
@@ -2777,8 +3085,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.2308,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-25-planning/run.events.v2.jsonl",
@@ -2786,8 +3095,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
@@ -2795,8 +3105,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
@@ -2804,8 +3115,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
@@ -2813,8 +3125,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
@@ -2822,8 +3135,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
@@ -2831,8 +3145,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
@@ -2840,8 +3155,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
@@ -2849,8 +3165,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
@@ -2858,8 +3175,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.6071,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-26-planning/run.events.v2.jsonl",
@@ -2867,8 +3185,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-26-planning/run.events.v2.jsonl",
@@ -2876,8 +3195,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-26-planning/run.events.v2.jsonl",
@@ -2885,8 +3205,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.15,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-26-planning/run.events.v2.jsonl",
@@ -2894,8 +3215,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-26-planning/run.events.v2.jsonl",
@@ -2903,8 +3225,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-26-planning/run.events.v2.jsonl",
@@ -2912,8 +3235,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.4127,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3-planning/run.events.v2.jsonl",
@@ -2921,8 +3245,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3-planning/run.events.v2.jsonl",
@@ -2930,8 +3255,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3-planning/run.events.v2.jsonl",
@@ -2939,8 +3265,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3-planning/run.events.v2.jsonl",
@@ -2948,8 +3275,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3-planning/run.events.v2.jsonl",
@@ -2957,8 +3285,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3-planning/run.events.v2.jsonl",
@@ -2966,8 +3295,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3-planning/run.events.v2.jsonl",
@@ -2975,8 +3305,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3-planning/run.events.v2.jsonl",
@@ -2984,8 +3315,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.1856,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3/run.events.v2.jsonl",
@@ -2993,8 +3325,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3/run.events.v2.jsonl",
@@ -3002,8 +3335,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3/run.events.v2.jsonl",
@@ -3011,8 +3345,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3/run.events.v2.jsonl",
@@ -3020,8 +3355,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3/run.events.v2.jsonl",
@@ -3029,8 +3365,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3/run.events.v2.jsonl",
@@ -3038,8 +3375,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3/run.events.v2.jsonl",
@@ -3047,8 +3385,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1072,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3/run.events.v2.jsonl",
@@ -3056,8 +3395,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.3229,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-4/run.events.v2.jsonl",
@@ -3065,8 +3405,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-4/run.events.v2.jsonl",
@@ -3074,8 +3415,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-4/run.events.v2.jsonl",
@@ -3083,8 +3425,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-4/run.events.v2.jsonl",
@@ -3092,8 +3435,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-4/run.events.v2.jsonl",
@@ -3101,8 +3445,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-4/run.events.v2.jsonl",
@@ -3110,8 +3455,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-4/run.events.v2.jsonl",
@@ -3119,8 +3465,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0577,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-4/run.events.v2.jsonl",
@@ -3128,8 +3475,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.5606,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-6/run.events.v2.jsonl",
@@ -3137,8 +3485,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-6/run.events.v2.jsonl",
@@ -3146,8 +3495,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-6/run.events.v2.jsonl",
@@ -3155,8 +3505,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-6/run.events.v2.jsonl",
@@ -3164,8 +3515,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-6/run.events.v2.jsonl",
@@ -3173,8 +3525,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-6/run.events.v2.jsonl",
@@ -3182,8 +3535,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-6/run.events.v2.jsonl",
@@ -3191,8 +3545,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0625,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-6/run.events.v2.jsonl",
@@ -3200,8 +3555,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.4014,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-7/run.events.v2.jsonl",
@@ -3209,8 +3565,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-7/run.events.v2.jsonl",
@@ -3218,8 +3575,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-7/run.events.v2.jsonl",
@@ -3227,8 +3585,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-7/run.events.v2.jsonl",
@@ -3236,8 +3595,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.15,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-7/run.events.v2.jsonl",
@@ -3245,8 +3605,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-7/run.events.v2.jsonl",
@@ -3254,8 +3615,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-7/run.events.v2.jsonl",
@@ -3263,8 +3625,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.7537,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-7/run.events.v2.jsonl",
@@ -3272,8 +3635,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-9-full/run.events.v2.jsonl",
@@ -3281,8 +3645,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-9-full/run.events.v2.jsonl",
@@ -3290,8 +3655,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-9-full/run.events.v2.jsonl",
@@ -3299,8 +3665,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-9-full/run.events.v2.jsonl",
@@ -3308,8 +3675,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-9-full/run.events.v2.jsonl",
@@ -3317,8 +3685,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.05,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-9-full/run.events.v2.jsonl",
@@ -3326,8 +3695,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.4332,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-9/run.events.v2.jsonl",
@@ -3335,8 +3705,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-9/run.events.v2.jsonl",
@@ -3344,8 +3715,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-9/run.events.v2.jsonl",
@@ -3353,8 +3725,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-9/run.events.v2.jsonl",
@@ -3362,8 +3735,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-9/run.events.v2.jsonl",
@@ -3371,8 +3745,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-9/run.events.v2.jsonl",
@@ -3380,8 +3755,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-9/run.events.v2.jsonl",
@@ -3389,8 +3765,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-03-T1-B-r1-remediation-9/run.events.v2.jsonl",
@@ -3398,8 +3775,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.5292,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
@@ -3407,8 +3785,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
@@ -3416,8 +3795,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
@@ -3425,8 +3805,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
@@ -3434,8 +3815,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
@@ -3443,8 +3825,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
@@ -3452,8 +3835,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
@@ -3461,8 +3845,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
@@ -3470,8 +3855,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.305,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-04-T1-C-r2-planning/run.events.v2.jsonl",
@@ -3479,8 +3865,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-04-T1-C-r2-planning/run.events.v2.jsonl",
@@ -3488,8 +3875,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-04-T1-C-r2-planning/run.events.v2.jsonl",
@@ -3497,8 +3885,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-04-T1-C-r2-planning/run.events.v2.jsonl",
@@ -3506,8 +3895,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-04-T1-C-r2-planning/run.events.v2.jsonl",
@@ -3515,8 +3905,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-04-T1-C-r2-planning/run.events.v2.jsonl",
@@ -3524,8 +3915,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-04-T1-C-r2-planning/run.events.v2.jsonl",
@@ -3533,8 +3925,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-04-T1-C-r2-planning/run.events.v2.jsonl",
@@ -3542,8 +3935,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.485,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-05-T1-A-r2-full/run.events.v2.jsonl",
@@ -3551,8 +3945,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": -0.0417,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-05-T1-A-r2-planning/run.events.v2.jsonl",
@@ -3560,8 +3955,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": -0.0313,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-planning/run.events.v2.jsonl",
@@ -3569,8 +3965,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-planning/run.events.v2.jsonl",
@@ -3578,8 +3975,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-planning/run.events.v2.jsonl",
@@ -3587,8 +3985,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-planning/run.events.v2.jsonl",
@@ -3596,8 +3995,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-planning/run.events.v2.jsonl",
@@ -3605,8 +4005,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-planning/run.events.v2.jsonl",
@@ -3614,8 +4015,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-planning/run.events.v2.jsonl",
@@ -3623,8 +4025,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.15,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-planning/run.events.v2.jsonl",
@@ -3632,8 +4035,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.1648,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-29-planning/run.events.v2.jsonl",
@@ -3641,8 +4045,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-29-planning/run.events.v2.jsonl",
@@ -3650,8 +4055,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-29-planning/run.events.v2.jsonl",
@@ -3659,8 +4065,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-29-planning/run.events.v2.jsonl",
@@ -3668,8 +4075,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-29-planning/run.events.v2.jsonl",
@@ -3677,8 +4085,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-29-planning/run.events.v2.jsonl",
@@ -3686,8 +4095,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-29-planning/run.events.v2.jsonl",
@@ -3695,8 +4105,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-29-planning/run.events.v2.jsonl",
@@ -3704,8 +4115,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.1559,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-31-full/run.events.v2.jsonl",
@@ -3713,8 +4125,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-31-full/run.events.v2.jsonl",
@@ -3722,8 +4135,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-31-full/run.events.v2.jsonl",
@@ -3731,8 +4145,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-31-full/run.events.v2.jsonl",
@@ -3740,8 +4155,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-31-full/run.events.v2.jsonl",
@@ -3749,8 +4165,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-31-full/run.events.v2.jsonl",
@@ -3758,8 +4175,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-31-full/run.events.v2.jsonl",
@@ -3767,8 +4185,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0577,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-31-full/run.events.v2.jsonl",
@@ -3776,8 +4195,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.6177,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-35-full/run.events.v2.jsonl",
@@ -3785,8 +4205,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-35-full/run.events.v2.jsonl",
@@ -3794,8 +4215,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-35-full/run.events.v2.jsonl",
@@ -3803,8 +4225,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-35-full/run.events.v2.jsonl",
@@ -3812,8 +4235,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-35-full/run.events.v2.jsonl",
@@ -3821,8 +4245,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.15,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-35-full/run.events.v2.jsonl",
@@ -3830,8 +4255,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-35-full/run.events.v2.jsonl",
@@ -3839,8 +4265,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.2324,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-35-full/run.events.v2.jsonl",
@@ -3848,8 +4275,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-36-full/run.events.v2.jsonl",
@@ -3857,8 +4285,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.4381,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-36-full/run.events.v2.jsonl",
@@ -3866,8 +4295,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-36-full/run.events.v2.jsonl",
@@ -3875,8 +4305,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-36-full/run.events.v2.jsonl",
@@ -3884,8 +4315,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-36-full/run.events.v2.jsonl",
@@ -3893,8 +4325,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-36-full/run.events.v2.jsonl",
@@ -3902,8 +4335,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-36-full/run.events.v2.jsonl",
@@ -3911,8 +4345,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.15,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-36-full/run.events.v2.jsonl",
@@ -3920,8 +4355,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-38-full/run.events.v2.jsonl",
@@ -3929,8 +4365,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.1935,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-38-full/run.events.v2.jsonl",
@@ -3938,8 +4375,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-38-full/run.events.v2.jsonl",
@@ -3947,8 +4385,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-38-full/run.events.v2.jsonl",
@@ -3956,8 +4395,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-38-full/run.events.v2.jsonl",
@@ -3965,8 +4405,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-38-full/run.events.v2.jsonl",
@@ -3974,8 +4415,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-38-full/run.events.v2.jsonl",
@@ -3983,8 +4425,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-38-full/run.events.v2.jsonl",
@@ -3992,8 +4435,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0682,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-39-full/run.events.v2.jsonl",
@@ -4001,8 +4445,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-39-full/run.events.v2.jsonl",
@@ -4010,8 +4455,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-39-full/run.events.v2.jsonl",
@@ -4019,8 +4465,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-39-full/run.events.v2.jsonl",
@@ -4028,8 +4475,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-39-full/run.events.v2.jsonl",
@@ -4037,8 +4485,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-39-full/run.events.v2.jsonl",
@@ -4046,8 +4495,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.4104,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "g6/runs/g6-06-T1-B-r2-remediation-39-full/run.events.v2.jsonl",
@@ -4055,8 +4505,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.075,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "stage-7-rehearsals/runs/rehearsal-04w-v5/run.events.v2.jsonl",
@@ -4064,8 +4515,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "stage-7-rehearsals/runs/rehearsal-04w-v5/run.events.v2.jsonl",
@@ -4073,8 +4525,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "stage-7-rehearsals/runs/rehearsal-04w-v5/run.events.v2.jsonl",
@@ -4082,8 +4535,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "stage-7-rehearsals/runs/rehearsal-04w-v5/run.events.v2.jsonl",
@@ -4091,8 +4545,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.0364,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": true
   },
   {
     "caseId": "stage-7-rehearsals/runs/sp2-cell-01/run.events.v2.jsonl",
@@ -4100,8 +4555,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "stage-7-rehearsals/runs/sp2-cell-01/run.events.v2.jsonl",
@@ -4109,8 +4565,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "stage-7-rehearsals/runs/sp2-cell-01/run.events.v2.jsonl",
@@ -4118,8 +4575,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "stage-7-rehearsals/runs/sp2-cell-01/run.events.v2.jsonl",
@@ -4127,8 +4585,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": -0.0419,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": true
   },
   {
     "caseId": "stage-7-rehearsals/runs/sp2-cell-02/run.events.v2.jsonl",
@@ -4136,8 +4595,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0625,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "stage-7-rehearsals/runs/sp2-cell-02/run.events.v2.jsonl",
@@ -4145,8 +4605,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "stage-7-rehearsals/runs/sp2-cell-02/run.events.v2.jsonl",
@@ -4154,8 +4615,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "stage-7-rehearsals/runs/sp2-cell-02/run.events.v2.jsonl",
@@ -4163,8 +4625,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.0289,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": true
   },
   {
     "caseId": "ui-demo-run/runs/0cffb470-09e0-4bd9-bf89-8909a177a674/0cffb470-09e0-4bd9-bf89-8909a177a674.events.v2.jsonl",
@@ -4172,8 +4635,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "ui-demo-run/runs/0cffb470-09e0-4bd9-bf89-8909a177a674/0cffb470-09e0-4bd9-bf89-8909a177a674.events.v2.jsonl",
@@ -4181,8 +4645,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0625,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "ui-demo-run/runs/0cffb470-09e0-4bd9-bf89-8909a177a674/0cffb470-09e0-4bd9-bf89-8909a177a674.events.v2.jsonl",
@@ -4190,8 +4655,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "ui-demo-run/runs/0cffb470-09e0-4bd9-bf89-8909a177a674/0cffb470-09e0-4bd9-bf89-8909a177a674.events.v2.jsonl",
@@ -4199,8 +4665,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "ui-demo-run/runs/0cffb470-09e0-4bd9-bf89-8909a177a674/0cffb470-09e0-4bd9-bf89-8909a177a674.events.v2.jsonl",
@@ -4208,8 +4675,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.05,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "ui-demo-run/runs/0cffb470-09e0-4bd9-bf89-8909a177a674/0cffb470-09e0-4bd9-bf89-8909a177a674.events.v2.jsonl",
@@ -4217,17 +4685,19 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "ui-demo-run/runs/0cffb470-09e0-4bd9-bf89-8909a177a674/0cffb470-09e0-4bd9-bf89-8909a177a674.events.v2.jsonl",
     "unitKey": "root",
-    "selected": "leaf",
+    "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": -0.345,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "ui-demo-run/runs/2fcea3bd-a85b-4a3d-a987-9d0badeb7f5f/2fcea3bd-a85b-4a3d-a987-9d0badeb7f5f.events.v2.jsonl",
@@ -4235,8 +4705,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0357,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "ui-demo-run/runs/2fcea3bd-a85b-4a3d-a987-9d0badeb7f5f/2fcea3bd-a85b-4a3d-a987-9d0badeb7f5f.events.v2.jsonl",
@@ -4244,8 +4715,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": 0,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "ui-demo-run/runs/2fcea3bd-a85b-4a3d-a987-9d0badeb7f5f/2fcea3bd-a85b-4a3d-a987-9d0badeb7f5f.events.v2.jsonl",
@@ -4253,8 +4725,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": -0.2985,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "ui-demo-run/runs/41ba47d5-d44a-4ec2-a470-d84437c6d076/41ba47d5-d44a-4ec2-a470-d84437c6d076.events.v2.jsonl",
@@ -4262,8 +4735,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0227,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "ui-demo-run/runs/41ba47d5-d44a-4ec2-a470-d84437c6d076/41ba47d5-d44a-4ec2-a470-d84437c6d076.events.v2.jsonl",
@@ -4271,8 +4745,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": -0.4089,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "ui-demo-run/runs/41ba47d5-d44a-4ec2-a470-d84437c6d076/41ba47d5-d44a-4ec2-a470-d84437c6d076.events.v2.jsonl",
@@ -4280,8 +4755,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0357,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "ui-demo-run/runs/766ccb97-7a39-45c2-bfcf-0818b97ed907/766ccb97-7a39-45c2-bfcf-0818b97ed907.events.v2.jsonl",
@@ -4289,8 +4765,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0167,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "ui-demo-run/runs/766ccb97-7a39-45c2-bfcf-0818b97ed907/766ccb97-7a39-45c2-bfcf-0818b97ed907.events.v2.jsonl",
@@ -4298,8 +4775,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0167,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "ui-demo-run/runs/87e7fe2c-a4c1-4c21-895c-7c1c33efc154/87e7fe2c-a4c1-4c21-895c-7c1c33efc154.events.v2.jsonl",
@@ -4307,8 +4785,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "ui-demo-run/runs/87e7fe2c-a4c1-4c21-895c-7c1c33efc154/87e7fe2c-a4c1-4c21-895c-7c1c33efc154.events.v2.jsonl",
@@ -4316,8 +4795,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0625,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "ui-demo-run/runs/87e7fe2c-a4c1-4c21-895c-7c1c33efc154/87e7fe2c-a4c1-4c21-895c-7c1c33efc154.events.v2.jsonl",
@@ -4325,8 +4805,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "ui-demo-run/runs/87e7fe2c-a4c1-4c21-895c-7c1c33efc154/87e7fe2c-a4c1-4c21-895c-7c1c33efc154.events.v2.jsonl",
@@ -4334,8 +4815,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "ui-demo-run/runs/87e7fe2c-a4c1-4c21-895c-7c1c33efc154/87e7fe2c-a4c1-4c21-895c-7c1c33efc154.events.v2.jsonl",
@@ -4343,8 +4825,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "ui-demo-run/runs/87e7fe2c-a4c1-4c21-895c-7c1c33efc154/87e7fe2c-a4c1-4c21-895c-7c1c33efc154.events.v2.jsonl",
@@ -4352,17 +4835,19 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0357,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "ui-demo-run/runs/87e7fe2c-a4c1-4c21-895c-7c1c33efc154/87e7fe2c-a4c1-4c21-895c-7c1c33efc154.events.v2.jsonl",
     "unitKey": "root",
-    "selected": "leaf",
+    "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": -0.3616,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-executor-stuck/run.events.v2.jsonl",
@@ -4370,8 +4855,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-executor-stuck/run.events.v2.jsonl",
@@ -4379,8 +4865,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-executor-stuck/run.events.v2.jsonl",
@@ -4388,8 +4875,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-executor-stuck/run.events.v2.jsonl",
@@ -4397,8 +4885,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-executor-stuck/run.events.v2.jsonl",
@@ -4406,8 +4895,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-executor-stuck/run.events.v2.jsonl",
@@ -4415,17 +4905,19 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-executor-stuck/run.events.v2.jsonl",
     "unitKey": "warehouse-analytics-root",
-    "selected": "leaf",
+    "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": -0.0455,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-executor-stuck/run.events.v2.jsonl",
@@ -4433,8 +4925,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0714,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-runtime-dir-mismatch/run.events.v2.jsonl",
@@ -4442,8 +4935,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-runtime-dir-mismatch/run.events.v2.jsonl",
@@ -4451,8 +4945,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-runtime-dir-mismatch/run.events.v2.jsonl",
@@ -4460,8 +4955,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-runtime-dir-mismatch/run.events.v2.jsonl",
@@ -4469,8 +4965,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-runtime-dir-mismatch/run.events.v2.jsonl",
@@ -4478,8 +4975,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-runtime-dir-mismatch/run.events.v2.jsonl",
@@ -4487,8 +4985,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-runtime-dir-mismatch/run.events.v2.jsonl",
@@ -4496,8 +4995,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-runtime-dir-mismatch/run.events.v2.jsonl",
@@ -4505,8 +5005,9 @@
     "selected": "split",
     "leafFeasible": false,
     "splitViable": true,
-    "splitAdvantage": -0.0198,
-    "minimumAdvantage": 0.15
+    "doesNotFit": true,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n08-executor-stuck/run.events.v2.jsonl",
@@ -4514,8 +5015,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1667,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n08-executor-stuck/run.events.v2.jsonl",
@@ -4523,8 +5025,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1875,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n08-executor-stuck/run.events.v2.jsonl",
@@ -4532,8 +5035,9 @@
     "selected": "split",
     "leafFeasible": false,
     "splitViable": true,
-    "splitAdvantage": -0.0326,
-    "minimumAdvantage": 0.15
+    "doesNotFit": true,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n08-executor-stuck/run.events.v2.jsonl",
@@ -4541,8 +5045,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0714,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n08-executor-stuck/run.events.v2.jsonl",
@@ -4550,8 +5055,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n08-executor-stuck/run.events.v2.jsonl",
@@ -4559,8 +5065,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0714,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n08-executor-stuck/run.events.v2.jsonl",
@@ -4568,8 +5075,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n08-executor-stuck/run.events.v2.jsonl",
@@ -4577,8 +5085,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0714,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n08-executor-stuck/run.events.v2.jsonl",
@@ -4586,8 +5095,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n08-executor-stuck/run.events.v2.jsonl",
@@ -4595,8 +5105,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0714,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n08-executor-stuck/run.events.v2.jsonl",
@@ -4604,8 +5115,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n08-executor-stuck/run.events.v2.jsonl",
@@ -4613,8 +5125,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runtime-runs/4e853223-1fff-47d5-a0f3-e59fdbfb3c76.events.v2.jsonl",
@@ -4622,8 +5135,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1667,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runtime-runs/4e853223-1fff-47d5-a0f3-e59fdbfb3c76.events.v2.jsonl",
@@ -4631,8 +5145,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1875,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runtime-runs/4e853223-1fff-47d5-a0f3-e59fdbfb3c76.events.v2.jsonl",
@@ -4640,8 +5155,9 @@
     "selected": "split",
     "leafFeasible": false,
     "splitViable": true,
-    "splitAdvantage": -0.0326,
-    "minimumAdvantage": 0.15
+    "doesNotFit": true,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runtime-runs/4e853223-1fff-47d5-a0f3-e59fdbfb3c76.events.v2.jsonl",
@@ -4649,8 +5165,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0714,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runtime-runs/4e853223-1fff-47d5-a0f3-e59fdbfb3c76.events.v2.jsonl",
@@ -4658,8 +5175,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runtime-runs/4e853223-1fff-47d5-a0f3-e59fdbfb3c76.events.v2.jsonl",
@@ -4667,8 +5185,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0714,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runtime-runs/4e853223-1fff-47d5-a0f3-e59fdbfb3c76.events.v2.jsonl",
@@ -4676,8 +5195,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runtime-runs/4e853223-1fff-47d5-a0f3-e59fdbfb3c76.events.v2.jsonl",
@@ -4685,8 +5205,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0714,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runtime-runs/4e853223-1fff-47d5-a0f3-e59fdbfb3c76.events.v2.jsonl",
@@ -4694,8 +5215,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runtime-runs/4e853223-1fff-47d5-a0f3-e59fdbfb3c76.events.v2.jsonl",
@@ -4703,8 +5225,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0714,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runtime-runs/4e853223-1fff-47d5-a0f3-e59fdbfb3c76.events.v2.jsonl",
@@ -4712,8 +5235,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runtime-runs/4e853223-1fff-47d5-a0f3-e59fdbfb3c76.events.v2.jsonl",
@@ -4721,8 +5245,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runtime-runs/67b52f91-d4d4-4d1f-a1de-4f09cdf80363.events.v2.jsonl",
@@ -4730,8 +5255,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runtime-runs/67b52f91-d4d4-4d1f-a1de-4f09cdf80363.events.v2.jsonl",
@@ -4739,8 +5265,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runtime-runs/67b52f91-d4d4-4d1f-a1de-4f09cdf80363.events.v2.jsonl",
@@ -4748,8 +5275,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runtime-runs/67b52f91-d4d4-4d1f-a1de-4f09cdf80363.events.v2.jsonl",
@@ -4757,8 +5285,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runtime-runs/67b52f91-d4d4-4d1f-a1de-4f09cdf80363.events.v2.jsonl",
@@ -4766,8 +5295,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runtime-runs/67b52f91-d4d4-4d1f-a1de-4f09cdf80363.events.v2.jsonl",
@@ -4775,17 +5305,19 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0833,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runtime-runs/67b52f91-d4d4-4d1f-a1de-4f09cdf80363.events.v2.jsonl",
     "unitKey": "warehouse-analytics-root",
-    "selected": "leaf",
+    "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": -0.0455,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-11/runtime-runs/67b52f91-d4d4-4d1f-a1de-4f09cdf80363.events.v2.jsonl",
@@ -4793,8 +5325,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.0714,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n04/run.events.v2.jsonl",
@@ -4802,8 +5335,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.25,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n04/run.events.v2.jsonl",
@@ -4811,8 +5345,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.25,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n04/run.events.v2.jsonl",
@@ -4820,8 +5355,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.2068,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n04/run.events.v2.jsonl",
@@ -4829,8 +5365,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n04/run.events.v2.jsonl",
@@ -4838,8 +5375,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n04/run.events.v2.jsonl",
@@ -4847,8 +5385,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n04/run.events.v2.jsonl",
@@ -4856,8 +5395,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n04/run.events.v2.jsonl",
@@ -4865,8 +5405,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1667,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n08/run.events.v2.jsonl",
@@ -4874,8 +5415,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n08/run.events.v2.jsonl",
@@ -4883,8 +5425,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1667,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n08/run.events.v2.jsonl",
@@ -4892,8 +5435,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n08/run.events.v2.jsonl",
@@ -4901,8 +5445,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n08/run.events.v2.jsonl",
@@ -4910,8 +5455,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n08/run.events.v2.jsonl",
@@ -4919,8 +5465,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n08/run.events.v2.jsonl",
@@ -4928,8 +5475,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n08/run.events.v2.jsonl",
@@ -4937,8 +5485,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n08/run.events.v2.jsonl",
@@ -4946,8 +5495,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n08/run.events.v2.jsonl",
@@ -4955,8 +5505,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n08/run.events.v2.jsonl",
@@ -4964,8 +5515,9 @@
     "selected": "split",
     "leafFeasible": false,
     "splitViable": true,
-    "splitAdvantage": 0.1489,
-    "minimumAdvantage": 0.15
+    "doesNotFit": true,
+    "runsInParallel": true,
+    "verifiableApart": true
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n08/run.events.v2.jsonl",
@@ -4973,8 +5525,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/1664d097-a69d-448c-b058-258cd1097075.events.v2.jsonl",
@@ -4982,8 +5535,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.25,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/1664d097-a69d-448c-b058-258cd1097075.events.v2.jsonl",
@@ -4991,8 +5545,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.25,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/1664d097-a69d-448c-b058-258cd1097075.events.v2.jsonl",
@@ -5000,8 +5555,9 @@
     "selected": "split",
     "leafFeasible": true,
     "splitViable": true,
-    "splitAdvantage": 0.2068,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/1664d097-a69d-448c-b058-258cd1097075.events.v2.jsonl",
@@ -5009,8 +5565,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/1664d097-a69d-448c-b058-258cd1097075.events.v2.jsonl",
@@ -5018,8 +5575,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/1664d097-a69d-448c-b058-258cd1097075.events.v2.jsonl",
@@ -5027,8 +5585,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/1664d097-a69d-448c-b058-258cd1097075.events.v2.jsonl",
@@ -5036,8 +5595,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/1664d097-a69d-448c-b058-258cd1097075.events.v2.jsonl",
@@ -5045,8 +5605,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1667,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/4ba80bca-879a-4fa3-af4c-e5ca10721d1d.events.v2.jsonl",
@@ -5054,8 +5615,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/4ba80bca-879a-4fa3-af4c-e5ca10721d1d.events.v2.jsonl",
@@ -5063,8 +5625,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1667,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/4ba80bca-879a-4fa3-af4c-e5ca10721d1d.events.v2.jsonl",
@@ -5072,8 +5635,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/4ba80bca-879a-4fa3-af4c-e5ca10721d1d.events.v2.jsonl",
@@ -5081,8 +5645,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/4ba80bca-879a-4fa3-af4c-e5ca10721d1d.events.v2.jsonl",
@@ -5090,8 +5655,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/4ba80bca-879a-4fa3-af4c-e5ca10721d1d.events.v2.jsonl",
@@ -5099,8 +5665,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/4ba80bca-879a-4fa3-af4c-e5ca10721d1d.events.v2.jsonl",
@@ -5108,8 +5675,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/4ba80bca-879a-4fa3-af4c-e5ca10721d1d.events.v2.jsonl",
@@ -5117,8 +5685,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/4ba80bca-879a-4fa3-af4c-e5ca10721d1d.events.v2.jsonl",
@@ -5126,8 +5695,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.1,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/4ba80bca-879a-4fa3-af4c-e5ca10721d1d.events.v2.jsonl",
@@ -5135,8 +5705,9 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/4ba80bca-879a-4fa3-af4c-e5ca10721d1d.events.v2.jsonl",
@@ -5144,8 +5715,9 @@
     "selected": "split",
     "leafFeasible": false,
     "splitViable": true,
-    "splitAdvantage": 0.1489,
-    "minimumAdvantage": 0.15
+    "doesNotFit": true,
+    "runsInParallel": true,
+    "verifiableApart": true
   },
   {
     "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/4ba80bca-879a-4fa3-af4c-e5ca10721d1d.events.v2.jsonl",
@@ -5153,7 +5725,8 @@
     "selected": "leaf",
     "leafFeasible": true,
     "splitViable": false,
-    "splitAdvantage": -0.125,
-    "minimumAdvantage": 0.15
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
   }
 ]

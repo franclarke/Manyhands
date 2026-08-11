@@ -163,7 +163,6 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
         ? undefined
         : {
             policyVersion: prepared.state.granularityStrategy!.policyVersion,
-            minimumAdvantage: policyConfig.minimumAdvantage,
             maxLeafContextTokens: policyConfig.maxLeafContextTokens,
             maxLeafScopePaths: policyConfig.maxLeafScopePaths,
             maxLeafPlannedPaths: policyConfig.maxLeafPlannedPaths

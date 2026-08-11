@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { foldRun, type RunEvent } from "@manyhands/run-coordinator";
 
-const base = { runId: "run-c2", occurredAt: "2026-07-24T00:00:00.000Z" };
+const base = { runId: "run-granularity", occurredAt: "2026-08-11T00:00:00.000Z" };
 
 function events(): RunEvent[] {
   return [
@@ -12,11 +12,10 @@ function events(): RunEvent[] {
       sequence: 2,
       type: "planning.granularity_strategy_selected",
       payload: {
-        policyVersion: "adaptive-utility/2.0.0-pilot",
-        condition: "C2",
+        policyVersion: "granularity/4.0.0",
+        condition: "C",
         candidateTreeHash: "sha256:candidate",
         config: {
-          minimumAdvantage: 0.15,
           maxLeafContextTokens: 24_000,
           maxLeafScopePaths: 40,
           maxLeafPlannedPaths: 12
@@ -27,21 +26,9 @@ function events(): RunEvent[] {
           selected: "split",
           leafFeasible: true,
           splitViable: true,
-          features: {
-            contextRelief: 0.7,
-            parallelism: 0.8,
-            faultIsolation: 0.6,
-            coordination: 0.2,
-            pathOverlap: 0.1,
-            validationDuplication: 0,
-            uncertainty: 0.1
-          },
-          benefit: 0.7,
-          cost: 0.1,
-          splitAdvantage: 0.6,
-          minimumAdvantage: 0.15,
+          reasons: { doesNotFit: false, runsInParallel: true, verifiableApart: true },
           evidenceRefs: ["src/web.ts"],
-          rationale: "The semantic cut has positive measured utility."
+          rationale: "Split because two children can start at the same time."
         }],
         metrics: { maxGraphDepth: 2, totalLeafCount: 3, averageBranchingFactor: 3 }
       }
@@ -50,27 +37,32 @@ function events(): RunEvent[] {
 }
 
 describe("planning.granularity_strategy_selected", () => {
-  it("survives journal replay with the complete C2 decision evidence", () => {
+  it("survives journal replay with the complete decision evidence", () => {
     const state = foldRun(events());
 
-    expect(state.granularityStrategy?.policyVersion).toBe("adaptive-utility/2.0.0-pilot");
-    expect(state.granularityStrategy?.condition).toBe("C2");
+    expect(state.granularityStrategy?.policyVersion).toBe("granularity/4.0.0");
+    expect(state.granularityStrategy?.condition).toBe("C");
     expect(state.granularityStrategy?.candidateTreeHash).toBe("sha256:candidate");
     expect(state.granularityStrategy?.config.maxLeafPlannedPaths).toBe(12);
     expect(state.granularityStrategy?.assessments["node-warehouse-web"]?.selected).toBe("split");
-    expect(state.granularityStrategy?.assessments["node-warehouse-web"]?.splitAdvantage).toBe(0.6);
+    // The reasons are the decision. Replaying a verdict without them would
+    // leave the journal saying what was chosen and not why.
+    expect(state.granularityStrategy?.assessments["node-warehouse-web"]?.reasons).toEqual({
+      doesNotFit: false,
+      runsInParallel: true,
+      verifiableApart: true
+    });
   });
 
-  it("keeps historical journals readable when the planned-path ceiling is absent", () => {
+  it("rejects an assessment that does not say which reasons held", () => {
     const selected = events()[1] as Extract<RunEvent, { type: "planning.granularity_strategy_selected" }>;
-    const { maxLeafPlannedPaths: _omitted, ...legacyConfig } = selected.payload.config;
-    const legacy = [
+    const withoutReasons = selected.payload.assessments.map(({ reasons: _dropped, ...rest }) => rest);
+    const broken = [
       events()[0]!,
-      { ...selected, payload: { ...selected.payload, config: legacyConfig } }
+      { ...selected, payload: { ...selected.payload, assessments: withoutReasons } }
     ] as RunEvent[];
 
-    expect(() => foldRun(legacy)).not.toThrow();
-    expect(foldRun(legacy).granularityStrategy?.config.maxLeafPlannedPaths).toBeUndefined();
+    expect(() => foldRun(broken)).toThrow();
   });
 
   it("is rejected after planning has failed", () => {
