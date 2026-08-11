@@ -1,9 +1,0 @@
-[2026-08-01T05:47:42.378Z] cell g6-02-T1-C-r1 | condition C | task T1
-[2026-08-01T05:47:44.316Z] workspace 3d6b8fd6-6685-4348-95ed-3f1939e917b1
-[2026-08-01T05:47:48.287Z] run 7d034bfd-f81a-4a23-80f2-4b9778f4511b
-[2026-08-01T05:47:52.578Z]   -> planning
-[2026-08-01T05:56:40.814Z]   -> needs_approval
-[2026-08-01T05:56:40.819Z]   approving plan (approve-plan:graph-semantic-warehouse-order-priority-backorders-461d1cdc53:r1)
-[2026-08-01T05:56:44.963Z]   -> running
-[2026-08-01T06:05:50.825Z]   -> failed
-[2026-08-01T06:05:50.840Z] lifecycle=failed finalSha=none

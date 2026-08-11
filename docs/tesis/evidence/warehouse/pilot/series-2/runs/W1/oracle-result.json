@@ -1,9 +1,0 @@
-{
-  "oracleId": "warehouse-w1-v1",
-  "increment": "W1",
-  "target": "C:\\Users\\franc\\AppData\\Local\\Temp\\manyhands-warehouse-pilot-W1-Vl4FJE",
-  "outcome": "fail",
-  "startedAt": "2026-07-25T03:05:11.329Z",
-  "finishedAt": "2026-07-25T03:05:32.734Z",
-  "error": "file:///C:/Users/franc/Documents/Proyectos/Manyhands/docs/tesis/evidence/warehouse/oracles/oracle-core.mjs:47\r\n  catch { throw new Error(`study:probe did not emit JSON: ${stdout.slice(0, 300)}`); }\r\n                ^\r\n\r\nError: study:probe did not emit JSON: \r\n> warehouse-control-tower-seed@0.0.0 study:probe C:\\Users\\franc\\AppData\\Local\\Temp\\manyhands-warehouse-pilot-W1-Vl4FJE\r\n> tsc -p tsconfig.json && node dist/src/cli/study-probe.js \"--\" \"--increment\" \"W1\" \"--scenario\" \"thesis-seed-2026\" \"--format\" \"json\"\r\n\r\n{\"schemaVersion\":1,\"increment\":\"W1\",\"scenario\"\r\n    at probe (file:///C:/Users/franc/Documents/Proyectos/Manyhands/docs/tesis/evidence/warehouse/oracles/oracle-core.mjs:47:17)\r\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\r\n    at async runExternalOracle (file:///C:/Users/franc/Documents/Proyectos/Manyhands/docs/tesis/evidence/warehouse/oracles/oracle-core.mjs:20:17)\r\n    at async file:///C:/Users/franc/Documents/Proyectos/Manyhands/docs/tesis/evidence/warehouse/oracles/W1/oracle.mjs:3:1\r\n\r\nNode.js v24.16.0\r\n"
-}

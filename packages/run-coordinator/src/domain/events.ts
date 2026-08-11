@@ -153,58 +153,6 @@ export const RunEventSchema = z.discriminatedUnion("type", [
     depth: z.number().int().nonnegative(),
     diagnostics: z.array(NonEmptyStringSchema).min(1)
   }).strict()),
-  /**
-   * Recorded history only. No code emits this event.
-   *
-   * It carries the `C_task` complexity index — four weighted dimensions against
-   * a threshold — which was replaced by the utility policy and whose
-   * implementation has been removed. Eighteen journals under
-   * `docs/tesis/evidence` contain it, and a journal that cannot be folded is
-   * evidence that has been destroyed, so the schema and its reducer case stay.
-   * Nothing here should be extended: `planning.granularity_strategy_selected`
-   * is where a granularity decision is recorded now.
-   */
-  event("planning.granularity_assessed", z.object({
-    formulaVersion: NonEmptyStringSchema,
-    weights: z.object({
-      scopeRadius: z.number().nonnegative(),
-      interfaceImpact: z.number().nonnegative(),
-      validationSurface: z.number().nonnegative(),
-      contextTokenMass: z.number().nonnegative()
-    }).strict(),
-    // Finite, not positive. The threshold is a policy parameter, and two
-    // legitimate policies sit outside the productive range: "every unit is a
-    // leaf" needs a value at or above the highest reachable score, and "no unit
-    // is a leaf" needs one below the lowest. Requiring a positive number
-    // rejected the latter at write time and cost an entire experiment arm.
-    leafThreshold: z.number().finite(),
-    assessments: z.array(z.object({
-      unitKey: EntityIdSchema,
-      nodeId: EntityIdSchema,
-      dimensions: z.object({
-        scopeRadius: z.number().min(0).max(10),
-        interfaceImpact: z.number().min(0).max(10),
-        validationSurface: z.number().min(0).max(10),
-        contextTokenMass: z.number().min(0).max(10)
-      }).strict(),
-      signalSource: z.enum(["llm", "clamped", "derived"]),
-      complexityScore: z.number().nonnegative(),
-      decision: z.enum(["leaf", "composite"]),
-      recommendedBranchingFactor: z.number().int().min(2).max(5).optional(),
-      rationale: NonEmptyStringSchema
-    }).strict()).min(1),
-    criticDecisions: z.array(z.object({
-      kind: z.enum(["coalesced", "resplit_required", "resplit_declined"]),
-      unitIds: z.array(EntityIdSchema).min(1),
-      rationale: NonEmptyStringSchema
-    }).strict()),
-    metrics: z.object({
-      maxGraphDepth: z.number().int().nonnegative(),
-      totalLeafCount: z.number().int().positive(),
-      averageBranchingFactor: z.number().nonnegative(),
-      coalescedUnitsCount: z.number().int().nonnegative()
-    }).strict()
-  }).strict()),
   event("planning.granularity_strategy_selected", z.object({
     policyVersion: NonEmptyStringSchema,
     condition: z.enum(["A", "B", "C", "C2"]),

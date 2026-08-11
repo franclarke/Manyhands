@@ -1,7 +1,0 @@
-[2026-08-01T05:07:41.874Z] cell g6-01-T1-A-r1 | condition A | task T1
-[2026-08-01T05:07:45.261Z] workspace 71eeb899-2ee4-44da-8991-4fabc3e16df4
-[2026-08-01T05:07:49.783Z] run b3941357-010c-452d-9959-7e61b48b52e7
-[2026-08-01T05:07:54.328Z]   -> planning
-[2026-08-01T05:12:10.840Z]   -> failed
-[2026-08-01T05:12:10.849Z]   (no .granularity-metrics.json)
-[2026-08-01T05:12:10.852Z] lifecycle=failed finalSha=none

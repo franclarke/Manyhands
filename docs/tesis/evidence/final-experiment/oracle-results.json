@@ -1,7 +1,0 @@
-{
-  "rehearsal": { "runId": "062e496e-572f-48e8-843a-31542082c6a9", "task": "S", "candidateSha": "dc953bda672b2303b8b70b4ad5dcf2d94a3d7263", "tests": "PASS", "oracle": "PASS", "counted": false },
-  "M-C-r1": { "runId": "21f2aebf-9218-4c2e-9e96-b8b60b86fc59", "task": "M", "candidateSha": "6204eeb8b416bda97c9a97d9a82f667726bf0022", "tests": "PASS", "oracle": "PASS", "counted": true },
-  "M-C-r2": { "runId": "99c0c50f-8e76-49ef-8bd4-bb020b1240b9", "task": "M", "candidateSha": "73c6b35a5849a2514513fd4bf44139dd91f6537f", "tests": "PASS", "oracle": "PASS", "counted": true },
-  "S-C-r1": { "runId": "a74c6959-8981-41b7-9341-899fca9a504e", "task": "S", "candidateSha": "e4caca0b7df98367bb998cb6f40ba95de0b93033", "tests": "PASS", "oracle": "PASS", "counted": true },
-  "S-C-r2": { "runId": "d611c700-b392-41d0-88ae-39ebead48119", "task": "S", "candidateSha": "eb3631af68bc1add42d60aa051cf603ed3be7218", "tests": "PASS", "oracle": "PASS", "counted": true }
-}

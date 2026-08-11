@@ -1,9 +1,0 @@
-{
-  "oracleId": "warehouse-w1-v1",
-  "increment": "W1",
-  "target": "C:\\Users\\franc\\AppData\\Local\\Temp\\manyhands-warehouse-pilot-W1-yoNOPY",
-  "outcome": "fail",
-  "startedAt": "2026-07-25T02:31:43.769Z",
-  "finishedAt": "2026-07-25T02:31:56.529Z",
-  "error": "file:///C:/Users/franc/Documents/Proyectos/Manyhands/docs/tesis/evidence/warehouse/oracles/oracle-core.mjs:69\r\n  catch (error) { throw new Error(`${file} ${args.join(\" \")} failed: ${error.stderr ?? error.message}`); }\r\n                        ^\r\n\r\nError: pnpm study:probe -- --increment W1 --scenario thesis-seed-2026 --format json failed: El nombre de archivo, el nombre de directorio o la sintaxis de la etiqueta del volumen no son correctos.\r\n    at command (file:///C:/Users/franc/Documents/Proyectos/Manyhands/docs/tesis/evidence/warehouse/oracles/oracle-core.mjs:69:25)\r\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\r\n    at async probe (file:///C:/Users/franc/Documents/Proyectos/Manyhands/docs/tesis/evidence/warehouse/oracles/oracle-core.mjs:45:22)\r\n    at async runExternalOracle (file:///C:/Users/franc/Documents/Proyectos/Manyhands/docs/tesis/evidence/warehouse/oracles/oracle-core.mjs:20:17)\r\n    at async file:///C:/Users/franc/Documents/Proyectos/Manyhands/docs/tesis/evidence/warehouse/oracles/W1/oracle.mjs:3:1\r\n\r\nNode.js v24.16.0\r\n"
-}

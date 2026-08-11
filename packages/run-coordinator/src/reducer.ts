@@ -32,27 +32,6 @@ export interface IntegrationProjection {
   failureReason?: string;
 }
 
-export interface GranularityAssessmentProjection {
-  unitKey: string;
-  nodeId: string;
-  dimensions: { scopeRadius: number; interfaceImpact: number; validationSurface: number; contextTokenMass: number };
-  signalSource: "llm" | "clamped" | "derived";
-  complexityScore: number;
-  decision: "leaf" | "composite";
-  recommendedBranchingFactor?: number;
-  rationale: string;
-}
-
-export interface GranularityProjection {
-  formulaVersion: string;
-  weights: { scopeRadius: number; interfaceImpact: number; validationSurface: number; contextTokenMass: number };
-  leafThreshold: number;
-  /** Keyed by compiled node id so the UI can explain the decision per node. */
-  assessments: Record<string, GranularityAssessmentProjection>;
-  criticDecisions: Array<{ kind: "coalesced" | "resplit_required" | "resplit_declined"; unitIds: string[]; rationale: string }>;
-  metrics: { maxGraphDepth: number; totalLeafCount: number; averageBranchingFactor: number; coalescedUnitsCount: number };
-}
-
 export interface GranularityStrategyAssessmentProjection {
   unitKey: string;
   nodeId: string;
@@ -117,7 +96,6 @@ export interface RunProjection {
   graphId?: string;
   graphRevision?: number;
   approvedGraphRevision?: number;
-  granularity?: GranularityProjection;
   granularityStrategy?: GranularityStrategyProjection;
   planningEnvelope?: PlanningEnvelopeProjection;
   planningCandidates?: PlanningCandidatesProjection;
@@ -197,26 +175,6 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
     case "graph.compiled":
     case "planning.critic_recorded":
       if (next.lifecycle !== "planning" && next.lifecycle !== "needs_approval" && next.lifecycle !== "running") throw new Error(`Cannot record planning facts while ${next.lifecycle}.`);
-      break;
-    case "planning.granularity_assessed":
-      if (next.lifecycle !== "planning" && next.lifecycle !== "needs_approval" && next.lifecycle !== "running") throw new Error(`Cannot record planning facts while ${next.lifecycle}.`);
-      next.granularity = {
-        formulaVersion: event.payload.formulaVersion,
-        weights: { ...event.payload.weights },
-        leafThreshold: event.payload.leafThreshold,
-        assessments: Object.fromEntries(event.payload.assessments.map((assessment) => [assessment.nodeId, {
-          unitKey: assessment.unitKey,
-          nodeId: assessment.nodeId,
-          dimensions: { ...assessment.dimensions },
-          signalSource: assessment.signalSource,
-          complexityScore: assessment.complexityScore,
-          decision: assessment.decision,
-          rationale: assessment.rationale,
-          ...(assessment.recommendedBranchingFactor === undefined ? {} : { recommendedBranchingFactor: assessment.recommendedBranchingFactor })
-        }])),
-        criticDecisions: event.payload.criticDecisions.map((decision) => ({ ...decision, unitIds: [...decision.unitIds] })),
-        metrics: { ...event.payload.metrics }
-      };
       break;
     case "planning.granularity_strategy_selected":
       if (next.lifecycle !== "planning" && next.lifecycle !== "needs_approval" && next.lifecycle !== "running") throw new Error(`Cannot record planning facts while ${next.lifecycle}.`);

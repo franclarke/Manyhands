@@ -1,9 +1,0 @@
-{
-  "oracleId": "warehouse-w1-v1",
-  "increment": "W1",
-  "target": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-pilot-2",
-  "outcome": "fail",
-  "startedAt": "2026-07-25T03:07:39.200Z",
-  "finishedAt": "2026-07-25T03:07:53.601Z",
-  "error": "file:///C:/Users/franc/Documents/Proyectos/Manyhands/docs/tesis/evidence/warehouse/oracles/oracle-core.mjs:72\r\nfunction assert(condition, message) { if (!condition) throw new Error(message); }\r\n                                                            ^\r\n\r\nError: stateHash is not versioned sha256\r\n    at assert (file:///C:/Users/franc/Documents/Proyectos/Manyhands/docs/tesis/evidence/warehouse/oracles/oracle-core.mjs:72:61)\r\n    at runExternalOracle (file:///C:/Users/franc/Documents/Proyectos/Manyhands/docs/tesis/evidence/warehouse/oracles/oracle-core.mjs:26:3)\r\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\r\n    at async file:///C:/Users/franc/Documents/Proyectos/Manyhands/docs/tesis/evidence/warehouse/oracles/W1/oracle.mjs:3:1\r\n\r\nNode.js v24.16.0\r\n"
-}

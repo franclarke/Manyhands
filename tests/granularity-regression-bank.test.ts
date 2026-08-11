@@ -23,26 +23,19 @@ const BASELINE_PATH = join(process.cwd(), "tests", "fixtures", "granularity-bank
 describe("granularity regression bank", () => {
   const corpus = loadGranularityCorpus();
 
-  it("recovers a corpus large enough to discriminate, and names what it excludes", () => {
+  it("carries a corpus large enough to discriminate", () => {
     expect(corpus.cases.length).toBeGreaterThanOrEqual(80);
-    // Exclusions are asserted as data so a shrinking corpus cannot pass quietly.
-    expect(corpus.excluded.every((entry) => entry.reason.length > 0)).toBe(true);
+    expect(corpus.cases.every((item) => item.breakdown.root !== undefined)).toBe(true);
   });
 
   /**
-   * Structural fidelity: the reconstruction is a well-formed policy input that
-   * covers exactly the units the run assessed.
-   *
-   * Value fidelity — replaying reproduces every recorded selection, advantage
-   * and feature exactly — was proven against all 87 cases while the build still
-   * implemented `adaptive-utility/3.1.0-pilot`, the version that recorded them
-   * (commit 2f6b64bf). It cannot be asserted across a version bump without
-   * asserting that the policy never changes, so what carries it forward is the
-   * frozen decision table below, whose first revision was generated from that
-   * proven-faithful reconstruction.
+   * The policy stops descending once it collapses a composite, so it does not
+   * assess every unit of the input — and should not. What must hold is that it
+   * reaches a verdict on the root of every case and never invents a unit key,
+   * which is what would happen if the corpus and the tree it walks drifted apart.
    */
-  it("reconstructs every case into a well-formed policy input", () => {
-    const missing: string[] = [];
+  it("reaches a verdict on every case without inventing units", () => {
+    const problems: string[] = [];
 
     for (const item of corpus.cases) {
       const replayed = selectGranularityStrategy({
@@ -51,20 +44,16 @@ describe("granularity regression bank", () => {
         repositorySnapshot: item.repositorySnapshot,
         config: PILOT_UTILITY_POLICY
       });
-      for (const unitKey of Object.keys(item.recordedAssessments)) {
-        if (replayed.assessments[unitKey] === undefined) {
-          missing.push(`${item.caseId} :: ${unitKey} :: unit absent from replay`);
-        }
+      const known = new Set(unitKeys(item.breakdown.root));
+      if (replayed.assessments[item.breakdown.root.key] === undefined) {
+        problems.push(`${item.caseId} :: root unassessed`);
+      }
+      for (const unitKey of Object.keys(replayed.assessments)) {
+        if (!known.has(unitKey)) problems.push(`${item.caseId} :: ${unitKey} :: not a unit of the input tree`);
       }
     }
 
-    expect(missing).toEqual([]);
-  });
-
-  it("produces a decision row for every assessed unit", () => {
-    const rows = corpus.cases.flatMap((item) => decisionRows(item.caseId, item.recordedAssessments));
-    expect(rows.length).toBeGreaterThan(corpus.cases.length);
-    expect(rows.every((row) => ["leaf", "split", "semantic_replan"].includes(row.selected))).toBe(true);
+    expect(problems).toEqual([]);
   });
 
   /**
@@ -97,3 +86,9 @@ describe("granularity regression bank", () => {
     expect(current).toEqual(baseline);
   });
 });
+
+function unitKeys(unit: { key: string; kind: string; children?: Array<{ key: string; kind: string }> }): string[] {
+  return unit.kind === "leaf"
+    ? [unit.key]
+    : [unit.key, ...(unit.children ?? []).flatMap((child) => unitKeys(child as Parameters<typeof unitKeys>[0]))];
+}

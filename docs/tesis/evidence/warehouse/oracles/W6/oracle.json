@@ -1,1 +1,0 @@
-{"schemaVersion":1,"id":"warehouse-w6-v1","increment":"W6","command":["node","oracle.mjs"],"timeoutMs":600000,"scriptSha256":"dd4372f21b3410c664e12c6128b9ecce7d7fa363d5f7ab3e91c28ee092b62854","coreSha256":"79519f064f29356a0447f610ea63ba41bdb5eab273d26cd48124371dbb3c81bb","specimenSha256":"409ea222fca7bb96bbd97bc212c3dd05ca00e134205b77952fcab4b59f03dc23"}

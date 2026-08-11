@@ -26,7 +26,6 @@ export * from "./compiler/acceptance-allocation.js";
 export * from "./compiler/graph-compiler.js";
 export * from "./compiler/validation-obligations.js";
 export * from "./critics/review.js";
-export * from "./granularity/thesis-metrics.js";
 export * from "./granularity/policy.js";
 export * from "./granularity/repository-context-profile.js";
 export * from "./granularity/utility-policy.js";

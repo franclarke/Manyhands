@@ -34,22 +34,6 @@
  */
 export const ADAPTIVE_UTILITY_POLICY_VERSION = "adaptive-utility/3.2.0-pilot";
 
-/**
- * Versions this build no longer implements, newest first.
- *
- * Frozen experimental assets name the policy version they measured. That name is
- * a historical fact and is never rewritten to match a later build — but a series
- * whose policy has been superseded must say so somewhere the compiler can see,
- * or the only thing standing between a silent policy change and a stale freeze
- * is that someone remembers. Retiring a version is therefore an edit here, and
- * assets pinned to a retired version are read as historical rather than current.
- */
-export const SUPERSEDED_UTILITY_POLICY_VERSIONS: readonly string[] = Object.freeze([
-  "adaptive-utility/3.1.0-pilot",
-  "adaptive-utility/3.0.0-pilot",
-  "adaptive-utility/2.0.0-pilot"
-]);
-
 export interface UtilityPolicyConfig {
   policyVersion: string;
   minimumAdvantage: number;

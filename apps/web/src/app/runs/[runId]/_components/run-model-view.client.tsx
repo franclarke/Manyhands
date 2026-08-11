@@ -7,7 +7,7 @@ import { useLiveRunModel } from "@/components/run-model/use-live-run-model";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { StatusPill } from "@/components/ui/status-pill";
-import { eventPresentation, granularityExplanation, granularityStrategyExplanation, summarizeRunNodes, type GranularityExplanationView } from "@/lib/run-model/presentation";
+import { eventPresentation, granularityStrategyExplanation, summarizeRunNodes, type GranularityExplanationView } from "@/lib/run-model/presentation";
 import type { RunEvent, RunSeed } from "@/lib/run-model/types";
 import { runUiStatus, statusMeta } from "@/lib/status";
 import { CockpitRunGraph } from "./cockpit-run-graph";
@@ -52,9 +52,8 @@ export function RunModelView({
   );
 
   const selectedGranularity = useMemo(
-    () => granularityStrategyExplanation(model.projection?.granularityStrategy, selectedNodeId)
-      ?? granularityExplanation(model.projection?.granularity, selectedNodeId),
-    [model.projection?.granularity, model.projection?.granularityStrategy, selectedNodeId]
+    () => granularityStrategyExplanation(model.projection?.granularityStrategy, selectedNodeId),
+    [model.projection?.granularityStrategy, selectedNodeId]
   );
 
   async function command(path: string, body?: unknown): Promise<void> {
