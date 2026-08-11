@@ -30,8 +30,12 @@ con capturas, para que sirva de material de tesis.
 para cada iteración I en [0, 1, 2, 3, 4]:
     repetir:
         correr la iteración I
-        si el oráculo de I pasa: seguir a I+1
+        si el oráculo de I pasa:
+            capturar grafo, inspector, evidencia y app (§6.4)
+            escribir la bitácora y la explicación (§6.2, §6.5)
+            seguir a I+1
         si no:
+            capturar el estado en el navegador (§6.4)
             analizar la causa en el journal del run
             localizar el defecto en el código de ManyHands
             escribir un test que lo reproduzca (rojo)
@@ -284,24 +288,82 @@ Sólo del run que **pasó**:
 Esto es lo que va a la tesis: **qué nodos se crearon y qué implementó cada
 etapa.**
 
-### 6.3 Capturas — `docs/demo/screenshots/`
+### 6.3 Cómo operar el navegador
 
-Sólo de los runs que pasaron. Por iteración:
+**Todo se hace contra la aplicación levantada de verdad, en un navegador real.**
+No alcanza con leer el journal: la evidencia de la tesis son capturas del sistema
+funcionando.
 
-- `iter-<n>-graph.png` — el grafo en `/runs/<runId>` con el plan compilado.
-- `iter-<n>-app.png` — la aplicación corriendo en el navegador.
-- `iter-<n>-evidence.png` — la evidencia del run entregado.
+Levantar la aplicación:
 
-Y una vez, si ocurre: `recovery.png`, la secuencia fallo → reparación → entrega.
-Es la prueba visual de la robustez.
+```bash
+pnpm build          # obligatorio: el server sirve dist, no el fuente
+pnpm web:build
+pnpm --filter @manyhands/web start   # queda en 127.0.0.1:3100
+```
 
-**Cómo capturar**: `pnpm web:build`, arrancar el preview `web-prod` de
-`.claude/launch.json`, abrir `127.0.0.1:<puerto>/runs/<runId>`. La barra lateral
-monta colapsada; expandirla con el botón `aria-label="Expandir barra lateral"`
-antes de capturar. Si el panel del navegador no está visible y `screenshot` da
-timeout, usar `javascript_tool` para verificar el DOM y reintentar la captura.
+Manejar el navegador con `puppeteer-core`, que ya es dependencia de la raíz
+(`25.3.0`), apuntando al Chrome instalado:
 
----
+```js
+import puppeteer from "puppeteer-core";
+const browser = await puppeteer.launch({
+  executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  headless: false,               // se quiere ver, y las capturas salen mejor
+  defaultViewport: { width: 1600, height: 1000 }
+});
+const page = await browser.newPage();
+await page.goto("http://127.0.0.1:3100/runs/<runId>", { waitUntil: "networkidle2" });
+await page.screenshot({ path: "docs/demo/screenshots/<nombre>.png" });
+```
+
+Dos cosas que hacen fallar la captura si no se saben:
+
+- **`127.0.0.1`, nunca `localhost`.** El server no escucha en el segundo.
+- **La barra lateral monta colapsada.** Expandirla antes de capturar:
+  `await page.click('[aria-label="Expandir barra lateral"]')`.
+- **`/` tarda minutos** con datos reales. Ir siempre directo a `/runs/<runId>`.
+
+Si Chrome no está en esa ruta, el fallback es
+`C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe`.
+
+### 6.4 Capturas — `docs/demo/screenshots/`
+
+**De cada intento que pasa** (`iter-<n>/`):
+
+| Archivo | Qué muestra |
+|---|---|
+| `graph.png` | El grafo compilado en `/runs/<runId>`: los nodos que el sistema creó |
+| `node-inspector.png` | Un nodo seleccionado con su explicación de granularidad — las tres razones |
+| `evidence.png` | La evidencia del run entregado |
+| `app.png` | La aplicación construida, corriendo en el navegador |
+
+**De cada intento que falla** (`iter-<n>/failed-<k>/`):
+
+| Archivo | Qué muestra |
+|---|---|
+| `failure.png` | El estado del run donde se frenó, con el nodo o la decisión que lo trabó |
+| `context.png` | El inspector del nodo que falló, o la cola de decisiones |
+
+Las capturas de fallo **no van a la tesis**: son para diagnosticar y para el
+ledger. Las de éxito sí.
+
+Y una vez, si ocurre: `recovery.png` — la secuencia fallo → reparación →
+entrega. Es la prueba visual de la robustez y vale más que cuatro éxitos limpios.
+
+### 6.5 Explicación por intento exitoso
+
+Además de la bitácora de §6.2, cada iteración que pasa deja en
+`docs/demo/iteration-<n>.md` un párrafo en prosa que explique **qué construyó el
+sistema y cómo lo decidió**, escrito para que se pueda pegar en la tesis:
+
+> En la iteración 2 el planificador propuso un corte de tres unidades. La
+> política conservó dos y colapsó la tercera porque no poseía ningún criterio de
+> aceptación propio. Las dos que quedaron corrieron en paralelo —no había
+> artefacto que las ordenara— y la integración adoptó ambos resultados sobre la
+> base de la iteración anterior.
+
+Con la captura del grafo al lado, eso es una página de tesis.
 
 ## 7. Al terminar
 
