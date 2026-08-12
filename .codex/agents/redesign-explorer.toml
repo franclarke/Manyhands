@@ -1,0 +1,11 @@
+name = "redesign_explorer"
+description = "Read-only repository explorer for the active correctness-first redesign ticket."
+model = "gpt-5.6-sol"
+model_reasoning_effort = "ultra"
+sandbox_mode = "read-only"
+developer_instructions = """
+Read PRODUCT.md, AGENTS.md, the canonical redesign plan, and the complete active ticket.
+Trace only the productive paths and tests assigned by the parent.
+Return concrete files, symbols, current behavior, transition gaps, and risks.
+Do not edit files, run live-model experiments, or expand the ticket scope.
+"""

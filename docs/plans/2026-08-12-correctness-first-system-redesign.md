@@ -57,6 +57,13 @@ follow this plan for future implementation. If the implementation contradicts
 this plan, record the difference as a transition gap; do not weaken the plan to
 match the code.
 
+#### Implementation status
+
+| Stage | Status | Attributable evidence | Next-stage disposition |
+|---|---|---|---|
+| Stage 0 / G0 | `in_progress` | [`../audits/stage-0/`](../audits/stage-0/) | Stage 1 is blocked until the clean-clone baseline and independent G0 review pass. |
+| Stages 1–11 | `not_started` | none | Must execute in normative order. |
+
 ### 0.2 Required reading and execution protocol
 
 Before implementing any stage, the agent must:
