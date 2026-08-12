@@ -1,8 +1,10 @@
 {
   "schemaVersion": 1,
   "status": "in_progress",
-  "subjectCommit": null,
-  "clonePath": null,
+  "subjectCommit": "9cf3e87a9a534bd07947cfaedb6d78f88205b642",
+  "subjectTree": "694b99d80023d329502987563d2b8fb4b8df113e",
+  "clonePath": "C:/mh-g0-9cf3-02",
+  "logHashManifest": "docs/audits/stage-0/logs.sha256",
   "commands": [
     {
       "id": "codex-harness-preflight",
@@ -10,72 +12,130 @@
       "workingDirectory": "C:/Users/franc/Documents/Proyectos/Manyhands",
       "status": "pass",
       "exitCode": 0,
-      "result": "16 ok, 0 fail; degraded only by an unrelated incomplete rollout scan",
+      "result": "16 ok, 0 fail; degraded only by an unrelated incomplete rollout scan.",
+      "logPath": "docs/audits/stage-0/logs/codex-harness-preflight.log",
+      "modelId": "not_applicable"
+    },
+    {
+      "id": "clean-clone-identity",
+      "exactCommand": "git rev-parse HEAD; git show -s --format=%T HEAD; git status --porcelain; pnpm --version; node --version",
+      "workingDirectory": "C:/mh-g0-9cf3-02",
+      "status": "pass",
+      "exitCode": 0,
+      "result": "Detached clean clone at commit 9cf3e87a9a534bd07947cfaedb6d78f88205b642 and tree 694b99d80023d329502987563d2b8fb4b8df113e; pnpm 11.21.0; Node v24.16.0.",
+      "logPath": "docs/audits/stage-0/logs/candidate-9cf3-shortpath-identity.log",
+      "modelId": "not_applicable"
+    },
+    {
+      "id": "clean-install",
+      "exactCommand": "pnpm install --frozen-lockfile --store-dir C:/mh-store-9cf3-02",
+      "workingDirectory": "C:/mh-g0-9cf3-02",
+      "status": "pass",
+      "exitCode": 0,
+      "result": "Cold install from an initially empty isolated store completed with 630 packages using pnpm 11.21.0.",
+      "logPath": "docs/audits/stage-0/logs/candidate-9cf3-shortpath-clean-install.log",
       "modelId": "not_applicable"
     },
     {
       "id": "stage0-contracts",
       "exactCommand": "pnpm exec vitest run tests/architecture-baseline.test.ts tests/documentation-current.test.ts",
-      "status": "not_run",
-      "exitCode": null,
-      "modelId": "not_applicable",
-      "reasonIfNotRun": "Stage 0 harness commit not frozen yet"
+      "workingDirectory": "C:/mh-g0-9cf3-02",
+      "status": "pass",
+      "exitCode": 0,
+      "result": "2 test files passed; 9 tests passed.",
+      "logPath": "docs/audits/stage-0/logs/candidate-9cf3-shortpath-stage0-contracts.log",
+      "modelId": "not_applicable"
     },
     {
       "id": "focused-route-characterization",
       "exactCommand": "pnpm exec vitest run tests/run-create-canonical-seed.test.ts tests/planning-v2-pipeline.test.ts tests/planning-v2-approval.test.ts tests/scheduler-readiness-v2.test.ts tests/run-v2-execution-driver.test.ts tests/run-v2-execution-host.test.ts tests/execution-core-v2-node-executor.test.ts tests/integration-manifest.test.ts tests/integration-operation-recovery.test.ts tests/exact-candidate-validation.test.ts tests/final-candidate.test.ts tests/delivery-state-machine.test.ts tests/run-store-event-source.test.ts tests/run-v2-record-cache-reconciliation.test.ts tests/run-liveness-supervisor.test.ts tests/run-v2-e2e.test.ts tests/run-v2-crash-recovery.test.ts tests/local-boundary.test.ts",
-      "status": "not_run",
-      "exitCode": null,
-      "modelId": "not_applicable",
-      "reasonIfNotRun": "Stage 0 harness commit not frozen yet"
+      "workingDirectory": "C:/mh-g0-9cf3-02",
+      "status": "pass",
+      "exitCode": 0,
+      "result": "18 test files passed; 138 tests passed.",
+      "logPath": "docs/audits/stage-0/logs/candidate-9cf3-shortpath-focused-route.log",
+      "modelId": "not_applicable"
     },
     {
       "id": "full-tests",
       "exactCommand": "pnpm test",
-      "status": "not_run",
-      "exitCode": null,
-      "modelId": "not_applicable",
-      "reasonIfNotRun": "Clean clone not created yet"
+      "workingDirectory": "C:/mh-g0-9cf3-02",
+      "status": "pass",
+      "exitCode": 0,
+      "result": "229 test files passed; 1481 tests passed; 4 tests skipped.",
+      "logPath": "docs/audits/stage-0/logs/candidate-9cf3-shortpath-full-tests.log",
+      "modelId": "not_applicable"
     },
     {
       "id": "package-typechecks",
       "exactCommand": "pnpm -r --filter \"./packages/*\" typecheck",
-      "status": "not_run",
-      "exitCode": null,
-      "modelId": "not_applicable",
-      "reasonIfNotRun": "Clean clone not created yet"
+      "workingDirectory": "C:/mh-g0-9cf3-02",
+      "status": "pass",
+      "exitCode": 0,
+      "result": "All 12 package typechecks passed.",
+      "logPath": "docs/audits/stage-0/logs/candidate-9cf3-shortpath-typechecks.log",
+      "modelId": "not_applicable"
     },
     {
       "id": "web-typecheck",
       "exactCommand": "pnpm --filter @manyhands/web exec tsc --noEmit",
-      "status": "not_run",
-      "exitCode": null,
-      "modelId": "not_applicable",
-      "reasonIfNotRun": "Clean clone not created yet"
+      "workingDirectory": "C:/mh-g0-9cf3-02",
+      "status": "pass",
+      "exitCode": 0,
+      "result": "Web TypeScript check completed with exit code 0.",
+      "logPath": "docs/audits/stage-0/logs/candidate-9cf3-shortpath-web-typecheck.log",
+      "modelId": "not_applicable"
     },
     {
       "id": "package-build",
       "exactCommand": "pnpm build",
-      "status": "not_run",
-      "exitCode": null,
-      "modelId": "not_applicable",
-      "reasonIfNotRun": "Clean clone not created yet"
+      "workingDirectory": "C:/mh-g0-9cf3-02",
+      "status": "pass",
+      "exitCode": 0,
+      "result": "All 12 package builds passed.",
+      "logPath": "docs/audits/stage-0/logs/candidate-9cf3-shortpath-package-build.log",
+      "modelId": "not_applicable"
     },
     {
       "id": "web-build",
       "exactCommand": "pnpm web:build",
-      "status": "not_run",
-      "exitCode": null,
-      "modelId": "not_applicable",
-      "reasonIfNotRun": "Clean clone not created yet"
+      "workingDirectory": "C:/mh-g0-9cf3-02",
+      "status": "pass",
+      "exitCode": 0,
+      "result": "Package builds and the Next production build passed; the complete generated route table is preserved in the log.",
+      "logPath": "docs/audits/stage-0/logs/candidate-9cf3-shortpath-web-build.log",
+      "modelId": "not_applicable"
     },
     {
       "id": "lint-baseline",
       "exactCommand": "pnpm lint",
-      "workingDirectory": "C:/Users/franc/Documents/Proyectos/Manyhands",
+      "workingDirectory": "C:/mh-g0-9cf3-02",
       "status": "fail",
       "exitCode": 1,
-      "result": "78 pre-existing errors, 0 warnings; CI currently treats lint as non-blocking",
+      "result": "78 pre-existing errors and 0 warnings; characterized and non-blocking for G0, but unresolved for production qualification.",
+      "logPath": "docs/audits/stage-0/logs/candidate-9cf3-shortpath-lint.log",
+      "modelId": "not_applicable"
+    }
+  ],
+  "adverseHistory": [
+    {
+      "id": "temporary-clone-web-build",
+      "exactCommand": "pnpm web:build",
+      "workingDirectory": "C:/Users/franc/AppData/Local/Temp/manyhands-stage0-9cf3e87a-7b1afc06ca154ff3b411ce5190952809",
+      "status": "inconclusive",
+      "exitCode": 1,
+      "result": "The temporary clone passed installation and source checks, but its directory was externally emptied during the web build. The resulting missing plugin/files and ENOENT are preserved as harness/environment evidence and are not attributed to the product.",
+      "logPath": "docs/audits/stage-0/logs/candidate-9cf3-web-build.log",
+      "modelId": "not_applicable"
+    },
+    {
+      "id": "legacy-pnpm7-cold-install-chain",
+      "exactCommand": "See preserved clean-clone-install*.log and final-*.log command transcripts.",
+      "workingDirectory": "multiple recorded clean-clone attempts",
+      "status": "fail",
+      "exitCode": 1,
+      "result": "The repository-pinned pnpm 7 toolchain was not reproducible on the current host; commit a3f45c72 migrated the harness to pnpm 11.21.0 and refreshed the lockfile before Stage 1.",
+      "logPath": "docs/audits/stage-0/logs.sha256",
       "modelId": "not_applicable"
     }
   ]

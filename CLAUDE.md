@@ -15,7 +15,8 @@
    comportamiento legacy en diseño objetivo.
 
 Leé el plan completo antes de implementar una etapa. No ejecutes benchmarks
-grandes ni series con modelos hasta que se cumplan los gates de su Stage 14.
+grandes ni series con modelos hasta que Stage 11 declare elegible la
+arquitectura y cierre GProd.
 
 ## Dirección del rediseño
 

@@ -8,15 +8,19 @@
 
 **Baseline tree:** `4a8e169a0d68f3cd8a25c9a7ba098c422307d15f`
 
+**Rejected Stage 0 candidate:** `9cf3e87a9a534bd07947cfaedb6d78f88205b642`
+
+**Rejected candidate tree:** `694b99d80023d329502987563d2b8fb4b8df113e`
+
 **Branch:** `codex/correctness-first-full-implementation`
 
 **Captured:** 2026-08-12 (`America/Buenos_Aires`)
 
 This directory makes the transition baseline attributable before any Stage 1
-production change. The subject commit contains the reviewed normative
-architecture and its adversarial review. The later gate-evidence commit may add
-only documentation, tests and harness configuration; it must not alter the
-productive run path characterized here.
+production change. The baseline subject contains the reviewed normative
+architecture and its adversarial review. Candidate `9cf3e87a` added only gate
+evidence, tests and reproducibility/harness configuration, but independent
+review rejected its lock conversion before G0 could close.
 
 ## Evidence set
 
@@ -31,6 +35,11 @@ productive run path characterized here.
   current owners, gaps, target stages and retirement obligations.
 - [`required-cells.md`](required-cells.md) registers R0–R19. Every cell is
   `not_run` at G0; historical experiments do not fill target cells.
+- [`verification.md`](verification.md) records the clean short-path clone, its
+  mechanical outcomes and the independent finding that rejected it.
+- [`logs.sha256`](logs.sha256) authenticates the complete evidence log set under
+  [`logs/`](logs/), including the rejected `candidate-9cf3-shortpath-*` records and
+  preserved adverse attempts.
 
 ## Admitted claims
 
@@ -40,8 +49,8 @@ At G0 this evidence may prove only that:
 2. the current productive route and its transition gaps are traceable;
 3. every target invariant, completion criterion and required cell has a future
    owner and gate;
-4. existing legacy reachability cannot grow without changing the explicit
-   characterization test;
+4. new files containing a frozen legacy marker cannot appear without changing
+   the explicit characterization test;
 5. no product behavior was changed before the gate.
 
 ## What G0 does not prove
@@ -66,8 +75,17 @@ user work was discarded.
 
 ## Gate closure conditions
 
-G0 remains `in_progress` until a clean local clone of the Stage 0 harness commit
-starts clean and passes the focused route suite, full tests, package/web
-typechecks and builds. The command registry must contain the exact results and
-log hashes, the plan status must point here, and an independent reviewer must
-confirm that Stage 1 production code was not started.
+Candidate `9cf3e87a` passed the mechanical checks in the clean short-path clone
+`C:/mh-g0-9cf3-02`. A cold frozen-lockfile installation placed 630 packages from
+an initially empty store, and the Stage 0 contracts, focused route, full suite,
+package/web typechecks, package build, and Next production build passed. Lint
+still reports the characterized pre-existing baseline of 78 errors and 0
+warnings. Independent review then rejected the candidate because the pnpm 11
+lock conversion changed baseline direct and transitive dependency resolutions.
+G0 therefore remains `in_progress`; Stage 1 is blocked until a
+resolution-preserving candidate repeats these checks and passes review. All
+R0–R19 cells remain `not_run`.
+
+The independent G0 review is fail-closed. Its dependency-drift finding is
+preserved in [`verification.md`](verification.md); no Stage 1 work is authorized
+until the reissued candidate closes it.

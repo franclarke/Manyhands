@@ -1,12 +1,20 @@
 {
   "schemaVersion": 1,
-  "capturedAtUtc": "2026-08-12T18:27:44.3182447Z",
+  "capturedAtUtc": "2026-08-12T19:44:52.5927804Z",
   "timezone": "Argentina Standard Time",
   "baselineSubject": {
     "branch": "codex/correctness-first-full-implementation",
     "commit": "f8082e5f2adcf89adfb4a3d76f95bdc0c44e3265",
     "tree": "4a8e169a0d68f3cd8a25c9a7ba098c422307d15f",
     "remote": "https://github.com/franclarke/Manyhands.git"
+  },
+  "verifiedCandidate": {
+    "commit": "9cf3e87a9a534bd07947cfaedb6d78f88205b642",
+    "tree": "694b99d80023d329502987563d2b8fb4b8df113e",
+    "clonePath": "C:/mh-g0-9cf3-02",
+    "initialStorePath": "C:/mh-store-9cf3-02",
+    "corepackShimPath": "C:/mh-shim-9cf3-02",
+    "cloneStatus": "clean"
   },
   "initialDirtyState": {
     "branch": "main",
@@ -26,17 +34,29 @@
   },
   "tools": {
     "node": "v24.16.0",
-    "pnpm": "7.29.3",
+    "pnpm": "11.21.0",
+    "ciNode": "22.22.0",
     "git": "2.40.1.windows.1",
     "codex": "0.146.0",
     "claude": "2.1.222"
   },
-  "pnpmLockSha256": "ccfdec805178d04f07921c595206239eafe58236ac61300c6589b4953ecc9c40",
+  "pnpmLockSha256": "92d6ebaa559baff3ddf9990839522bf77d9bafd8aac594c462ccca1f9a41a112",
+  "preStage1HarnessRemediation": [
+    {
+      "commit": "a3f45c72b21c20853f2d4616a3429c62b81f3a20",
+      "purpose": "Pin pnpm 11.21.0, refresh the lockfile, and pin CI Node 22.22.0 for reproducible cold installation."
+    },
+    {
+      "commit": "9cf3e87a9a534bd07947cfaedb6d78f88205b642",
+      "purpose": "Make the Windows shim regression assertion case-insensitive without changing productive behavior."
+    }
+  ],
   "implementationHarness": {
     "model": "gpt-5.6-sol",
     "reasoningEffort": "ultra",
     "maximumConcurrentChildren": 3,
-    "modelInvocationDuringStage0": "not_run"
+    "productiveManyHandsModelInvocationDuringStage0": "not_run",
+    "note": "The Codex implementation harness used gpt-5.6-sol at ultra reasoning; ManyHands itself did not execute a live-model benchmark or productive model run for G0 evidence."
   },
   "secretsCaptured": false
 }

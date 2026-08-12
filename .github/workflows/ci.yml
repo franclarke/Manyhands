@@ -39,10 +39,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Non-blocking for now: the repo carries 46 pre-existing lint errors in
-      # tests/ and packages/ (measured 2026-07-23). Surfaced as a signal so it
-      # can be driven to zero, then flipped to a hard gate (remove
-      # continue-on-error). Lint is not one of the six thesis gates.
+      # Non-blocking during the staged redesign: G0 characterized 78 existing
+      # errors and 0 warnings on 2026-08-12. GProd requires a green lint gate;
+      # remove continue-on-error before production qualification.
       - name: Lint
         run: pnpm lint
         continue-on-error: true

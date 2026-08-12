@@ -21,16 +21,24 @@ describe("B-033 current product documentation", () => {
   });
 
   it("does not present retired thesis evidence as proof of the correctness-first architecture", async () => {
-    const [docsReadme, thesisReadme] = await Promise.all([
+    const [docsReadme, thesisReadme, claudeGuide, conflictRiskReadme, orchestratorReadme] = await Promise.all([
       readFile(path.join(root, "docs", "README.md"), "utf8"),
-      readFile(path.join(root, "docs", "tesis", "README.md"), "utf8")
+      readFile(path.join(root, "docs", "tesis", "README.md"), "utf8"),
+      readFile(path.join(root, "CLAUDE.md"), "utf8"),
+      readFile(path.join(root, "packages", "conflict-risk", "README.md"), "utf8"),
+      readFile(path.join(root, "packages", "orchestrator-graph", "README.md"), "utf8")
     ]);
 
     expect(docsReadme).toContain("Stage 11");
-    expect(docsReadme).not.toContain("Stage 14");
     expect(docsReadme).toContain("Stage 0 baseline");
     expect(thesisReadme).toContain("Historical draft — not current evidence");
     expect(thesisReadme).toContain("must not be used to close any current architecture gate");
+    for (const currentGuide of [docsReadme, claudeGuide, conflictRiskReadme, orchestratorReadme]) {
+      expect(currentGuide).not.toMatch(/Stage (?:1[2-9]|[2-9]\d)/u);
+    }
+    expect(claudeGuide).toContain("Stage 11");
+    expect(conflictRiskReadme).toContain("Stage 6");
+    expect(orchestratorReadme).toContain("GProd");
   });
 
   it("keeps the Stage 0 transition ledger and required-cell registry complete", async () => {

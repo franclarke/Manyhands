@@ -65,7 +65,7 @@ candidate, the suite is `not_run` for G0 even though its test files exist.
 | 3. Seed canonical lifecycle | `initializeRunCanonicalEvents` claims fenced authority and durably appends the idempotent `run.created` fact before the create response is returned. | `apps/web/src/lib/server/runs/v2/initialize-run.ts:10-31`; `packages/run-store/src/jsonl-event-store.ts:124-204` | `source`; focused test receipt pending |
 | 4. Own planning in Next | The route registers `runPlanningV2Pipeline` as an in-process background promise. The active-run and background-task maps live on the Next.js process's `globalThis`. | `apps/web/src/app/api/runs/route.ts:99-106`; `apps/web/src/lib/server/runs/runner-state.ts:3-16,44-76` | `source`; process-restart cell `not_run` |
 | 5. Inspect repository | Planning claims the run operation and repository lease, verifies the event store, then creates an exact-commit `RepositorySnapshot` through `buildFastRepositorySnapshot`. | `apps/web/src/lib/server/runs/v2/run-coordinator-host.ts:48-70,88-105`; `packages/repository-index/src/index.ts:371-410` | `source`; full physical view/restart evidence `not_run` |
-| 6. Invoke planning model | `RecursivePlanner` invokes the selected Codex or Claude CLI once per cut. The CLI runs read-only for Codex or plan mode with a disallowed-tool list for Claude. | `apps/web/src/lib/server/runs/v2/run-coordinator-host.ts:71-87,147-183,265-283` | `source`; live-provider baseline `not_run` |
+| 6. Invoke planning model | `RecursivePlanner` invokes the selected Codex or Claude CLI once per cut attempt, with up to two attempts per unit so validation failures can trigger a repair prompt. The CLI runs read-only for Codex or plan mode with a disallowed-tool list for Claude. | `apps/web/src/lib/server/runs/v2/run-coordinator-host.ts:71-87,147-183,265-283`; `packages/decomposer/src/planner/recursive-planner.ts:209,328-351` | `source`; live-provider baseline `not_run` |
 | 7. Build semantic plan | Planning folds grounded cuts into a `SemanticPlan` and applies the persisted granularity condition before compilation. | `apps/web/src/lib/server/runs/v2/planning-host.ts:73-164,165-198` | `source`; focused test receipt pending |
 | 8. Project through legacy planning | The productive route reconstructs `WorkBreakdown` and `CandidatePlan` through `projectSemanticPlanForLegacyCompiler`; the compiler performs the same projection again. | `apps/web/src/lib/server/runs/v2/planning-host.ts:170-185`; `packages/decomposer/src/planner/semantic-plan-projection.ts:7-120`; `packages/decomposer/src/compiler/graph-compiler.ts:52-65` | `source`; this is a known transition gap, not a pass |
 | 9. Compile and request approval | The compiler creates the graph/contracts/review; planning appends `graph.compiled`, critic findings, the proposed revision and an `approve_plan` decision. | `apps/web/src/lib/server/runs/v2/planning-host.ts:320-385` | `source`; focused test receipt pending |
@@ -191,23 +191,17 @@ this table.
     command and result are recorded; all physical full-route cells remain
     `not_run` at this characterization point.
 
-## Baseline-test coverage gap
+## Baseline-test coverage and limits
 
-`tests/architecture-baseline.test.ts:8-44` currently enforces only that V1
-records do not parse as the canonical V2 cache, packages do not import the app
-layer, and product source does not consume `@manyhands/core`.
+`tests/architecture-baseline.test.ts` now checks the package-manager/Node
+baseline, resolution-preserving lock conversion, V1/V2 cache separation,
+package dependency direction, absence of `@manyhands/core`, the known files
+containing each frozen legacy marker, and the Sol Ultra harness profiles.
+`tests/documentation-current.test.ts` checks the I1-I43, DoC1-DoC26 and R0-R19
+registries and rejects obsolete active-stage guidance.
 
-It does not yet freeze:
-
-- the exact allowlist of legacy productive imports above;
-- absence of new `WorkBreakdown`/`CandidatePlan`, `orchestrator-graph` or
-  `conflict-risk` consumers;
-- invariant I43 source hygiene;
-- query purity and daemon ownership;
-- coverage of all I1-I43 ledger rows and R0-R19 cell rows;
-- the rule that V1 compatibility is read-only;
-- stage-specific retirement reachability.
-
-Those assertions should be added when their respective stages make the desired
-state true. G0 should first record this exact debt so later gates cannot declare
-success by moving or renaming it.
+These are transition guards, not proof of the target architecture. In
+particular, the legacy-marker check freezes the set of files containing each
+marker; it does not count call sites inside an already allowlisted file.
+Stage-specific gates must still establish query purity, daemon ownership, I43
+source hygiene, read-only legacy compatibility and final zero reachability.

@@ -61,8 +61,9 @@ match the code.
 
 | Stage | Status | Attributable evidence | Next-stage disposition |
 |---|---|---|---|
-| Stage 0 / G0 | `in_progress` | [`../audits/stage-0/`](../audits/stage-0/) | Stage 1 is blocked until the clean-clone baseline and independent G0 review pass. |
-| Stages 1–11 | `not_started` | none | Must execute in normative order. |
+| Stage 0 / G0 | `in_progress` | [`../audits/stage-0/`](../audits/stage-0/); candidate `9cf3e87a9a534bd07947cfaedb6d78f88205b642` rejected by independent review because its pnpm 11 lock conversion changed baseline dependency resolutions | Reissue a resolution-preserving candidate, repeat clean-clone verification and obtain independent review. |
+| Stage 1 / G1 | `blocked` | none | G0 must pass on the reissued candidate before Stage 1 begins. |
+| Stages 2–11 | `not_started` | none | Must execute in normative order. |
 
 ### 0.2 Required reading and execution protocol
 

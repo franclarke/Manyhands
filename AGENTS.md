@@ -139,6 +139,12 @@ specifications. See `CONTEXT-MAP.md` and `docs/agents/domain.md`.
 
 ## Learned Operating Rules
 
+- For long-running clean-clone qualification on Windows, use explicit short
+  paths outside `%TEMP%` for the clone, package store and tool shims, verify
+  those targets do not exist before creation, and record candidate identity and
+  Git cleanliness after the checks. Host temporary-directory cleanup can erase
+  an active clone or store and turn an environmental purge into a misleading
+  product failure.
 - For browser evidence of a generated target, start its declared Node entrypoint
   directly and set runtime data paths outside the target when supported. Stop
   that process before delivery, then move any generated untracked runtime files

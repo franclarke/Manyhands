@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -7,9 +8,10 @@ import { RunRecordSchema } from "@/lib/server/runs/schema";
 const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url));
 describe("target architecture migration baseline", () => {
   it("pins a package-manager runtime that supports the declared Node baseline", async () => {
-    const [rootPackage, workflow] = await Promise.all([
+    const [rootPackage, workflow, nvmrc] = await Promise.all([
       readFile(path.join(REPO_ROOT, "package.json"), "utf8"),
-      readFile(path.join(REPO_ROOT, ".github", "workflows", "ci.yml"), "utf8")
+      readFile(path.join(REPO_ROOT, ".github", "workflows", "ci.yml"), "utf8"),
+      readFile(path.join(REPO_ROOT, ".nvmrc"), "utf8")
     ]);
     const manifest = JSON.parse(rootPackage) as {
       packageManager?: string;
@@ -20,6 +22,22 @@ describe("target architecture migration baseline", () => {
     expect(manifest.engines).toEqual({ node: ">=22.13", pnpm: "11.21.0" });
     expect(workflow).toContain("version: 11.21.0");
     expect(workflow).toContain("node-version: 22.22.0");
+    expect(nvmrc.trim()).toBe("22.22.0");
+  });
+
+  it("converts the package-manager lock without changing baseline resolutions", async () => {
+    const lockfile = await readFile(path.join(REPO_ROOT, "pnpm-lock.yaml"), "utf8");
+    const packageResolutions = parsePackageResolutions(lockfile);
+    const importerResolutions = parseImporterResolutions(lockfile);
+
+    expect(packageResolutions).toHaveLength(778);
+    expect(sha256Lines(packageResolutions)).toBe(
+      "845bda9823eacae6bf087008b95b5fc99a80888a69026a967df71026b71e6673"
+    );
+    expect(importerResolutions).toHaveLength(100);
+    expect(sha256Lines(importerResolutions)).toBe(
+      "0d5aeecdbc69dd8e6a5523c39e96855b805d214d7b7935b44b9a31310b706e5f"
+    );
   });
 
   it("keeps V1 records out of the canonical V2 cache schema", async () => {
@@ -224,4 +242,84 @@ async function sourceFiles(directory: string): Promise<string[]> {
 
 function relativePath(file: string): string {
   return path.relative(REPO_ROOT, file).replaceAll("\\", "/");
+}
+
+function parsePackageResolutions(lockfile: string): string[] {
+  const lines = lockfile.split(/\r?\n/u);
+  const start = lines.indexOf("packages:");
+  const end = lines.indexOf("snapshots:");
+  if (start < 0 || end <= start) {
+    throw new Error("Expected a pnpm v9 lockfile with packages and snapshots sections.");
+  }
+
+  const resolutions: string[] = [];
+  let packageId: string | undefined;
+  for (const line of lines.slice(start + 1, end)) {
+    const packageMatch = /^  (\S.*):$/u.exec(line);
+    if (packageMatch) {
+      packageId = unquoteYamlScalar(packageMatch[1]);
+      continue;
+    }
+    const resolutionMatch = /^    resolution: \{integrity: ([^,}]+).*\}$/u.exec(line);
+    if (resolutionMatch && packageId) {
+      resolutions.push(`${packageId}|${unquoteYamlScalar(resolutionMatch[1])}`);
+      packageId = undefined;
+    }
+  }
+  return resolutions.sort();
+}
+
+function parseImporterResolutions(lockfile: string): string[] {
+  const lines = lockfile.split(/\r?\n/u);
+  const start = lines.indexOf("importers:");
+  const end = lines.indexOf("packages:");
+  if (start < 0 || end <= start) {
+    throw new Error("Expected a pnpm lockfile with importers and packages sections.");
+  }
+
+  const resolutions: string[] = [];
+  let importer: string | undefined;
+  let section: "dependencies" | "devDependencies" | "optionalDependencies" | undefined;
+  let dependency: string | undefined;
+  for (const line of lines.slice(start + 1, end)) {
+    const importerMatch = /^  (\S.*):$/u.exec(line);
+    if (importerMatch) {
+      importer = unquoteYamlScalar(importerMatch[1]);
+      section = undefined;
+      dependency = undefined;
+      continue;
+    }
+    const sectionMatch = /^    (dependencies|devDependencies|optionalDependencies):$/u.exec(line);
+    if (sectionMatch) {
+      section = sectionMatch[1] as typeof section;
+      dependency = undefined;
+      continue;
+    }
+    const dependencyMatch = /^      (\S.*):$/u.exec(line);
+    if (dependencyMatch && section) {
+      dependency = unquoteYamlScalar(dependencyMatch[1]);
+      continue;
+    }
+    const versionMatch = /^        version: (.+)$/u.exec(line);
+    if (versionMatch && importer && section && dependency) {
+      const encodedVersion = unquoteYamlScalar(versionMatch[1]);
+      const version = encodedVersion.startsWith("link:")
+        ? encodedVersion
+        : encodedVersion.split("(", 1)[0];
+      resolutions.push(`${importer}|${section}|${dependency}|${version}`);
+      dependency = undefined;
+    }
+  }
+  return resolutions.sort();
+}
+
+function unquoteYamlScalar(value: string): string {
+  const trimmed = value.trim();
+  return trimmed.startsWith("'") && trimmed.endsWith("'")
+    ? trimmed.slice(1, -1).replaceAll("''", "'")
+    : trimmed;
+}
+
+function sha256Lines(lines: readonly string[]): string {
+  return createHash("sha256").update(`${lines.join("\n")}\n`).digest("hex");
 }
