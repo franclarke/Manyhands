@@ -1,43 +1,28 @@
-# DOCUMENTACIÓN TÉCNICA DE MANYHANDS
+# ManyHands documentation
 
-Bienvenido al centro oficial de documentación de **ManyHands**, el sistema local y self-hosted de orquestación multiagente para desarrollo de software.
+ManyHands is being redesigned from a path-oriented multi-agent control plane into
+a correctness-first software engineering system.
 
----
+## Sources of truth
 
-## 🌟 LOS 3 PILARES FUNDAMENTALES DEL SISTEMA
+1. [`PRODUCT.md`](../PRODUCT.md) — product purpose, users and stable experience
+   principles.
+2. [`2026-08-12-correctness-first-system-redesign.md`](plans/2026-08-12-correctness-first-system-redesign.md)
+   — the only normative architecture and implementation plan.
+3. [`agents/`](agents/) — local workflow for implementation agents.
+4. [`tesis/`](tesis/) — academic material and attributable historical evidence;
+   it is not a current architecture specification.
 
-Muchos componentes del sistema existen para dar soporte a la arquitectura, pero el núcleo estratégico de ManyHands descansa sobre **3 pilares principales**:
+The former `docs/design`, `docs/system`, `docs/core-pillars`, `docs/adr`,
+`docs/development` and older plan were removed on 2026-08-12. They contained
+incompatible targets and claims superseded by observed run failures.
 
-| Pilar | Documento de Arquitectura | Descripción |
-|---|---|---|
-| 🧠 **Pilar 1: El Decomposer** | 📄 **[01-decomposer-engine.md](core-pillars/01-decomposer-engine.md)** | Planificación semántica y política de granularidad. El planificador propone los cortes; una política determinista (`adaptive-utility`) decide cuáles se ejecutan comparando beneficio contra costo, y nunca inventa uno. |
-| ⚡ **Pilar 2: La Ejecución** | 📄 **[02-execution-and-orchestration.md](core-pillars/02-execution-and-orchestration.md)** | Despacho continuo por eventos, scheduler determinista, `V2ExecutionDriver` con `recordQueue` atómico, pool de reciclaje de worktrees y sandboxing de seguridad. |
-| 🛡️ **Pilar 3: La Integración** | 📄 **[03-integration-and-evidence.md](core-pillars/03-integration-and-evidence.md)** | Construcción de la Matriz de Evidencias sobre commits exactos, materialización bottom-up del árbol e integración final verificada en la rama entregada. |
+## Implementation status
 
----
+The current source tree is transitional. A type, class or test with the same
+name as a target capability does not prove that the capability is implemented.
+Use the gap table and stage exit criteria in the redesign plan, then verify the
+productive path, tests and persisted evidence before reporting status.
 
-## ⚙️ SUBSISTEMAS TÉCNICOS Y ESPECIFICACIONES
-
-| Subsistema | Especificación Técnica | Descripción |
-|---|---|---|
-| 📐 **TaskGraph & Contratos** | 📄 **[01-task-graph.md](system/01-task-graph.md)** | Grafo jerárquico, relaciones canónicas tipadas, reductor Compare-and-Swap e inmutabilidad profunda (`deepFreeze`). |
-| 💾 **Persistencia y Durabilidad** | 📄 **[02-persistence-and-durability.md](system/02-persistence-and-durability.md)** | Contratos de persistencia, eventos, snapshots, trazas y límites de recuperación documentados para la transición actual. |
-| 🚀 **Indexación Monorepo** | 📄 **[03-monorepo-grounding.md](system/03-monorepo-grounding.md)** | Indexación nativa con `ripgrep` (`rg --files`), caché incremental por Git HEAD SHA y extractor de firmas de exportación. |
-| 🖥️ **Cockpit UI & Interacción** | 📄 **[04-cockpit-ui-and-interaction.md](system/04-cockpit-ui-and-interaction.md)** | Modelo visual del Cockpit (`apps/web`), medallas de ciclo de vida de nodos, cola de decisiones non-blocking y prohibición de `fitView`. |
-
----
-
-## 📜 REGISTRO DE DECISIONES Y PLANIFICACIÓN
-
-- **Decisiones de Arquitectura**: `docs/DECISIONS.md` y carpeta `docs/adr/`.
-- **Estado de cierre de tesis**: [`docs/tesis/evidence/g6/FINAL-REPORT.md`](tesis/evidence/g6/FINAL-REPORT.md) y [`docs/tesis/HANDOFF.md`](tesis/HANDOFF.md).
-- **Próxima validación semántica**: diseño futuro documentado en [`docs/tesis/evidence/semantic-planning/next-run.md`](tesis/evidence/semantic-planning/next-run.md); todavía no ejecutado.
-
----
-
-## PRINCIPIOS DE AUTORIDAD DE DOCUMENTACIÓN
-
-1. **`PRODUCT.md`**: Usuarios y principios del producto.
-2. **`docs/DECISIONS.md`**: Decisiones de arquitectura target.
-3. **`docs/core-pillars/`**: Los 3 pilares estructurales del producto.
-4. **`docs/system/`**: Esquemas y especificaciones técnicas de subsistemas.
+No large live-model benchmark should run until Stage 14 eligibility gates are
+satisfied.

@@ -46,6 +46,9 @@ export interface EphemeralExecutionWorkspaceProviderOptions {
   now?: () => string;
   platform?: NodeJS.Platform;
   tmpdir?: () => string;
+  /** Bounded retry for transient Windows locks during `git worktree remove`. */
+  removeAttempts?: number;
+  waitBeforeRemoveRetry?: () => Promise<void>;
 }
 
 export class EphemeralExecutionWorkspaceProvider implements ExecutionWorkspaceProvider {
@@ -55,6 +58,8 @@ export class EphemeralExecutionWorkspaceProvider implements ExecutionWorkspacePr
   private readonly now: () => string;
   private readonly platform: NodeJS.Platform | undefined;
   private readonly tmpdir: (() => string) | undefined;
+  private readonly removeAttempts: number;
+  private readonly waitBeforeRemoveRetry: () => Promise<void>;
 
   constructor(options: EphemeralExecutionWorkspaceProviderOptions) {
     this.repoRoot = options.repoRoot;
@@ -63,6 +68,10 @@ export class EphemeralExecutionWorkspaceProvider implements ExecutionWorkspacePr
     this.now = options.now ?? nowIso;
     this.platform = options.platform;
     this.tmpdir = options.tmpdir;
+    this.removeAttempts = Number.isInteger(options.removeAttempts) && options.removeAttempts! > 0
+      ? options.removeAttempts!
+      : 3;
+    this.waitBeforeRemoveRetry = options.waitBeforeRemoveRetry ?? (() => new Promise((resolve) => setTimeout(resolve, 100)));
   }
 
   async acquire(params: CreateWorktreeParams): Promise<ExecutionWorkspaceHandle> {
@@ -113,13 +122,27 @@ export class EphemeralExecutionWorkspaceProvider implements ExecutionWorkspacePr
             candidateCommit: outcome.candidateCommit
           }));
         }
-        await this.serialize(() => this.git.remove({ repoRoot: this.repoRoot, worktreePath }));
+        await this.removeWithRetry(worktreePath);
       }
     };
   }
 
   private serialize<T>(operation: () => Promise<T>): Promise<T> {
     return withRepositoryTopology(this.repoRoot, operation);
+  }
+
+  private async removeWithRetry(worktreePath: string): Promise<void> {
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= this.removeAttempts; attempt += 1) {
+      try {
+        await this.serialize(() => this.git.remove({ repoRoot: this.repoRoot, worktreePath }));
+        return;
+      } catch (error) {
+        lastError = error;
+        if (attempt < this.removeAttempts) await this.waitBeforeRemoveRetry();
+      }
+    }
+    throw lastError;
   }
 }
 

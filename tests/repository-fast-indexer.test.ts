@@ -136,7 +136,6 @@ describe("FastRepositoryIndexer", () => {
 
     expect(rgInvocations).toBe(0);
     expect(second.cacheHit).toBe(true);
-    expect(second.timings.totalMs).toBeLessThan(25);
     expect(second.index.files).toEqual(first.index.files);
     expect(second.index.files[0]?.exportedSymbols).toEqual(["Booking", "book", "createBooking"]);
     expect(
@@ -152,6 +151,27 @@ describe("FastRepositoryIndexer", () => {
       indexerProfile: INDEXER_PROFILE,
       index: { files: first.index.files }
     });
+  });
+
+  performanceIt("keeps warm-cache p95 below 25ms on the supported Windows workstation", async () => {
+    const root = await createRepository();
+    await mkdir(path.join(root, "src"), { recursive: true });
+    await writeFile(path.join(root, "src", "api.ts"), "export const api = true;\n", "utf8");
+    const headSha = await commitAll(root, "warm-cache performance fixture");
+    const indexer = new FastRepositoryIndexer();
+    await indexer.indexWithReceipt({ rootPath: root, baseCommit: headSha });
+
+    const samples: number[] = [];
+    for (let sample = 0; sample < 20; sample += 1) {
+      const receipt = await indexer.indexWithReceipt({ rootPath: root, baseCommit: headSha });
+      expect(receipt.cacheHit).toBe(true);
+      samples.push(receipt.timings.totalMs);
+    }
+    const ordered = [...samples].sort((left, right) => left - right);
+    const p95 = ordered[Math.ceil(ordered.length * 0.95) - 1]!;
+
+    expect(p95, `warm-cache p95=${p95.toFixed(2)}ms; samples=${ordered.map((value) => value.toFixed(2)).join(",")}`)
+      .toBeLessThan(25);
   });
 
   it("builds one coherent exact-commit index when the working tree is dirty", async () => {

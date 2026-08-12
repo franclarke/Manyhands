@@ -200,7 +200,9 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
         workspaces,
         repoRoot,
         repositorySnapshot: prepared.repositorySnapshot,
-        operationId: lease.operationId
+        bootstrapValidation: true,
+        operationId: lease.operationId,
+        traceStore
       }),
       finalCandidate: finalCandidatePort({ git, repoRoot, baseCommit: prepared.graph.baseCommit }),
       integrationOperation: {

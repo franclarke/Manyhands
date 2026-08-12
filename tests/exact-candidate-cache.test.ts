@@ -106,16 +106,21 @@ describe("validateExactCandidate baseline sandbox reuse", () => {
     expect(baselineDispose).toHaveBeenCalledTimes(1);
   });
 
-  it("attempts baseline cleanup even when candidate cleanup fails", async () => {
+  it("preserves verified evidence when cleanup fails after validation", async () => {
     const candidateDispose = vi.fn(async () => { throw new Error("candidate cleanup failed"); });
     const baselineDispose = vi.fn(async () => undefined);
-    await expect(validateExactCandidate({ recipe: baselineRecipe, obligations: twoObligations }, {
+    const onCleanupFailure = vi.fn();
+    const result = await validateExactCandidate({ recipe: baselineRecipe, obligations: twoObligations }, {
       sandbox: { create: async () => ({ worktreePath: "C:/candidate", headCommit: "candidate-sha", clean: true, dispose: candidateDispose }) },
       run: async () => ({ passed: true, exitCode: 0, output: "ok" }),
       createBaselineSandbox: async () => ({ worktreePath: "C:/baseline", headCommit: "baseline-sha", clean: true, dispose: baselineDispose }),
-      runBaseline: async () => ({ passed: true, exitCode: 0, output: "ok" })
-    })).rejects.toThrow(/candidate cleanup failed/i);
+      runBaseline: async () => ({ passed: true, exitCode: 0, output: "ok" }),
+      onCleanupFailure
+    });
+
+    expect(result.matrix.outcome).toBe("verified");
     expect(candidateDispose).toHaveBeenCalledTimes(1);
     expect(baselineDispose).toHaveBeenCalledTimes(1);
+    expect(onCleanupFailure).toHaveBeenCalledWith(expect.objectContaining({ message: "candidate cleanup failed" }));
   });
 });

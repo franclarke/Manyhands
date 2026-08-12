@@ -54,6 +54,31 @@ export async function loadRunProjectionV2(runId: string): Promise<RunProjection>
   return foldRun(await store.load(runId));
 }
 
+/**
+ * Repair the disposable RunRecord projection from the canonical V2 journal.
+ *
+ * A process can append a terminal event and lose its record-cache write before
+ * a takeover fences it. The journal is authoritative, so reads must never
+ * report the older cache as a live run or try to cancel an already terminal
+ * execution.
+ */
+export async function reconcileRunRecordProjectionV2(run: RunRecord): Promise<RunRecord> {
+  const store = eventStore();
+  const recovery = await verifyAndRecoverRunStore(run.runId, { store });
+  if (recovery.status === "corrupt") throw new Error(`Run ${run.runId} has a corrupt durable event store.`);
+  const events = await store.load(run.runId);
+  // Imported and legacy runs have a RunRecord but no V2 journal to project.
+  // The record is their only durable representation, so preserving it is safer
+  // than folding an empty event list into an invented lifecycle.
+  if (events.length === 0) return run;
+  const state = foldRun(events);
+  if (state.sequence <= run.projection.eventSequence) return run;
+  return getRunRepository().update(run.runId, (current) => {
+    if (current.projection.eventSequence >= state.sequence) return current;
+    return projectV2RunRecordCache(current, state, events);
+  });
+}
+
 export async function resolveDecisionV2(
   runId: string,
   decisionId: string,

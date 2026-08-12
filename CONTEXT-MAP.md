@@ -1,14 +1,15 @@
 # ManyHands context map
 
-Read only the contexts relevant to the current task.
+Read only the context relevant to the task.
 
 | Context | Authoritative sources |
 | --- | --- |
-| Product and user experience | `PRODUCT.md`, `docs/design/` |
-| Target architecture and decisions | `docs/DECISIONS.md`, `docs/adr/` |
-| Runtime contracts | `docs/system/`, `docs/core-pillars/` |
-| Thesis claims and evidence | `docs/tesis/HANDOFF.md`, `docs/tesis/claim-evidence-matrix.md`, `docs/tesis/evidence/` |
-| Current package boundaries | `AGENTS.md`, package source and tests |
+| Product and user experience | `PRODUCT.md` |
+| Target architecture, domain language and implementation order | `docs/plans/2026-08-12-correctness-first-system-redesign.md` |
+| Agent workflow | `AGENTS.md`, `CLAUDE.md`, `docs/agents/` |
+| Thesis claims and evidence | `docs/tesis/` |
+| Current implementation | package source, tests and persisted runs |
 
-This map is an index, not a second specification. When sources disagree, follow
-the documentation authority declared in `AGENTS.md`.
+The redesign plan is normative for future implementation. Thesis evidence
+describes what happened and must remain historically accurate; it does not
+override the target architecture.

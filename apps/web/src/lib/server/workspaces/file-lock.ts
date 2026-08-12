@@ -7,6 +7,7 @@ const DEFAULT_ACQUIRE_TIMEOUT_MS = 30_000;
 const DEFAULT_STALE_MS = 30_000;
 const DEFAULT_RETRY_MS = 15;
 const RENAME_RETRIES = 5;
+const QUARANTINE_RENAME_RETRIES = 40;
 
 interface FileLockOwner {
   token: string;
@@ -270,7 +271,19 @@ async function quarantineAbandonedLock(
         await removeClaimOwner(claimedTakeoverPath, takeoverOwner);
         return false;
       }
-      return quarantineLockDirectory(lockDir);
+      const quarantined = await quarantineLockDirectory(
+        lockDir,
+        observed,
+        takeoverOwner,
+        takeoverOwner.token,
+        staleMs
+      );
+      if (!quarantined) {
+        await removeOwnedTakeoverMarker(takeoverPath, takeoverOwner).catch(() => undefined);
+        await restoreClaimedTakeover(takeoverPath, claimedTakeoverPath);
+        await removeClaimOwner(claimedTakeoverPath, takeoverOwner);
+      }
+      return quarantined;
     } catch (error) {
       await removeOwnedTakeoverMarker(takeoverPath, takeoverOwner).catch(() => undefined);
       await restoreClaimedTakeover(takeoverPath, claimedTakeoverPath);
@@ -303,7 +316,17 @@ async function quarantineAbandonedLock(
     await removeOwnedTakeoverMarker(takeoverPath, takeoverOwner).catch(() => undefined);
     return false;
   }
-  return quarantineLockDirectory(lockDir);
+  const quarantined = await quarantineLockDirectory(
+    lockDir,
+    observed,
+    takeoverOwner,
+    undefined,
+    staleMs
+  );
+  if (!quarantined) {
+    await removeOwnedTakeoverMarker(takeoverPath, takeoverOwner).catch(() => undefined);
+  }
+  return quarantined;
 }
 
 async function claimObservedTakeover(
@@ -365,13 +388,51 @@ async function restoreClaimedTakeover(takeoverPath: string, claimedPath: string)
   }
 }
 
-async function quarantineLockDirectory(lockDir: string): Promise<boolean> {
+async function quarantineLockDirectory(
+  lockDir: string,
+  expectedOwner: FileLockOwner | undefined,
+  expectedTakeover: TakeoverOwner,
+  ownClaimToken: string | undefined,
+  staleMs: number
+): Promise<boolean> {
   const quarantine = `${lockDir}.abandoned-${process.pid}-${randomUUID()}`;
-  try {
-    await renameWithRetry(lockDir, quarantine);
-  } catch (error) {
-    if (isErrno(error) && error.code === "ENOENT") return false;
-    throw error;
+  for (let attempt = 0; ; attempt += 1) {
+    const takeoverPath = path.join(lockDir, "takeover");
+    if (
+      !sameOwner(expectedOwner, await readOwner(lockDir)) ||
+      !sameTakeoverOwner(expectedTakeover, (await observeTakeover(takeoverPath))?.owner) ||
+      await hasForeignActiveClaim(takeoverPath, ownClaimToken, staleMs)
+    ) return false;
+
+    try {
+      await rename(lockDir, quarantine);
+      break;
+    } catch (error) {
+      const code = isErrno(error) ? error.code : undefined;
+      if (code === "ENOENT") return false;
+      if (
+        attempt < QUARANTINE_RENAME_RETRIES &&
+        (code === "EPERM" || code === "EACCES" || code === "EBUSY")
+      ) {
+        await delay(25);
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  const movedTakeoverPath = path.join(quarantine, "takeover");
+  if (
+    !sameOwner(expectedOwner, await readOwner(quarantine)) ||
+    !sameTakeoverOwner(expectedTakeover, (await observeTakeover(movedTakeoverPath))?.owner)
+  ) {
+    if (!await publishCandidate(quarantine, lockDir)) {
+      throw new WorkspaceConflictError(
+        `Workspace store lock identity changed while quarantining ${lockDir}; ` +
+          `the moved directory was preserved at ${quarantine}.`
+      );
+    }
+    return false;
   }
   await rm(quarantine, { recursive: true, force: true }).catch(() => undefined);
   return true;

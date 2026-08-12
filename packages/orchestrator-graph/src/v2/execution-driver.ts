@@ -43,6 +43,8 @@ export interface V2NodeExecutionInput {
   waveId: string;
   attemptId: string;
   inputFingerprint: string;
+  /** Immutable diagnostic from the failed attempt this retry replaces. */
+  priorFailure?: { attemptId: string; reason: string };
   graph: GraphRevision;
   node: TaskNodeV2;
   contract: TaskContractBundle;
@@ -793,6 +795,9 @@ function createAttempt(
   const previousAttempt = Object.values(state.attempts)
     .filter((attempt) => attempt.nodeId === nodeId && ["failed", "discarded", "stale"].includes(attempt.status))
     .at(-1);
+  const priorFailure = previousAttempt?.status === "failed" && previousAttempt.failureReason !== undefined
+    ? { attemptId: previousAttempt.attemptId, reason: previousAttempt.failureReason }
+    : undefined;
   const ordinal = Object.values(state.attempts).filter((attempt) => attempt.nodeId === nodeId).length + 1;
   const attemptId = `${run.runId}:attempt:${nodeId}:${ordinal}`;
   const common = { attemptId, nodeId, inputFingerprint, ...(previousAttempt !== undefined ? { retryOfAttemptId: previousAttempt.attemptId } : {}), executorProfile: run.executorProfile };
@@ -814,6 +819,7 @@ function createAttempt(
       waveId,
       attemptId,
       inputFingerprint,
+      ...(priorFailure === undefined ? {} : { priorFailure }),
       graph: run.graph,
       node,
       contract,

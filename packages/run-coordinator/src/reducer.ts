@@ -480,6 +480,7 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       if (next.finalCandidate?.manifestId !== event.payload.approval.manifestId || next.finalCandidate.commit !== event.payload.approval.finalSha) throw new Error(`Delivery manifest ${event.payload.approval.manifestId} is not the verified final candidate.`);
       if (next.finalCandidate.sourceTargetFingerprint !== event.payload.approval.targetFingerprint || next.finalCandidate.targetBranch !== event.payload.approval.targetBranch || next.finalCandidate.targetHead !== event.payload.approval.targetHead) throw new Error("Delivery approval does not match the candidate target snapshot.");
       next.deliveryApproval = event.payload.approval;
+      delete next.failureReason;
       transition(next, "delivering");
       break;
     case "delivery.published":
@@ -491,6 +492,7 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       if (event.payload.receipt.targetHeadBefore !== undefined && event.payload.receipt.targetHeadBefore !== next.deliveryApproval?.targetHead) throw new Error("Delivery receipt target head does not match the approval.");
       next.deliveryReceipt = event.payload.receipt;
       next.outcomes.delivery = "published";
+      delete next.failureReason;
       transition(next, "completed");
       break;
     case "delivery.failed":

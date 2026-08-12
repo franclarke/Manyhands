@@ -48,4 +48,10 @@ describe("run cockpit chrome", () => {
     expect(cockpit).toContain("Matriz de evidencia");
     expect(cockpit).toContain("evidenceRefs");
   });
+
+  it("does not describe an already published result as blocked", () => {
+    const cockpit = source("apps/web/src/app/runs/[runId]/_components/run-model-view.client.tsx");
+
+    expect(cockpit).toContain('model.run.lifecycle === "result_ready" && model.projection?.finalCandidate !== undefined && !canDeliver');
+  });
 });

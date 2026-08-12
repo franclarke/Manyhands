@@ -1,23 +1,10 @@
 # @manyhands/conflict-risk
 
-Predicción actual de riesgo pairwise a partir de contratos, scopes y señales del
-repository index.
+Implementación transicional de predicción pairwise de conflictos.
 
-## Dirección objetivo
+El rediseño reemplaza la matriz pairwise como producto por `ResourceClaim`
+indexado por recurso. Este package puede aportar evidencia durante la migración,
+pero no crea dependencias funcionales ni es una fuente de verdad de scheduling.
+Se retira o absorbe cuando Stage 13 demuestre que no tiene callers productivos.
 
-El package produce evidencia para `ConflictConstraint` y decisiones de
-scheduling. No debe:
-
-- crear dependencies funcionales;
-- recomendar `add_dependency` sin pasar por Graph Compiler;
-- tratar un SeamBinding compatible como conflicto;
-- convertir falta de información en riesgo bajo;
-- afirmar corrección semántica.
-
-Las señales conservan source, freshness, confidence y rationale. El scheduler
-decide cómo actuar según política y presupuesto.
-
-API actual destacada: `buildTaskPairRiskMatrix`, `predictConflict`,
-`buildStaticConflictSignals`, `findRiskPrediction`.
-
-Contrato objetivo: [`docs/system/13-conflict-risk.md`](../../docs/system/13-conflict-risk.md).
+Fuente normativa: [rediseño correctness-first](../../docs/plans/2026-08-12-correctness-first-system-redesign.md#95-taskgraph-and-resource-claims).

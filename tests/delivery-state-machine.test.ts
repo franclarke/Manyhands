@@ -37,6 +37,34 @@ describe("delivery state machine V2", () => {
     expect(state.outcomes.delivery).toBe("failed");
   });
 
+  it("clears a retryable delivery failure after the same manifest is published", () => {
+    const events = [
+      ...readyEvents(),
+      event(6, "delivery.started", { approval }),
+      event(7, "delivery.failed", { manifestId: approval.manifestId, reason: "target dirty", retryable: true }),
+      event(8, "delivery.started", { approval }),
+      event(9, "delivery.published", {
+        receipt: {
+          receiptId: "receipt-1",
+          requestFingerprint: "request-1",
+          manifestId: approval.manifestId,
+          finalSha: approval.finalSha,
+          targetBranch: approval.targetBranch,
+          targetHeadBefore: approval.targetHead,
+          targetHeadAfter: approval.finalSha,
+          disposition: "delivered",
+          confirmed: true
+        }
+      })
+    ];
+
+    const state = foldRun(events);
+
+    expect(state.lifecycle).toBe("completed");
+    expect(state.outcomes.delivery).toBe("published");
+    expect(state.failureReason).toBeUndefined();
+  });
+
   it("checks the frozen target before publishing and adopts a prior receipt by idempotency key", async () => {
     const requestFingerprint = deliveryRequestFingerprint(approval);
     const receipt = { receiptId: "receipt-1", requestFingerprint, manifestId: approval.manifestId, finalSha: approval.finalSha, targetBranch: approval.targetBranch, targetHeadBefore: approval.targetHead, targetHeadAfter: "merge-sha", disposition: "delivered" as const, confirmed: true as const };

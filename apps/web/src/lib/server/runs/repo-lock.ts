@@ -540,6 +540,17 @@ export interface RepoLeaseHeartbeatOptions {
 export function startRepoLeaseHeartbeat(lease: RepoLease, options: RepoLeaseHeartbeatOptions = {}): () => void {
   const intervalMs = options.intervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS;
   let stopped = false;
+  const emitBeat = (at: string): void => {
+    try {
+      options.onBeat?.(at);
+    } catch {
+      // Observability cannot prevent a lease from keeping its durable pulse.
+    }
+  };
+  // acquireRepoLock persisted this token-scoped heartbeat before returning the
+  // lease. Reporting it synchronously gives observers the same immediate
+  // liveness fact and does not depend on the event loop reaching a timer.
+  emitBeat(lease.acquiredAt);
   const tick = async (): Promise<void> => {
     while (!stopped) {
       try {
@@ -552,7 +563,7 @@ export function startRepoLeaseHeartbeat(lease: RepoLease, options: RepoLeaseHear
           options.onLost?.(result.reason);
           return;
         }
-        options.onBeat?.(at);
+        emitBeat(at);
       } catch {
         // Transient FS error: keep trying; staleness needs a long silence.
       }

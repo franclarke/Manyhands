@@ -218,7 +218,7 @@ function RunSummary({ model, canDeliver }: { model: ReturnType<typeof useLiveRun
         {summary.coordinatingNodes > 0 ? `${summary.coordinatingNodes} nodo coordinando · ` : ""}{model.contracts.length} contrato{model.contracts.length === 1 ? "" : "s"} vigente{model.contracts.length === 1 ? "" : "s"}
       </p>
       {canDeliver ? <div className="mt-4 rounded-lg border border-[var(--status-completed-border)] bg-[var(--status-completed-bg)] p-3 text-xs text-[var(--status-completed-fg)]"><CheckCircle2 className="mr-2 inline h-4 w-4" />Resultado verificado listo para publicar.</div> : null}
-      {model.projection?.finalCandidate !== undefined && !canDeliver ? <div className="mt-4 rounded-lg border border-[var(--status-review-border)] bg-[var(--status-review-bg)] p-3 text-xs text-[var(--status-review-fg)]">La entrega está bloqueada hasta verificar la matriz exacta del candidato.</div> : null}
+      {model.run.lifecycle === "result_ready" && model.projection?.finalCandidate !== undefined && !canDeliver ? <div className="mt-4 rounded-lg border border-[var(--status-review-border)] bg-[var(--status-review-bg)] p-3 text-xs text-[var(--status-review-fg)]">La entrega está bloqueada hasta verificar la matriz exacta del candidato.</div> : null}
       <EvidenceDetails matrices={model.evidenceMatrices} matrixId={model.projection?.finalCandidate?.evidenceMatrixId} candidateCommit={model.projection?.finalCandidate?.commit} />
       {model.projection?.failureReason !== undefined ? <div className="mt-4 rounded-lg border border-[var(--status-failed-border)] bg-[var(--status-failed-bg)] p-3 text-xs text-[var(--status-failed-fg)]">{model.projection.failureReason}</div> : null}
     </section>

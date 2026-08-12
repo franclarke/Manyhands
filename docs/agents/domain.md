@@ -1,22 +1,24 @@
 # Domain documentation
 
-ManyHands already has authoritative product, architecture, system, and thesis
-documents. Skills must consume those sources rather than create a parallel
-description of the system.
+ManyHands uses one target-architecture source to prevent competing vocabularies
+and parallel designs.
 
-## Before exploring
+## Before implementation
 
-1. Read `PRODUCT.md` and `docs/README.md`.
-2. Read `CONTEXT-MAP.md` and follow only the entries relevant to the work.
-3. Read applicable ADRs under `docs/adr/`.
-4. For thesis work, read `docs/tesis/HANDOFF.md` and the referenced evidence
-   protocol or defect record.
+1. Read `PRODUCT.md`.
+2. Read `docs/plans/2026-08-12-correctness-first-system-redesign.md` completely.
+3. Inspect the productive source path and tests named by the active stage.
+4. Consult `docs/tesis/` only when academic or historical evidence is relevant.
+   Do not treat it as a current specification.
 
 ## Vocabulary and authority
 
-- Use the canonical terms from the selected context documents.
+- Use the canonical language in section 5 of the redesign plan.
 - Do not rename persisted historical evidence to match newer terminology.
-- If implementation contradicts target documentation, record a transition gap;
-  do not rewrite the target silently.
-- New context documents should be created only when a real terminology gap is
-  resolved. They must point back to the authoritative source rather than copy it.
+- Classify target gaps as `implemented`, `partial`, `missing`, `incompatible` or
+  `unknown` and support the classification with current evidence.
+- Do not create another architecture overview, ADR set or subsystem
+  specification. Amend the canonical plan when an authorized architectural
+  decision genuinely changes it.
+- A compatibility adapter is valid only at a named historical read boundary and
+  must have a retirement criterion.

@@ -110,6 +110,7 @@ describe("P1 — a leaf must bring its own proof", () => {
     expect(model.seen.map((request) => request.unit.key)).toEqual(["root", "backend"]);
     expect(result.unresolved).toHaveLength(0);
   });
+
 });
 
 describe("P2 — siblings never write the same file", () => {

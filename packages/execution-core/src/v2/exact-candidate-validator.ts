@@ -4,6 +4,7 @@ import path from "node:path";
 
 import type { TaskContractBundle } from "@manyhands/contracts";
 import type { RepositorySnapshot } from "@manyhands/repository-index";
+import type { TraceStore } from "@manyhands/trace-store";
 
 import type { GitRunner } from "../git/runner";
 import { GitCandidateSandboxFactory, validateExactCandidate, type EvidenceValidationCache } from "../validation/candidate-validator";
@@ -28,6 +29,10 @@ export interface ExactCandidateValidatorV2Options {
   runner?: ValidationRunner;
   operationId?: string;
   evidenceCache?: EvidenceValidationCache;
+  /** Records deferred sandbox cleanup without changing validation evidence. */
+  traceStore?: TraceStore;
+  /** Permit npm test to validate a planned Node bootstrap before package.json exists. */
+  bootstrapValidation?: boolean;
 }
 
 export function computeEvidenceMatrixId(input: {
@@ -56,10 +61,22 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
     this.runner = options.runner ?? new ChildProcessValidationRunner();
   }
 
+  private validationCapabilities(contract: TaskContractBundle) {
+    const capabilities = this.options.repositorySnapshot.capabilities;
+    if (this.options.bootstrapValidation !== true || capabilities.baselineCommands.length > 0) return capabilities;
+    const allowedPaths = contract.scope.allowedPaths.map((candidate) => candidate.replaceAll("\\", "/").toLowerCase());
+    const targetsNodeProject = allowedPaths.includes("package.json") && allowedPaths.some((candidate) => isTestFilePath(candidate));
+    if (!targetsNodeProject) return capabilities;
+    return {
+      ...capabilities,
+      baselineCommands: [{ kind: "test" as const, command: "npm", args: ["test"], sourceScript: "test" }]
+    };
+  }
+
   prepare(input: { contract: TaskContractBundle }): PreparedValidationRecipe {
     return prepareValidationRecipe({
       contract: input.contract.validation,
-      capabilities: this.options.repositorySnapshot.capabilities,
+      capabilities: this.validationCapabilities(input.contract),
       repositorySnapshotId: this.options.repositorySnapshot.snapshotId
     });
   }
@@ -93,7 +110,7 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
     const recipe = input.prepared === undefined
       ? compileValidationRecipe({
           contract: input.contract.validation,
-          capabilities: this.options.repositorySnapshot.capabilities,
+          capabilities: this.validationCapabilities(input.contract),
           repositorySnapshotId: this.options.repositorySnapshot.snapshotId,
           candidateCommit: input.candidateCommit,
           baselineCommit: input.baselineCommit
@@ -143,6 +160,15 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
         repoRoot: this.options.repoRoot,
         supervision
       }),
+      onCleanupFailure: async (error) => {
+        if (this.options.traceStore === undefined) return;
+        await this.options.traceStore.append({
+          type: "worktree_clean_failed",
+          actor: "system",
+          taskId: input.contract.task.nodeId,
+          payload: { phase: "validation", message: describe(error) }
+        });
+      },
       ...(Object.keys(integrity.candidateTestContents).length === 0 ? {} : {
         runNegativeControl: async (step) => this.runNegativeControl({
           runId: input.runId,
@@ -285,6 +311,11 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
       if (changedFiles.includes(tsconfigPath) && baselineConfig !== candidateConfig) configurationPaths.add(tsconfigPath);
     }
     for (const referenced of await this.changedValidationDependencies(validationCommands, changedFiles, baselineCommit, candidateCommit, moduleAliases, read, signal)) configurationPaths.add(referenced);
+    const bootstrapTestBaseline = baselineFiles.size === 0
+      && Object.keys(baselineScripts).length === 0
+      && candidateFiles.size > 0
+      && Object.keys(candidateScripts).length > 0;
+    if (bootstrapTestBaseline) configurationPaths.delete("package.json");
     for (const exceeded of readBudget.exceededPaths) configurationPaths.add(exceeded);
     return {
       findings: [
@@ -374,6 +405,10 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
       await sandbox.dispose();
     }
   }
+}
+
+function describe(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function manifestAncestors(changedFiles: readonly string[]): Set<string> {

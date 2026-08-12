@@ -16,31 +16,37 @@ runs.
 
 ## Documentation authority
 
-1. `PRODUCT.md` — users and product principles.
-2. `docs/DECISIONS.md` — target architecture decisions.
-3. `docs/system/` — technical contracts.
-4. `docs/design/` — product interaction and visual behavior.
-5. `docs/adr/` — rationale and trade-offs.
+1. `PRODUCT.md` — users and stable product principles.
+2. `docs/plans/2026-08-12-correctness-first-system-redesign.md` — the sole
+   target architecture, domain language and implementation sequence.
+3. `docs/tesis/` — academic material and attributable historical evidence.
+4. Source, tests and persisted runs — evidence of current implementation.
 
-When current code differs, record a transition gap. Do not silently rewrite the
-target to match implementation.
+When current code differs, record a transition gap. Never weaken the target to
+match implementation or reinterpret historical evidence as current success.
 
 ## Target architecture summary
 
 - Hybrid graph: goal root, integration-boundary composites, cohesive leaves.
 - Canonical typed relations: parent ownership, `ArtifactRequirement`,
-  `SeamBinding`, `ConflictConstraint`.
-- Planner and Graph Compiler are separate responsibilities.
-- Contracts version goal, scope, seams, artifacts and validation obligations.
+  `SeamBinding` and resource-indexed `ResourceClaim`.
+- A queryable Repository Model grounds a progressive Planning Engine.
+- `SemanticPlan` is the only planning output; Graph Compiler transforms it
+  directly into one `GraphRevision`.
+- Contracts version goal, change ownership, context, seams, artifacts,
+  validation and composite integration.
 - Attempts are immutable and identified by `InputFingerprint`.
-- Execution bases materialize only declared artifacts.
+- Commits are provenance; execution bases materialize only content-addressed,
+  scoped artifact manifests.
 - Failures recover by cause, not a universal retry count.
 - Run domain events are canonical; snapshots are projections and traces are
   diagnostics.
+- A dedicated local daemon owns run actors, processes and journal writes; the
+  web application is a command/query client.
 - Human decisions block only affected readiness.
-- Validation builds an Evidence Matrix on exact commits.
-- Integration is bottom-up; delivery publishes the validated tree.
-- LangGraph, React Flow and CLI executors are adapters, not domain types.
+- Validation builds a hierarchical Evidence Matrix on exact candidates.
+- Composite integration is a first-class attempt with parent-owned shared work.
+- Worktree isolation and execution sandboxing are separate capabilities.
 - The canvas never recenters in response to run events.
 
 ## Current repository boundaries
@@ -51,15 +57,15 @@ transition is implemented. Do not add new dependencies to legacy
 
 | Area | Current location | Target direction |
 |---|---|---|
-| Graph | `packages/task-graph` | typed relations and revisions |
-| Contracts | `packages/contracts` | scope/artifact/validation contracts |
-| Planning | `packages/decomposer` | Planner + Graph Compiler boundary |
-| Coordination | `packages/orchestrator-graph`, web hosts | framework-independent Run Coordinator |
-| Execution | `packages/execution-core` | bases, attempts, validation, integration modules |
-| Scheduling | `packages/scheduler`, `conflict-risk` | artifact readiness and constraints |
-| Persistence | `packages/run-store`, `trace-store` | domain events separate from diagnostics |
-| Grounding | `packages/repository-index` | versioned repository model |
-| UI | `apps/web` | one graph/result run workspace |
+| Graph | `packages/task-graph` | typed relations, resource claims and revisions |
+| Contracts | `packages/contracts` | all versioned domain obligations |
+| Planning | `packages/decomposer` | Repository Query consumer, Planning Engine and Compiler |
+| Coordination | current web hosts and `orchestrator-graph` | migrate to `packages/run-engine` + `apps/daemon` |
+| Execution | `packages/execution-core` | deep attempt, artifact, validation, integration and sandbox modules |
+| Scheduling | `packages/scheduler`, `conflict-risk` | frontier readiness; retire pairwise risk product |
+| Persistence | `packages/run-store`, `trace-store` | canonical events separate from diagnostics |
+| Grounding | `packages/repository-index` | exact Repository Model and budgeted query interface |
+| UI | `apps/web` | daemon client and graph/result projection |
 
 ## Working in the transition
 
@@ -70,13 +76,14 @@ transition is implemented. Do not add new dependencies to legacy
 5. Implement the smallest vertical slice that moves toward the target.
 6. Do not introduce parallel representations of graph relations, lifecycle or
    evidence for convenience.
-7. Update the applicable target docs and future transition ledger.
+7. Update the status of the active stage in the canonical redesign plan.
 8. Run narrow checks first, then affected package/web typechecks or builds.
 
 Current safety behavior such as worktree isolation, diff inspection, scope
 enforcement, orchestrator-owned candidate commits, process supervision, leases
-and fencing must not be weakened during migration. Their target contracts are in
-`docs/system/05-worktree-layer.md` and `docs/system/security-boundary.md`.
+and fencing must not be weakened during migration. Remove a mechanism only when
+the replacement invariant and crash/concurrency tests in the canonical plan are
+already green.
 
 ## Product UI rules
 
@@ -127,5 +134,18 @@ Local ticket states use the canonical Pocock roles plus `closed`. See
 
 ### Domain docs
 
-This monorepo uses a context map over its existing authoritative documents. See
-`CONTEXT-MAP.md` and `docs/agents/domain.md`.
+This monorepo uses one canonical redesign plan rather than parallel subsystem
+specifications. See `CONTEXT-MAP.md` and `docs/agents/domain.md`.
+
+## Learned Operating Rules
+
+- For browser evidence of a generated target, start its declared Node entrypoint
+  directly and set runtime data paths outside the target when supported. Stop
+  that process before delivery, then move any generated untracked runtime files
+  to a recoverable evidence directory; package installation or app-generated
+  state in the target can make an otherwise valid delivery appear dirty.
+- A thesis or showcase experiment intended to demonstrate graph scale or product
+  quality must pre-register independent graph-topology and browser-level product
+  oracles. A minimal standard-library target and source-pattern checks are only
+  control-plane smoke evidence, never proof of rich decomposition or usable
+  software.

@@ -1,27 +1,10 @@
 # @manyhands/trace-store
 
-Package actual de trazas de planning y ejecución.
+Persistencia de trazas diagnósticas: prompts referenciados, logs, timings,
+eventos de provider y procesos.
 
-## Boundary objetivo
+Las trazas no deciden lifecycle, readiness, adoption ni success. El event journal
+de `run-store` conserva hechos de dominio. Todo dato sensible se redacta antes de
+persistir.
 
-`trace-store` conserva telemetría diagnóstica: prompts, logs, timings, eventos de
-provider y detalles de proceso. No es el event log de dominio y no decide
-lifecycle, readiness, success ni estado de UI.
-
-La taxonomía actual incluye eventos legacy y algunos hechos que también aparecen
-en el producto. El plan de transición debe clasificar cada tipo como:
-
-- domain event: migrar al Run Event Store;
-- diagnostic trace: conservar aquí;
-- duplicated/obsolete: retirar.
-
-API actual destacada: `TraceEvent`, `TraceEventType`, `TraceStore` e
-`InMemoryTraceStore`.
-
-`JsonlTraceStore` persiste envelopes checksummed en
-`.manyhands/runs/<runId>/traces.jsonl`, fuerza cada append a disco y redacta
-tokens, passwords, claves, cookies, headers Bearer y credenciales embebidas
-antes de serializar. Una nueva instancia sobre el mismo run recupera las trazas
-sin depender de memoria de proceso.
-
-Contrato objetivo: [`docs/design/run-operative-model.md`](../../docs/design/run-operative-model.md).
+Fuente normativa: [observabilidad y autoridad](../../docs/plans/2026-08-12-correctness-first-system-redesign.md#917-observability-and-cost-accounting).

@@ -111,6 +111,7 @@ export interface V2PhysicalNodeExecutionInput {
   runId: string;
   attemptId: string;
   inputFingerprint: string;
+  priorFailure?: { attemptId: string; reason: string };
   graph: GraphRevision;
   node: TaskNodeV2;
   contract: TaskContractBundle;
@@ -535,9 +536,8 @@ export class V2NodeExecutor {
           payload: { message: describe(error) }
         });
       } catch {
-        // Cleanup authority is reported by the execution outcome below.
+        // The cleanup failure is non-blocking once the candidate is recorded.
       }
-      if (candidateCommit !== undefined) throw error;
     }
   }
 
@@ -703,7 +703,7 @@ export class V2NodeExecutor {
 }
 
 export function buildV2NodeInstructions(
-  input: Pick<V2PhysicalNodeExecutionInput, "node" | "contract" | "consumedArtifacts">,
+  input: Pick<V2PhysicalNodeExecutionInput, "node" | "contract" | "consumedArtifacts" | "priorFailure">,
   prepared?: PreparedValidationRecipe
 ): string {
   const { task, scope, seams } = input.contract;
@@ -730,6 +730,15 @@ export function buildV2NodeInstructions(
       ...task.sourceContract.acceptanceCriteria.map((criterion) => `  - ${criterion}`),
       "- Constraints:",
       ...task.sourceContract.constraints.map((constraint) => `  - ${constraint}`)
+    );
+  }
+  if (input.priorFailure !== undefined) {
+    lines.push(
+      "",
+      "Previous attempt failed; repair that observed failure before finishing:",
+      `- Attempt: ${input.priorFailure.attemptId}`,
+      `- Failure: ${input.priorFailure.reason}`,
+      "Do not repeat the same implementation without addressing it."
     );
   }
   // Without this the agent has no way to know that a new test file is even

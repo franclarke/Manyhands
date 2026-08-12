@@ -77,6 +77,26 @@ describe("V2NodeExecutor", () => {
     expect(instructions).toContain("listBackorders(state)");
   });
 
+  it("turns a retried attempt's recorded failure into explicit repair context", () => {
+    const instructions = buildV2NodeInstructions({
+      node: { id: "node-server", title: "Recipe HTTP server" },
+      contract: {
+        task: { goal: "Implement a recipe HTTP server.", acceptanceCriteria: [], constraints: [] },
+        scope: { allowedPaths: ["src/index.js"], outputRoots: [], forbiddenPaths: [] },
+        seams: []
+      },
+      consumedArtifacts: [],
+      priorFailure: {
+        attemptId: "run-1:attempt:node-server:1",
+        reason: "npm test failed: expected HTTP 200"
+      }
+    } as never);
+
+    expect(instructions).toContain("Previous attempt failed; repair that observed failure before finishing:");
+    expect(instructions).toContain("npm test failed: expected HTTP 200");
+    expect(instructions).toContain("Do not repeat the same implementation without addressing it.");
+  });
+
   it("executes a leaf directly from its V2 bundle and validates the exact orchestrator commit", async () => {
     const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
     const node = compiled.graph.nodes["node-api"]!;
@@ -213,7 +233,7 @@ describe("V2NodeExecutor", () => {
     }]);
   });
 
-  it("does not report success when a pooled candidate cannot be anchored", async () => {
+  it("preserves a verified candidate when pooled worktree cleanup fails", async () => {
     const compiled = compileGraphRevision(
       { breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() },
       compilerDependencies
@@ -244,11 +264,12 @@ describe("V2NodeExecutor", () => {
       },
       now: () => at
     });
+    const traceStore = new InMemoryTraceStore();
     const executor = new V2NodeExecutor({
       git,
       repoRoot: "C:/repo/booking",
       baseBuilder,
-      traceStore: new InMemoryTraceStore(),
+      traceStore,
       executorFactory: new FixedAgentExecutorFactory(successfulAgent()),
       validator: {
         validate: async (input) => matrix(input.contract, input.candidateCommit)
@@ -260,10 +281,8 @@ describe("V2NodeExecutor", () => {
 
     const outcome = await executor.execute(request(compiled, node.id));
 
-    expect(outcome).toEqual({
-      kind: "failure",
-      reason: "candidate anchor failed"
-    });
+    expect(outcome).toMatchObject({ kind: "success", candidateCommit: commit });
+    expect(traceStore.findByType("worktree_clean_failed")).toHaveLength(1);
   });
 
   it("publishes a repaired leaf as one cumulative handoff from its physical base", async () => {
@@ -714,6 +733,103 @@ describe("ScopeChecker V2", () => {
 });
 
 describe("ExactCandidateValidatorV2", () => {
+  it("materializes npm test for a bootstrap target that declares its planned test path", () => {
+    const compiledContract = {
+      task: { goal: "Bootstrap a Node project.", acceptanceCriteria: [], validation: { id: "validation-bootstrap", revision: "r1" } },
+      validation: {
+        id: "validation-bootstrap",
+        revision: "r1",
+        nodeId: "node-bootstrap",
+        obligations: [{
+          id: "obligation-bootstrap",
+          criterionId: "criterion-bootstrap",
+          layer: "leaf",
+          severity: "required",
+          acceptableEvidence: ["test_result"],
+          baselinePolicy: "required",
+          negativeControl: "not_required",
+          flakyPolicy: "forbid",
+          evidence: { kind: "focused_command", selectors: ["test/basic.test.mjs"], references: ["test/basic.test.mjs"] }
+        }]
+      },
+      scope: { allowedPaths: ["package.json", "src/index.mjs", "test/basic.test.mjs"] }
+    } as never;
+    const snapshot = {
+      ...bookingSnapshot(),
+      capabilities: { scripts: {}, baselineCommands: [], languages: [], stack: [] }
+    };
+    const validator = new ExactCandidateValidatorV2({
+      git: new FakeGitRunner(),
+      workspaces: fakeWorkspaceProvider(new FakeGitRunner()),
+      repoRoot: "C:/repo/bootstrap",
+      repositorySnapshot: snapshot,
+      bootstrapValidation: true
+    });
+
+    const prepared = validator.prepare({ contract: compiledContract });
+
+    expect(prepared.unmaterializedObligationIds).toEqual([]);
+    expect(prepared.steps[0]?.command).toMatchObject({ command: "npm", args: ["test", "test/basic.test.mjs"] });
+  });
+
+  it("does not treat the first test script as weakened baseline coverage", async () => {
+    const compiledContract = {
+      task: { goal: "Bootstrap a Node project.", acceptanceCriteria: [], validation: { id: "validation-bootstrap", revision: "r1" } },
+      validation: {
+        id: "validation-bootstrap",
+        revision: "r1",
+        nodeId: "node-bootstrap",
+        obligations: [{
+          id: "obligation-bootstrap",
+          criterionId: "criterion-bootstrap",
+          layer: "leaf",
+          severity: "required",
+          acceptableEvidence: ["test_result"],
+          baselinePolicy: "required",
+          negativeControl: "not_required",
+          flakyPolicy: "forbid",
+          evidence: { kind: "focused_command", selectors: ["test/basic.test.mjs"], references: ["test/basic.test.mjs"] }
+        }]
+      },
+      scope: { allowedPaths: ["package.json", "src/index.mjs", "test/basic.test.mjs"] }
+    } as never;
+    const baselineCommit = "b".repeat(40);
+    const candidateCommit = "c".repeat(40);
+    const git = new FakeGitRunner({
+      diffRangeNameOnly: ["package.json", "src/index.mjs", "test/basic.test.mjs"],
+      showFileByRef: {
+        [candidateCommit]: {
+          "package.json": JSON.stringify({ name: "node-esm-root", type: "module", scripts: { test: "node --test test/*.test.mjs" } }),
+          "src/index.mjs": "export const ready = true;",
+          "test/basic.test.mjs": "import test from 'node:test'; test('ready', () => {});"
+        }
+      }
+    });
+    const snapshot = {
+      ...bookingSnapshot(),
+      capabilities: { scripts: {}, baselineCommands: [], languages: [], stack: [] }
+    };
+    const validator = new ExactCandidateValidatorV2({
+      git,
+      workspaces: fakeWorkspaceProvider(git),
+      repoRoot: "C:/repo/bootstrap",
+      repositorySnapshot: snapshot,
+      bootstrapValidation: true,
+      runner: { run: async () => ({ passed: true, output: "green", exitCode: 0 }) }
+    });
+
+    const evidence = await validator.validate({
+      runId: "run-bootstrap-integrity",
+      attemptId: "attempt-bootstrap-integrity",
+      contract: compiledContract,
+      candidateCommit,
+      baselineCommit
+    });
+
+    expect(evidence.outcome).toBe("verified");
+    expect(evidence.integrityFindings).toEqual([]);
+  });
+
   it("links baseline and candidate observations to the V2 validation obligations", async () => {
     const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
     const contract = compiled.contracts.find((bundle) => bundle.task.nodeId === "node-api")!;

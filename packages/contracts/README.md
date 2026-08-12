@@ -1,23 +1,11 @@
 # @manyhands/contracts
 
-Schemas actuales para tareas de agentes, execution scope, interfaces y
-resultados de validación.
+Schemas versionados en la frontera de confianza de ManyHands.
 
-## Dirección objetivo
+La implementación está en transición hacia un único vocabulario para Goal,
+change/context ownership, seams, artifacts, validation e integration. Los tipos
+actuales no prueban que el contrato target esté implementado. Nuevos formatos se
+escriben sólo desde el camino canónico; compatibilidad legacy queda en readers
+unidireccionales para evidencia histórica.
 
-El package debe expresar obligaciones versionadas:
-
-- `TaskContract` con goal y acceptance criteria;
-- `ScopeContract`;
-- `SeamContract` con semántica, producer y consumers;
-- `ArtifactContract`;
-- `ValidationContract` separado de recipes ejecutables.
-
-Los tipos actuales `AgentTaskContract` e `InterfaceContract` son el punto de
-partida, no necesariamente la forma final. Los comandos del LLM no se convierten
-en evidencia confiable solo por pasar una whitelist.
-
-La validación de frontera debe rechazar paths inseguros, producers ausentes,
-revisions incompatibles y criteria sin forma de evidencia.
-
-Contrato objetivo: [`docs/system/02-contracts.md`](../../docs/system/02-contracts.md).
+Fuente normativa: [modelo canónico y Stage 2](../../docs/plans/2026-08-12-correctness-first-system-redesign.md#8-canonical-data-model).

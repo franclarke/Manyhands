@@ -1,28 +1,10 @@
 # @manyhands/task-graph
 
-Modelo actual de `TaskNode`, `TaskGraph`, dependencias, validación y orden
-topológico.
+Modelo versionado del grafo ejecutable de ManyHands.
 
-## Estado de transición
+El target conserva jerarquía de integración, `ArtifactRequirement` y
+`SeamBinding`, y reemplaza conflictos pairwise por `ResourceClaim`. Un
+`GraphRevision` es la compilación directa de un `SemanticPlan`; no es el control
+flow interno del orquestador.
 
-La implementación actual mantiene `graph.dependencies` y shortcuts en nodos con
-semántica principalmente de orden. Ese comportamiento es evidencia del estado
-actual, no el contrato objetivo.
-
-## Dirección objetivo
-
-- `parentId` canónico para ownership;
-- `ArtifactRequirement` para disponibilidad material;
-- `SeamBinding` para compatibilidad;
-- `ConflictConstraint` para scheduling;
-- graph revisions inmutables;
-- children, readiness y blast radius derivados;
-- validación de contracts y evidence coverage.
-
-La migración debe evitar mantener ambas representaciones indefinidamente. Toda
-compatibilidad legacy necesita adapter y fecha/criterio de retiro.
-
-API actual destacada: validación de grafo ejecutable, topological order,
-readiness, helpers de dependencias y `graftSubtree`.
-
-Contrato objetivo: [`docs/system/01-task-graph.md`](../../docs/system/01-task-graph.md).
+Fuente normativa: [Graph Revision y Resource Claims](../../docs/plans/2026-08-12-correctness-first-system-redesign.md#85-executable-graph-revision).

@@ -131,6 +131,31 @@ describe("ephemeral execution workspace", () => {
     expect(git.calls.filter((call) => call.op === "remove")).toHaveLength(1);
   });
 
+  it("retries a transient worktree removal before surfacing a cleanup failure", async () => {
+    let removals = 0;
+    const git = fakeGit({
+      remove: async () => {
+        removals += 1;
+        if (removals === 1) throw new Error("EPERM: worktree still busy");
+      }
+    });
+    const provider = new EphemeralExecutionWorkspaceProvider({
+      repoRoot: "C:/repo",
+      worktreesRoot: "C:/workspaces",
+      platform: "linux",
+      git,
+      now: () => "2026-08-07T00:00:00.000Z",
+      removeAttempts: 2,
+      waitBeforeRemoveRetry: async () => undefined
+    });
+    const handle = await provider.acquire(params("task-a"));
+
+    await expect(handle.release()).resolves.toBeUndefined();
+
+    expect(removals).toBe(2);
+    expect(git.live.size).toBe(0);
+  });
+
 
   /**
    * Keyed by repository, not held per instance. A per-instance turnstile would

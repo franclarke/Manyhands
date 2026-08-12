@@ -370,14 +370,15 @@ export class RecursivePlanner {
         failures.push(...parsed.error.issues.map((issue) => `${issue.path.join(".") || "root"}: ${issue.message}`));
         continue;
       }
-      const violations = this.cutViolations(parsed.data, parent, snapshotPaths, claimedKeys, claimedWrites);
+      const proposal = parsed.data;
+      const violations = this.cutViolations(proposal, parent, snapshotPaths, claimedKeys, claimedWrites);
       if (violations.length > 0) {
         failures.push(...violations);
         continue;
       }
       let feasibility: Awaited<ReturnType<CutFeasibilityCriticPort["review"]>>;
       try {
-        feasibility = await this.feasibilityCritic.review({ parent, proposal: parsed.data, evidence });
+        feasibility = await this.feasibilityCritic.review({ parent, proposal, evidence });
       } catch (error) {
         failures.push(`scope_feasibility: ${error instanceof Error ? error.message : String(error)}`);
         continue;
@@ -386,7 +387,7 @@ export class RecursivePlanner {
         failures.push(...feasibility.issues);
         continue;
       }
-      return { kind: "ok", proposal: parsed.data };
+      return { kind: "ok", proposal };
     }
     return { kind: "failed", diagnostics: unique(failures) };
   }
@@ -571,6 +572,7 @@ export function buildCutPrompt(input: CutPromptInput): { system: string; user: s
       "- No two children may write the same path. If they both need it, one owns it and the others read it.",
       "- Sibling reads and writes must form one acyclic direction. List only the files a child needs; do not list a higher layer merely for context.",
       "- A child small enough to implement in one step must write at least one test file that proves its criteria.",
+      "- A capability child must also write at least one non-test implementation file. A test-only write set is valid only when the child's objective is explicitly limited to tests, coverage, or validation.",
       "- Every `read` must already exist in the repository evidence below, be written by a sibling, or be one the parent already reads.",
       "- Together the children must write every path the parent promised to write.",
       "- Every child must carry strictly fewer paths than this unit; a cut that does not shrink is not a cut.",

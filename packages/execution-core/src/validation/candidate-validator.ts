@@ -47,6 +47,8 @@ export interface CandidateValidatorDependencies {
   createBaselineSandbox?(baselineCommit: string): Promise<CandidateSandbox>;
   runBaseline?(step: ValidationRecipeStep, sandbox: CandidateSandbox): Promise<{ passed: boolean; exitCode: number; output: string }>;
   runNegativeControl?(step: ValidationRecipeStep, sandbox: CandidateSandbox): Promise<{ detectedFailure: boolean; output: string }>;
+  /** Cleanup is operational maintenance; report it without changing candidate evidence. */
+  onCleanupFailure?(error: unknown): Promise<void> | void;
   cache?: EvidenceValidationCache;
 }
 
@@ -158,8 +160,16 @@ export async function validateExactCandidate(
     }
     const results = await Promise.allSettled(cleanups.map(async (cleanup) => cleanup()));
     const failures = results.filter((result): result is PromiseRejectedResult => result.status === "rejected").map((result) => result.reason);
-    if (failures.length === 1) throw failures[0];
-    if (failures.length > 1) throw new AggregateError(failures, "Multiple validation sandboxes failed cleanup.");
+    if (failures.length > 0) {
+      const cleanupFailure = failures.length === 1
+        ? failures[0]
+        : new AggregateError(failures, "Multiple validation sandboxes failed cleanup.");
+      try {
+        await dependencies.onCleanupFailure?.(cleanupFailure);
+      } catch {
+        // Reporting cannot retroactively invalidate the already-recorded evidence.
+      }
+    }
   }
 }
 

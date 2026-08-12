@@ -69,12 +69,14 @@ describe("V2ExecutionDriver", () => {
     );
     const harness = coordinatorHarness(compiled.graph.graphId);
     let attempts = 0;
+    const retryContexts: Array<V2NodeExecutionInput["priorFailure"]> = [];
     const driver = new V2ExecutionDriver({
       coordinator: harness.coordinator,
       now: () => at,
       loadCurrentInputs: staticInputs(compiled),
       execute: async (input) => {
         attempts += 1;
+        retryContexts.push(input.priorFailure);
         if (attempts === 1) return { kind: "failure", reason: "transient: provider disconnected" };
         return { ...(success(input) as Extract<V2NodeExecutionOutcome, { kind: "success" }>), finalManifestId: "retry-final" };
       }
@@ -98,6 +100,10 @@ describe("V2ExecutionDriver", () => {
     expect(state.lifecycle).toBe("result_ready");
     const retried = Object.values(state.attempts).find((attempt) => attempt.retryOfAttemptId !== undefined);
     expect(retried?.retryOfAttemptId).toBeDefined();
+    expect(retryContexts).toEqual([
+      undefined,
+      { attemptId: retried!.retryOfAttemptId, reason: "transient: provider disconnected" }
+    ]);
   });
 
   it("raises an empty upstream artifact decision against the producer, not the blocked consumer", async () => {
