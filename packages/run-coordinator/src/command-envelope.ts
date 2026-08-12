@@ -62,6 +62,23 @@ export type RunCommandIdentityMaterial = z.infer<typeof RunCommandIdentityMateri
 export type RunCommandEnvelopeInput = z.infer<typeof RunCommandEnvelopeInputSchema>;
 export type RunCommandEnvelope = z.infer<typeof RunCommandEnvelopeSchema>;
 
+/**
+ * Durable acknowledgement that a run actor accepted and flushed a command.
+ * It does not claim that any long-running work requested by the command ended.
+ */
+export const CommandReceiptSchema = z.object({
+  schemaVersion: z.literal(1),
+  receiptId: EntityIdSchema,
+  commandId: EntityIdSchema,
+  runId: EntityIdSchema,
+  commandDigest: CanonicalDigestSchema,
+  acceptedRevision: z.number().int().positive(),
+  daemonEpoch: EntityIdSchema,
+  acceptedAt: z.string().datetime({ offset: true })
+}).strict();
+
+export type CommandReceipt = z.infer<typeof CommandReceiptSchema>;
+
 export function buildRunCommandEnvelope(
   input: RunCommandEnvelopeInput,
   hasher: DigestHasher

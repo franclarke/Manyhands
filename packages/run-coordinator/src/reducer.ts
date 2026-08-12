@@ -1,3 +1,5 @@
+import type { EffectIntent, PhysicalEffectReceipt } from "@manyhands/contracts";
+import type { CommandReceipt } from "./command-envelope.js";
 import { DecisionSchema, type Decision } from "./domain/decisions.js";
 import { RunEventSchema, type RunEvent } from "./domain/events.js";
 import { assertLifecycleTransition, type RunLifecycle } from "./domain/lifecycle.js";
@@ -88,6 +90,9 @@ export interface RunProjection {
   granularityStrategy?: GranularityStrategyProjection;
   planningEnvelope?: PlanningEnvelopeProjection;
   planningCandidates?: PlanningCandidatesProjection;
+  commandReceipts: Record<string, CommandReceipt>;
+  effectIntents: Record<string, EffectIntent>;
+  physicalEffectReceipts: Record<string, PhysicalEffectReceipt>;
   decisions: Record<string, Decision>;
   stoppedNodeIds?: string[];
   readiness: { readyNodeIds: string[]; pendingDecisionIds: string[]; explanations?: Array<Record<string, unknown>>; effectiveConfig?: Record<string, unknown>; schedulerState?: Record<string, unknown>; budgetAvailable?: boolean; conflictEvidence?: Array<Record<string, unknown>>; evaluatedAt?: string };
@@ -123,6 +128,9 @@ export function foldRun(rawEvents: readonly RunEvent[]): RunProjection {
         lifecycle: "planning",
         sequence: 1,
         appliedEventIds: [event.eventId],
+        commandReceipts: {},
+        effectIntents: {},
+        physicalEffectReceipts: {},
         decisions: {},
         stoppedNodeIds: [],
         readiness: { readyNodeIds: [], pendingDecisionIds: [] },
@@ -150,6 +158,38 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
   switch (event.type) {
     case "run.created":
       throw new Error("run.created can only be the first event.");
+    case "command.accepted": {
+      const receipt = event.payload.receipt;
+      if (receipt.runId !== next.runId) throw new Error(`Command ${receipt.commandId} belongs to another run.`);
+      if (next.commandReceipts[receipt.commandId] !== undefined) throw new Error(`Command ${receipt.commandId} already has an acceptance receipt.`);
+      if (
+        next.physicalEffectReceipts[receipt.receiptId] !== undefined
+        || Object.values(next.commandReceipts).some((existing) => existing.receiptId === receipt.receiptId)
+      ) {
+        throw new Error(`Command receipt ${receipt.receiptId} already exists.`);
+      }
+      next.commandReceipts[receipt.commandId] = structuredClone(receipt);
+      break;
+    }
+    case "effect.requested": {
+      const intent = event.payload.intent;
+      if (intent.runId !== next.runId) throw new Error(`Effect ${intent.effectId} belongs to another run.`);
+      if (next.effectIntents[intent.effectId] !== undefined) throw new Error(`Effect ${intent.effectId} already exists.`);
+      next.effectIntents[intent.effectId] = structuredClone(intent);
+      break;
+    }
+    case "effect.observed": {
+      const receipt = event.payload.receipt;
+      if (
+        next.physicalEffectReceipts[receipt.receiptId] !== undefined
+        || Object.values(next.commandReceipts).some((existing) => existing.receiptId === receipt.receiptId)
+      ) throw new Error(`Receipt ${receipt.receiptId} already exists.`);
+      const intent = next.effectIntents[receipt.effectId];
+      if (intent === undefined) throw new Error(`Physical effect receipt ${receipt.receiptId} has no requested effect ${receipt.effectId}.`);
+      if (receipt.inputDigest !== intent.inputDigest) throw new Error(`Physical effect receipt ${receipt.receiptId} does not match effect ${receipt.effectId} input digest.`);
+      next.physicalEffectReceipts[receipt.receiptId] = structuredClone(receipt);
+      break;
+    }
     case "legacy.run_imported":
       if (next.sequence !== 1 || next.lifecycle !== "planning") throw new Error("A legacy import must immediately follow run.created.");
       next.outcomes.execution = "interrupted";
@@ -415,7 +455,7 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       }
       break;
     }
-    case "wave.selected":
+    case "wave.selected": {
       if (next.lifecycle !== "running") throw new Error(`Cannot select a wave while ${next.lifecycle}.`);
       if (event.payload.nodeIds.length > event.payload.maxParallel) throw new Error(`Wave ${event.payload.waveId} exceeds maxParallel.`);
       if (event.payload.nodeIds.some((nodeId) => !next.readiness.readyNodeIds.includes(nodeId))) throw new Error(`Wave ${event.payload.waveId} contains a node not present in observed readiness.`);
@@ -431,6 +471,7 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       };
       next.selectedWaves.push(selectedWave);
       break;
+    }
     case "run.pause_requested":
       if (next.lifecycle !== "running" && next.lifecycle !== "waiting_for_input") throw new Error(`Cannot pause while ${next.lifecycle}.`);
       next.lifecycleBeforePause = next.lifecycle;

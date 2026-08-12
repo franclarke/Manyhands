@@ -1,5 +1,7 @@
+import { EffectIntentSchema, PhysicalEffectReceiptSchema } from "@manyhands/contracts";
 import { EntityIdSchema, FinalArtifactManifestSchema, IsoTimestampSchema, NonEmptyStringSchema } from "@manyhands/shared";
 import { z } from "zod";
+import { CommandReceiptSchema } from "../command-envelope.js";
 import { DecisionInputSchema, DecisionResolutionShape, requireDecisionResolution } from "./decisions.js";
 import { DeliveryApprovalSchema, DeliveryReceiptSchema } from "./outcomes.js";
 import { AdoptedArtifactSchema } from "./artifacts.js";
@@ -116,6 +118,9 @@ function event<T extends string, S extends z.ZodTypeAny>(type: T, payload: S) {
 
 export const RunEventSchema = z.discriminatedUnion("type", [
   event("run.created", z.object({ goal: NonEmptyStringSchema }).strict()),
+  event("command.accepted", z.object({ receipt: CommandReceiptSchema }).strict()),
+  event("effect.requested", z.object({ intent: EffectIntentSchema }).strict()),
+  event("effect.observed", z.object({ receipt: PhysicalEffectReceiptSchema }).strict()),
   event("legacy.run_imported", z.object({
     sourceHash: NonEmptyStringSchema,
     importerVersion: z.literal(1),
