@@ -4,22 +4,25 @@
 > workflow to implement this plan one stage at a time. Read this document in full
 > before changing production code.
 
-**Goal:** Rebuild ManyHands around semantic software boundaries, exact scoped
-artifacts, explicit hierarchical integration, durable single-owner execution and
-verifiable outcomes, so that large task trees are useful when the work actually
-supports them.
+**Goal:** Rebuild ManyHands around semantic software boundaries, versioned
+resource authority, exact Git-native artifacts, explicit hierarchical
+integration, durable effect execution and verifiable outcomes, so that large
+task trees are useful only when the work actually supports them.
 
 **Architecture:** ManyHands remains a local modular monolith. A durable run daemon
-owns every mutation and coordinates pure domain modules for repository modeling,
-planning, graph compilation, scheduling, execution, validation and integration.
-The web application becomes a command/query client. Planning is progressive and
-repository-driven; execution transports declared artifacts rather than whole
-child commits; every attempt runs in an explicitly classified sandbox and every
-adopted result is proven on an exact candidate.
+owns every mutation, persists effect intent before external work and coordinates
+pure domain modules for repository modeling, planning, graph compilation,
+scheduling, execution, validation and integration. The browser is untrusted; the
+Next server is a same-installation backend-for-frontend over authenticated local
+IPC. Planning is progressive over immutable repository views; execution
+transports declared Git object changes rather than whole child commits; every
+attempt runs in an explicitly classified sandbox and every adopted result is
+proven on an exact candidate.
 
 **Tech Stack:** TypeScript, Zod, Node.js 22+, pnpm workspace, Vitest, Next.js,
-Git, JSONL event journals, content-addressed artifact manifests and pluggable
-local sandbox/executor adapters.
+Git object databases and namespaced refs, fsync-backed JSONL event journals,
+authenticated Unix-domain-socket/Windows-named-pipe IPC and pluggable local
+sandbox/executor adapters.
 
 ---
 
@@ -45,6 +48,9 @@ The remaining sources have narrower authority:
 5. Source code, tests and persisted runs describe the current implementation,
    not the target. A passing test can characterize legacy behavior without
    making that behavior desirable.
+6. The [adversarial review record](../audits/correctness-first-redesign-review.md)
+   records the reasoning that produced this revision. It is historical
+   evidence, not a second normative specification.
 
 If this plan conflicts with historical evidence, preserve the evidence and
 follow this plan for future implementation. If the implementation contradicts
@@ -76,7 +82,7 @@ Before implementing any stage, the agent must:
 ### 0.3 Freeze on expensive experiments
 
 No large live-model benchmark, five-run longitudinal series or wide-graph run is
-authorized by this plan until Stage 12 says the architecture is eligible. Until
+authorized by this plan until Stage 11 says the architecture is eligible. Until
 then, development uses pure unit tests, repository fixtures, recorded model
 replays, real-Git integration tests and process/sandbox tests. A live model may be
 used only by an explicitly opt-in smoke test after its prerequisites are green.
@@ -310,6 +316,82 @@ not on the productive route.
 deletes the superseded implementation after callers move. No permanent V3/V2/V1
 stack and no compatibility adapter without an identified historical reader.
 
+### F13. Single-writer ordering does not make effects crash-consistent
+
+The current implementation contains useful local remedies—fenced event appends,
+process receipts, integration operation journals and delivery recovery—but the
+target design only says that an actor "schedules effects." It does not define the
+durable boundary around process spawn, Git mutation, validation, sandbox creation
+or delivery.
+
+**Consequence:** a daemon can crash after recording a decision but before the
+physical action, or after the action but before recording its result. Duplicate
+executors, orphan processes, repeated Git mutations and lost completions remain
+possible even with one event writer.
+
+**Required correction:** the canonical journal acts as a durable effect outbox.
+Every external mutation has a stable effect identity, a durably appended intent,
+kind-specific idempotency/reconciliation rules and a terminal event. Exactly-once
+execution is not claimed.
+
+### F14. Repository snapshots alone are insufficient for progressive planning
+
+The immutable base `RepositoryModel` is correct for intake, but later expansion
+may depend on interfaces and files produced by already adopted artifacts. Mutating
+the base model would destroy attribution; continuing to query only the base would
+make later planning stale by construction.
+
+**Consequence:** a local expansion can hallucinate around an interface that now
+exists, miss a generated resource, or compile a contract against the wrong
+version.
+
+**Required correction:** preserve the base model and derive immutable,
+content-addressed `RepositoryView`s from it plus exact adopted manifests. Planning
+and resource catalogs bind to a view digest.
+
+### F15. Artifact identity and artifact lifecycle are conflated
+
+The initial manifest shape includes mutable fields such as `status` and an
+evidence matrix created after the manifest. It also forces Git trees, file
+changes and evidence into one structural shape.
+
+**Consequence:** the same artifact content can acquire different identities as it
+moves from candidate to adopted, and a complete tree or evidence bundle carries
+meaningless path entries. Reconciliation and caching become ambiguous.
+
+**Required correction:** manifests are immutable discriminated Git-native values.
+Verification, adoption, staleness and rejection are separate domain events.
+Evidence is not a materializable artifact.
+
+### F16. Repository authority, runtime exclusion and scheduling risk are mixed
+
+A source resource such as a package is semantic ownership. A TCP port or target
+branch is a physical lease. Proximity to a public API is a soft integration-risk
+signal. Treating all three as one equality-key lock either misses containment or
+serializes isolated worktrees for the wrong reason.
+
+**Consequence:** the scheduler can hide double ownership, fail to detect aliasing,
+or lose useful parallelism while still making poor high-risk selections.
+
+**Required correction:** use a `ResourceCatalog` and versioned `ResourceClaim`s
+for plan authority, provider-owned `RuntimeLeaseClaim`s for physical exclusion,
+and an advisory `IntegrationRiskEstimate` only for selection among already-ready
+nodes.
+
+### F17. The privileged local transport has no stated security boundary
+
+The daemon can execute processes, use credentials and mutate repositories. A raw
+localhost endpoint would be reachable by browser-origin attacks and would leave
+authentication, CSRF and origin behavior implicit.
+
+**Consequence:** a malicious site can attempt privileged local commands, or a
+browser token can become equivalent to daemon authority.
+
+**Required correction:** browser JavaScript never connects to the daemon. The
+Next server mediates commands over user-restricted local IPC and an installation
+capability unavailable to the browser. A loopback TCP fallback is opt-in and
+enforces the same capability plus strict origin/host policy.
+
 ---
 
 ## 3. Product and system requirements
@@ -322,29 +404,44 @@ The redesigned system must:
    attributes and an immutable repository target.
 2. Inspect the exact base tree and produce a queryable repository model with
    declared coverage and uncertainty.
-3. Produce a semantic hierarchical plan whose nodes correspond to real product
+3. Derive immutable repository views when adopted artifacts change the surface
+   available to later planning, without rewriting the base model.
+4. Produce a semantic hierarchical plan whose nodes correspond to real product
    or architecture boundaries.
-4. Explain why each unit is a leaf or why each composite is split.
-5. Compile exactly one semantic plan revision into exactly one executable graph
+5. Explain why each unit is a leaf or why each composite is split.
+6. Compile exactly one semantic plan revision into exactly one executable graph
    revision and versioned contracts.
-6. Support bounded, local plan expansion and amendments without invalidating
+7. Support bounded, local plan expansion and amendments without invalidating
    unrelated work.
-7. Dispatch only nodes whose exact inputs, resources, decisions and executor
+8. Reject ambiguous or overlapping write authority unless an explicit artifact
+   version transition orders it.
+9. Dispatch only nodes whose exact inputs, resources, decisions and executor
    capabilities are ready.
-8. Execute every attempt against an exact base in a classified sandbox.
-9. Inspect changes from Git, enforce scope/resource ownership and create
+10. Select among ready nodes using advisory integration risk without allowing a
+    heuristic to create dependencies or weaken safety.
+11. Execute every attempt against an exact base in a classified sandbox.
+12. Inspect changes from Git, enforce scope/resource ownership and create
    orchestrator-owned candidate commits.
-10. Produce exact artifact manifests and materialize only declared artifacts.
-11. Validate leaf, composite, root and delivery candidates against obligations
+13. Produce immutable Git-native manifests, retain their objects and materialize
+    only declared artifacts.
+14. Validate leaf, composite, root and delivery candidates against obligations
     appropriate to each level.
-12. Integrate bottom-up, including planned parent-owned edits and seam tests.
-13. Recover according to observed cause and preserve immutable failed attempts.
-14. Continue independent work while a local decision is pending.
-15. Survive a web restart without affecting a run and recover deterministically
+15. Refuse plan approval when a required goal criterion has no accepted proof
+    authority, and bind human/external judgments to the exact candidate.
+16. Integrate bottom-up, including strictly scoped parent-owned edits and seam
+    tests; integration cannot silently repair child-owned implementation.
+17. Persist effect intent before external mutation and reconcile every
+    non-terminal effect after daemon or machine restart.
+18. Recover according to observed cause and preserve immutable failed attempts.
+19. Continue independent work while a local decision is pending.
+20. Survive a web restart without affecting a run and recover deterministically
     from a daemon crash.
-16. Present plan, activity, decisions, evidence and delivery without inventing
+21. Authenticate the privileged daemon boundary without exposing daemon
+    capability material to browser JavaScript.
+22. Present plan, activity, decisions, evidence and delivery without inventing
     state in the UI.
-17. Deliver exactly the tree that was finally validated.
+23. Deliver exactly the tree that was finally validated by compare-and-swap
+    against the approved destination state.
 
 ### 3.2 Non-functional requirements
 
@@ -354,6 +451,9 @@ The redesigned system must:
 - Every materialized artifact is verified by digest and preimage.
 - Every lifecycle transition is derived from durable facts.
 - Replaying an event journal produces the same domain projection.
+- An acknowledged command and an effect intent survive process and machine
+  restart; incomplete trailing writes are recoverable and complete corruption
+  fails closed.
 - Re-running a deterministic failed attempt with an identical fingerprint is
   forbidden unless the recovery policy explicitly identifies new evidence.
 
@@ -371,8 +471,8 @@ The redesigned system must:
 
 - Repository modeling must handle monorepos without embedding the whole index in
   a prompt.
-- Scheduling resource conflicts must be proportional to claims, not all node
-  pairs.
+- Resource overlap and incremental risk selection must use catalog/neighborhood
+  indexes, not a materialized all-node-pairs matrix.
 - Event append and normal projection updates must not rewrite full history.
 - Graph depth has no product target; practical bounds come from planning and
   execution budgets and are reported when reached.
@@ -385,9 +485,12 @@ The redesigned system must:
   minimum sandbox capability.
 - Credentials are scoped to one executor/attempt and are absent from prompts,
   diffs and durable logs.
-- Validation commands come from trusted repository/config sources and compiled
-  recipes, never from agent prose.
+- Validation commands come from operator-approved repository capabilities and
+  compiled recipes. Repository-defined shell text and agent prose are untrusted
+  until the command policy validates their executable/arguments/environment.
 - Delivery publishes only the validated final manifest.
+- Browser requests are untrusted; only the authenticated Next server-side
+  mediator can reach privileged daemon IPC.
 
 #### Maintainability
 
@@ -409,81 +512,160 @@ The redesigned system must:
 
 ## 4. Architectural invariants
 
-These invariants are stronger than implementation convenience. A change that
-violates one is incorrect even if a narrow test passes.
+Each invariant below forbids an observable corruption or false-success state.
+Implementation mechanisms may change; the prohibited states may not.
 
-### Domain and authority
+### Domain authority and durability
 
-- **I1 — Run as product unit.** A run transforms one immutable goal/target into
-  one attributable delivered result or one explained adverse outcome.
-- **I2 — One writer.** Exactly one run actor in the daemon may append domain
-  facts for a run. Web handlers, background timers and queries never mutate run
-  state directly.
-- **I3 — Events are facts.** The event journal is canonical; snapshots, list
-  indexes and UI models are rebuildable projections.
-- **I4 — Framework independence.** Domain contracts do not contain Next.js,
-  React Flow, LangGraph, Claude or Codex types.
+- **I1 — Immutable run premise.** A run has one current accepted
+  `GoalContract` revision and one exact initial repository target. Revisions are
+  immutable; a different goal or base creates a successor revision or new run
+  with explicit user-approved impact/invalidation, never an in-place edit.
+- **I2 — One domain writer.** Exactly one current `RunActor` may append facts for
+  a run. No web handler, query, timer, effect worker or recovery scanner writes
+  domain state directly.
+- **I3 — Idempotent commands.** Reusing a `commandId` with identical content
+  returns the original receipt; reusing it with different content is rejected.
+- **I4 — Journal before projection.** A lifecycle state that cannot be rebuilt
+  from the canonical journal does not exist. Snapshots, indexes, attempt lists,
+  artifact lists and UI models are disposable projections.
+- **I5 — No duplicate authority.** Operational receipts and trace files may
+  describe physical reality, but only actor-consumed journal events can change
+  domain lifecycle, adoption or completion.
+- **I6 — Presentation/provider independence.** Run state remains fully
+  replayable and commandable without a browser, web framework, model SDK or
+  executor process. Consequently domain contracts contain none of their types;
+  restarting or replacing one cannot change domain meaning.
 
-### Planning and graph
+### Repository knowledge, planning and graph
 
-- **I5 — One planning representation.** `SemanticPlan` is the sole output of
-  planning. `GraphRevision` is the sole executable graph. Only the Graph Compiler
-  transforms between them.
-- **I6 — Grounded claims.** Every repository-specific planning statement points
-  to repository evidence or is explicitly marked hypothetical/unknown.
-- **I7 — Semantic leaves.** Path count and test presence may inform capacity but
-  can never, alone, establish leafhood.
-- **I8 — Justified cuts.** Every composite records at least one valid split
-  reason and a concrete integration obligation.
-- **I9 — Hierarchy differs from readiness.** `parentId` means integration
-  ownership. `ArtifactRequirement` means material availability. `SeamBinding`
-  means compatibility. `ResourceClaim` controls exclusion. None substitutes for
-  another.
-- **I10 — Local evolution.** An amendment invalidates only attempts whose exact
-  inputs changed.
+- **I7 — Exact repository view.** Every planning or validation decision names
+  the immutable base model plus exact artifact overlays it observed. A view
+  cannot silently float to a newer repository state.
+- **I8 — Honest epistemics.** `unknown`, `partial`, `conflicting` and low
+  confidence are distinct. Absence of evidence is never encoded as negative
+  evidence, empty, zero or low risk.
+- **I9 — One representation per seam.** `SemanticPlan` is the sole planning
+  output and `GraphRevision` the sole executable graph. Only the deterministic
+  Graph Compiler transforms between them.
+- **I10 — Goal coverage and proofability.** Every required goal criterion has a
+  root obligation and an accepted proof authority before plan approval. Child
+  refinements cannot replace or weaken it.
+- **I11 — Semantic leaves and cuts.** Path count, prompt wording, test presence,
+  desired fan-out or model confidence cannot alone establish a leaf or split.
+  Every split has distinct responsibilities and a parent integration recipe.
+- **I12 — Acyclic executable dataflow.** Artifact requirements and resource
+  version transitions are acyclic. A circular implementation dependency must be
+  replaced by a frozen seam/contract-first producer or rejected.
+- **I13 — Local evolution.** A new plan/graph revision preserves stable node and
+  contract identity where semantics did not change, and invalidates only inputs
+  whose referenced digests changed.
 
-### Execution and artifacts
+### Resource authority and scheduling
 
-- **I11 — Immutable attempts.** A retry or repair is a new attempt with lineage;
-  failed evidence is never overwritten.
-- **I12 — Exact bases.** Every attempt records the base tree, consumed artifact
-  digests, contract revisions, context digest, executor profile and sandbox
-  capability in its fingerprint.
-- **I13 — Orchestrator-owned commits.** Agents edit files; the orchestrator
-  inspects, stages and creates all candidate commits.
-- **I14 — Scoped transport.** A consumer receives only declared artifact
-  contents. A whole commit is never silently substituted for a path-scoped
-  artifact.
-- **I15 — Supported kinds only.** A materializable artifact kind cannot enter an
-  approved graph unless a materializer and round-trip contract test exist.
-- **I16 — Shared ownership is explicit.** Shared files/resources belong to a
-  contract-first producer or a composite integrator, not multiple concurrent
-  leaves.
+- **I14 — Canonical overlap.** Repository resource identity comes from the
+  `ResourceCatalog`; aliasing and containment are evaluated by a tri-state
+  `overlaps` relation. Raw string equality is never the safety rule.
+- **I15 — Unique write authority.** Two unordered nodes cannot own overlapping
+  repository writes. Serialization is not a repair for double ownership.
+- **I16 — Versioned consumption.** A reader names the base or artifact version it
+  consumes. A later writer may run concurrently only when isolation preserves
+  that frozen input; consuming the writer requires an `ArtifactRequirement` and
+  successor resource version.
+- **I17 — Physical leases are separate.** Ports, process slots, target refs and
+  other mutable host resources use `RuntimeLeaseClaim`; they never masquerade as
+  semantic code ownership.
+- **I18 — Heuristics have no safety authority.** Integration-risk estimates may
+  change ordering or concurrency among ready nodes only. They cannot create a
+  dependency, authorize a write, satisfy readiness or suppress validation.
+
+### Attempts, effects and process custody
+
+- **I19 — Immutable attempts.** Retry, repair and integration create new attempt
+  identities and lineage. A terminal attempt or its evidence is never reopened
+  or overwritten, and the actor never admits two non-terminal attempts for the
+  same node and exact input fingerprint.
+- **I20 — Durable intent before mutation.** No external side effect starts until
+  its stable `EffectIntent` is durably appended and flushed.
+- **I21 — Reconcile before repeat.** A non-terminal effect is inspected against
+  physical receipts and the target system before it is retried. Unknown prior
+  execution is never treated as “not started.”
+- **I22 — No exactly-once fiction.** Effects are at-least-once only when
+  idempotent by identity; otherwise recovery proves the prior effect absent,
+  adopts its observed result or stops at an explicit decision.
+- **I23 — Exact attempt inputs.** Base tree, repository view, consumed manifest
+  digests, contract/resource revisions, context, executor and sandbox capability
+  are all part of `InputFingerprint`.
+- **I24 — Orchestrator-owned candidates.** Agent-created commits, refs or active
+  Git operations are never adopted. Git-observed changes are rechecked and the
+  orchestrator alone creates the candidate.
+- **I25 — Process custody.** Every executor/validator process belongs to one
+  effect and attempt, has a durable identity plus daemon epoch, and is either
+  supervised to a terminal receipt or verified dead/quarantined before retry.
+- **I26 — Cancellation is physical.** `cancelled` is impossible while an owned
+  process can still mutate state. A completion racing cancellation is recorded
+  but cannot be adopted unless policy and an explicit command permit it.
+
+### Artifacts and Git
+
+- **I27 — Immutable manifests, separate lifecycle.** A manifest contains content
+  identity and provenance only. Verification, adoption, rejection and staleness
+  are journal facts that bind its digest; they never mutate the manifest.
+- **I28 — Scoped transport.** A consumer receives only declared Git object
+  changes. Whole commits, transitive ancestry and undeclared paths never cross a
+  change-set boundary.
+- **I29 — Git fidelity and reachability.** Blob/tree OIDs and modes preserve
+  binary files, symlinks, gitlinks, executability and deletions. Every referenced
+  object remains reachable under a run-owned ref until retention policy proves it
+  disposable.
+- **I30 — Supported kinds only.** A materializable manifest kind cannot enter an
+  approved graph without an exact round-trip materializer for the repository’s
+  Git object format.
 
 ### Validation, integration and delivery
 
-- **I17 — Evidence has attribution.** A passing command without an explicit
-  criterion/obligation binding proves no product criterion.
-- **I18 — Validation is hierarchical.** Leaf success is not transitive. Every
-  composite and the root validate their exact combined candidate.
-- **I19 — Integration is an attempt.** Composite integration has an immutable
-  base, inputs, diff, candidate, evidence and failure classification.
-- **I20 — Git cleanliness is insufficient.** A conflict-free apply is not proof
-  of contract or behavioral compatibility.
-- **I21 — Exact delivery.** `completed` requires a receipt for the same tree and
-  commit named by the final validated manifest.
+- **I31 — Evidence binds exact subjects.** An observation proves nothing unless
+  it names criterion, obligation, proof strategy, verifier/environment digest and
+  exact candidate tree.
+- **I32 — Proof authority cannot be downgraded.** Deterministic checks,
+  protected external oracles and candidate-bound human judgments satisfy only
+  policies that explicitly accept them. Model opinions are advisory evidence,
+  never correctness authority.
+- **I33 — Self-authored checks are insufficient alone.** A test created by the
+  implementation attempt cannot be the sole proof of a required root criterion
+  without an independent oracle, protected baseline/negative control or explicit
+  human authority.
+- **I34 — Validation is hierarchical.** Leaf success is not transitive. Every
+  composite and root proves its exact combined candidate, and changed inputs make
+  prior evidence stale.
+- **I35 — Integration authority is bounded.** An integration attempt may write
+  only explicitly parent-owned resources. A needed child-owned change causes a
+  child repair or plan/contract amendment, never an omnipotent integration edit.
+- **I36 — Integration is an attempt.** Every composite integration has exact
+  inputs, diff, candidate, validation, failure class and immutable lineage. A
+  conflict-free composition alone remains unverified.
+- **I37 — Exact compare-and-swap delivery.** Delivery checks the approved target
+  head and cleanliness immediately before publication, publishes the exact final
+  commit/tree without synthesizing a new candidate, and completes only from a
+  matching receipt. A moved target is a decision, not an automatic merge.
 
-### Safety and operations
+### Security and operations
 
-- **I22 — Worktree is not sandbox.** Checkout isolation and host security are
-  reported separately.
-- **I23 — Capability honesty.** The UI and journal expose the effective sandbox,
-  network and credential policy of every attempt.
-- **I24 — Cause-based recovery.** The system never applies a universal retry
-  count to unrelated failure classes.
-- **I25 — Read-only queries.** Reading a run cannot cancel, resume, repair or
-  otherwise advance it.
-- **I26 — No benchmark knowledge in production.** Product code and generic
+- **I38 — Worktree is not sandbox.** Checkout isolation, filesystem/process
+  confinement, network policy and credential scope are separate measured
+  capabilities.
+- **I39 — Privileged local boundary.** Browser JavaScript never possesses daemon
+  credentials or direct transport. Authenticated user-restricted IPC mediates all
+  privileged commands; host compromise by another process running as the same OS
+  user is an explicit residual risk.
+- **I40 — Capability honesty.** The journal and UI expose the effective sandbox,
+  network, Git and credential policies. Missing proof lowers capability or fails
+  closed; it never inherits an optimistic label.
+- **I41 — Cause-based recovery.** A retry states what evidence, environment or
+  input changed. Deterministic failure with unchanged inputs is not retried.
+- **I42 — Read-only queries.** Reading, listing or streaming a run cannot cancel,
+  resume, reconcile, repair, dispatch or otherwise advance it.
+- **I43 — No benchmark knowledge in production.** Product code and generic
   prompts contain no benchmark-domain nouns, expected fixture methods or oracle
   answers.
 
@@ -508,7 +690,21 @@ index schema version.
 
 The structured, evidence-bearing interpretation of a Repository Snapshot:
 packages, modules, symbols, imports, public interfaces, tests, commands,
-resources, inferred ownership and coverage.
+resources, ownership evidence and coverage. It may inform policy; it does not
+grant write authority.
+
+**Repository View**
+
+An immutable planning/validation view composed from one Repository Model plus a
+declared ordered set of adopted change-set manifests. It has its own digest and
+never mutates the base model.
+
+**Resource Catalog**
+
+The repository-view-scoped canonical identity and containment/alias index for
+packages, modules, paths, symbols, schemas and integration hotspots. It answers
+`overlaps(a, b)` as `yes | no | unknown`; ownership and version lineage live
+in contracts, not in the catalog.
 
 **Planning Evidence**
 
@@ -551,9 +747,21 @@ runtime node identities, typed relations and references to versioned contracts.
 
 **Resource Claim**
 
-A node's declared use of a named resource with mode `shared_read`,
-`exclusive_write` or `integration_write`. It replaces pairwise conflict edges as
-the scheduling primitive.
+A node's versioned authority to observe or modify a canonical repository
+resource. A write is owned by either implementation or parent integration.
+Claims replace pairwise conflict edges as a plan-verification primitive; they
+are not physical runtime locks.
+
+**Runtime Lease Claim**
+
+A provider-defined claim over a mutable host resource such as an executor slot,
+TCP port, GPU, Git ref or delivery destination. Runtime leases are the
+scheduler's hard exclusion primitive.
+
+**Integration Risk Estimate**
+
+An evidence-bearing, explicitly uncertain heuristic used only to order or limit
+concurrency among hard-ready nodes. It never creates correctness facts.
 
 **Seam Contract**
 
@@ -567,8 +775,8 @@ content selectors and materialization; it is not a commit.
 
 **Artifact Manifest**
 
-The immutable, content-addressed record of one produced artifact, including
-source candidate, exact paths/blobs, preimages, postimages and digest.
+An immutable Git-native `ChangeSetManifest` or `CandidateTreeManifest`.
+Lifecycle and evidence bindings are separate facts.
 
 **Candidate**
 
@@ -589,6 +797,12 @@ one attempt.
 
 A versioned statement of what must be demonstrated for one criterion at one
 hierarchy level.
+
+**Proof Strategy**
+
+The predeclared method and authority allowed to satisfy a Validation Obligation:
+executable, static, protected external oracle, candidate-bound human review or
+controlled observation. Model-assisted review is advisory only.
 
 **Evidence Matrix**
 
@@ -615,6 +829,18 @@ states impact and preserved work before it is applied.
 The daemon-owned serialized command processor for one run. It is the only domain
 writer for that run.
 
+**Effect Intent**
+
+The durably journaled identity, inputs and reconciliation policy for one external
+side effect. A pending effect is an intent without a terminal actor-consumed
+event.
+
+**Physical Effect Receipt**
+
+Durable operational evidence written by an effect adapter/supervisor. It helps
+the Run Actor reconcile physical state but is never lifecycle authority by
+itself.
+
 **Diagnostic Trace**
 
 Provider output, prompt references, timings and logs useful for diagnosis but not
@@ -626,20 +852,24 @@ authoritative for lifecycle or correctness.
 
 ```mermaid
 flowchart TD
-    UI["Web UI"] -->|commands and queries| API["Local daemon interface"]
+    UI["Browser UI"] -->|same-origin HTTP| WEB["Next backend-for-frontend"]
+    WEB -->|authenticated local IPC| API["Daemon command/query interface"]
     API --> ACTOR["Per-run actor: single writer"]
     ACTOR --> EVENTS["Canonical event journal"]
     EVENTS --> PROJ["Rebuildable projections"]
-    PROJ --> UI
+    PROJ --> API
+    API --> WEB
+    WEB --> UI
 
     ACTOR --> GOAL["Goal Contract"]
-    GOAL --> MODEL["Repository Model and Query"]
-    MODEL --> PLAN["Planning Engine"]
+    GOAL --> MODEL["Repository Model, View and Query"]
+    MODEL --> CATALOG["Resource Catalog"]
+    CATALOG --> PLAN["Planning Engine"]
     PLAN --> VERIFY["Plan Verifier"]
     VERIFY --> COMPILER["Graph Compiler"]
     COMPILER --> GRAPH["Graph Revision and contracts"]
 
-    GRAPH --> SCHED["Frontier Scheduler"]
+    GRAPH --> SCHED["Readiness + Selection Policy"]
     SCHED --> ATTEMPT["Attempt Runner"]
     ATTEMPT --> SANDBOX["Sandbox Provider"]
     SANDBOX --> AGENT["Executor Adapter"]
@@ -649,24 +879,31 @@ flowchart TD
     INTEGRATE --> ROOT["Exact root candidate"]
     ROOT --> DELIVERY["Delivery Adapter"]
 
-    ATTEMPT --> EVENTS
-    VALIDATE --> EVENTS
-    INTEGRATE --> EVENTS
-    DELIVERY --> EVENTS
+    ACTOR --> INTENT["Durable Effect Intent"]
+    INTENT --> EFFECTS["Effect Dispatcher + Receipts"]
+    EFFECTS --> ATTEMPT
+    EFFECTS --> VALIDATE
+    EFFECTS --> INTEGRATE
+    EFFECTS --> DELIVERY
+    EFFECTS --> ACTOR
 ```
 
 ### 6.1 Deployment topology
 
-The target is one local installation with two processes:
+The target is one local installation with two long-lived processes:
 
-- `apps/daemon`: durable process owner, composition root and local command/query
-  endpoint;
-- `apps/web`: Next.js presentation process and static assets.
+- `apps/daemon`: privileged durable process owner, composition root and
+  authenticated local IPC endpoint;
+- `apps/web`: Next.js backend-for-frontend, presentation process and static
+  assets. Browser JavaScript talks only to this process.
 
 All domain logic remains in packages. This is not a network microservice split:
 the daemon exists because process ownership is a real seam. Development may run
 both from one launcher, but restarting the web process must not restart or take
-ownership of runs.
+ownership of runs. On Unix the default transport is a user-owned `0600` Unix
+domain socket; on Windows it is a named pipe restricted to the installation
+user SID. Both require a random installation capability stored outside browser
+reach. The same-user-compromise limitation is explicit.
 
 ### 6.2 Dependency direction
 
@@ -693,11 +930,13 @@ behind the `run-engine` interface. No package may depend on `apps/*`.
 
 | Module | External interface | Complexity hidden |
 |---|---|---|
-| Repository Model | `inspect`, `query`, `buildContextPack` | parsing, caching, relevance, coverage |
+| Repository Model | `inspect`, `composeView`, `query`, `buildContextPack` | parsing, overlays, caching, relevance, coverage |
+| Resource Catalog | `resolve`, `overlaps`, `neighborhood` | canonicalization, aliases, containment, unknowns |
 | Planning Engine | `plan`, `expand`, `amend` | model tools, local repair, budgeting |
 | Graph Compiler | `compile` | IDs, contracts, resource claims, graph checks |
-| Scheduler | `selectFrontier` | readiness, resources, budgets, fairness |
+| Scheduler | `evaluateReadiness`, `selectFrontier` | hard readiness, runtime leases, advisory risk, budgets |
 | Run Engine | `submitCommand`, `queryRun` | actors, recovery, dispatch, adoption |
+| Effect Dispatcher | `dispatchPending`, `reconcile` | idempotency, physical receipts, process/Git crash windows |
 | Attempt Runner | `executeAttempt` | base, sandbox, CLI, Git inspection |
 | Validation Engine | `validateCandidate` | recipe, baseline, controls, attribution |
 | Composite Integrator | `integrate` | artifact application, shared edits, seam checks |
@@ -716,16 +955,18 @@ not exposed merely to make tests easy.
    the daemon.
 2. The daemon validates the request, resolves the exact base commit/tree and
    appends `run.created` with a `GoalContract` digest.
-3. The Repository Model inspects that exact snapshot. It records coverage,
-   warnings and capability evidence.
+3. The Repository Model inspects that exact snapshot, builds its canonical
+   Resource Catalog and records coverage, warnings and capability evidence.
 4. The Planning Engine queries relevant packages, symbols, tests and boundaries.
    It may ask a human only when an answer changes behavior, architecture, scope,
    risk or acceptance.
 5. Planning creates a top-level semantic architecture and expands units until
    the approved execution horizon contains feasible leaves and represented
    planning-frontier composites.
-6. The Plan Verifier checks outcome coverage, seam sufficiency, resource
-   ownership, leaf feasibility, integration obligations and uncertainty.
+6. The Plan Verifier checks outcome/proof coverage, seam sufficiency, canonical
+   resource overlap and version ownership, leaf feasibility, integration
+   obligations and uncertainty. Model-assisted findings are advisory until a
+   deterministic check or human decision resolves them.
 7. The Graph Compiler creates one immutable `GraphRevision` and all referenced
    contracts directly from the accepted `SemanticPlan`.
 8. The user reviews and approves that exact revision. The approval includes the
@@ -734,14 +975,16 @@ not exposed merely to make tests easy.
 ### 7.2 Progressive expansion
 
 An unexpanded composite is not an executable leaf. When its parent contract and
-available repository knowledge make expansion useful, the run actor invokes
-`PlanningEngine.expand(unitId)`.
+available repository knowledge make expansion useful, the run actor composes an
+immutable `RepositoryView` from the base plus adopted manifests and invokes
+`PlanningEngine.expand(unitId, repositoryViewDigest)`.
 
 The result is auto-adoptable only when it stays inside the approved envelope:
 
 - parent objective and criteria are unchanged;
 - no new external seam or protected resource is introduced;
-- write/resource envelope does not expand;
+- write/resource envelope does not expand and every referenced resource resolves
+  in the view's catalog;
 - risk and cost remain within approved policy;
 - parent integration obligation remains satisfiable.
 
@@ -754,20 +997,29 @@ execution is a later optimization, not a prerequisite for correctness.
 
 ### 7.3 Leaf execution
 
-1. Scheduler computes ready nodes from approved graph, fresh artifacts,
-   decisions, resources, executor capability and budget.
-2. The run actor persists the selection before dispatch.
-3. `ExecutionBaseBuilder` constructs an exact tree from run base plus only the
+1. The Readiness Evaluator computes hard-ready nodes from approved graph, fresh
+   versioned artifacts, decisions, resource authority, runtime leases, executor
+   capability and budget.
+2. The Selection Policy chooses among that set using critical path, cost and
+   advisory integration risk. Unknown risk may reduce concurrency but never
+   invents a dependency.
+3. The run actor appends the selection and a stable `EffectIntent` before
+   dispatch. A physical adapter cannot start without that durable intent.
+4. `ExecutionBaseBuilder` constructs an exact tree from run base plus only the
    required artifact manifests.
-4. `AttemptRunner` creates an ephemeral workspace and sandbox, then passes a
+5. `AttemptRunner` creates an ephemeral workspace and sandbox, then passes a
    context projection and contract to the selected executor.
-5. The agent edits files but does not commit.
-6. The orchestrator inspects Git status/diff, validates resource and path scope,
+6. The agent edits files but does not commit. An agent-created commit, ref move
+   or active Git operation rejects the attempt.
+7. The orchestrator inspects Git status/diff, validates resource and path scope,
    stages permitted changes and creates a candidate commit.
-7. `ArtifactBuilder` extracts exact output manifests from that candidate.
-8. `ValidationEngine` validates the exact candidate in a separate clean
+8. `ArtifactBuilder` extracts exact Git-object manifests from that candidate
+   and retains the objects under a run-owned ref.
+9. `ValidationEngine` validates the exact candidate in a separate clean
    workspace and builds the Evidence Matrix.
-9. The run actor reloads current inputs, recomputes freshness and either adopts
+10. The effect adapter writes a physical receipt; the run actor appends the
+    terminal effect/attempt facts, reloads current inputs, recomputes freshness
+    and either adopts
    the artifacts or records the attempt as stale/rejected.
 
 ### 7.4 Composite integration
@@ -779,7 +1031,8 @@ execution is a later optimization, not a prerequisite for correctness.
 3. Deterministic application checks preimages and ordering. A mismatch is a
    classified integration input failure, not an arbitrary merge failure.
 4. If the `IntegrationContract` owns shared edits, an integration executor makes
-   those edits under the parent's resource claims.
+   only those edits under explicit parent-owned resource claims. A required
+   child-owned edit creates a child repair or amendment.
 5. The orchestrator creates the composite candidate and validates seam,
    integration and parent criteria on the combined result.
 6. The composite produces new scoped artifacts and/or a candidate-tree manifest
@@ -788,9 +1041,11 @@ execution is a later optimization, not a prerequisite for correctness.
 ### 7.5 Root and delivery
 
 The root integration attempt builds the complete candidate, runs global build,
-regression, end-to-end and required quality checks, then emits a
-`FinalArtifactManifest`. Delivery is a separate adapter operation. It publishes
-that exact commit/tree, verifies the destination and appends a matching receipt.
+regression, end-to-end, protected external and candidate-bound human checks as
+required, then emits a `CandidateTreeManifest`. Delivery is a separate durable
+effect. It compares the destination with the approved head, fast-forwards or
+atomically updates the ref to that exact commit, verifies the destination tree
+and appends a matching receipt. A moved or dirty destination blocks explicitly.
 Only then is the run `completed`.
 
 ---
@@ -814,6 +1069,22 @@ type GoalContract = {
     required: boolean;
     level: "product" | "quality" | "constraint";
     protectedReferences?: string[];
+    verification: {
+      allowedProofs: Array<{
+        mode:
+          | "executable" | "static" | "external_oracle"
+          | "human_review" | "observational";
+        authority:
+          | "orchestrator_deterministic"
+          | "protected_external_oracle"
+          | "operator";
+      }>;
+      independence:
+        | "independent_required"
+        | "protected_baseline_or_negative_control"
+        | "human_authority"
+        | "not_applicable";
+    };
   }>;
   constraints: string[];
   qualityAttributes: Array<{
@@ -830,9 +1101,13 @@ type GoalContract = {
 };
 ```
 
-Criteria are never created from a test file name. Child criteria may refine a
-parent criterion, but the parent remains responsible for proving the original
-statement on the integrated result.
+Criteria are never created from a test file name. Intake may propose a
+verification policy, but the accepted Goal Contract makes it authoritative.
+Concrete commands/selectors are resolved later from the Repository View into
+Validation Obligations and Proof Strategies. A required criterion with no valid
+accepted authority makes planning `needs_input`; a green build cannot substitute.
+Child criteria may refine a parent criterion, but the parent remains responsible
+for proving the original statement on the integrated result.
 
 ### 8.2 Repository Model and evidence
 
@@ -853,6 +1128,23 @@ type RepositoryModel = {
   digest: string;
 };
 
+type RepositoryView = {
+  baseModelDigest: string;
+  appliedManifestDigests: string[];
+  treeSha: string;
+  contentDigest: string;
+  resourceCatalogDigest: string;
+  digest: string;
+};
+
+type EpistemicAssessment =
+  | { state: "unknown"; reason: string; evidenceRefs: [] }
+  | {
+      state: "known" | "partial" | "conflicting";
+      confidence: "high" | "medium" | "low";
+      evidenceRefs: string[];
+    };
+
 type PlanningEvidenceRef = {
   id: string;
   snapshotId: string;
@@ -860,9 +1152,32 @@ type PlanningEvidenceRef = {
         "command" | "convention" | "diagnostic";
   locator: string;
   digest: string;
-  confidence: "high" | "medium" | "low";
+  epistemic: EpistemicAssessment;
+};
+
+type ResourceCatalog = {
+  repositoryContentDigest: string;
+  resources: Record<string, {
+    id: string;
+    kind: "package" | "module" | "path" | "symbol" |
+          "schema" | "integration_surface";
+    canonicalLocator: string;
+    evidenceRefs: string[];
+  }>;
+  contains: Array<{
+    containerId: string;
+    memberId: string;
+    evidenceRefs: string[];
+  }>;
+  aliases: Array<{ leftId: string; rightId: string; evidenceRefs: string[] }>;
+  digest: string;
 };
 ```
+
+`contentDigest` is derived from the immutable base, ordered overlays and exact
+tree before catalog construction. The catalog binds to that content digest; the
+final view digest then includes `resourceCatalogDigest`. This avoids circular
+identity between a view and its catalog while keeping both exact.
 
 The public query seam is budgeted and evidence-returning:
 
@@ -879,7 +1194,11 @@ interface RepositoryQuery {
 ```
 
 Every query reports cost, truncation and unknowns. The planner cannot request an
-unbounded `allFilesWithContents` operation.
+unbounded `allFilesWithContents` operation. `ResourceCatalog.overlaps` is
+implemented over canonical IDs, alias equivalence and transitive containment and
+returns `unknown` when coverage cannot justify yes/no. Ownership and artifact
+versions are deliberately excluded from the catalog so a cached repository fact
+cannot silently grant authority.
 
 ### 8.3 Semantic Plan
 
@@ -889,6 +1208,7 @@ type SemanticPlan = {
   revision: number;
   goalContract: ContractRef;
   repositorySnapshot: RepositorySnapshotRef;
+  repositoryView: { digest: string; treeSha: string; resourceCatalogDigest: string };
   rootUnitId: string;
   units: Record<string, WorkUnit>;
   seams: Record<string, PlannedSeam>;
@@ -948,7 +1268,7 @@ type GranularityDecision = {
   expectedCosts: string[];
   integrationObligationId?: string;
   evidenceRefs: string[];
-  confidence: "high" | "medium" | "low";
+  epistemic: EpistemicAssessment;
 };
 ```
 
@@ -964,31 +1284,84 @@ type GraphRevision = {
   graphId: string;
   revision: number;
   semanticPlan: { id: string; revision: number; digest: string };
+  repositoryView: {
+    digest: string;
+    treeSha: string;
+    resourceCatalogDigest: string;
+  };
   rootId: string;
   nodes: Record<string, TaskNode>;
   artifactRequirements: ArtifactRequirement[];
   seamBindings: SeamBinding[];
   resourceClaims: ResourceClaim[];
+  runtimeLeaseClaims: RuntimeLeaseClaim[];
   contractRefs: ContractRef[];
-  createdAt: string;
+  digest: string;
 };
+
+type ArtifactRequirement = {
+  id: string;
+  producerNodeId: string;
+  consumerNodeId: string;
+  artifactContract: ContractRef;
+  consumerInputName: string;
+  acceptedManifestKinds: Array<"change_set" | "candidate_tree">;
+};
+
+type SeamBinding = {
+  id: string;
+  producerNodeId: string;
+  consumerNodeId: string;
+  seamContract: ContractRef;
+  artifactRequirementId: string;
+  validationObligationIds: string[];
+};
+
+type ResourceVersionRef =
+  | { kind: "repository_view"; digest: string }
+  | { kind: "artifact_contract"; ref: ContractRef };
 
 type ResourceClaim = {
   id: string;
   nodeId: string;
-  resourceKey: string;
-  mode: "shared_read" | "exclusive_write" | "integration_write";
-  phase: "implementation" | "validation" | "integration" | "delivery";
+  resourceId: string;
   source: "planner" | "compiler" | "repository_policy";
   evidenceRefs: string[];
-  confidence: "high" | "medium" | "low";
+  epistemic: EpistemicAssessment;
+} & (
+  | {
+      access: "observe";
+      inputVersion: ResourceVersionRef;
+    }
+  | {
+      access: "modify";
+      ownerPhase: "implementation" | "integration";
+      inputVersion: ResourceVersionRef;
+      outputArtifact: ContractRef;
+    }
+);
+
+type RuntimeLeaseClaim = {
+  id: string;
+  nodeId: string;
+  provider: string;
+  resourceKey: string;
+  mode: "shared" | "exclusive";
+  phase: "implementation" | "validation" | "integration" | "delivery";
 };
 ```
 
-Resource keys are normalized names such as `package:contracts`,
-`module:billing`, `file:src/index.ts`, `schema:orders` or
-`service-port:localhost:3100`. The compiler may generate claims from exact
-paths/configuration, but a risk scorer cannot create a functional dependency.
+Repository claims reference only IDs in the exact Resource Catalog. Catalog
+overlap, not string equality, detects package/file and module/schema aliasing.
+Two unordered overlapping `modify` claims are an invalid plan. A deliberate
+sequential transformation is valid only when the successor's `inputVersion`
+references the predecessor artifact and the graph contains the matching
+`ArtifactRequirement`; the scheduler does not repair this by serialization.
+
+Runtime keys such as `tcp:127.0.0.1:3100`, an executor slot or a target Git ref
+are defined and normalized by their provider. They protect physical state, not
+source ownership. A risk scorer cannot create either kind of claim or a
+functional dependency.
 
 ### 8.6 Contracts per node
 
@@ -1016,81 +1389,200 @@ secrets and oracle files remain hard-denied.
 
 ### 8.7 Artifact Contract and Manifest
 
-Supported initial artifact kinds are deliberately small:
-
-- `change_set`: exact file/blob changes against a known base tree;
-- `interface_snapshot`: a change set designated as a shared contract baseline;
-- `candidate_tree`: a complete tree produced by a composite/root;
-- `evidence_bundle`: non-materializable evidence references.
-
-No other kind enters the schema until a materializer and tests exist.
+Artifact contracts describe semantic role (`implementation_change`,
+`interface_snapshot`, `composite_change` or `final_tree`) separately from
+physical representation. The initial physical union has only two members.
+`EvidenceMatrix` and trace/log bundles are separate records, not artifacts.
 
 ```ts
-type ArtifactManifest = {
+type ArtifactManifest = ChangeSetManifest | CandidateTreeManifest;
+
+type ManifestIdentity = {
   id: string;
   contract: ContractRef;
-  kind: "change_set" | "interface_snapshot" |
-        "candidate_tree" | "evidence_bundle";
   producerNodeId: string;
   producerAttemptId: string;
   inputFingerprint: string;
-  sourceCandidate: { commitSha: string; treeSha: string };
+  repositoryObjectStoreId: string;
+  objectFormat: "sha1" | "sha256";
+  sourceCandidate: { commitOid: string; treeOid: string };
+  retainedByRef: string;
+};
+
+type ChangeSetManifest = ManifestIdentity & {
+  kind: "change_set";
   baseTreeSha: string;
+  resultTreeSha: string;
   entries: Array<{
-    path: string;
-    operation: "add" | "modify" | "delete" | "rename";
-    previousPath?: string;
-    beforeBlobSha?: string;
-    afterBlobSha?: string;
-    mode?: string;
+    oldPath?: string;
+    newPath?: string;
+    operation: "add" | "modify" | "delete" | "type_change";
+    oldOid?: string;
+    newOid?: string;
+    oldMode?: string;
+    newMode?: string;
+    detectedRenameFrom?: string;
   }>;
-  contentDigest: string;
-  evidenceMatrixId: string;
-  status: "candidate" | "verified" | "adopted" | "stale" | "rejected";
+  manifestDigest: string;
+};
+
+type CandidateTreeManifest = ManifestIdentity & {
+  kind: "candidate_tree";
+  baseCommitOid: string;
+  commitOid: string;
+  treeOid: string;
+  manifestDigest: string;
 };
 ```
 
-Materialization verifies base tree compatibility and every declared preimage.
-It may use a binary Git patch internally, but the manifest remains the canonical
-description. An artifact with undeclared paths is rejected before adoption.
+Commit OID remains provenance; tree/blob OIDs and modes are content identity.
+Git's rename detection is heuristic, so exact transport is a delete plus add;
+`detectedRenameFrom` is explanatory metadata only. Modes preserve regular,
+executable, symlink and gitlink entries; binaries require no special patch form.
+Submodule objects may be referenced but are never fetched or initialized without
+an explicit network capability and contract.
+
+Materialization verifies the base/preimage objects, updates a temporary Git index
+from declared OIDs, writes the resulting tree and compares it with
+`resultTreeSha`. It does not apply textual patches, run filters or traverse
+source commit ancestry. Candidate objects are retained under run-owned refs in a
+Git object database; ManyHands does not create a parallel blob CAS. Immutable
+manifest content excludes evidence and lifecycle status. `artifact.verified`,
+`artifact.adopted`, `artifact.stale` and `artifact.rejected` events bind the
+manifest digest later.
 
 ### 8.8 Attempt and fingerprint
 
 ```ts
+type InputFingerprintMaterial = {
+  executionBase: { repositoryViewDigest: string; treeSha: string };
+  consumedArtifactDigests: string[];
+  nodeContractDigest: string;
+  resourceClaimDigest: string;
+  contextDigest: string;
+  executorProfileDigest: string;
+  sandboxCapabilityDigest: string;
+};
+
 type Attempt = {
   id: string;
   runId: string;
   nodeId: string;
-  purpose: "implementation" | "repair" | "integration" | "validation";
+  purpose: "implementation" | "repair" | "integration";
   ordinal: number;
   lineage?: { retryOf?: string; repairOf?: string };
   inputFingerprint: string;
-  baseManifestId: string;
-  contractDigest: string;
+  executionBase: { repositoryViewDigest: string; treeSha: string };
+  nodeContractDigest: string;
+  resourceClaimDigest: string;
   contextDigest: string;
   executorProfileDigest: string;
   sandboxCapabilityDigest: string;
   consumedArtifactDigests: string[];
   state: "prepared" | "running" | "candidate" | "validated" |
-         "failed" | "stale" | "cancelled";
+         "failed" | "interrupted" | "stale" | "cancelled";
 };
 ```
 
-The fingerprint includes all fields that can change eligibility. The global
+`inputFingerprint` is the canonical digest of `InputFingerprintMaterial`; its
+artifact list is sorted by requirement identity, not incidental completion
+order. The fingerprint includes all fields that can change eligibility. The global
 graph revision is provenance but does not invalidate an unrelated node by
 itself; referenced node/contract/resource revisions do.
 
-### 8.9 Evidence and final result
+Validation executions are separate immutable records keyed by exact candidate,
+proof strategy, recipe and environment. Re-running validation produces another
+observation; it does not pretend that the engineering attempt itself ran again.
 
-An evidence observation must include exact candidate, command/static proof,
-selectors, output digest, environment digest and criterion/obligation IDs.
-`satisfied` is impossible without an applicable observation. Composite evidence
-may reuse a physical test execution for several obligations only when the recipe
-declared those bindings before execution.
+### 8.9 Durable effects
 
-The final manifest contains the exact root commit/tree, all adopted root artifact
-digests, goal contract digest, graph/contract revisions, evidence matrix and
-delivery target. A delivery receipt must echo and verify the same tree.
+```ts
+type EffectIntent = {
+  effectId: string;
+  runId: string;
+  attemptId?: string;
+  kind:
+    | "model_call" | "process_spawn" | "process_terminate"
+    | "sandbox_create" | "git_mutation" | "artifact_materialize"
+    | "validation" | "delivery" | "cleanup";
+  inputDigest: string;
+  daemonEpoch: string;
+  idempotency:
+    | "repeat_safe"
+    | "reconcile_then_repeat"
+    | "never_repeat_unknown";
+  requestedAt: string;
+};
+
+type PhysicalEffectReceipt = {
+  receiptId: string;
+  effectId: string;
+  observation: "started" | "succeeded" | "failed";
+  inputDigest: string;
+  daemonEpoch: string;
+  processIdentity?: {
+    pid: number;
+    creationIdentity: string;
+    supervisorNonce: string;
+  };
+  resultDigest?: string;
+  observedAt: string;
+};
+```
+
+`effect.requested` is appended with durable flush before dispatch.
+`effect.completed`, `effect.failed` or `effect.interrupted` is appended only
+by the actor after validating a physical receipt or reconciliation result.
+Pending work is derived from the journal; there is no second authoritative
+outbox database. Each physical receipt is immutable; a started observation and
+a terminal observation have different `receiptId`s. Rewriting one receipt from
+started to succeeded would recreate a second mutable lifecycle state and is
+forbidden.
+
+### 8.10 Evidence and final result
+
+```ts
+type ProofStrategy = {
+  id: string;
+  goalContractDigest: string;
+  criterionId: string;
+  obligationId: string;
+  mode:
+    | "executable" | "static" | "external_oracle"
+    | "human_review" | "observational";
+  authority:
+    | "orchestrator_deterministic"
+    | "protected_external_oracle"
+    | "operator";
+  repositoryViewDigest: string;
+  procedureRef: string;
+  selectorDigest?: string;
+  environmentPolicyDigest: string;
+  independence:
+    | "independent_required"
+    | "protected_baseline_or_negative_control"
+    | "human_authority"
+    | "not_applicable";
+  digest: string;
+};
+```
+
+A Proof Strategy must be one of the exact mode/authority pairs accepted by the
+Goal Contract. Authorities are categorical, not a ranking: an operator cannot
+silently substitute for a protected external oracle, or vice versa.
+
+An evidence observation must include exact candidate tree, proof mode/authority,
+recipe/verifier digest, selectors, output digest, environment digest and
+criterion/obligation IDs. Outcomes are `satisfied`, `failed`,
+`inconclusive`, `not_run` or `not_applicable`; none is inferred from a
+confidence score. Composite evidence may reuse a physical test execution for
+several obligations only when the recipe declared those bindings before
+execution.
+
+The final result binds a `CandidateTreeManifest` digest to all adopted root
+artifact digests, Goal Contract, graph/contracts, Evidence Matrix and delivery
+target. A delivery receipt must echo and verify the same commit/tree without
+mutating the manifest.
 
 ---
 
@@ -1100,8 +1592,10 @@ delivery target. A delivery receipt must echo and verify the same tree.
 
 **Location:** evolve `packages/repository-index`.
 
-**Responsibility:** turn an exact Git snapshot into a structured model and serve
-bounded evidence queries. It does not decide work units.
+**Responsibility:** turn an exact Git snapshot into a structured base model,
+compose immutable views from adopted manifests, build each view's Resource
+Catalog and serve bounded evidence queries. It does not decide work units or
+grant write authority.
 
 **Required implementation:**
 
@@ -1109,23 +1603,35 @@ bounded evidence queries. It does not decide work units.
 - Parse package/workspace manifests and entrypoints.
 - Extract TS/JS imports, exports, symbols and public signatures. Add coverage
   metadata for extensions/languages not fully parsed.
+- Resolve workspace/package exports, path aliases, framework entrypoints and
+  config-derived relationships when evidence is available; dynamic imports and
+  unsupported conventions remain explicit unknowns.
 - Link tests to source using imports, naming conventions, configured projects and
   explicit test runner metadata.
 - Identify schemas, migrations, generated files, shared registries, barrels,
   lockfiles and other integration hotspots as resources.
+- Record generated-file provenance and the trusted regeneration command when
+  known. A generated output is never treated as an independently owned source
+  merely because it exists.
+- Canonicalize resource identities and index alias/containment without copying
+  ownership or artifact versions into the catalog.
 - Record conventions from repository evidence, never from benchmark wording.
 - Provide a relevance service seeded by goal terms, affected symbols, dependency
   neighborhoods and tests.
 - Return excerpts lazily with byte/token budgets and content digests.
 - Keep unknown/partial results explicit and deterministic.
+- Compose overlays from exact Git objects and incrementally re-index changed
+  surfaces. The ordered manifest digests, resulting tree and model schema define
+  the Repository View identity.
 
 **Interface rules:** callers ask questions; they never receive the full model in
 one default prompt. Query results return stable evidence references. Index timing
 and cache-hit diagnostics are telemetry, not domain semantics.
 
 **Failure behavior:** parser failure degrades only the affected file/language and
-records coverage. Missing evidence for a required boundary blocks or asks for
-targeted inspection; it never becomes low risk.
+records coverage. Missing evidence for a required boundary or resource overlap
+blocks approval/expansion or asks for targeted inspection; it never becomes low
+risk or false non-overlap.
 
 ### 9.2 Planning Engine
 
@@ -1162,7 +1668,9 @@ interface PlanningEngine {
 
 The planner may use read-only repository tools. It must not receive every file as
 static prompt context, modify the target, execute arbitrary commands or declare
-runtime success.
+runtime success. Planning on the same contract/view with no new evidence cannot
+repeat indefinitely: it must accept, surface a decision, expand the query with a
+recorded reason or reject.
 
 ### 9.3 Granularity policy
 
@@ -1223,15 +1731,31 @@ only in historical evidence, not in productive decisions.
 The verifier checks semantic truth available before execution:
 
 - all product criteria have a root obligation;
+- every required criterion has an allowed proof strategy and authority;
 - child refinements point to known parent criteria;
 - leaves are feasible and composites have integration obligations;
 - seams contain observable semantics and compatibility checks;
 - artifact contracts have producers, consumers and supported kinds;
-- resource ownership has no unexplained concurrent exclusive writers;
+- all resource IDs resolve in the exact catalog, overlaps are known where writes
+  are involved, and no unordered overlapping writers exist;
 - contract-first producers precede their consumers;
 - protected/oracle paths cannot enter write scopes;
 - unknowns are surfaced with appropriate severity;
 - planning frontiers remain inside approved envelopes.
+
+Verifier authority is explicit:
+
+| Verifier class | May block compilation? | May satisfy correctness? | Response |
+|---|---:|---:|---|
+| Schema/reference/graph/resource invariant | yes | no | deterministic error |
+| Repository/Git deterministic check | yes | only through a declared proof strategy | exact finding/evidence |
+| Model-assisted plan critic | no by itself | never | advisory finding; targeted check, bounded replan or human decision |
+| Protected external oracle | when required and unavailable | yes when Goal Contract allows | candidate-bound evidence |
+| Human review | when required and unresolved | yes when Goal Contract allows | candidate/rubric-bound decision |
+
+A model finding may suspend auto-progression while its claimed risk is checked,
+but `LLM says invalid` is not an invariant violation and `LLM says valid`
+never approves a plan.
 
 The compiler performs mechanics:
 
@@ -1239,6 +1763,7 @@ The compiler performs mechanics:
 - node contract bundles;
 - `parentId`, `ArtifactRequirement`, `SeamBinding`, `ResourceClaim`;
 - exact scope/resource normalization;
+- resource version transitions and runtime lease requirements;
 - validation obligation identities;
 - integration contracts;
 - graph acyclicity and reference validation;
@@ -1250,26 +1775,37 @@ returns findings linked to semantic unit/evidence IDs. It never projects through
 
 ### 9.5 TaskGraph and Resource Claims
 
-**Location:** evolve `packages/task-graph`; consume claim evaluation from
-`packages/scheduler` or a small pure module.
+**Location:** evolve `packages/task-graph`; consume catalog overlap from
+`packages/repository-index` through a small pure query port.
 
 The graph retains hierarchy, artifacts and seams. Pairwise
-`ConflictConstraint[]` is replaced by `ResourceClaim[]` in the new schema.
+`ConflictConstraint[]` is replaced by versioned `ResourceClaim[]` and
+provider-owned `RuntimeLeaseClaim[]` in the new schema.
 Compatibility readers may upcast historical graphs into conservative claims for
-replay, but productive compilation emits only claims.
+replay, but productive compilation emits only claims. An upcast graph is
+read-only diagnostic state and is never eligible for new execution, adoption or
+delivery without replanning into a current Graph Revision.
 
-Conflict rule:
+Plan rule:
 
 ```text
-shared_read + shared_read       -> compatible
-shared_read + exclusive_write   -> serialize unless a frozen seam permits read
-exclusive_write + exclusive_write -> invalid or serialize by explicit ownership
-integration_write               -> owned by the composite integration phase
-unknown claim confidence        -> conservative scheduling and visible warning
+observe(base V) + observe(base V)       -> compatible
+observe(base V) + modify(base V -> A)   -> compatible in isolated bases
+observe(A) + modify(base V -> A)        -> artifact dependency; reader waits
+modify(base V -> A) + modify(base V -> B), overlapping -> invalid ownership
+modify(A -> B) after modify(base V -> A) -> valid only with explicit artifact/version edge
+unknown overlap involving modify         -> block approval or require clarification
 ```
 
-Claims are indexed by resource key, making conflict evaluation proportional to
-claims on relevant resources. The graph does not materialize every conflicting
+The important consequence is that worktree isolation already freezes readers:
+source `shared_read + exclusive_write` is not a physical lock. If the reader
+needs the new value, that is dataflow, not scheduling. `ownerPhase:
+integration` scopes parent-owned writes but does not grant authority over child
+resources.
+
+Claims are indexed by canonical resource ID and catalog containment. Validation
+examines only claim buckets/ancestors that may overlap. Runtime lease providers
+index their own exact keys. The graph does not materialize every conflicting
 pair. Historical pairwise relations remain readable only in the replay adapter.
 
 ### 9.6 Scheduler
@@ -1280,14 +1816,19 @@ pair. Historical pairwise relations remain readable only in the replay adapter.
 
 ```ts
 interface FrontierScheduler {
-  selectFrontier(input: SchedulerInput): SchedulerDecision;
+  evaluateReadiness(input: SchedulerInput): ReadinessDecision;
+  selectFrontier(
+    ready: ReadonlyArray<ReadyCandidate>,
+    policy: SelectionPolicy
+  ): SchedulerDecision;
 }
 ```
 
 The input is a pure snapshot: approved graph, adopted artifact digests,
-decisions, active attempts and resources, executor/sandbox capacity, budget,
+decisions, active attempts, runtime leases, executor/sandbox capacity, budget,
 pause state and circuit breakers. The output lists selected nodes and an
-explanation for every non-selected candidate.
+explanation for every non-selected candidate. Hard readiness and soft selection
+are different types and functions.
 
 Readiness requires:
 
@@ -1296,39 +1837,62 @@ Readiness requires:
 - compatible seam baseline where execution can proceed contract-first;
 - no pending decision affecting the node;
 - an available executor profile meeting required capabilities;
-- resource claims compatible with active and newly selected nodes;
+- repository resource versions available exactly as claimed;
+- runtime lease claims compatible with active and newly selected nodes;
 - budget and wall-clock allowance;
 - no prior adoption for the same fingerprint.
 
-Selection maximizes useful critical-path progress under the cap. It does not
-maximize node count and does not introduce barriers: after any attempt settles,
-the run actor records facts and recomputes the frontier. The durable term should
-be `frontier.selection`; `wave` may remain only as a legacy event upcast or UI
-historical label until migrated.
+Selection maximizes useful critical-path progress under the cap while considering
+estimated execution cost and integration risk. Initial trustworthy signals are
+limited to evidence-backed public-API change, dependency-neighborhood proximity,
+integration hotspot ownership, unknown/partial grounding and failures already
+observed in this run. Cross-run historical frequency or learned weights remain
+disabled until a calibration dataset exists.
 
-### 9.7 Artifact Builder, Registry and Execution Base
+Risk is computed lazily for each ready candidate and incrementally against the
+small selected set using catalog/dependency indexes. It is not a persisted
+all-pairs matrix. `unknown` is distinct from high risk. A bad estimate may cost
+time or parallelism, but artifacts, ownership and validation still enforce
+correctness. Selection does not maximize node count or introduce barriers: after
+any attempt settles, the actor records facts and recomputes the frontier. The
+durable term is `frontier.selection`; `wave` remains only in historical
+upcasts.
+
+### 9.7 Artifact Builder, Git Object Store and Execution Base
 
 **Location:** `packages/execution-core/src/artifacts` and `src/base` initially;
 metadata persistence remains in `packages/run-store`.
 
-`ArtifactBuilder` compares candidate to exact base, selects only contract-owned
-entries and produces a manifest plus content-addressed payload. It handles add,
-modify, delete, rename, mode changes and binary files. It rejects output paths
-not covered by the contract.
+`ArtifactBuilder` compares candidate to exact base using Git objects, selects
+only contract-owned entries and produces a canonical manifest. Blob/tree/commit
+payload already lives in Git's content-addressed object database. A run-owned
+namespaced ref retains the candidate; the manifest store persists small canonical
+JSON and its digest. There is no custom content store.
+
+The builder handles add, modify, delete, type/mode change, binary, symlink and
+gitlink entries. Rename is optional explanatory detection over exact delete/add
+identity. It rejects paths/resources not covered by the contract and rejects an
+agent-created commit or active merge/cherry-pick/rebase state.
 
 `ArtifactMaterializer`:
 
 1. verifies manifest schema/digest;
 2. verifies required base tree or each preimage blob;
-3. applies only declared entries;
-4. verifies resulting postimage blobs and modes;
+3. populates a temporary index from only declared object IDs without filters,
+   hooks or worktree line-ending conversion;
+4. writes and verifies the resulting tree, postimage objects and modes;
 5. records a composition step;
 6. leaves a clean deterministic tree or fails without partial adoption.
 
 `ExecutionBaseBuilder` deduplicates identical manifests by digest and refuses
 incompatible preimages. It never traverses predecessor commits looking for
 implicit changes. The resulting `ExecutionBaseManifest` is part of the attempt
-fingerprint.
+fingerprint. A complete `candidate_tree` may become an exclusive base or final
+delivery subject; it is not overlaid beside sibling change sets.
+
+Retention deletes a namespaced ref only after no active attempt, adopted
+artifact, evidence matrix, pending delivery or configured audit window references
+it. Garbage collection is maintenance, never part of adoption.
 
 ### 9.8 Attempt Runner and executor context
 
@@ -1342,7 +1906,8 @@ Responsibilities in order:
 4. Create sandbox and attempt-specific credential context.
 5. Build a compact executor context from contracts and evidence refs.
 6. Invoke `AgentExecutor` under process supervision.
-7. Inspect Git state independently of stdout.
+7. Inspect HEAD, refs, index, operation state and worktree independently of
+   stdout; reject agent-created commits or unfinished Git operations.
 8. Enforce protected paths, resource claims and change contract.
 9. Create orchestrator candidate or classified failure.
 10. Build artifact manifests and request validation.
@@ -1352,6 +1917,20 @@ The generic implementation prompt contains principles, not benchmark fixes. It
 must tell the agent the observable outcome, constraints, consumed artifacts,
 owned resources, validation expectations and exact prior findings for a repair.
 It must not prescribe fixture-specific method names.
+
+All orchestrator Git calls use argument arrays and a controlled `GitPolicy`:
+hooks, external diff/textconv, unsafe protocols and inherited credential helpers
+are disabled; config and identity are explicit; paths are NUL-delimited and
+checked without following worktree symlinks. Repository-owned Git configuration
+cannot execute code on the host merely because the repository is inspected.
+
+Every executor profile fixes and digests the binary/version, structured output
+protocol, turn/cost limits, permission mode, allowed tools, additional
+directories, settings sources, hooks, plugins and MCP configuration. Repository
+content cannot silently enable provider hooks/tools or widen access. Claude
+`--dangerously-skip-permissions` (and equivalent provider bypasses) is permitted
+only inside an independently enforced sandbox or an explicit interactive
+`unsafe_local` profile; it is never the unattended security boundary.
 
 A repair is a new attempt. The failed candidate may be committed to a quarantined
 ref and used as the repair base, making the repair reproducible without adopting
@@ -1398,19 +1977,32 @@ provider material. Long-lived host `HOME`/`USERPROFILE` is not forwarded as the
 general solution. Secrets are never serialized in events or traces.
 
 The Process Supervisor owns process groups/job objects, timeouts and verified
-termination. The daemon epoch and attempt ID are recorded with every process.
-On supported platforms, daemon death should terminate descendants by OS
-construction; startup reconciliation remains a second line of defense.
+termination. Each process effect has a small supervisor receipt directory keyed
+by `effectId`; the wrapper writes `started` before launching the provider,
+captures protocol output separately from diagnostics and writes one final
+receipt. The daemon epoch and attempt ID are recorded with every process.
+
+On Windows the adapter uses a Job Object with kill-on-close and records PID plus
+creation identity; on Unix it uses a process group plus a parent-liveness
+sentinel and the strongest available parent-death mechanism. Startup never trusts
+PID alone. If a final receipt exists it is consumed; if the old process is
+verified alive it is terminated/quarantined; if physical state is unknowable the
+attempt stops for decision rather than spawning a duplicate.
 
 ### 9.10 Validation Engine
 
 **Location:** deepen `packages/execution-core/src/validation` behind one
 `ValidationEngine` interface.
 
-The engine takes candidate, prior base, `ValidationContract`, Repository Model
-capabilities and sandbox policy. It compiles a recipe without model-written
-commands, validates in a separate clean workspace and returns a complete Evidence
-Matrix.
+The engine takes candidate, prior base, `ValidationContract`, Repository View
+capabilities and sandbox policy. It resolves a candidate-independent Proof
+Strategy and recipe without model-written commands, validates in a separate clean
+workspace and returns a complete Evidence Matrix.
+
+Validation may mutate only ephemeral resources owned by that sandbox. A
+protected oracle is read-only by default; if an oracle requires an external
+mutation, that mutation is a separately declared effect with its own idempotency
+and reconciliation policy or the strategy is unsupported.
 
 Evidence layers:
 
@@ -1421,6 +2013,14 @@ Evidence layers:
   attributes;
 - delivery: selected final checks plus exact tree identity.
 
+Every required obligation declares an accepted proof mode/authority pair,
+selector identity, applicability and independence policy. Recipe preparation
+verifies that a selector actually selects the intended tests/checks before
+candidate execution. Behavioral obligations normally compare the exact baseline
+and use a negative control when feasible; a command that passes before the change
+cannot by itself prove causation. Build success is quality evidence, not automatic proof
+of an unrelated product criterion.
+
 Test integrity remains generic: detect deleted/disabled tests, `only`, unjustified
 skip, assertion weakening and baseline behavior. Domain-specific public surfaces
 belong in the Goal/Validation Contract or external oracle, never a regex in the
@@ -1429,6 +2029,12 @@ validator.
 An external oracle is protected input to the run and executes outside agent
 write scope. Its result is attributable to the exact final candidate but does not
 rewrite internal evidence retroactively.
+
+Human review uses a declared rubric and exact candidate/tree (plus screenshots or
+observations where relevant). A later candidate invalidates the decision.
+Model-generated tests are retained as supporting evidence but cannot be the sole
+authority for a required root criterion unless the Goal Contract explicitly
+delegated final authority to a human who reviews that evidence.
 
 ### 9.11 Composite Integrator
 
@@ -1449,15 +2055,22 @@ contract, parent resource claims and validation contract. It materializes child
 artifacts deterministically, performs parent-owned shared edits when required,
 creates a composite candidate and validates it.
 
+The same change enforcer used for leaves checks the integration diff against
+catalog overlap and `ownerPhase: integration`. The executor has no emergency
+permission to edit child-owned implementation. If a finding is attributable to
+one child, a new child repair consumes the current seam/integration evidence and
+the parent integration is retried with the new child artifact. If ownership or
+the seam itself is wrong, a local amendment/replan changes contracts explicitly.
+
 Conflict classes and responses:
 
 | Class | Meaning | Response |
 |---|---|---|
 | preimage | artifact does not apply to declared base | stale/replan; never force |
 | resource | ownership contract is inconsistent | graph amendment |
-| textual | exact child changes overlap unexpectedly | integration repair or amendment |
+| textual | exact child changes overlap unexpectedly | repair only within parent-owned surface; otherwise amendment |
 | seam | public contract/semantics disagree | contract amendment or repair |
-| behavioral | combined candidate fails obligations | integration repair |
+| behavioral | combined candidate fails obligations | parent repair, child repair or amendment according to ownership |
 | environment | checks could not execute | resource recovery |
 | internal | invariant/store/materializer defect | fail closed and diagnose |
 
@@ -1488,9 +2101,30 @@ repository resource manager prevents incompatible delivery/mutation across runs;
 it is not a second writer for run state.
 
 Command handling is idempotent by `commandId`. The receipt means the command was
-durably accepted, not that its long operation completed. The actor advances from
-events and schedules effects; effect completion returns facts through the actor
-mailbox.
+durably accepted and flushed, not that its long operation completed. When domain
+logic requests external work, the actor appends `effect.requested` with stable
+`effectId`, input digest and reconciliation policy before the dispatcher can
+observe it. The journal is therefore the outbox.
+
+The dispatcher owns no domain state. It writes/validates a physical receipt and
+returns an observation through the actor mailbox. The actor checks effect ID,
+input digest, daemon epoch, attempt freshness and current cancellation state
+before appending a terminal fact. Duplicate receipts are idempotent; a receipt
+for different inputs is corruption.
+
+Crash consistency by effect class:
+
+| Effect | Idempotency/reconciliation rule |
+|---|---|
+| Repository inspection/model query | repeat on exact immutable view |
+| Sandbox/workspace creation | deterministic effect path/session ID; inspect then reuse or dispose |
+| Executor/model process | consume final supervisor receipt; otherwise verify old tree dead and interrupt attempt before a new attempt |
+| Process termination | repeat by PID + creation identity; success requires verified death |
+| Git candidate/artifact operation | private worktree/index and effect-scoped ref; inspect ref/tree and adopt exact result or discard |
+| Artifact materialization | repeat in a fresh temporary index from exact preimages |
+| Validation | repeat creates a new validation execution on the same exact candidate/recipe |
+| Delivery | reconcile destination ref/tree first; if still at expected head perform compare-and-swap; never replay over divergence |
+| Cleanup | repeat-safe and observable, but cleanup failure cannot fabricate domain success |
 
 No API route calls `startRunBackgroundTask`, stores promises on `globalThis` or
 mutates liveness during a GET.
@@ -1507,11 +2141,15 @@ Keep:
 - immutable attempt/artifact records;
 - atomic snapshots and upcasters;
 - diagnostics separated into `trace-store`.
+- fsync-backed acceptance for command and effect-intent events in production;
+  incomplete trailing record recovery and fail-closed complete-record corruption.
 
 Change:
 
-- only the daemon event-store adapter may append productive events;
+- only the daemon actor event-store adapter may append productive events;
 - replace `RunRecord` lifecycle authority with a rebuildable run index;
+- make attempt/artifact/effect files immutable content or projections, never a
+  second lifecycle state machine;
 - remove read-path reconciliation side effects;
 - remove cross-host fencing once the daemon single-owner invariant and migration
   tests prove it redundant;
@@ -1521,13 +2159,24 @@ Change:
 Daemon startup recovery:
 
 1. acquire and validate installation ownership;
-2. verify journals and load snapshots/tails;
-3. reconcile process records using PID plus creation identity;
-4. terminate or quarantine descendants from an older daemon epoch;
-5. mark in-flight attempts interrupted with cause `daemon_crash`;
-6. rebuild projections and resource ownership;
-7. apply recovery policy and recompute planning/execution frontier;
-8. resume only work whose inputs are still exact.
+2. mint a new daemon epoch, bind authenticated local IPC and refuse a second
+   owner;
+3. verify journals, truncate only an incomplete trailing record and load
+   snapshots/tails;
+4. derive pending effects from intents without terminal events;
+5. reconcile physical receipts, process identities, effect-scoped Git refs,
+   sandboxes and delivery destinations by effect kind;
+6. terminate or quarantine descendants from an older daemon epoch before any
+   replacement process starts;
+7. append recovered completion when exact evidence exists; otherwise mark the
+   attempt interrupted or raise an explicit decision;
+8. rebuild projections, object retention and runtime lease ownership;
+9. apply cause-specific recovery and recompute the planning/execution frontier;
+10. resume only work whose inputs are still exact.
+
+An acknowledged command has logical RPO 0 subject to filesystem/hardware
+guarantees. A middle-record checksum/sequence failure is not auto-repaired.
+Snapshots may be discarded; the journal may not be guessed.
 
 A web restart has no recovery path because it has no execution ownership.
 
@@ -1548,7 +2197,12 @@ Recovery maps observed cause to a change that could alter the outcome:
 | artifact preimage mismatch | mark stale and rematerialize/replan |
 | sibling integration conflict | integration attempt/repair, not leaf reruns by default |
 | flaky validation | classify flaky; do not upgrade to clean evidence |
-| daemon crash | interrupt physical effects, rebuild and redispatch fresh work |
+| daemon crash before effect dispatch | execute the already-durable intent |
+| daemon crash with final physical receipt | validate receipt and append recovered completion |
+| daemon crash with live/unknown process | verify/terminate/quarantine; interrupt attempt before any replacement |
+| machine restart | reconcile as no-process startup; consume durable receipts and effect-scoped Git state |
+| cancellation | append cancel intent, terminate by physical identity, release leases only after verified quiescence |
+| target branch moved | block delivery; require rebase/replan and exact revalidation |
 | internal invariant failure | fail closed; no automatic semantic repair |
 
 Every retry records what changed. If nothing changed and the failure is
@@ -1558,12 +2212,15 @@ deterministic, the retry is invalid.
 
 Decisions are durable domain objects with affected scope, evidence, options,
 expected revision and impact. They block only nodes whose readiness depends on
-them.
+them. A validation/human-review decision also binds candidate tree, rubric and
+proof authority; it becomes stale with any candidate change.
 
 An amendment contains:
 
 - trigger and evidence;
 - prior and proposed semantic plan/graph revisions;
+- prior and proposed Repository View/catalog digests when discovery changed the
+  modeled surface;
 - contract/resource changes;
 - attempts/artifacts becoming stale;
 - work preserved;
@@ -1574,11 +2231,14 @@ Applying an amendment never rewrites old revisions or evidence.
 
 ### 9.16 Web application
 
-**Location:** `apps/web` becomes a daemon client and projection renderer.
+**Location:** `apps/web` becomes an authenticated server-side daemon client and
+projection renderer. Browser code never imports or receives the daemon client,
+socket path or installation capability.
 
 The web process may:
 
-- submit versioned commands;
+- validate same-origin browser intent and submit versioned commands from its
+  server-side mediator;
 - query snapshots and stream ordered events;
 - derive presentation state from shared selectors;
 - display graph, contracts, resources, attempts, evidence and decisions;
@@ -1592,6 +2252,15 @@ It may not:
 - infer lifecycle from logs/stdout;
 - optimistically mark domain decisions resolved;
 - present unsafe local execution as sandboxed.
+- expose permissive CORS, accept mutation by GET, or forward a daemon capability
+  to browser JavaScript.
+
+Browser-to-Next mutations require same-origin `Origin`/Fetch Metadata, a
+SameSite anti-CSRF token and non-simple JSON content type. Next-to-daemon uses the
+user-restricted Unix socket/named pipe plus installation capability and request
+nonce. A loopback TCP development fallback binds only `127.0.0.1`, rejects
+browser origins/hosts, requires the same capability and is never the production
+default. TLS and user-account infrastructure are unnecessary for same-host IPC.
 
 Planning UI must show, for each cut, feasibility, split reasons, evidence,
 resource ownership and integration obligation. The graph supports hierarchy and
@@ -1613,6 +2282,7 @@ details. Required measurements per planning/attempt/integration operation:
 - validation duration and command digests;
 - integration inputs, conflicts and repair cost;
 - ready/selected concurrency and critical-path contribution;
+- per-candidate integration-risk signals, unknown state and selection effect;
 - sandbox capability actually used.
 
 These metrics are observations. They do not become policy thresholds until a
@@ -1652,28 +2322,34 @@ owned by exactly one of:
    not write it.
 
 Two siblings never receive concurrent exclusive ownership. Serializing two
-writers is a fallback only when their responsibilities cannot be redesigned; it
-does not make duplicated ownership semantically clean.
+writers is not a fallback: it hides an invalid plan. A deliberate sequential
+transformation is represented by versioned output artifact A consumed by the
+successor that produces B. Without that edge, overlapping writers are rejected.
 
 ### 10.3 Avoiding quadratic constraints
 
-Resource claims are indexed:
+Resource catalog overlap and claims are indexed:
 
 ```text
-resourceKey -> active claims + ready claims
+canonical resource id -> claims
+container id -> descendant resource ids
+alias class -> canonical id
 ```
 
-Selection examines nodes sharing a key. A package-level claim can cover many
-files without generating pair edges. More precise symbol/file claims can reduce
-false serialization when the Repository Model has high-confidence evidence.
+Plan verification examines only the relevant resource/ancestor/alias buckets.
+A package claim can cover many files without generating pair edges. More precise
+symbol/file claims can reduce false rejection when the Repository Model has
+known evidence. Runtime lease providers use their own exact indexes. Soft risk is
+computed only for ready candidates and the small selected frontier.
 
 ### 10.4 Dynamic discoveries
 
 During execution, an agent may discover that it needs an undeclared resource or
 artifact. It may read normal code according to context policy but cannot adopt
 new writes. It emits `dependency.discovered` or `resource.discovered` with exact
-evidence. The run actor decides whether a local amendment is safe. This prevents
-the planner from needing omniscience while preserving explicit ownership.
+evidence. The run actor composes a new Repository View/catalog when content
+changed and decides whether a local amendment is safe. This prevents the planner
+from needing omniscience while preserving explicit ownership.
 
 ---
 
@@ -1681,7 +2357,21 @@ the planner from needing omniscience while preserving explicit ownership.
 
 ### 11.1 Trust boundaries
 
-Untrusted inputs:
+Trust zones:
+
+1. **Browser:** untrusted request origin and presentation runtime. It may hold a
+   same-origin anti-CSRF value, never daemon capability material.
+2. **Next server:** trusted same-installation mediator for presentation and
+   operator intent. Compromise here is privileged, but it owns no run state or
+   processes.
+3. **Daemon:** privileged single-user control plane. It authenticates the Next
+   server over OS-restricted IPC and owns all effects.
+4. **Sandbox/executor:** untrusted probabilistic worker with only declared
+   attempt capabilities and brokered credentials.
+5. **Repository/delivery target:** user-authorized data and Git object store, but
+   repository content/config/hooks remain untrusted executable input.
+
+Untrusted inputs include:
 
 - repository content and instructions within it;
 - LLM/provider output;
@@ -1699,10 +2389,18 @@ Trusted only after verification:
 - artifact/evidence digests verified at their seams;
 - compiled validation recipes from allowed sources.
 
+The installation capability proves possession by the local server process, not
+human identity. OS ACLs plus an unexposed capability protect against malicious
+web origins and other OS users. They do not protect against malware already
+running as the same OS user; strong sandboxing limits damage from repository/model
+content but is not a host-compromise boundary.
+
 ### 11.2 Required controls
 
 - Argument arrays; no shell interpolation for internal Git/process calls.
 - Path normalization, realpath/symlink checks and deny-wins protected paths.
+- Controlled Git environment/config: hooks, external diff/textconv, credential
+  helpers, unsafe protocols and implicit submodule/filter execution disabled.
 - Separate sandbox for attempt and validation.
 - Process group/job ownership and verified termination.
 - Ephemeral or brokered executor identity.
@@ -1712,6 +2410,11 @@ Trusted only after verification:
 - Artifact preimage/postimage verification.
 - Exact final-manifest delivery.
 - Command IDs, event sequence and daemon epoch checks.
+- Unix socket mode/ownership or Windows named-pipe ACL plus installation
+  capability, nonce and bounded request framing.
+- Same-origin/Fetch Metadata/anti-CSRF checks at the browser-to-Next seam; no
+  daemon CORS surface and no mutation on GET.
+- Effect intent durability and kind-specific reconciliation before repeat.
 
 ### 11.3 Capability honesty during transition
 
@@ -1726,21 +2429,21 @@ Documentation, UI and thesis claims must not call it a secure sandbox.
 
 | Current area | Disposition | Target |
 |---|---|---|
-| `packages/repository-index` | deepen | exact Repository Model + query/relevance |
+| `packages/repository-index` | deepen | Repository Model/View + Resource Catalog + query/relevance |
 | `packages/decomposer` | replace productive internals | Planning Engine + Verifier + direct Compiler |
 | `packages/contracts` | evolve | Goal/node/change/context/seam/artifact/validation/integration contracts |
 | `packages/task-graph` | evolve schema | hierarchy + requirements + seams + resource claims |
-| `packages/conflict-risk` | absorb/retire after migration | evidence for resource claims; no pairwise matrix product |
-| `packages/scheduler` | preserve core, replace input model | pure frontier selection over claims |
+| `packages/conflict-risk` | absorb useful signals, retire package | optional Integration Risk Estimator; no pairwise matrix product |
+| `packages/scheduler` | preserve core, separate policies | hard readiness over versions/leases + advisory selection |
 | `packages/execution-core` | deepen and split internally | base, sandbox, attempt, artifacts, validation, integration adapters |
 | `packages/orchestrator-graph` | retire | useful driver semantics move to `packages/run-engine` |
 | `packages/run-coordinator` | preserve domain | commands/events/reducer/policies; no infrastructure |
-| `packages/run-store` | preserve and simplify | daemon-owned journal and rebuildable projections |
+| `packages/run-store` | preserve and simplify | daemon-owned journal/effect outbox and rebuildable projections |
 | `packages/trace-store` | preserve | diagnostics only |
 | web run hosts | remove composition ownership | daemon client adapters |
 | `apps/web` | preserve presentation | command/query client and truthful projections |
-| — | create | `packages/run-engine` application module |
-| — | create | `apps/daemon` durable composition root |
+| — | create | `packages/run-engine` actor/effect application module |
+| — | create | `apps/daemon` privileged durable composition root + local IPC |
 
 The table names target ownership, not permission to move everything at once.
 Each stage below makes one productive seam real and then deletes the replaced
@@ -1798,585 +2501,413 @@ Every stage ends with:
 
 ---
 
-## 14. Detailed implementation stages
-
-### Stage 0 — Documentation reset and experimental freeze
-
-**Goal:** establish one source of truth and stop spending live-model budget on a
-known-invalid architecture.
-
-**Files:**
-
-- Create: `docs/plans/2026-08-12-correctness-first-system-redesign.md`
-- Rewrite: `docs/README.md`, `CONTEXT-MAP.md`, `README.md`, `AGENTS.md`,
-  `CLAUDE.md`, `docs/agents/domain.md`
-- Rewrite package READMEs to reference this plan.
-- Delete superseded `docs/DECISIONS.md`, `docs/adr/`, `docs/core-pillars/`,
-  `docs/design/`, `docs/system/`, `docs/development/` and the older plan.
-- Preserve: `PRODUCT.md`, `docs/agents/`, `docs/tesis/`.
-- Delete the generated `docs/demo/` series after the operator judged it
-  non-representative. Its architectural findings remain captured in sections 1
-  and 2; its screenshots, journals and generated targets are not a benchmark.
-
-**Verification:**
-
-- all remaining Markdown links resolve;
-- no remaining authoritative document references deleted architecture paths;
-- `docs/tesis/` source content is unchanged;
-- `git diff --numstat` shows no accidental line-ending rewrite.
-
-**Status:** completed by the documentation change that introduced this plan.
-
-### Stage 1 — Characterize the productive route and remove benchmark leakage
-
-**Goal:** create enforceable architectural guardrails before changing domain
-models.
-
-**Files:**
-
-- Create: `tests/architecture/productive-route.test.ts`
-- Create: `tests/architecture/production-source-hygiene.test.ts`
-- Create: `tests/architecture/package-boundaries.test.ts`
-- Create: `packages/execution-core/src/executor/instruction-policy.ts`
-- Modify: `packages/execution-core/src/v2/node-executor.ts`
-- Modify: `packages/execution-core/src/validation/test-integrity.ts`
-- Modify: `packages/execution-core/src/index.ts`
-
-**TDD sequence:**
-
-1. Write a test that scans productive source (`apps/*/src`, `packages/*/src`)
-   and fails on the known benchmark nouns/methods. Exclude tests, fixtures and
-   historical evidence explicitly.
-2. Run it and confirm failure names `backorders` and `currentBackorders` in the
-   current productive files.
-3. Add generic instruction/validation policy based only on contracts and
-   evidence bindings.
-4. Delete benchmark-specific branches.
-5. Add a productive-route test that traces the API composition root to the
-   current planner/driver and records the starting migration map.
-6. Add package-boundary tests that forbid web client code from importing new
-   infrastructure modules and forbid domain packages from importing apps.
-7. Run narrow tests, execution-core typecheck/build and full `pnpm test`.
-
-**Exit criteria:**
-
-- production source contains no fixture-domain term;
-- behavior requested by a contract can still be represented generically;
-- current productive route is executable as a test artifact, not a prose claim.
-
-### Stage 2 — Canonical Goal, planning and resource contracts
-
-**Goal:** introduce the target language without yet replacing runtime execution.
-
-**Files:**
-
-- Create: `packages/contracts/src/goal-contract.ts`
-- Create: `packages/contracts/src/change-contract.ts`
-- Create: `packages/contracts/src/context-contract.ts`
-- Create: `packages/contracts/src/integration-contract.ts`
-- Rewrite/evolve: `artifact-contract.ts`, `seam-contract.ts`,
-  `validation-contract.ts`, `contract-bundle.ts`, `index.ts`
-- Create: `packages/task-graph/src/resource-claim.ts`
-- Modify: `packages/task-graph/src/graph-revision.ts`, `validate-v2.ts`,
-  `graph-reducer.ts`, `index.ts`
-- Create: `tests/goal-contract.test.ts`
-- Create: `tests/node-contract-bundle-vnext.test.ts`
-- Create: `tests/task-graph-resource-claims.test.ts`
-- Create: `tests/contract-supported-artifact-kinds.test.ts`
-
-**TDD sequence:**
-
-1. Specify Goal Contract identity, criterion refinement and protected refs.
-2. Specify that every new artifact kind requires a registered materializer
-   capability.
-3. Specify resource claim normalization and compatibility.
-4. Specify composite integration ownership and required validation.
-5. Implement schemas/types and pure validators.
-6. Add a one-way adapter for historical graph/contracts only where an existing
-   fixture reader needs it; prohibit the adapter from new productive writes.
-7. Keep current runtime schema operational until Stage 5 moves the compiler.
-
-**Exit criteria:**
-
-- target concepts have one schema each;
-- no production caller creates equivalent parallel arrays;
-- historical reads remain explicit and tested;
-- package and full gates pass.
-
-### Stage 3 — Repository Model and budgeted query interface
-
-**Goal:** replace path inventory grounding with a structured, queryable model.
-
-**Files:**
-
-- Create: `packages/repository-index/src/repository-model.ts`
-- Create: `packages/repository-index/src/query.ts`
-- Create: `packages/repository-index/src/relevance.ts`
-- Create: `packages/repository-index/src/resources.ts`
-- Modify: `fast-indexer.ts`, `source-parser.ts`, `snapshot.ts`, `index.ts`
-- Create fixtures under `tests/fixtures/repository-model/`
-- Create: `tests/repository-model.test.ts`
-- Create: `tests/repository-query-budget.test.ts`
-- Create: `tests/repository-import-topology.test.ts`
-- Create: `tests/repository-resource-catalog.test.ts`
-- Modify existing repository index/cache tests.
-
-**TDD sequence:**
-
-1. Fixture with packages, imports, exports, tests, barrel, config and migration.
-2. Prove current fast index cannot answer required import/test/resource queries.
-3. Implement deterministic extraction and coverage diagnostics.
-4. Implement relevance seeded by goal terms and dependency neighborhoods.
-5. Implement byte/token/query budgets and stable evidence refs.
-6. Test cache invalidation by commit plus model schema/profile.
-7. Test partial language/parser coverage returns `unknown`, never false empty.
-
-**Exit criteria:**
-
-- planner can retrieve a relevant subgraph without listing all paths;
-- imports/tests/resources are represented with evidence;
-- query truncation and coverage are visible;
-- cold/hot performance is measured but not allowed to weaken correctness.
-
-### Stage 4 — Planning Engine V3 and progressive semantic plans
-
-**Goal:** replace the current path-cut productive planner with a semantic,
-repository-tool-using planning engine.
-
-**Files:**
-
-- Create: `packages/decomposer/src/planner/planning-engine.ts`
-- Create: `packages/decomposer/src/planner/work-unit.ts`
-- Rewrite: `packages/decomposer/src/planner/semantic-plan.ts`
-- Create: `packages/decomposer/src/planner/unit-expander.ts`
-- Create: `packages/decomposer/src/planner/repository-tools.ts`
-- Create: `packages/decomposer/src/planner/plan-verifier.ts`
-- Create: `packages/decomposer/src/planner/granularity-decision.ts`
-- Create: `packages/decomposer/src/planner/planning-result.ts`
-- Modify provider adapters to implement a narrow cut/tool protocol.
-- Create: `tests/planning-engine.test.ts`
-- Create: `tests/planning-granularity-v3.test.ts`
-- Create: `tests/planning-frontier.test.ts`
-- Create: `tests/planning-contract-first.test.ts`
-- Create/update recorded transcripts under `tests/fixtures/planning/v3/`.
-
-**Required fixture scenarios:**
-
-- small cohesive vertical change remains one leaf;
-- large module splits for capacity without claiming parallelism;
-- two independent features split with disjoint resources;
-- two consumers of a new interface receive a contract-first producer;
-- shared barrel/package manifest belongs to parent integration;
-- uncertain public contract produces `needs_input` or frontier;
-- a requested deep tree with no real boundaries is rejected as an artificial
-  split;
-- depth at least three emerges from nested integration boundaries;
-- a bad proposal is repaired locally without discarding accepted siblings.
-
-**TDD sequence:**
-
-1. Implement domain objects and verifier with stub planner output.
-2. Implement categorical granularity decisions.
-3. Implement budgeted repository tool adapter.
-4. Implement unit-by-unit expansion and local repair.
-5. Add recorded replay from one real planner only after stub tests pass.
-6. Keep the old planner reachable only through an explicit comparison harness.
-7. Do not move production yet; Stage 5 compiles and Stage 6 switches the host.
-
-**Exit criteria:**
-
-- no leaf decision is based solely on path count/test existence;
-- every cut has reason, evidence and integration obligation;
-- no regex over goal wording creates formal independence;
-- context budget is recorded per unit;
-- planning-only suite runs without network.
-
-### Stage 5 — Direct Graph Compiler and resource-based graph
-
-**Goal:** compile `SemanticPlan` directly into runtime contracts and remove
-legacy projection from the new path.
-
-**Files:**
-
-- Rewrite: `packages/decomposer/src/compiler/graph-compiler.ts`
-- Rewrite/evolve: `contract-compiler.ts`, `validation-obligations.ts`,
-  `acceptance-allocation.ts`
-- Delete after callers move: `semantic-plan-projection.ts` and obsolete
-  `candidate-plan.ts`/`schema.ts` compatibility paths not used by replay.
-- Modify task-graph/compiler critics.
-- Create: `tests/graph-compiler-v3.test.ts`
-- Create: `tests/graph-compiler-integration-ownership.test.ts`
-- Create: `tests/graph-compiler-resource-claims.test.ts`
-- Create: `tests/semantic-plan-single-representation.test.ts`
-
-**TDD sequence:**
-
-1. Compile fixtures from Stage 4 into exact expected graph/contracts.
-2. Assert no WorkBreakdown projection is called.
-3. Compile resource claims, supported artifact contracts, seam bindings and
-   integration contracts.
-4. Reject unexplained shared writers and unsupported artifact kinds.
-5. Compile root/composite hierarchical obligations without duplicating child
-   ownership.
-6. Add property tests for stable IDs/digests and graph acyclicity.
-7. Remove old productive projections and their implementation-detail tests.
-
-**Exit criteria:**
-
-- one direct `SemanticPlan -> GraphRevision` transformation;
-- GraphRevision has claims rather than generated all-pairs conflicts;
-- every composite has an executable integration contract;
-- every requirement references a materializable artifact kind.
-
-### Stage 6 — Switch productive planning and retire the old planner route
-
-**Goal:** make Planning Engine V3 the only productive planner before changing
-artifact execution.
-
-**Files:**
-
-- Rewrite: `apps/web/src/lib/server/runs/v2/planning-host.ts` temporarily, or
-  introduce the run-engine planning host if Stage 9 has already landed in the
-  same integration branch.
-- Modify: `run-coordinator-host.ts`, planning event mapping and approval
-  projection.
-- Modify: `packages/decomposer/src/index.ts` exports.
-- Delete: productive reachability to `RecursivePlanner`, granularity selector,
-  legacy work breakdown and path-derived relations.
-- Create: `tests/planning-v3-productive.test.ts`
-- Create: `tests/planning-v3-events.test.ts`
-- Update: approval and cockpit planning projection tests.
-
-**TDD sequence:**
-
-1. Make a host-level test fail because the current host embeds all repository
-   paths and projects through legacy structures.
-2. Wire Repository Query, Planning Engine, Verifier and direct Compiler.
-3. Persist semantic plan identity, frontier/uncertainty and cut explanations.
-4. Ensure plan approval refers to exact plan/graph revisions.
-5. Add a reachability test forbidding productive imports of retired modules.
-6. Delete unreachable production code; keep only named historical replay
-   adapters.
-
-**Exit criteria:**
-
-- real run planning cannot invoke the old path;
-- root context is relevant and budgeted;
-- plan inspector can explain semantic cuts/resources/integration;
-- all planning tests and full suite pass without live model calls.
-
-### Stage 7 — Scoped artifact protocol and exact base materialization
-
-**Goal:** stop using whole commits as the implicit handoff between nodes.
-
-**Files:**
-
-- Create: `packages/execution-core/src/artifacts/manifest.ts`
-- Create: `packages/execution-core/src/artifacts/builder.ts`
-- Create: `packages/execution-core/src/artifacts/materializer.ts`
-- Create: `packages/execution-core/src/artifacts/content-store.ts`
-- Rewrite: `base/artifact-materializer.ts`, `execution-base-builder.ts`,
-  `execution-base-manifest.ts`
-- Evolve: `packages/run-store/src/artifact-store.ts`
-- Create: `tests/artifact-manifest.test.ts`
-- Create: `tests/artifact-builder-real-git.test.ts`
-- Create: `tests/artifact-materializer-real-git.test.ts`
-- Rewrite: `tests/execution-base-builder.test.ts`
-
-**Required cases:** add/modify/delete/rename/mode/binary; two artifacts from one
-candidate; unrelated candidate changes excluded; duplicate digest; wrong
-preimage; stale base; partial apply cleanup; Windows path normalization.
-
-**TDD sequence:**
-
-1. Demonstrate that current `files` contract transports unrelated commit paths.
-2. Define manifest schemas and content digest.
-3. Build manifests from Git objects, not stdout.
-4. Materialize exact entries and verify before/after blobs.
-5. Make base builder consume manifests only.
-6. Keep source candidate commit for provenance and evidence.
-7. Reject legacy commit artifact in new graph execution; historical replay uses
-   a compatibility reader outside the new productive path.
-
-**Exit criteria:**
-
-- declared path subsets are physically enforced;
-- no new productive artifact has kind `commit`;
-- candidate commit remains traceable as provenance;
-- integration can combine disjoint child manifests without cherry-picking their
-  entire commits.
-
-### Stage 8 — First-class integration attempts and hierarchical evidence
-
-**Goal:** make composites own planned shared work and prove each combined level.
-
-**Files:**
-
-- Rewrite: `packages/execution-core/src/integration/manifest.ts`
-- Replace/retire: `integration/agent.ts` behind the new interface.
-- Create: `integration/integrator.ts`, `integration/conflict-classifier.ts`
-- Modify: `v2/node-executor.ts` or its replacement attempt orchestration.
-- Modify validation recipe/evidence code for composite obligations.
-- Create: `tests/composite-integrator.test.ts`
-- Create: `tests/composite-shared-resource.test.ts`
-- Create: `tests/hierarchical-evidence.test.ts`
-- Rewrite real-Git integration tests to use artifact manifests.
-
-**TDD sequence:**
-
-1. Reproduce whole-commit conflict with unrelated paths.
-2. Integrate scoped manifests deterministically.
-3. Execute parent-owned shared edit under `integration_write` claims.
-4. Validate seam and parent obligations on exact combined candidate.
-5. Produce parent artifact/candidate-tree manifest.
-6. Implement cause-specific repair with a new immutable attempt.
-7. Delete whole-commit cherry-pick path from productive integration.
-
-**Exit criteria:**
-
-- composite integration is visible as its own attempt/evidence;
-- clean application without semantic proof remains unverified;
-- shared files have one planned owner;
-- child success is revalidated at parent/root.
-
-### Stage 9 — Attempt Runner decomposition and generic repair
-
-**Goal:** replace the giant V2 executor with deep modules and immutable repair
-attempts.
-
-**Files:**
-
-- Create: `packages/execution-core/src/attempt/attempt-runner.ts`
-- Create: `attempt/candidate-builder.ts`, `attempt/change-enforcer.ts`,
-  `attempt/repair-input.ts`
-- Create: `validation/validation-engine.ts`
-- Move existing helpers behind these interfaces without speculative packages.
-- Reduce exports in `packages/execution-core/src/index.ts`.
-- Create: `tests/attempt-runner.test.ts`
-- Create: `tests/repair-attempt-lineage.test.ts`
-- Create: `tests/execution-core-public-interface.test.ts`
-- Migrate V2 node executor tests to interface-level behavior.
-
-**TDD sequence:**
-
-1. Characterize productive attempt outcomes and Git side effects.
-2. Extract candidate creation and change enforcement behind one interface.
-3. Extract validation behind one interface.
-4. Make repair create a new attempt from a quarantined failed candidate and
-   exact findings.
-5. Move integration to `CompositeIntegrator`.
-6. Shrink public exports; delete old executor/integration paths once unreachable.
-
-**Exit criteria:**
-
-- caller invokes one attempt interface;
-- execution, Git inspection, validation and integration have separate internal
-  responsibilities;
-- no mutable failed-attempt evidence;
-- no benchmark-specific or accumulated one-off prompt branches.
-
-### Stage 10 — Sandbox capabilities and credential isolation
-
-**Goal:** make execution safety factual and enforceable before live autonomous
-runs resume.
-
-**Files:**
-
-- Create: `packages/execution-core/src/sandbox/types.ts`
-- Create: `sandbox/provider.ts`, `sandbox/policy.ts`,
-  `sandbox/credential-broker.ts`
-- Create adapters appropriate to supported platforms/executors only after a
-  capability spike proves them.
-- Modify: executor profiles and `agent-env.ts`; remove unconditional bypass.
-- Create: `tests/sandbox-policy.test.ts`
-- Create: `tests/sandbox-filesystem-escape.test.ts`
-- Create: `tests/sandbox-process-lifecycle.test.ts`
-- Create: `tests/credential-broker.test.ts`
-- Create opt-in platform integration tests under `tests/platform/`.
-
-**TDD sequence:**
-
-1. Assert current profiles report host-visible/unsafe behavior.
-2. Remove claims of strong isolation and require explicit unsafe opt-in.
-3. Implement capability negotiation and minimum policy.
-4. Implement attempt-specific credential home/broker.
-5. Prove filesystem escape, process survival and network behavior for each
-   claimed profile. A missing proof lowers the capability classification.
-6. Thread capability digest into fingerprints/events/UI.
-
-**Exit criteria:**
-
-- no productive default passes `danger-full-access` or skips permissions
-  unconditionally;
-- every executor advertises tested capabilities;
-- unsafe local mode is explicit and visible;
-- host credentials/config are not inherited broadly;
-- validation uses an equal or stronger isolation profile than implementation.
-
-### Stage 11 — Durable Run Engine and daemon ownership
-
-**Goal:** remove long-running ownership from Next.js and establish one writer by
-construction.
-
-**Files:**
-
-- Create package: `packages/run-engine/`
-- Create app: `apps/daemon/`
-- Create: run actor, mailbox, effect dispatcher, recovery supervisor,
-  repository resource manager and local transport.
-- Modify: `packages/run-coordinator` ports/events only where domain facts require
-  extension.
-- Simplify: `packages/run-store` authority interface.
-- Create: `tests/run-engine.test.ts`
-- Create: `tests/run-engine-command-idempotency.test.ts`
-- Create: `tests/run-daemon-web-restart.test.ts`
-- Create: `tests/run-daemon-crash-recovery.test.ts`
-- Create: `tests/run-daemon-single-writer.test.ts`
-
-**TDD sequence:**
-
-1. Characterize web-owned background task loss.
-2. Implement pure run actor with fake effects and event store.
-3. Implement durable command acceptance and idempotency.
-4. Implement effect completion through actor mailbox.
-5. Implement daemon lock/epoch and startup recovery.
-6. Compose existing planner/scheduler/attempt/validator/integrator adapters.
-7. Demonstrate web process restart while a fake long attempt continues.
-8. Demonstrate daemon crash interrupts/reconciles and resumes only fresh work.
-
-**Exit criteria:**
-
-- no productive run lifetime depends on web/globalThis;
-- exactly one append owner per run is mechanically enforced;
-- GET/query has no mutation side effect;
-- run journals reconstruct after crash;
-- old leases/fences are retained until tests prove them redundant, then removed
-  in the same stage or Stage 13.
-
-### Stage 12 — Web migration to daemon client
-
-**Goal:** make web a truthful command/query client without execution authority.
-
-**Files:**
-
-- Create: `apps/web/src/lib/run-client/`
-- Replace server run composition routes with daemon client adapters.
-- Remove: `runner-state.ts`, web process ownership registries and query-triggered
-  liveness mutation after all callers move.
-- Update run projections for planning frontier, resource claims, sandbox
-  capability and integration attempts.
-- Create/update API contract, projection and browser fixture tests.
-
-**TDD sequence:**
-
-1. API test: command receipt vs completed effect are distinct.
-2. Query test: repeated GET produces no new event or mutation.
-3. Restart test: web reconnects from cursor and displays live daemon state.
-4. UI tests: cut rationale/resources/integration; exact evidence; safety profile.
-5. Browser fixture test: no auto viewport movement on events.
-6. Remove direct web dependencies on execution/decomposer adapters.
-
-**Exit criteria:**
-
-- web imports only client/domain presentation contracts needed to render;
-- no planner/executor/driver is instantiated in web;
-- queries and streams recover gaps deterministically;
-- UI remains WCAG 2.2 AA and state-honest.
-
-### Stage 13 — Legacy removal and architecture closure
-
-**Goal:** delete transitional code and prove the target dependency graph.
-
-**Candidates for deletion after reachability proof:**
-
-- productive `RecursivePlanner`/path-cut policy and derived path seams;
-- WorkBreakdown/candidate planning schemas not needed for historical import;
-- pairwise conflict matrix/constraint productive path;
-- commit artifact materializer and whole-commit integration path;
-- giant V2 executor after all responsibilities move;
-- `packages/orchestrator-graph` after driver callers move;
-- web runner/liveness ownership, mutation fences/takeovers made redundant by the
-  daemon topology;
-- stale package exports and implementation-detail tests;
-- any dependency used only by deleted code.
-
-**Tests:**
-
-- dependency graph/cycle test;
-- forbidden import/reachability test;
-- public package surface snapshots;
-- historical event/graph upcast replay;
-- full deterministic E2E from goal fixture to delivery receipt.
-
-**Exit criteria:**
-
-- one productive implementation per responsibility;
-- compatibility only at explicit historical read boundaries;
-- package names/readmes match actual responsibilities;
-- full verification suite passes from a clean install/build;
-- source LOC reduction and removed mechanisms are recorded without using LOC as
-  a correctness claim.
-
-### Stage 14 — Controlled evaluation eligibility
-
-**Goal:** establish that spending model tokens can now answer meaningful
-questions.
-
-#### Gate A — no-model architecture tests
-
-- semantic planning fixtures cover small, deep, parallel, contract-first and
-  shared-integration cases;
-- exact artifacts round-trip through real Git;
-- composites validate combined candidates;
-- daemon/web restart and daemon crash tests pass;
-- sandbox capability tests pass for the chosen profile;
-- no benchmark leakage test passes;
-- full project gates pass.
-
-#### Gate B — one live planning smoke
-
-One planner call sequence against a medium fixture verifies tool use, context
-budgets, semantic plan shape and direct compilation. No coding executors run.
-Record the transcript once for replay. Failure returns to the responsible module;
-do not patch the benchmark wording.
-
-#### Gate C — one two-leaf end-to-end smoke
-
-Use a target with:
-
-- one contract-first or existing interface;
-- two genuinely independent implementations;
-- one parent-owned shared integration edit;
-- focused leaf tests and one composite test;
-- an external exact-candidate oracle.
-
-The purpose is to prove artifact transport and integration, not graph size.
-
-#### Gate D — medium graph
-
-Only after C passes, run a 4–6 leaf, depth 2–3 target containing a deliberate
-resource overlap and local amendment. Require bounded tokens and a predeclared
-stop rule.
-
-#### Gate E — new thesis series
-
-Design and preregister a new experiment. Do not reuse the old five-run claim as
-if comparable. The experiment must separately evaluate:
-
-- outcome quality;
-- semantic plan quality;
-- useful parallelism;
-- integration correctness;
-- recovery;
-- cost.
-
-Node count/depth are descriptive variables, never the primary outcome.
-
----
-
-## 15. Verification commands
-
-Use the narrowest test first. At every stage closure run:
+## 14. Authoritative implementation stages
+
+These are the only implementation stages. Each stage has a product increment,
+deterministic gate and retirement obligation. A unit test alone cannot close a
+stage. The sequence separates semantic correctness from durability, hard
+readiness from soft selection, offline planning from productive cutover, one
+live leaf from parallelism, and normal delivery from crash recovery.
+
+A later stage may add evidence for an earlier invariant, but it must not bypass
+an earlier gate or reopen a retired representation.
+
+### Stage 0 — Freeze the baseline and make evidence attributable
+
+**Purpose:** establish reproducible current truth before behavior changes.
+
+**Deliverables**
+
+- Record candidate SHA, dirty-worktree inventory, platform, tool versions, model
+  identifiers and commands for every baseline cell.
+- Characterize the productive route from `POST /api/runs` through planning,
+  scheduling, execution, integration, validation and delivery.
+- Preserve adverse evidence and mark unexecuted cells `not_run`.
+- Create a transition ledger from every target invariant to its current owner,
+  gap, implementation stage and retirement.
+- Freeze feature work in legacy planning and lifecycle representations.
+
+**Gate G0 — attributable baseline**
+
+- Clean-clone baseline and productive-route characterization are reproducible.
+- Every claim binds to an exact candidate or is `not_run`.
+- Every target invariant has an owner, stage and retirement disposition.
+- No redesign implementation preceded this gate.
+
+**Retirement:** none.
+
+### Stage 1 — Introduce the canonical correctness kernel
+
+**Purpose:** create one vocabulary for obligations, ownership and evidence
+without changing the live path.
+
+**Deliverables**
+
+- Versioned `GoalContract`, verification policy, `ProofStrategy`,
+  `SemanticPlan`, `GraphRevision`, `RepositoryViewRef`,
+  `ResourceClaim`, `RuntimeLeaseClaim`, `ArtifactRequirement`,
+  `SeamBinding`, immutable artifact manifests, `InputFingerprint`,
+  `ValidationObligation` and `EvidenceBinding`.
+- Pure validators for ownership uniqueness, version-chain legality, proof
+  authority, artifact reachability, graph acyclicity and contradictions.
+- Compatibility readers at persistence boundaries; no new legacy producer.
+
+**Gate G1 — canonical contracts**
+
+- Contract fixtures round-trip deterministically.
+- Double writers, stale evidence, ungrounded proof modes, mutable manifest
+  identity and artifact/dataflow cycles fail for the intended reason.
+- Dependency direction remains `apps -> specific packages -> shared`.
+- No package adds a dependency on legacy `@manyhands/core`.
+
+**Retirement:** prohibit new legacy contract producers.
+
+### Stage 2 — Build the durable daemon kernel and effect protocol
+
+**Purpose:** establish single-writer ownership and recoverable physical effects
+before productive cutover.
+
+**Deliverables**
+
+- Local daemon with one fenced actor per run.
+- Installation capability, nonce-bound commands and authenticated
+  Next-server-to-daemon IPC.
+- Durable `EffectIntent` with stable `effectId`, input digest, attempt and
+  reconciliation metadata.
+- Process, Git-ref, sandbox, validation-command, delivery and cleanup adapters
+  with kind-specific reconciliation.
+- Windows Job Object or Unix process-group supervision with durable started and
+  final receipts.
+- Partial-tail journal repair and fail-closed middle-corruption handling.
+
+This stage proves the protocol with deterministic fakes and wraps only the
+physical capabilities the current route actually supports. Later stages replace
+artifact, sandbox, validation and delivery adapter internals behind the same
+effect contract; an adapter stub is not evidence that the later semantic gate
+has passed.
+
+**Gate GD0 — actor authority**
+
+- Replay is deterministic; duplicate commands are idempotent; stale fences fail.
+- Two daemons cannot own one run.
+- Browser or web-process restart is not a lifecycle event.
+
+**Gate GD1 — effect recovery**
+
+For every effect kind, inject crashes before intent, after intent, after
+physical success but before authoritative completion, during reconciliation,
+and after terminal append but before acknowledgement. Restart must reach one
+authoritative outcome without duplicate non-idempotent effects, lost success or
+an exactly-once claim.
+
+**Retirement:** no new `globalThis` run ownership or web background runner.
+
+### Stage 3 — Move productive lifecycle ownership to the daemon
+
+**Purpose:** make the daemon the only lifecycle authority while current planner
+and executor remain behind adapters.
+
+**Deliverables**
+
+- Run creation becomes a command submitted through the trusted server mediator.
+- Queries read daemon projections; GET routes do not mutate lifecycle state.
+- Pause, resume, cancel, decisions and shutdown become durable commands.
+- Cancellation suppresses pending effects, terminates process groups, reconciles
+  cleanup and records the final state.
+- Remove the old web runner, route-time recovery and process-local ownership.
+- Keep any current live executor available only as an explicitly labelled
+  transitional/unsafe profile. The gate oracle uses a deterministic fake
+  executor; unattended live model execution is not authorized until GLeaf.
+
+**Gate GR — productive ownership**
+
+- A productive-route run with the deterministic fake executor survives browser
+  closure, Next restart and daemon restart.
+- Multiple tabs/web processes cannot duplicate planning or execution.
+- Cancellation leaves no descendant process or ambiguous run state.
+- The legacy productive owner is unreachable.
+
+**Retirement:** delete web-owned orchestration.
+
+### Stage 4 — Build Repository Model, views and resource catalog
+
+**Purpose:** ground planning in queryable, versioned repository truth.
+
+**Deliverables**
+
+- Deterministic facts with provenance and epistemic state:
+  `unknown | known | partial | conflicting`.
+- Immutable `RepositoryView` overlays exact adopted artifacts on a base.
+- View-scoped `ResourceCatalog` with canonical identity, alias/containment and
+  tri-state overlap: `yes | no | unknown`.
+- Separate semantic resource identity from runtime lease identity.
+- Budgeted queries, generated-file policy, gitlink awareness and stable digest.
+
+**Gate GRepo — grounded views**
+
+- Identical base, overlays and budget yield identical digest and answers.
+- Rename aliases, nesting, generated files, symlinks and gitlinks have explicit
+  outcomes.
+- Unknown write overlap fails concurrent readiness.
+- No planner claim lacks repository provenance.
+
+**Retirement:** remove ad hoc planner scans once their queries exist.
+
+### Stage 5 — Verify the semantic planner offline
+
+**Purpose:** prove one semantic representation before production.
+
+**Deliverables**
+
+- Progressive planner with bounded query/revision budget and explicit
+  `needs_input`, `unsupported` and `ambiguous` outcomes.
+- Deterministic verifier for coverage, ownership, versions, seams, artifacts,
+  proof strategies and cycles.
+- Direct `SemanticPlan -> GraphRevision` compiler with no intermediate graph.
+- Advisory model critic; each finding requires a deterministic check, new query
+  or human decision.
+- Differential offline evaluation against the current planner.
+
+**Gate GP0 — structural correctness**
+
+- Tiny, cross-package, generated, ambiguous and unsupported fixtures plus real
+  repositories are covered.
+- Accepted plans pass invariants; double writers, missing proof authority and
+  cycles fail before compilation.
+- Compilation is deterministic and semantically lossless.
+
+**Gate GP1 — planning product quality**
+
+- Pre-registered browser and topology oracles pass on attributed real repos.
+- Minimal standard-library targets remain control-plane smoke only.
+- Model criticism cannot directly approve or reject.
+- No-progress revisions terminate explicitly.
+
+**Retirement:** none until cutover.
+
+### Stage 6 — Cut over productive planning and scheduling
+
+**Purpose:** remove representation drift and pairwise conflict scoring.
+
+**Deliverables**
+
+- Live planning emits only `SemanticPlan -> GraphRevision`.
+- `ReadinessEvaluator` checks hard prerequisites, exact input versions,
+  decisions, resource ownership and runtime leases.
+- `SelectionPolicy` ranks only ready work using bounded
+  `IntegrationRiskEstimate` evidence.
+- Risk is lazy/indexed against the small selected set; no all-pairs matrix.
+- Risk affects order, concurrency and review intensity only; never dependency,
+  authority or readiness.
+
+**Gate GS — canonical frontier**
+
+- Live code has no legacy compiler projection or pairwise risk product.
+- Ready-set decisions are explainable from obligations.
+- Perturbing risk changes cost/order only.
+- A pending decision removes only its affected nodes from readiness; unrelated
+  work continues when capacity permits.
+- Unknown overlap involving a modification blocks plan approval/frontier or
+  requests clarification; the scheduler does not compensate by serialization.
+
+**Retirement:** delete legacy projection, compiler and pairwise conflict product.
+
+### Stage 7 — Implement attempts, Git-native artifacts and exact validation
+
+**Purpose:** bind results and proof to immutable scoped content.
+
+**Deliverables**
+
+- Immutable attempts keyed by `InputFingerprint`.
+- `ChangeSetManifest` and `CandidateTreeManifest` backed by Git object IDs,
+  modes and retained namespaced refs.
+- Exact materialization without whole-commit cherry-pick.
+- Git policy for hooks, filters, attributes, line endings, credentials,
+  submodules and repository-local configuration.
+- Concrete proof strategies and Evidence Matrix entries bound to candidate,
+  command, environment, baseline and authority.
+- Human review bound to exact candidate/rubric; model judgement remains
+  advisory/non-final.
+
+**Gate GA — artifact/evidence integrity**
+
+- Unowned paths, deletes, modes, symlinks, gitlinks and binaries are represented
+  or rejected deterministically.
+- Git GC cannot remove referenced artifacts.
+- No-op diffs, wrong selectors, stale approval and self-authored tests cannot
+  accidentally satisfy root criteria.
+- Required criteria without an allowed oracle enter `needs_input`.
+
+**Retirement:** remove commit-as-artifact transport and mutable manifest status.
+
+### Stage 8 — Run one live leaf through sandboxed effects
+
+**Purpose:** prove one trustworthy vertical slice before parallelism.
+
+**Deliverables**
+
+- Capability-driven sandbox with read-only inputs, scoped outputs, network and
+  credential policy, and observable enforcement.
+- Live Codex, then Claude, through the same attempt/effect protocol.
+- Agent-created Git state is observation; the orchestrator creates candidates.
+- Cause-specific bounded repair and durable cleanup.
+
+**Gate GLeaf — live leaf**
+
+- One visible real run yields a scoped artifact and exact validation evidence.
+- Attempts cannot write outside scope or access undeclared credentials/network.
+- Repository/project settings cannot enable undeclared hooks, tools, MCP servers
+  or additional directories in either executor profile.
+- Timeout, cancellation, supervisor restart and cleanup crash leave no orphan
+  or unjournaled candidate.
+- Missing enforcement blocks rather than silently degrades.
+
+**Retirement:** remove direct productive process execution outside supervision.
+
+### Stage 9 — Add hierarchical integration and bounded parallel selection
+
+**Purpose:** integrate children without an unrestricted super-agent.
+
+**Deliverables**
+
+- Composite attempts with explicit parent-owned resources and exact child
+  artifact inputs.
+- Same scope enforcer for leaves and composites.
+- Repair routing: child defect -> child; seam mismatch -> boundary owner;
+  ownership/topology error -> plan amendment; environment -> effect policy.
+- Resource-aware parallel selection among ready leaves.
+- Calibrated soft-risk records; learned weights stay disabled until attributed
+  evidence exists.
+
+**Gate GI — hierarchical correctness**
+
+- Unordered writers never share a semantic resource.
+- Sequential transformations have explicit artifact/version chains.
+- Integration cannot change child-owned resources without amendment.
+- Repair occurs at the lowest authority and candidate changes stale evidence.
+- Parallel/sequential executions converge when the graph permits both.
+
+**Retirement:** remove universal integration repair and implicit parent power.
+
+### Stage 10 — Prove adverse recovery and exact delivery
+
+**Purpose:** prevent crash-induced false success or duplicate publication.
+
+**Deliverables**
+
+- Restart matrix for planning, execution, validation, integration, cancellation,
+  cleanup and delivery.
+- Delivery intent binds source manifest, expected target ref/OID, cleanliness
+  policy and destination.
+- Compare-and-swap or fast-forward transaction plus ambiguous-outcome
+  reconciliation.
+- Immutable receipt for exact delivered tree/ref.
+- Diagnostics for corrupt journal, missing object, unresolved process, stale
+  decision, target divergence and unrecoverable external effect.
+
+**Gate GDel — crash-safe delivery**
+
+- Crashes around publication converge to one receipt and target state.
+- Dirty, diverged or unexpectedly advanced targets fail closed.
+- Delivery cannot reuse stale candidate evidence or human approval.
+- Clean clone reproduces the claim.
+
+**Retirement:** remove delivery without intent, CAS and reconciliation.
+
+### Stage 11 — Close the architecture and qualify the product
+
+**Purpose:** remove compatibility debt and judge actual product quality.
+
+**Deliverables**
+
+- Delete legacy lifecycle, planning, graph, conflict, artifact and delivery
+  routes after required imports are preserved.
+- Enforce dependency boundaries and one authority per invariant in CI.
+- UI shows projections, evidence freshness, decisions and recovery diagnostics
+  without imperative overrides or automatic viewport recentering.
+- Verify WCAG 2.2 AA, reduced motion, long content and small screens.
+- Evaluate real repositories with independent topology, browser-product,
+  correctness, crash-recovery and clean-clone delivery oracles.
+- Update operator, recovery, security and limitations docs.
+
+**Gate GProd — evaluation eligibility**
+
+- All prior gates pass on an attributable candidate.
+- Legacy productive paths are deleted or read-only import compatibility.
+- Each invariant has one owner and deterministic verification.
+- Required adverse cells passed; inapplicable cells explain why.
+- Remaining limitations do not contradict the product claim.
+
+**Retirement:** delete temporary adapters, flags and dual writes.
+
+### Gate summary
+
+| Gate | Decides | Required evidence |
+|---|---|---|
+| G0 | baseline attributable | candidate, environment, productive-route trace |
+| G1 | contracts sound | deterministic contract/invariant tests |
+| GD0 | daemon authority | replay, fencing, duplicate-command tests |
+| GD1 | effects recoverable | per-kind crash-injection matrix |
+| GR | lifecycle ownership moved | restart, multi-client, cancellation cells |
+| GRepo | repository truth queryable | deterministic views/catalog plus real repos |
+| GP0 | planner structurally correct | verifier/compiler suites |
+| GP1 | planner product quality | pre-registered real-repo/browser oracles |
+| GS | live frontier canonical | productive trace and scheduler properties |
+| GA | artifacts/evidence exact | Git object, scope, authority, freshness tests |
+| GLeaf | live leaf trustworthy | visible sandboxed run and process failures |
+| GI | hierarchy correct | composite, amendment, convergence cells |
+| GDel | delivery crash-safe | publication crash matrix and clean clone |
+| GProd | product evaluable | full attributed Evidence Matrix |
+
+### Required real and adverse cells
+
+Each cell varies one primary dimension. Combined chaos supplements but does not
+replace these cells.
+
+| Cell | Earliest gate | Primary dimension | Required oracle |
+|---|---|---|---|
+| R0 | GLeaf | tiny single-package goal | exact acceptance and clean clone |
+| R1 | GI | cross-package seam | typed seam and parent integration evidence |
+| R2 | GI | independent leaves | parallelism without resource conflict |
+| R3 | GI | sequential rewrite | explicit artifact/version chain |
+| R4 | GP0 | ambiguous ownership | reject or human clarification |
+| R5 | G1/GP0 | missing proof authority | `needs_input`, never false success |
+| R6 | GA | generated/ignored output | explicit policy outcome |
+| R7 | GA | binary/mode/symlink/gitlink | exact manifest/materialization |
+| R8 | GR | daemon restart | one owner and resumed projection |
+| R9 | GD1 | crash after physical success | reconciliation without duplicate |
+| R10 | GR/GLeaf | cancellation/timeout | no descendant process/ambiguous attempt |
+| R11 | GI | integration defect | lowest-authority repair |
+| R12 | GDel | delivery target divergence | fail closed |
+| R13 | GA/GDel | stale human approval | invalidated after candidate change |
+| R14 | GLeaf | unsupported sandbox | blocked with diagnostic |
+| R15 | GS | scoped decision pending | unrelated ready leaf continues |
+| R16 | GI | daemon crash during composite integration | one reconciled integration attempt/outcome |
+| R17 | GLeaf | leaf failure then repair | new causal input/fingerprint and immutable lineage |
+| R18 | GProd | medium real application | independent topology, product and clean-clone oracles |
+| R19 | GProd | larger meaningful hierarchy | useful boundaries/parallelism and bounded cost, not node count |
+
+### Stage dependency and retirement map
+
+| Capability | Introduced | Productive cutover | Legacy retirement |
+|---|---:|---:|---:|
+| Canonical contracts | 1 | incremental | 11 |
+| Durable daemon/effects | 2 | 3 | 3/11 |
+| Repository views/catalog | 4 | 5–6 | 6/11 |
+| Semantic planner/compiler | 5 | 6 | 6 |
+| Readiness/selection split | 6 | 6 | 6 |
+| Git-native artifacts/evidence | 7 | 7–8 | 7/11 |
+| Sandbox/live executors | 8 | 8 | 8/11 |
+| Hierarchical integration | 9 | 9 | 9/11 |
+| Exact delivery | 10 | 10 | 10/11 |
+| Compatibility adapters | as needed | temporary | 11 |
+## 15. Verification strategy and commands
+
+Use the narrowest relevant check first, then the affected package checks, then
+the full handoff-tree checks. No gate closes on filenames alone: its required
+real/adverse cells and product oracle must also pass.
+
+Current whole-repository commands:
 
 ```bash
 pnpm test
@@ -2386,171 +2917,282 @@ pnpm build
 pnpm web:build
 ```
 
-Once `apps/daemon` and `packages/run-engine` exist, add their typecheck/build to
-the workspace recursion and a daemon smoke command that uses fake executors.
+When `apps/daemon` and `packages/run-engine` exist, workspace recursion must
+include their typecheck/build and an isolated fake-executor daemon smoke test.
+Source changes close only on the exact candidate handed off. Documentation-only
+changes require link, terminology and final-diff checks, not unrelated builds.
 
-For documentation-only changes, verify links and diff instead of running product
-builds. For source changes, no stage closes without the full `pnpm test` on the
-exact handoff tree.
+The intended gate suites are named by responsibility, not predeclared
+filenames:
 
-Suggested architecture checks:
+| Gate family | Narrow checks |
+|---|---|
+| G1 | contract round-trip, invariant property tests, dependency boundaries |
+| GD0/GD1 | event replay, fencing, duplicate commands, per-effect crash matrix |
+| GR | real restart, multi-client ownership, physical cancellation |
+| GRepo | view digest, alias/containment/overlap, Git edge fixtures |
+| GP0/GP1 | planner/verifier/compiler properties plus real product oracles |
+| GS | hard readiness properties, selection-policy perturbation, no all-pairs product |
+| GA | Git object retention/materialization, scope, proof authority, evidence freshness |
+| GLeaf | sandbox capability, process-tree death, cleanup reconciliation |
+| GI | composite scope, repair routing, sequential version chain, convergence |
+| GDel | publication compare-and-swap, ambiguous-outcome reconciliation, clean clone |
+| GProd | full matrix, accessibility, dependency and legacy-reachability checks |
 
-```bash
-pnpm vitest run tests/architecture
-pnpm vitest run tests/repository-model.test.ts tests/repository-query-budget.test.ts
-pnpm vitest run tests/planning-engine.test.ts tests/planning-granularity-v3.test.ts
-pnpm vitest run tests/artifact-materializer-real-git.test.ts
-pnpm vitest run tests/composite-integrator.test.ts tests/hierarchical-evidence.test.ts
-pnpm vitest run tests/run-daemon-crash-recovery.test.ts
-```
-
-Do not invent filenames or commands before their stage creates them; this list
-defines the intended test surface.
+A test name created during implementation must describe the invariant it proves.
+Do not invent empty test shells merely to match this document.
 
 ---
 
 ## 16. Risk register and mitigations
 
-| Risk | Consequence | Mitigation |
+| Risk | Consequence | Mitigation / gate |
 |---|---|---|
-| Redesign becomes another parallel architecture | more drift | switch productive caller and delete old path per stage |
-| Semantic planner still hallucinates boundaries | invalid plans | repository tools, evidence refs, verifier, unknown state |
-| Progressive planning complicates runtime | new lifecycle bugs | represent frontier now; overlap planning/execution only later |
-| Resource claims over-serialize | lost parallelism | start conservative, improve precision from evidence, measure |
-| Resource claims under-specify conflicts | integration failures | parent ownership, hierarchical validation, discovery amendments |
-| Artifact manifests mishandle Git edge cases | corrupted bases | real-Git round-trip suite including binary/rename/mode/preimage |
-| Daemon migration weakens current safety | duplicate writers | preserve fencing until single-writer crash tests prove retirement |
-| Sandbox unavailable on a platform | unsafe autonomy | capability classification, explicit unsafe opt-in, fail closed |
-| Credential broker breaks CLI auth | executor unavailable | profile-specific integration tests; never fall back to full HOME |
-| Planner context retrieval omits critical code | wrong boundary | evidence coverage, uncertainty, agent read discovery and amendment |
-| Hierarchical validation duplicates cost | high tokens/time | deduplicate exact physical commands with explicit multi-binding |
-| New experiment repeats oracle weakness | misleading thesis | preflight both directions and separate plan/product/cost outcomes |
+| Redesign becomes a parallel architecture | permanent drift and double authority | productive cutover plus deletion in every stage; GProd reachability check |
+| Daemon and journal stores both become lifecycle authority | inconsistent recovery | canonical domain journal only; artifact/effect stores hold facts and receipts, never lifecycle truth; GD0 |
+| Crash after physical success replays a non-idempotent effect | duplicate process, ref update or publication | durable intent, stable key, kind-specific reconcile, no exactly-once claim; GD1/GDel |
+| Repository view omits an adopted artifact | planner/executor use stale truth | immutable overlay list and digest, artifact reachability validation; GRepo |
+| Resource identity is too coarse | avoidable plan rejection or lost parallelism | evidence-backed alias/containment refinement and measured ready-set loss; GS |
+| Resource identity is too permissive or unknown | unordered semantic writers | tri-state overlap, fail-closed write readiness, explicit amendment; G1/GS |
+| Soft risk becomes hidden correctness policy | heuristic changes validity | strict ReadinessEvaluator/SelectionPolicy split and perturbation test; GS |
+| Planner hallucinates boundaries or proof | invalid plan with plausible prose | provenance, epistemic state, deterministic verifier and explicit needs_input; GP0/GP1 |
+| Model critic becomes an unreviewable authority | nondeterministic rejection/approval | advisory findings only, resolved by deterministic check/query/human; GP0 |
+| Git-native manifest loses reachability | valid artifact disappears after GC | retained namespaced refs and reachability audit; GA |
+| Git edge behavior changes content | candidate differs by platform/config | object IDs/modes, explicit attributes/filter/hook/submodule policy, real-Git matrix; GA |
+| Self-authored tests prove their own requirement | circular success evidence | criterion proof authority, independent baseline/negative controls and human/external modes; GA |
+| Integration becomes a super-agent | ownership is erased at the root | explicit parent scope and same change enforcer as leaves; GI |
+| Wrong repair route causes endless expensive retries | repeated non-progress | classified cause, lowest-authority repair, immutable lineage and bounded revisions; GI |
+| Sandbox capability differs by OS | unsafe or misleading autonomy | capability declaration, observable enforcement, fail closed; GLeaf |
+| Credential isolation breaks CLI authentication | executor unavailable | profile-specific integration tests; no fallback to full user profile |
+| Same-user host malware reaches daemon capability | local compromise controls runs | filesystem/pipe ACL, nonce, least privilege; document residual host-trust limit |
+| Browser reaches privileged daemon directly | token leakage/CSRF/cross-origin control | trusted Next BFF, same-origin and Fetch Metadata checks; GR |
+| Human approval becomes stale | unreviewed candidate delivered | candidate-bound review and automatic invalidation; GA/GDel |
+| Product evaluation rewards node count | artificial fan-out and weak output | independent topology/product/correctness oracles; GP1/GProd |
+| Migration weakens current safety | regression before replacement is proven | preserve fencing, exact candidates, operation journals and delivery checks until replacement gates pass |
 
 ---
 
 ## 17. Rejected alternatives
 
-### Tune the existing path/test thresholds
+### Exact string equality for resources
 
-Rejected because it changes node quantity without improving semantic ownership,
-artifacts or integration.
+Rejected. Canonical IDs need view-scoped alias and containment semantics.
+However, the catalog is deliberately not a general semantic ontology: it answers
+identity/overlap with provenance and may return `unknown`.
 
-### Force minimum depth or fan-out
+### Pairwise conflict scoring as the scheduler substrate
 
-Rejected because it rewards artificial coordination and makes node count a
-Goodhart metric.
+Rejected. It is quadratic, mixes correctness with policy and can hide missing
+ownership. Hard readiness is obligation-based; soft risk is bounded and evaluated
+only among already-ready candidates.
 
-### Ask one model for a complete perfect DAG
+### Exactly-once physical effects
 
-Rejected because repository understanding is incomplete, plan validation becomes
-an expensive all-or-nothing gate and later discoveries invalidate broad work.
+Rejected. A crash can occur after the external action and before durable
+completion. The system promises durable intent, idempotency where available,
+reconciliation and one authoritative observed outcome—not exactly-once
+execution.
 
-### Let every sibling edit shared files and rely on merge repair
+### A separate distributed workflow/database platform
 
-Rejected because conflict-free Git application is not semantic compatibility and
-repair cost grows toward the root.
+Rejected for the local single-user product. A fenced append-only domain journal,
+single daemon and Git object database meet the required ownership boundaries
+with less operational surface. Revisit only if multi-host or multi-user
+coordination becomes a product requirement.
 
-### Continue transporting full commits
+### A custom blob content-addressed store
 
-Rejected because commits are provenance snapshots, not faithful representations
-of individual artifact contracts.
+Rejected. Git already supplies object identity, tree semantics, transport and
+reachability mechanisms. ManyHands adds scoped manifests and retained refs
+instead of duplicating storage.
 
-### Keep execution in Next with stronger leases
+### Browser-to-daemon direct access
 
-Rejected because leases cannot make a hot-reloaded presentation process a good
-owner of hours-long process trees. A daemon removes the cause rather than adding
-coordination around it.
+Rejected. The browser is an untrusted presentation client. Privileged commands
+cross the authenticated same-origin web server mediator and local IPC boundary.
 
-### Replace the local monolith with distributed services
+### Worktrees as a sandbox
 
-Rejected because ManyHands is local/single-user and the problem is ownership and
-interfaces, not independent service scaling.
+Rejected. They isolate checkouts, not processes, network, credentials, hooks or
+host filesystem access. Worktree isolation remains useful inside a separately
+enforced execution sandbox.
 
-### Trust the executor's own summary or exit code
+### Unrestricted integration super-agent
 
-Rejected because changed files, candidate identity and success must be derived
-from Git, contracts and independent evidence.
+Rejected. A parent may write only its declared integration resources. Child
+defects return to child authority; topology mistakes require amendment.
+
+### Serializing duplicate writers
+
+Rejected. Scheduling order cannot repair ambiguous ownership. A real sequential
+transformation must declare an artifact requirement and resource version chain.
+
+### Model critic as plan approver
+
+Rejected. Model judgement can discover concerns but cannot establish a
+deterministic invariant or final proof. Its output is advisory evidence.
+
+### Tune thresholds, require fan-out or ask for one perfect DAG
+
+Rejected. These optimize graph appearance, not semantic ownership or product
+quality. Progressive grounded planning may correctly produce a single leaf.
+
+### Continue full-commit artifact transport
+
+Rejected. Commits remain provenance; scoped object/mode manifests define the
+materializable artifact.
+
+### Keep productive ownership in Next with stronger leases
+
+Rejected. Leases do not make a reloadable presentation process a sound owner of
+long-lived process trees. The daemon removes the ownership mismatch.
 
 ---
 
 ## 18. Definition of completion for the redesign
 
-The redesign is complete only when all statements below are demonstrated by
-current code and tests:
+The redesign is complete only when current code and attributed evidence
+demonstrate all of the following:
 
-1. A single authoritative document and domain vocabulary remain.
-2. Productive planning uses a budgeted Repository Query and one Semantic Plan.
-3. Graph compilation is direct and resource-based.
-4. Small cohesive tasks stay leaves; deep/wide trees emerge on fixtures with real
-   boundaries.
-5. Shared contract and integration ownership are explicit.
-6. Artifact transport is scoped and content-addressed; commits are provenance.
-7. Every composite performs and validates an integration attempt.
-8. Repair/retry creates immutable lineage and changes something causally
-   relevant.
-9. A daemon, not Next.js, owns runs and process trees.
-10. Web restart is irrelevant to execution; daemon crash recovery is tested.
-11. Sandbox capability is enforced and reported honestly.
-12. No benchmark-specific policy exists in production.
-13. Legacy productive paths and redundant coordination are deleted.
-14. Full tests, package/web typechecks and builds are green.
-15. Gates A–D pass before a new thesis series begins.
+1. One normative architecture and vocabulary remain.
+2. One daemon actor owns each run and one canonical journal owns lifecycle truth.
+3. Browser and web restarts do not change run execution.
+4. Every physical effect has durable intent, stable identity and a tested
+   recovery decision.
+5. No exactly-once execution claim is made for ambiguous external effects.
+6. Productive planning uses immutable Repository Views and budgeted queries.
+7. Productive compilation is directly `SemanticPlan -> GraphRevision`.
+8. Repository resource identity, runtime leases and soft integration risk are
+   separate concepts.
+9. Hard readiness is deterministic; soft risk cannot change semantic validity.
+10. Unordered writers never own overlapping semantic resources.
+11. Sequential transformations declare artifact and version chains.
+12. Artifact manifests are immutable, scoped, Git-native and GC-reachable.
+13. Commits are provenance, not the unit of artifact transport.
+14. Attempts, validation executions and effect receipts have unambiguous
+    identities and authority.
+15. Every required criterion has an allowed proof strategy or blocks as
+    `needs_input`.
+16. Evidence and human review bind to the exact candidate and stale
+    automatically.
+17. Model judgement is advisory/non-final.
+18. Leaves and composites use the same change-scope enforcement.
+19. Repair routes to the lowest authoritative owner and terminates when no
+    causal progress is possible.
+20. Sandbox and credential capabilities are enforced and reported honestly.
+21. Cancellation and restart leave no orphaned process or ambiguous cleanup.
+22. Delivery is compare-and-swap/reconciled and produces an exact immutable
+    receipt.
+23. Legacy productive paths and dual authorities are deleted.
+24. Required real, browser and adverse cells pass on the exact handoff tree.
+25. Package/web/daemon checks, builds and accessibility verification are green.
+26. Remaining limitations are explicit and do not contradict the product claim.
 
-Passing the old five demonstration oracles is neither necessary nor sufficient
-for this completion definition.
+Passing legacy demonstration oracles, or increasing graph depth/node count, is
+neither necessary nor sufficient.
 
 ---
 
 ## 19. Current implementation gap summary
 
-This table is the starting status. Agents update it only with attributable tests
-and commits; they do not mark a target complete because a similarly named legacy
-class exists.
+This is the reviewed starting state, not a progress claim. Update it only with
+attributable code, tests and candidates; similarly named legacy classes do not
+satisfy target invariants.
 
-| Capability | Start status | Target stage |
-|---|---|---|
-| Exact repository snapshot/cache | partial | 3 |
-| Import/test/resource Repository Model | missing/partial | 3 |
-| Budgeted repository query for planner | missing | 3–4 |
-| Single canonical Semantic Plan path | incompatible | 4–6 |
-| Semantic leaf/split decision | incompatible | 4 |
-| Progressive frontier | missing | 4–6 |
-| Direct Graph Compiler | incompatible | 5 |
-| Resource claims instead of pair conflicts | missing | 2, 5 |
-| Scoped artifact manifests/materializer | missing | 7 |
-| Exact candidate validation/evidence custody | implemented, preserve | 8–9 |
-| Semantic criterion attribution | partial | 4, 5, 8 |
-| First-class composite integration | partial/incompatible | 8 |
-| Immutable repair attempts | partial/incompatible | 9 |
-| Executor-native/OS sandbox capability | incompatible | 10 |
-| Durable daemon/run actor | missing | 11 |
-| Event journal and replay | implemented, simplify | 11 |
-| Web as command/query client only | incompatible | 12 |
-| Legacy route retirement | missing | 13 |
-| Controlled evaluation eligibility | not eligible | 14 |
+| Capability | Reviewed start status | Target stage |
+|---|---|---:|
+| Canonical versioned correctness contracts | partial/incompatible | 1 |
+| Criterion proof authority | missing | 1, 7 |
+| Durable effect intent/reconciliation protocol | partial operation-specific journals only | 2 |
+| Fenced event journal/replay | implemented foundation; preserve and harden | 2 |
+| Process supervision/receipts | partial foundation; preserve and harden | 2 |
+| Durable daemon/run actor | missing | 2–3 |
+| Web as command/query client only | incompatible | 3 |
+| Exact repository snapshot/cache | partial | 4 |
+| Immutable Repository Views | missing | 4 |
+| ResourceCatalog with alias/containment/unknown | missing | 4 |
+| Budgeted planner queries | missing/partial | 4–5 |
+| Single canonical Semantic Plan path | incompatible; productive projection exists | 5–6 |
+| Direct Graph Compiler | incompatible | 5–6 |
+| Hard readiness vs soft selection | incompatible | 6 |
+| Pairwise conflict-risk product | implemented legacy; retire | 6 |
+| Immutable scoped Git-native manifests | missing | 7 |
+| Exact candidate validation/evidence custody | strong partial foundation; preserve | 7 |
+| Human/model/external proof modes | missing/partial | 7 |
+| OS-enforced sandbox capability | incompatible | 8 |
+| Live executor through durable effects | missing | 8 |
+| First-class scoped composite integration | partial/incompatible | 9 |
+| Cause/authority-directed repair | partial/incompatible | 9 |
+| Exact delivery checks/receipt | strong foundation; add intent/CAS reconcile | 10 |
+| Legacy route retirement | missing | 11 |
+| Controlled product evaluation eligibility | not eligible | 11 |
 
 ---
 
-## 20. References used to inform the design
+## 20. Explicit limitations and residual risks
 
-These are comparative inputs, not authorities over ManyHands:
+Even after implementation, the architecture does not promise:
 
-- SWE-agent's agent-computer interface and repository interaction:
-  https://swe-agent.com/latest/background/aci/
-- SWE-agent paper: https://arxiv.org/abs/2405.15793
-- Anthropic, building a multi-agent research system:
-  https://www.anthropic.com/engineering/multi-agent-research-system
-- OpenHands runtime/sandbox architecture:
-  https://docs.openhands.dev/openhands/usage/architecture/runtime
-- OpenHands sandbox providers:
-  https://docs.openhands.dev/openhands/usage/sandboxes/overview
-- OpenAI Codex subagents:
-  https://developers.openai.com/codex/subagents
-- OpenAI Codex worktrees:
-  https://developers.openai.com/codex/app/worktrees
-- OpenAI Symphony specification:
-  https://github.com/openai/symphony/blob/main/SPEC.md
+- protection from a fully compromised same-user host;
+- correct semantic plans without adequate repository evidence or human input;
+- useful parallelism when ownership/overlap remains unknown;
+- exactly-once execution of arbitrary external tools;
+- safe network access to untrusted services without a platform enforcement
+  capability;
+- that model critique is reproducible or authoritative;
+- that a correct graph guarantees a useful product;
+- distributed multi-host coordination;
+- free recovery: reconciliation and hierarchical validation consume time,
+  tokens and storage.
 
-The common lesson is bounded independence, isolated context, explicit ownership,
-durable evidence and validation of the combined result. None of these systems
-establishes that a larger tree is inherently better.
+Before Stage 0 these are design risks, not verified implementation properties.
+Windows Job Object/pipe ACL behavior, Unix containment, Git object retention,
+repository-view performance, planning quality and proof-authority UX require
+platform-specific experiments in their assigned gates.
+
+---
+
+## 21. Primary comparative references
+
+These sources inform constraints and trade-offs; they are not authorities over
+ManyHands:
+
+- [OpenAI Codex subagents](https://developers.openai.com/codex/subagents) —
+  parallel specialized contexts increase capability and token cost; concurrent
+  writes need deliberate ownership.
+- [OpenAI Codex worktrees](https://developers.openai.com/codex/app/worktrees) —
+  independent checkouts share Git metadata and do not provide process security.
+- [Anthropic, Building a multi-agent research system](https://www.anthropic.com/engineering/multi-agent-research-system) —
+  parallelism works best on independent breadth and requires end-state
+  evaluation; it is expensive and less naturally parallel for coding.
+- [Claude Code CLI reference](https://code.claude.com/docs/en/cli-usage) —
+  structured streaming, bounded turns/budget, permission modes and provider
+  background-session supervision are adapter capabilities. Provider session
+  state remains physical evidence; it does not replace the ManyHands Run Actor.
+- [Claude Code security](https://code.claude.com/docs/en/security) — permissions,
+  filesystem/network sandboxing and scoped credentials must be measured for the
+  active profile; non-interactive execution cannot assume an interactive trust
+  prompt or provider sandbox is equivalent to the declared ManyHands policy.
+- [OpenHands runtime architecture](https://docs.openhands.dev/openhands/usage/architecture/runtime) —
+  a runtime/sandbox is an explicit isolation and reproducibility boundary.
+- [SWE-agent Agent-Computer Interface](https://swe-agent.com/latest/background/aci/) —
+  tool interfaces shape agent behavior and should expose bounded, inspectable
+  operations.
+- [OpenAI Symphony specification](https://github.com/openai/symphony/blob/main/SPEC.md) —
+  reinforces workspace containment, restart recovery and single task ownership
+  while illustrating a simpler, less durable coordination model.
+- [Temporal Activity definition](https://docs.temporal.io/activity-definition) and
+  [retry policies](https://docs.temporal.io/encyclopedia/retry-policies) —
+  external activities can execute more than once; idempotency and
+  failure-specific retry/reconciliation are required.
+- [Git `update-ref`](https://git-scm.com/docs/git-update-ref) and
+  [`diff-tree`](https://git-scm.com/docs/git-diff-tree) — provide compare-and-swap
+  ref updates and exact object/mode information; rename detection is heuristic.
+- [Microsoft Windows Job Objects](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects) —
+  process groups and kill-on-close semantics support supervised cancellation.
+- [Node.js `net`](https://nodejs.org/download/release/latest/docs/api/net.html) —
+  supports Unix-domain sockets and Windows named pipes for local IPC.
+
+The common lesson is bounded independence, explicit authority, isolated
+execution, durable observation and validation of the combined result. None of
+the references proves that a larger agent tree is inherently better.
