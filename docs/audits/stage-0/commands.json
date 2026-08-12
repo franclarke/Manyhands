@@ -159,6 +159,16 @@
       "result": "The detached clone and pinned Node archive were verified, but a pre-install pnpm exec check populated node_modules outside the declared empty store and rg resolution returned multiple paths. The setup has no completion marker and supports no gate claim.",
       "logPath": "docs/audits/stage-0/logs/candidate-614b50b2-final-setup.log",
       "modelId": "not_applicable"
+    },
+    {
+      "id": "93afe766-last-exit-code-shadow-harness-error",
+      "exactCommand": "\"C:/Program Files/Git/cmd/git.exe\" clone -c core.autocrlf=false --no-local --no-hardlinks -- C:/Users/franc/Documents/Proyectos/Manyhands C:/mh-g0-93af-06",
+      "workingDirectory": "C:/Users/franc/Documents/Proyectos/Manyhands",
+      "status": "harness_error_after_clone",
+      "exitCode": null,
+      "result": "Git completed the clone, but assigning an unscoped LASTEXITCODE sentinel created a local PowerShell 5.1 shadow that was not refreshed. The fail-closed runner rejected the absent observed exit; no gate claim was made and paths are not reused.",
+      "logPath": "docs/audits/stage-0/logs/candidate-93afe766-final-setup.log",
+      "modelId": "not_applicable"
     }
   ]
 }

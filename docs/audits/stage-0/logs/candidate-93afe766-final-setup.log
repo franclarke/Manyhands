@@ -1,0 +1,9 @@
+RECEIPT_ID=setup
+CANDIDATE=93afe766346dfc149d7054618458c7d2c2bee870
+WORKING_DIRECTORY=C:\Users\franc\Documents\Proyectos\Manyhands
+COMMAND="C:\Program Files\Git\cmd\git.exe" clone -c core.autocrlf=false --no-local --no-hardlinks -- C:\Users\franc\Documents\Proyectos\Manyhands C:\mh-g0-93af-06
+CLONE_EXISTS_BEFORE=False
+STORE_EXISTS_BEFORE=False
+SHIM_EXISTS_BEFORE=False
+RUNTIME_EXISTS_BEFORE=False
+Cloning into 'C:\mh-g0-93af-06'...

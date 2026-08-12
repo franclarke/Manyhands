@@ -146,13 +146,15 @@ function Invoke-LoggedExternal(
     # NativeCommandError when the surrounding preference is Stop. Preserve the
     # stream in the receipt and decide success solely from the native exit code.
     $ErrorActionPreference = 'Continue'
-    $LASTEXITCODE = $null
+    # Assign the global automatic variable: assigning unscoped inside a
+    # function creates a local shadow that PowerShell 5.1 does not refresh.
+    $global:LASTEXITCODE = $null
     & $Executable @Arguments 2>&1 | ForEach-Object {
       $line = $_.ToString()
       Write-Host $line
       Write-ReceiptLine $LogPath $line
     }
-    $exitCode = $LASTEXITCODE
+    $exitCode = $global:LASTEXITCODE
   } finally {
     $ErrorActionPreference = $previousErrorActionPreference
     Pop-Location
@@ -190,9 +192,9 @@ function Invoke-ExternalText(
   $previousErrorActionPreference = $ErrorActionPreference
   try {
     $ErrorActionPreference = 'Continue'
-    $LASTEXITCODE = $null
+    $global:LASTEXITCODE = $null
     $lines = @(& $Executable @Arguments 2>&1 | ForEach-Object { $_.ToString() })
-    $exitCode = $LASTEXITCODE
+    $exitCode = $global:LASTEXITCODE
   } finally {
     $ErrorActionPreference = $previousErrorActionPreference
     Pop-Location

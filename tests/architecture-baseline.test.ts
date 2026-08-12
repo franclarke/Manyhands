@@ -62,6 +62,7 @@ describe("target architecture migration baseline", () => {
     expect(script).toContain("Detached clone identity changed during qualification");
     expect(script).toContain("RECEIPT_STATUS=pass");
     expect(script).toContain("decide success solely from the native exit code");
+    expect(script).toContain("$global:LASTEXITCODE = $null");
     expect(script).toContain("source-api-routes");
     expect(script).toContain("source-legacy-imports");
     expect(script).toContain("RG_PATH=");
