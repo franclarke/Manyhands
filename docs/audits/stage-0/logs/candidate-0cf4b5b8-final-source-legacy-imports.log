@@ -1,0 +1,26 @@
+RECEIPT_ID=source-legacy-imports
+CANDIDATE=0cf4b5b8d4dfe12182afeef8290e7468536872fb
+WORKING_DIRECTORY=C:\mh-g0-0cf4-08
+COMMAND=& 'C:\ProgramData\chocolatey\bin\rg.exe' '-n' '--glob' '!**/*.test.*' '@manyhands/(orchestrator-graph|conflict-risk)|projectSemanticPlanForLegacyCompiler' 'apps/web/src' 'packages'
+packages\conflict-risk\package.json:2:  "name": "@manyhands/conflict-risk",
+packages\conflict-risk\README.md:1:# @manyhands/conflict-risk
+packages\scheduler\src\wave-selector-v2.ts:1:import type { ConflictConstraintEvidence } from "@manyhands/conflict-risk";
+packages\scheduler\src\index.ts:11:} from "@manyhands/conflict-risk";
+packages\orchestrator-graph\src\v2\execution-driver.ts:6:import type { ConflictConstraintEvidence } from "@manyhands/conflict-risk";
+packages\scheduler\package.json:21:    "@manyhands/conflict-risk": "workspace:*",
+packages\orchestrator-graph\README.md:1:# @manyhands/orchestrator-graph
+packages\orchestrator-graph\package.json:2:  "name": "@manyhands/orchestrator-graph",
+packages\orchestrator-graph\package.json:22:    "@manyhands/conflict-risk": "workspace:*",
+packages\execution-core\package.json:21:    "@manyhands/conflict-risk": "workspace:*",
+packages\execution-core\src\run\executor.ts:12:import type { TaskPairRiskMatrix } from "@manyhands/conflict-risk";
+packages\decomposer\src\planner\candidate-plan.ts:12: * `projectSemanticPlanForLegacyCompiler`.
+packages\decomposer\src\compiler\graph-compiler.ts:17:import { projectSemanticPlanForLegacyCompiler } from "../planner/semantic-plan-projection.js";
+packages\decomposer\src\compiler\graph-compiler.ts:63:  const semanticProjection = semanticPlan === undefined ? undefined : projectSemanticPlanForLegacyCompiler(semanticPlan);
+apps/web/src\lib\server\runs\v2\execution-pipeline.ts:6:import { createConflictConstraintEvidence, type ConflictConstraintEvidence } from "@manyhands/conflict-risk";
+apps/web/src\lib\server\runs\v2\execution-pipeline.ts:25:import { V2ExecutionDriver, type V2NodeExecutionOutcome } from "@manyhands/orchestrator-graph";
+apps/web/src\lib\server\runs\v2\planning-host.ts:5:import { PLAN_CRITIC_KINDS, DEFAULT_GRANULARITY_POLICY, applyGranularitySelection, createSemanticPlan, projectPlannedTree, projectSemanticPlanForLegacyCompiler, resolveGranularityCondition, selectGranularityStrategy } from "@manyhands/decomposer";
+apps/web/src\lib\server\runs\v2\planning-host.ts:170:    const observedBreakdown = projectSemanticPlanForLegacyCompiler(semanticPlan).breakdown;
+apps/web/src\lib\server\runs\v2\planning-host.ts:184:    const selectedBreakdown = projectSemanticPlanForLegacyCompiler(selection.plan).breakdown;
+packages\decomposer\src\planner\semantic-plan-projection.ts:12:export function projectSemanticPlanForLegacyCompiler(plan: SemanticPlan): { breakdown: WorkBreakdown; candidatePlan: CandidatePlan } {
+EXIT_CODE=0
+COMMAND_STATUS=accepted_exit

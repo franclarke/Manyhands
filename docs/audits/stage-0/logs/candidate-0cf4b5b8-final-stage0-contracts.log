@@ -1,0 +1,21 @@
+RECEIPT_ID=stage0-contracts
+CANDIDATE=0cf4b5b8d4dfe12182afeef8290e7468536872fb
+WORKING_DIRECTORY=C:\mh-g0-0cf4-08
+COMMAND=& 'C:\mh-shim-0cf4-08\pnpm.cmd' 'exec' 'vitest' 'run' '--retry=0' 'tests/architecture-baseline.test.ts' 'tests/documentation-current.test.ts' 'tests/stage0-evidence-integrity.test.ts' 'tests/stage0-native-process.windows.test.ts'
+
+ RUN  v2.1.9 C:/mh-g0-0cf4-08
+
+ ✓ tests/documentation-current.test.ts (3 tests) 119ms
+ ✓ tests/stage0-evidence-integrity.test.ts (2 tests) 1581ms
+   ✓ Stage 0 evidence integrity > covers every retained log with a matching digest and attribution record 1509ms
+ ✓ tests/architecture-baseline.test.ts (8 tests) 503ms
+ ✓ tests/stage0-native-process.windows.test.ts (1 test) 9220ms
+   ✓ Stage 0 PowerShell native runner > captures a real native exit and fails closed for a missing executable 9217ms
+
+ Test Files  4 passed (4)
+      Tests  14 passed (14)
+   Start at  18:45:09
+   Duration  10.52s (transform 2.56s, setup 0ms, collect 8.78s, tests 11.42s, environment 2ms, prepare 1.38s)
+
+EXIT_CODE=0
+COMMAND_STATUS=accepted_exit

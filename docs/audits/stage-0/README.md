@@ -87,7 +87,10 @@ warnings. Independent review then rejected the candidate because the pnpm 11
 lock conversion changed baseline direct and transitive dependency resolutions.
 Subsequent harness candidates exposed fail-closed PowerShell and toolchain
 oracle defects before an accepted qualification could be recorded; their
-partial receipts remain adverse evidence. G0 therefore remains `in_progress`;
+partial receipts remain adverse evidence. The first fully executable successor,
+`0cf4b5b8`, then exposed a real durable-lock deadline-ordering defect after
+1,485 passing tests; the next candidate includes its deterministic regression
+and root-cause fix. G0 therefore remains `in_progress`;
 Stage 1 is blocked until a resolution-preserving candidate produces the exact
 18-receipt set, is recorded by a direct evidence-only child commit, and passes
 independent review. All R0–R19 cells remain `not_run`.

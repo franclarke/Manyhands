@@ -1,0 +1,40 @@
+RECEIPT_ID=setup
+CANDIDATE=0cf4b5b8d4dfe12182afeef8290e7468536872fb
+WORKING_DIRECTORY=C:\Users\franc\Documents\Proyectos\Manyhands
+COMMAND=& 'C:\Program Files\Git\cmd\git.exe' 'clone' '-c' 'core.autocrlf=false' '--no-local' '--no-hardlinks' '--' 'C:\Users\franc\Documents\Proyectos\Manyhands' 'C:\mh-g0-0cf4-08'
+CLONE_EXISTS_BEFORE=False
+STORE_EXISTS_BEFORE=False
+SHIM_EXISTS_BEFORE=False
+RUNTIME_EXISTS_BEFORE=False
+Cloning into 'C:\mh-g0-0cf4-08'...
+EXIT_CODE=0
+COMMAND_2=& 'C:\Program Files\Git\cmd\git.exe' '-C' 'C:\mh-g0-0cf4-08' 'checkout' '--detach' '0cf4b5b8d4dfe12182afeef8290e7468536872fb'
+HEAD is now at 0cf4b5b8 harden Stage 0 candidate qualification
+EXIT_CODE=0
+STORE_FILES_BEFORE_INSTALL=0
+NODE_RUNTIME_URL=https://nodejs.org/dist/v22.22.0/node-v22.22.0-win-x64.zip
+NODE_RUNTIME_EXPECTED_SHA256=c97fa376d2becdc8863fcd3ca2dd9a83a9f3468ee7ccf7a6d076ec66a645c77a
+COMMAND_3=Invoke-WebRequest -UseBasicParsing -Uri "https://nodejs.org/dist/v22.22.0/node-v22.22.0-win-x64.zip" -OutFile "C:\mh-runtime-0cf4-08\node-v22.22.0-win-x64.zip"
+NODE_RUNTIME_ACTUAL_SHA256=c97fa376d2becdc8863fcd3ca2dd9a83a9f3468ee7ccf7a6d076ec66a645c77a
+COMMAND_4=Expand-Archive -LiteralPath "C:\mh-runtime-0cf4-08\node-v22.22.0-win-x64.zip" -DestinationPath "C:\mh-runtime-0cf4-08"
+COMMAND_5="C:\mh-runtime-0cf4-08\node-v22.22.0-win-x64\corepack.cmd" enable --install-directory "C:\mh-shim-0cf4-08" pnpm
+EXIT_CODE=0
+PATH_PREFIX=C:\mh-shim-0cf4-08;C:\mh-runtime-0cf4-08\node-v22.22.0-win-x64
+COREPACK_HOME=C:\mh-runtime-0cf4-08\corepack-home
+PNPM_PATH=C:\mh-shim-0cf4-08\pnpm.cmd
+PNPM_SHA256=9050727905432cecb59917d8592cd723458f7f07c48faf73f44fccbe15887bbe
+PNPM_NODE_PATH=C:\mh-shim-0cf4-08\node.exe
+PNPM_NODE_SHA256=bae898add4643fcf890a83ad8ae56e20dce7e781cab161a53991ceba70c99ffb
+INITIAL_STATUS_COUNT=0
+NODE_VERSION_OUTPUT=v22.22.0
+PNPM_VERSION_OUTPUT=! Corepack is about to download https://registry.npmjs.org/pnpm/-/pnpm-11.21.0.tgz\\n11.21.0
+NODE=v22.22.0
+PNPM=11.21.0
+PNPM_NODE=v22.22.0
+RG_PATH=C:\ProgramData\chocolatey\bin\rg.exe
+RG_VERSION=ripgrep 14.1.0 (rev e50df40a19)
+GIT_PATH=C:\Program Files\Git\cmd\git.exe
+GIT_VERSION=git version 2.40.1.windows.1
+CODEX_PATH=C:\Users\franc\AppData\Local\Programs\OpenAI\Codex\bin\codex.exe
+CODEX_VERSION=codex-cli 0.146.0
+RECEIPT_STATUS=pass

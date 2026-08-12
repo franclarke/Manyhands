@@ -1,0 +1,48 @@
+RECEIPT_ID=codex-strict-preflight
+CANDIDATE=0cf4b5b8d4dfe12182afeef8290e7468536872fb
+WORKING_DIRECTORY=C:\mh-g0-0cf4-08
+COMMAND=& 'C:\Users\franc\AppData\Local\Programs\OpenAI\Codex\bin\codex.exe' '--strict-config' 'doctor' '--summary' '--ascii'
+Codex Doctor v0.146.0 · windows-x86_64
+
+Notes
+   [up] updates      0.147.0 available (current 0.146.0)
+   [!!] rollouts     770 active files · 1.65 GB on disk
+   [!!] sandbox      filesystem unrestricted · network enabled
+   [!!] threads      rollout scan was incomplete or found bad files
+-------------------------------------------------------------
+
+Environment
+  [ok] system       es-MX
+  [ok] runtime      standalone (windows, package C:\Users\franc\.codex\packages\standalone\releases\0.146.0-x86_64-pc-windows-msvc, bin C:\Users\franc\.codex\packages\standalone\releases\0.146.0-x86_64-pc-windows-msvc\bin, resources C:\Users\franc\.codex\packages\standalone\releases\0.146.0-x86_64-pc-windows-msvc\codex-resources, path C:\Users\franc\.codex\packages\standalone\releases\0.146.0-x86_64-pc-windows-msvc\codex-path)
+  [ok] install      consistent
+  [ok] search       file exists (bundled, `C:\Users\franc\.codex\packages\standalone\releases\0.146.0-x86_64-pc-windows-msvc\codex-path\rg.exe`)
+  [ok] git          git version 2.40.1.windows.1
+  [ok] terminal     unknown
+  [ok] title        default | project mh-g0-0cf4-08
+  [ok] state        databases healthy
+  [!!] threads      rollout scan was incomplete or found bad files
+
+Configuration
+  [ok] config       loaded
+  [ok] auth         auth is configured
+  [ok] mcp          4 server (3 stdio, 1 streamable_http) · 1 disabled
+  [ok] sandbox      unrestricted fs + enabled network · approval Never
+
+Updates
+  [ok] updates      update configuration is locally consistent
+
+Connectivity
+  [ok] network      no proxy env vars
+  [ok] websocket    connected (HTTP 101 Switching Protocols) · 15s timeout
+  [ok] reachability active provider endpoints are reachable over HTTP
+
+Background Server
+  [--] app-server   not running (ephemeral mode)
+
+-------------------------------------------------------------
+16 ok | 1 idle | 4 notes | 1 warn | 0 fail degraded
+
+Run codex doctor without --summary for detailed diagnostics.
+--all expand truncated lists       --json redacted report
+EXIT_CODE=0
+COMMAND_STATUS=accepted_exit

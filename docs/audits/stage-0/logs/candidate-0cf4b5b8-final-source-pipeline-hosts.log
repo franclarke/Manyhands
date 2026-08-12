@@ -1,0 +1,26 @@
+RECEIPT_ID=source-pipeline-hosts
+CANDIDATE=0cf4b5b8d4dfe12182afeef8290e7468536872fb
+WORKING_DIRECTORY=C:\mh-g0-0cf4-08
+COMMAND=& 'C:\ProgramData\chocolatey\bin\rg.exe' '-n' 'runPlanningV2Pipeline|startExecutionV2Pipeline|deliverRunV2|reconcileRunLiveness' 'apps/web/src'
+apps/web/src\app\api\runs\route.ts:13:import { runPlanningV2Pipeline } from "@/lib/server/runs/v2/run-coordinator-host";
+apps/web/src\app\api\runs\route.ts:105:    startRunBackgroundTask(saved.runId, "route:create:planning-v2", () => runPlanningV2Pipeline(saved.runId));
+apps/web/src\app\api\runs\[id]\decisions\[decisionId]\route.ts:16:import { runPlanningV2Pipeline } from "@/lib/server/runs/v2/run-coordinator-host";
+apps/web/src\app\api\runs\[id]\decisions\[decisionId]\route.ts:20:  startExecutionV2Pipeline
+apps/web/src\app\api\runs\[id]\decisions\[decisionId]\route.ts:52:      run = await startExecutionV2Pipeline(id, "route:decision:execution-v2");
+apps/web/src\app\api\runs\[id]\decisions\[decisionId]\route.ts:64:        startRunBackgroundTask(id, "route:decision:replan-v2", () => runPlanningV2Pipeline(id));
+apps/web/src\app\api\runs\[id]\run\route.ts:7:import { startExecutionV2Pipeline } from "@/lib/server/runs/v2/execution-pipeline";
+apps/web/src\app\api\runs\[id]\run\route.ts:20:    const started = await startExecutionV2Pipeline(run.runId, "route:run:execution-v2");
+apps/web/src\app\api\runs\[id]\route.ts:4:import { reconcileRunLiveness } from "@/lib/server/runs/liveness-supervisor";
+apps/web/src\app\api\runs\[id]\route.ts:19:    return NextResponse.json(await toCanonicalRunResponse(await reconcileRunLiveness(run)));
+apps/web/src\app\api\runs\[id]\restart\route.ts:6:import { startExecutionV2Pipeline } from "@/lib/server/runs/v2/execution-pipeline";
+apps/web/src\app\api\runs\[id]\restart\route.ts:17:    const run = await startExecutionV2Pipeline(id, "route:restart:execution-v2");
+apps/web/src\app\api\runs\[id]\deliver\route.ts:6:import { deliverRunV2, loadRunProjectionV2 } from "@/lib/server/runs/v2/command-host";
+apps/web/src\app\api\runs\[id]\deliver\route.ts:27:    const result = await deliverRunV2(id, approval);
+apps/web/src\app\api\runs\[id]\resume\route.ts:7:import { startExecutionV2Pipeline } from "@/lib/server/runs/v2/execution-pipeline";
+apps/web/src\app\api\runs\[id]\resume\route.ts:19:    const run = await startExecutionV2Pipeline(id, "route:resume:execution-v2");
+apps/web/src\lib\server\runs\liveness-supervisor.ts:77:export async function reconcileRunLiveness(run: RunRecord): Promise<RunRecord> {
+apps/web/src\lib\server\runs\v2\command-host.ts:191:export async function deliverRunV2(runId: string, approval: DeliveryApproval): Promise<{ run: RunRecord; state: RunProjection }> {
+apps/web/src\lib\server\runs\v2\execution-pipeline.ts:102:export async function startExecutionV2Pipeline(runId: string, label = "execution-v2"): Promise<RunRecord> {
+apps/web/src\lib\server\runs\v2\run-coordinator-host.ts:48:export async function runPlanningV2Pipeline(runId: string): Promise<void> {
+EXIT_CODE=0
+COMMAND_STATUS=accepted_exit

@@ -27,6 +27,13 @@ independent review. The rejected `dc454704` attempt reached the full suite but
 was stopped when review proved its expected/observed PowerShell version check
 was tautological; none of its twelve receipts is accepted evidence.
 
+Candidate `0cf4b5b8` then ran under the pinned Node 22 toolchain. Setup, the cold
+install, Stage 0 contracts and the focused route passed. Its full suite exposed
+one real safety defect after 1,485 passing tests: a lock waiter checked staleness
+before its own expired deadline and attempted a late Windows rename. A
+deterministic regression reproduced the reclaim and the successor moves the
+deadline check before every stale-lock mutation.
+
 This decision proves an attributable transition baseline only. It does not
 prove any Stage 1-11 target capability, production readiness, or thesis
 hypothesis. R0-R19 remain `not_run`.

@@ -1,0 +1,552 @@
+RECEIPT_ID=full-tests
+CANDIDATE=0cf4b5b8d4dfe12182afeef8290e7468536872fb
+WORKING_DIRECTORY=C:\mh-g0-0cf4-08
+COMMAND=& 'C:\mh-shim-0cf4-08\pnpm.cmd' 'exec' 'vitest' 'run' '--retry=0'
+
+ RUN  v2.1.9 C:/mh-g0-0cf4-08
+
+ ✓ tests/execution-driver-concurrency.test.ts (11 tests) 273ms
+ ✓ tests/decomposer-recursive-recovery.test.ts (15 tests) 87ms
+stderr | tests/workspace-file-lock-commit.test.ts > workspace file lock commit truth > returns a committed result and lets the next owner acquire after release rename exhaustion
+[WorkspaceLock] Mutation committed but lock release failed for C:\Users\franc\AppData\Local\Temp\mh-workspace-lock-commit-yolWsB\workspaces.json.lock; commit wins and the next acquirer will adopt token-scoped cleanup: Error: simulated release rename contention
+System.Management.Automation.RemoteException
+ ✓ tests/decomposer-recursive.test.ts (9 tests) 398ms
+ ✓ tests/execution-core-recorder.test.ts (28 tests) 391ms
+ ✓ tests/execution-core-integration.test.ts (26 tests) 622ms
+ ✓ tests/execution-core-skeleton-scaffolder.test.ts (21 tests) 809ms
+ ✓ tests/execution-core-run-executor.test.ts (34 tests) 894ms
+ ✓ tests/run-v2-execution-driver.test.ts (15 tests) 1833ms
+   ✓ V2ExecutionDriver > refreshes scheduler capabilities with the inputs that replace a stale attempt 383ms
+ ✓ tests/execution-core-v2-node-executor.test.ts (55 tests) 1779ms
+   ✓ ExactCandidateValidatorV2 > persists and rejects a feasible negative control that stays green on the baseline 483ms
+ ✓ tests/contract-acceptance-allocation.test.ts (9 tests) 241ms
+ ✓ tests/execution-core-errors.test.ts (35 tests) 42ms
+ ✓ tests/execution-core-types.test.ts (43 tests) 147ms
+ ✓ tests/graph-compiler.test.ts (14 tests) 380ms
+ ✓ tests/workspace-file-lock-commit.test.ts (10 tests) 8319ms
+   ✓ workspace file lock commit truth > returns a committed result and lets the next owner acquire after release rename exhaustion 326ms
+   ✓ workspace file lock commit truth > adopts a release transition left live after committed cleanup failed 456ms
+   ✓ workspace file lock commit truth > recovers when a dead claimant crashed after moving the old marker 354ms
+   ✓ workspace file lock commit truth > allows only one challenger to claim a dead marker and preserves the fresh owner 1363ms
+   ✓ workspace file lock commit truth > rejects a stale marker claim before three challengers can move a fresh owner 2523ms
+   ✓ workspace file lock commit truth > recovers a stale corrupt takeover marker without deleting it in place 785ms
+   ✓ workspace file lock commit truth > recovers the stale raw takeover marker written by the legacy protocol 456ms
+   ✓ workspace file lock commit truth > linearizes release against takeover before either can move the lock path 1644ms
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ ✓ tests/integration-manifest.test.ts (9 tests) 2997ms
+   ✓ IntegrationManifestExecutor > recovers after a crash following the first child without repeating its side effect 859ms
+   ✓ IntegrationManifestExecutor > recovers after persisting a repair commit without launching that repair twice 2085ms
+ ✓ tests/stage0-evidence-integrity.test.ts (2 tests) 2389ms
+   ✓ Stage 0 evidence integrity > covers every retained log with a matching digest and attribution record 1243ms
+   ✓ Stage 0 evidence integrity > does not retain common credential forms in raw logs 1125ms
+ ✓ tests/recursive-planner.test.ts (14 tests) 117ms
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ ✓ tests/run-v2-e2e.test.ts (2 tests) 2837ms
+   ✓ V2 productive run > materializes declared child artifacts and integrates the exact verified root candidate 558ms
+   ✓ V2 productive run > re-enters the driver after an integration journal takeover without repeating the applied child 2275ms
+ ✓ tests/exact-candidate-validation.test.ts (7 tests) 1436ms
+   ✓ validateExactCandidate > executes the frozen value-aware order oracle and rejects the retry-2 candidate 1393ms
+ ✓ tests/architecture-baseline.test.ts (8 tests) 11227ms
+   ✓ target architecture migration baseline > keeps packages independent from application-layer imports 2582ms
+   ✓ target architecture migration baseline > forbids productive @manyhands/core consumers 7589ms
+   ✓ target architecture migration baseline > freezes known legacy reachability until the owning migration stage retires it 821ms
+ ✓ tests/execution-core-validation-runner.test.ts (17 tests) 3215ms
+   ✓ ChildProcessValidationRunner — shell handling > wraps Windows package-manager shims without enabling Node shell interpolation 525ms
+   ✓ ChildProcessValidationRunner — timeout > does not return while a validation descendant can still write 2615ms
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ ✓ tests/execution-core-worktree.test.ts (14 tests) 140ms
+ ✓ tests/run-coordinator-lifecycle.test.ts (9 tests) 85ms
+ ✓ tests/recursive-planner-lineage.test.ts (11 tests) 67ms
+ ✓ tests/repository-aware-scheduling.test.ts (7 tests) 104ms
+ ✓ tests/planning-harness.test.ts (12 tests) 9125ms
+   ✓ in-process planning harness > plans and compiles a valid draft without a server, worktree or network 4015ms
+   ✓ legacy one-shot path — retired in stage 3C > indexer blindness — .mjs sources are visible to the planner 4494ms
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ ✓ tests/cut-properties.test.ts (10 tests) 41ms
+ ✓ tests/derived-relations.test.ts (14 tests) 153ms
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ ✓ tests/evidence-matrix.test.ts (10 tests) 81ms
+ ✓ tests/contracts-v2.test.ts (10 tests) 41ms
+ ✓ tests/granularity-policy.test.ts (12 tests) 349ms
+ ✓ tests/domain.test.ts (11 tests) 102ms
+ ✓ tests/task-graph-artifact-cycles.test.ts (16 tests) 34ms
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ ✓ tests/execution-core-cli-invocation.test.ts (10 tests) 841ms
+   ✓ secure CLI process invocation > round-trips hostile argv through a real batch shim without executing it 440ms
+   ✓ secure CLI process invocation > forces delayed expansion off while round-tripping literal exclamation marks 330ms
+ ✓ tests/ephemeral-execution-workspace.test.ts (9 tests) 480ms
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ ✓ tests/repository-snapshot.test.ts (7 tests) 857ms
+   ✓ RepositorySnapshotBuilder > produces the same identity for the same target, commit and content 390ms
+ ✓ tests/run-events-replay.test.ts (5 tests) 5001ms
+   ✓ run-events SSE replay (INV-7) > frames carry id: <seq> and a fresh connection replays the full log 1119ms
+   ✓ run-events SSE replay (INV-7) > Last-Event-ID resumes exactly after the last folded frame 1172ms
+   ✓ run-events SSE replay (INV-7) > the higher of ?after= and Last-Event-ID wins 803ms
+   ✓ run-events SSE replay (INV-7) > flushes an initial comment when the cursor is already at the latest event 1009ms
+   ✓ run-events SSE replay (INV-7) > INV-7: prefix + reconnect-replayed suffix folds to the same model as one uninterrupted stream 894ms
+ ✓ tests/run-operation-authority-atomic.test.ts (8 tests) 25975ms
+   ✓ atomic run authority > fences the previous owner even if the process crashes before publishing the new claim 1597ms
+   ✓ atomic run authority > kills and verifies a live child before returning a takeover claim for dispatch 7286ms
+   ✓ atomic run authority > does not publish or return a takeover when process reconciliation cannot prove allDead 907ms
+   ✓ atomic run authority > timestamps the takeover receipt and published heartbeat after process verification 1831ms
+   ✓ atomic run authority > does not publish takeover authority until repository effects are quiescent 2154ms
+   ✓ atomic run authority > leaves the previous authority intact when takeover quiescence fails 1013ms
+   ✓ atomic run authority > crosses the durable repository lease before publishing a cross-host planning takeover 6308ms
+   ✓ atomic run authority > crosses the durable repository lease before publishing a cross-host delivery takeover 4873ms
+ ✓ tests/cockpit-decision-queue.test.ts (11 tests) 23ms
+ ✓ tests/repo-lock-atomic.test.ts (14 tests) 26648ms
+   ✓ B-004 repo lock: token + generation > acquisition mints an immutable token and a monotonically increasing generation 562ms
+   ✓ B-004 repo lock: token + generation > a late release from a previous incarnation of the same run never deletes the current lock 1091ms
+   ✓ B-004 repo lock: token + generation > release verifies ownership even when the lock changed between read and remove 1032ms
+   ✓ B-004 repo lock: atomic acquire and stale takeover > of N concurrent fresh acquirers exactly one wins 695ms
+   ✓ B-004 repo lock: atomic acquire and stale takeover > N concurrent contenders over a stale lock produce exactly one valid owner (every round) 7041ms
+   ✓ B-004 repo lock: atomic acquire and stale takeover > honors a live legacy file-format lock and steals it atomically when stale 903ms
+   ✓ B-004 repo lock: atomic acquire and stale takeover > steals an unreadable (corrupt) lock 873ms
+   ✓ B-004 repo lock: heartbeat > renew refreshes the lease heartbeat; a superseded lease cannot renew 1005ms
+   ✓ B-004 repo lock: heartbeat > startRepoLeaseHeartbeat renews periodically until stopped 1016ms
+   ✓ B-004 repo lock: heartbeat > aborts an in-flight effect when repository authority is lost 5026ms
+   ✓ B-004 repo lock: heartbeat > default liveness trusts a fresh lock heartbeat over a dead PID, and steals once the heartbeat is stale 952ms
+   ✓ B-004 repo lock: fencing > assertRepoLeaseCurrent passes for the active lease and throws RepoLeaseLostError for a superseded one 774ms
+   ✓ B-004 repo lock: git common directory keying > two paths into the same repository (linked worktree) contend on one lock 2845ms
+   ✓ B-004 repo lock: crash residue > a lock directory without owner.json older than the grace window is treated as stale 2818ms
+ ✓ tests/contract-boundary-validation.test.ts (8 tests) 50ms
+ ✓ tests/integration-operation-recovery.test.ts (4 tests) 119ms
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ ✓ tests/run-model-v2-reducer.test.ts (4 tests) 43ms
+ ✓ tests/scope-critic-calibration.test.ts (5 tests) 60ms
+ ✓ tests/planning-v2-recursive.test.ts (5 tests) 11750ms
+   ✓ productive planning with the recursive planner > cuts the root, records every resolved unit and compiles the graph 2628ms
+   ✓ productive planning with the recursive planner > cuts the root even under a budget it fits, because the root proves nothing 1476ms
+   ✓ productive planning with the recursive planner > persists a granularity assessment and applies it to the plan that compiles 1986ms
+   ✓ productive planning with the recursive planner > records the repair diagnostics the validator produced, verbatim 2535ms
+   ✓ productive planning with the recursive planner > records the unit it could not cut, in place, with the blocking property 3122ms
+ ❯ tests/store-recovery-traces-security.test.ts (8 tests | 1 failed) 4467ms
+   ✓ durable recovery, traces and bounded grounding > rebuilds a run from a compacted generation plus active journal and repairs a torn tail 2538ms
+   × durable recovery, traces and bounded grounding > renews a durable lock lease before its stale deadline 418ms
+     → expected [Function] to throw error matching /Timed out/iu but got 'EPERM: operation not permitted, renam…'
+   ✓ durable recovery, traces and bounded grounding > marks bounded grounding partial and does not claim omitted files 583ms
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ ✓ tests/repository-fast-indexer.test.ts (13 tests | 2 skipped) 41461ms
+   ✓ FastRepositoryIndexer > uses rg --files with hidden and gitignore semantics 1985ms
+   ✓ FastRepositoryIndexer > reuses the HEAD-addressed cache without invoking rg again 2240ms
+   ✓ FastRepositoryIndexer > builds one coherent exact-commit index when the working tree is dirty 3776ms
+   ✓ FastRepositoryIndexer > uses ignore rules from the exact commit instead of dirty workspace rules 3576ms
+   ✓ FastRepositoryIndexer > discovers snapshot capabilities from the exact commit instead of the dirty workspace 4134ms
+   ✓ FastRepositoryIndexer > extracts multiline and aliased exports with the canonical AST parser 3515ms
+   ✓ FastRepositoryIndexer > indexes every parseable source extension, including the module variants 4523ms
+   ✓ FastRepositoryIndexer > publishes one valid cache under concurrent cold writers and removes temporaries 4429ms
+   ✓ FastRepositoryIndexer > rebuilds a cache whose checksum is invalid 4189ms
+   ✓ FastRepositoryIndexer > rebuilds a cache written under a different indexer profile 4816ms
+   ✓ FastRepositoryIndexer > derives baseline commands for a lockfile-less target on the productive snapshot path 4273ms
+ ✓ tests/scope-bounded-creation.test.ts (9 tests) 172ms
+ ✓ tests/durable-process-kill.test.ts (6 tests) 2990ms
+   ✓ killRunProcessesVerified > kills a durable process even when the in-memory registry is empty (post-restart) 633ms
+   ✓ killRunProcessesVerified > refuses to kill a recycled pid (creation time after registration) and counts it dead 450ms
+   ✓ killRunProcessesVerified > does not declare allDead when identity cannot be verified for a live pid 617ms
+   ✓ killRunProcessesVerified > treats an already-dead durable pid idempotently across repeated cancels 606ms
+   ✓ killRunProcessesVerified > a normally-exited process leaves no open evidence and no kill work 319ms
+   ✓ killRunProcessesVerified > verifies the whole descendant tree: a surviving grandchild blocks allDead 361ms
+ ✓ tests/execution-driver-produced-artifacts.test.ts (1 test) 431ms
+   ✓ artifact adoption for every contract a node produces > lets a consumer of a planner-declared artifact become ready 427ms
+ ✓ tests/integrator-strict-dag.test.ts (7 tests) 94ms
+stderr | tests/decomposer-claude-code-recursive.test.ts > ClaudeCodeRecursiveDecomposer > surfaces claude process failures as decomposer LLM errors
+[RecursiveDecomposer] Step "root" attempt 1/3 failed (provider_request): Graph generation failed for node "root" (attempt 1/3, provider_request): Claude Code recursive planning failed with exit code 7: boom. Retrying with stricter JSON instructions.
+System.Management.Automation.RemoteException
+ ✓ tests/run-coordinator-derived-recording.test.ts (3 tests) 35ms
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ ✓ tests/planning-v2-adaptive.test.ts (2 tests) 5705ms
+   ✓ adaptive granularity in the productive planning pipeline > persists the assessment before compilation, and replay explains the policy 3657ms
+   ✓ adaptive granularity in the productive planning pipeline > compiles the tree the policy selected, and records both it and the input 2033ms
+stderr | tests/decomposer-claude-code-recursive.test.ts > ClaudeCodeRecursiveDecomposer > surfaces claude process failures as decomposer LLM errors
+[RecursiveDecomposer] Step "root" attempt 2/3 failed (provider_request): Graph generation failed for node "root" (attempt 2/3, provider_request): Claude Code recursive planning failed with exit code 7: boom. Retrying with stricter JSON instructions.
+System.Management.Automation.RemoteException
+ ✓ tests/run-parallelism-observation.test.ts (9 tests) 30ms
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ ✓ tests/run-model-presentation.test.ts (8 tests) 23ms
+stderr | tests/decomposer-claude-code-recursive.test.ts > ClaudeCodeRecursiveDecomposer > surfaces is_error envelopes as decomposer LLM errors
+[RecursiveDecomposer] Step "root" attempt 1/3 failed (provider_request): Graph generation failed for node "root" (attempt 1/3, provider_request): Claude Code reported an error result for node "root": model refused. Retrying with stricter JSON instructions.
+System.Management.Automation.RemoteException
+stderr | tests/decomposer-claude-code-recursive.test.ts > ClaudeCodeRecursiveDecomposer > surfaces is_error envelopes as decomposer LLM errors
+[RecursiveDecomposer] Step "root" attempt 2/3 failed (provider_request): Graph generation failed for node "root" (attempt 2/3, provider_request): Claude Code reported an error result for node "root": model refused. Retrying with stricter JSON instructions.
+System.Management.Automation.RemoteException
+ ✓ tests/decomposer-claude-code-recursive.test.ts (6 tests) 4751ms
+   ✓ ClaudeCodeRecursiveDecomposer > uses the claude result envelope as the recursive step JSON 518ms
+   ✓ ClaudeCodeRecursiveDecomposer > plans in plan mode against the configured model 451ms
+   ✓ ClaudeCodeRecursiveDecomposer > sends instructions through the real system-prompt channel, not a fake block in the user turn 543ms
+   ✓ ClaudeCodeRecursiveDecomposer > surfaces claude process failures as decomposer LLM errors 1659ms
+   ✓ ClaudeCodeRecursiveDecomposer > surfaces is_error envelopes as decomposer LLM errors 1550ms
+ ✓ tests/execution-core-routing.test.ts (12 tests) 28ms
+ ✓ tests/execution-base-builder.test.ts (5 tests) 36ms
+ ✓ tests/decomposer-recursive-nested-interface.test.ts (2 tests) 66ms
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ ✓ tests/task-graph-graft.test.ts (4 tests) 41ms
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ ✓ tests/graph-critics-v2.test.ts (7 tests) 274ms
+ ✓ tests/workspace-repository.test.ts (14 tests) 26281ms
+   ✓ JsonWorkspaceRepository > seeds ManyHands and Aprobado on first list when file is missing 1055ms
+   ✓ JsonWorkspaceRepository > creates and retrieves a workspace 964ms
+   ✓ JsonWorkspaceRepository > dedupes slug on duplicate name 842ms
+   ✓ JsonWorkspaceRepository > updates fields and bumps updatedAt 995ms
+   ✓ JsonWorkspaceRepository > get throws WorkspaceNotFoundError for missing id 711ms
+   ✓ JsonWorkspaceRepository > update throws WorkspaceValidationError for invalid payload 1194ms
+   ✓ JsonWorkspaceRepository > delete removes an entry 1585ms
+   ✓ JsonWorkspaceRepository > delete refuses to remove the last workspace 2578ms
+   ✓ JsonWorkspaceRepository > create payload rejects empty name 881ms
+   ✓ JsonWorkspaceRepository > serializes parallel writes producing unique slugs 6668ms
+   ✓ JsonWorkspaceRepository > serializes writes from independent OS processes without a lost update 7646ms
+   ✓ JsonWorkspaceRepository > takes over an abandoned filesystem lock 464ms
+   ✓ JsonWorkspaceRepository > loads a legacy path-keyed repository identity without a filesystem object id 444ms
+ ✓ tests/execution-core-kill-verify.test.ts (7 tests | 1 skipped) 4598ms
+   ✓ killProcessTreeVerified > kills a live process and verifies it is gone 730ms
+   ✓ live process registry > kills every process registered for an owner and verifies the kill 849ms
+   ✓ live process registry > spawnExecutorProcess registers under processOwnerId and unregisters on close 959ms
+   ✓ live process registry > does not resolve a timeout while a descendant can still write 1822ms
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ ✓ tests/run-liveness.test.ts (10 tests) 23ms
+ ✓ tests/plan-critic.test.ts (9 tests) 37ms
+ ✓ tests/execution-core-git-runner.test.ts (8 tests) 23277ms
+   ✓ SimpleGitRunner ancestry > returns false for sibling commits when git merge-base exits 1 without stderr 5702ms
+   ✓ SimpleGitRunner ancestry > classifies an already-satisfied cherry-pick separately from a conflict 7330ms
+   ✓ SimpleGitRunner commit identity > uses a command-scoped ManyHands identity when the repository has no usable author 3695ms
+   ✓ GitRunner bounded file reads > rejects a git blob that exceeds the byte budget 2329ms
+   ✓ GitRunner bounded file reads > propagates cancellation instead of treating it as a missing file 1890ms
+   ✓ GitRunner bounded file reads > returns null only for a missing Git object or path 2296ms
+ ✓ tests/exact-candidate-cache.test.ts (5 tests) 28ms
+ ✓ tests/planning-v2-pipeline.test.ts (5 tests) 9979ms
+   ✓ planning V2 vertical slice > grounds the package manifest when repository scripts form part of the command surface 1355ms
+   ✓ planning V2 vertical slice > records model failure and never substitutes a lower-quality planner 2757ms
+   ✓ planning V2 vertical slice > fails the run when the compiler rejects the plan, without pretending a graph exists 2085ms
+   ✓ planning V2 vertical slice > persists planning nodes before the planner completes 2068ms
+   ✓ planning V2 vertical slice > compiles from the SemanticPlan the fixpoint produced, never from a breakdown 1706ms
+ ✓ tests/topological-level.test.ts (7 tests) 1455ms
+   ✓ topological level as a compiled, inert fact > is read by nothing that schedules, dispatches or decides 1255ms
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ ✓ tests/validation-recipe.test.ts (5 tests) 21ms
+ ✓ tests/delivery-state-machine.test.ts (4 tests) 59ms
+ ✓ tests/causal-recovery-scheduling-v2.test.ts (3 tests) 64ms
+ ✓ tests/flow-layout.test.ts (11 tests) 55ms
+ ✓ tests/granularity-selection-governs.test.ts (5 tests) 182ms
+ ✓ tests/scheduler-scope-aware-wave.test.ts (8 tests) 72ms
+ ✓ tests/run-failure-receipt.test.ts (4 tests) 415ms
+ ✓ tests/process-supervisor.test.ts (6 tests) 4628ms
+   ✓ B-005 supervisor primitive > registers with metadata, auto-unregisters on exit, and the kill report carries the meta 689ms
+   ✓ B-005 supervisor primitive > an AbortSignal kills the supervised tree 712ms
+   ✓ B-005 validation runner under supervision > registers its child under the run and dies with the run's kill 1186ms
+   ✓ B-005 dependency installer under supervision > registers the install child under the run and dies with the run's kill 1396ms
+   ✓ B-005 web supervised spawn (titler/decomposer seam) > children spawned through supervisedSpawnFn are registered and die with the run 621ms
+ ✓ tests/leaf-empty-diff-noop.test.ts (3 tests) 154ms
+ ✓ tests/scheduler-conflict-constraints.test.ts (10 tests) 57ms
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ ✓ tests/granularity-context-profile.test.ts (4 tests) 33ms
+ ✓ tests/test-weakening-detection.test.ts (6 tests) 328ms
+ ✓ tests/execution-core-replan-invalidation.test.ts (6 tests) 62ms
+ ✓ tests/task-graph-v2.test.ts (11 tests) 77ms
+stderr | tests/decomposer-codex-recursive.test.ts > CodexRecursiveDecomposer > surfaces codex process failures as decomposer LLM errors
+[RecursiveDecomposer] Step "root" attempt 1/3 failed (provider_request): Graph generation failed for node "root" (attempt 1/3, provider_request): Codex recursive planning failed with exit code 7: boom. Retrying with stricter JSON instructions.
+System.Management.Automation.RemoteException
+stderr | tests/decomposer-codex-recursive.test.ts > CodexRecursiveDecomposer > surfaces codex process failures as decomposer LLM errors
+[RecursiveDecomposer] Step "root" attempt 2/3 failed (provider_request): Graph generation failed for node "root" (attempt 2/3, provider_request): Codex recursive planning failed with exit code 7: boom. Retrying with stricter JSON instructions.
+System.Management.Automation.RemoteException
+ ✓ tests/decomposer-codex-recursive.test.ts (6 tests) 3584ms
+   ✓ CodexRecursiveDecomposer > uses the raw codex stdout as the recursive step JSON 597ms
+   ✓ CodexRecursiveDecomposer > preserves leaf validation commands from codex recursive step JSON 510ms
+   ✓ CodexRecursiveDecomposer > plans in sandbox mode against the configured model 595ms
+   ✓ CodexRecursiveDecomposer > passes reasoning effort to codex recursive planning when configured 556ms
+   ✓ CodexRecursiveDecomposer > surfaces codex process failures as decomposer LLM errors 1290ms
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+Preparing worktree (new branch 'mh/run-rec/task-a')
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ ✓ tests/decomposer-interactive-planning.test.ts (2 tests) 1042ms
+   ✓ ClaudeCodeRecursiveDecomposer - Interactive Planning > throws DecomposerQuestionError when LLM returns a question decision 517ms
+   ✓ ClaudeCodeRecursiveDecomposer - Interactive Planning > injects previous user answer and completes when run with caching and answers 522ms
+Preparing worktree (new branch 'mh/run-rec/task-c')
+ ✓ tests/run-v2-decision-control.test.ts (2 tests) 4147ms
+   ✓ V2 local decision control > resolves a node decision under the live execution authority without fencing independent siblings 2291ms
+   ✓ V2 local decision control > keeps a resolved waiting run parked until the execution driver recomputes readiness 1853ms
+ ✓ tests/decomposer-llm-guards.test.ts (10 tests) 18ms
+ ✓ tests/task-graph-reducer.test.ts (11 tests) 35ms
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ ✓ tests/execution-core-claude-code-cli.test.ts (8 tests) 4343ms
+   ✓ CliAgentExecutor with the Claude Code profile (injected spawn) > captures and parses structured output 450ms
+   ✓ CliAgentExecutor with the Claude Code profile (injected spawn) > surfaces spawn errors as non-zero outcomes 402ms
+   ✓ CliAgentExecutor with the Claude Code profile (injected spawn) > kills the process and marks timeouts 3480ms
+ ✓ tests/run-store-event-source.test.ts (5 tests) 565ms
+ ✓ tests/run-record-repository.test.ts (8 tests) 19295ms
+   ✓ JsonRunRecordStore V2 cache > round-trips a canonical record and rejects a missing id 849ms
+   ✓ JsonRunRecordStore V2 cache > reads a same-version legacy takeover receipt as insufficient evidence 427ms
+   ✓ JsonRunRecordStore V2 cache > lists newest first and filters equivalent workspace ids 1848ms
+   ✓ JsonRunRecordStore V2 cache > limits disk reads for a recent-runs slice 2832ms
+   ✓ JsonRunRecordStore V2 cache > serializes concurrent updates across store instances 11142ms
+   ✓ JsonRunRecordStore V2 cache > preserves both fields when concurrent writers update different cache metadata 1182ms
+   ✓ JsonRunRecordStore V2 cache > deletes records and surfaces corrupt explicit reads 747ms
+ ✓ tests/effort-registry.test.ts (14 tests) 21ms
+ ✓ tests/agent-env-allowlist.test.ts (7 tests) 374ms
+   ✓ B-006 executor spawn env (canary) > the executor child cannot see an undeclared server secret 361ms
+ ✓ tests/decomposer-llm-fallback.test.ts (4 tests) 42ms
+ ✓ tests/decomposer-llm-normalize.test.ts (3 tests) 59ms
+Preparing worktree (new branch 'mh/run-clean/task-a')
+ ✓ tests/local-boundary.test.ts (14 tests) 18ms
+ ✓ tests/run-v2-migration.test.ts (3 tests) 1914ms
+   ✓ V1 to V2 migration > backs up and imports a safe V1 run without inventing evidence, candidates or delivery 1688ms
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ ✓ tests/run-process-presence.test.ts (10 tests) 17ms
+ ✓ tests/world-reconciler.test.ts (3 tests) 12374ms
+   ✓ reconcileWorld > keeps valid evidence, invalidates vanished commits, sweeps orphans, removes stale locks 5796ms
+   ✓ reconcileWorld > reports the run as not resumable when the base commit vanished 2397ms
+   ✓ reconcileWorld > is a no-op on a consistent world 4173ms
+ ✓ tests/execution-failure-cause-classification.test.ts (9 tests) 407ms
+   ✓ scope violation reasons name the offending paths > carries the violated paths through to the classified failure 380ms
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ ✓ tests/manyhands-dev-renderer.test.ts (3 tests) 261ms
+ ✓ tests/execution-core-codex-cli.test.ts (7 tests) 1393ms
+   ✓ CliAgentExecutor with the Codex profile (injected spawn) > captures stdout/stderr and exit code 522ms
+   ✓ CliAgentExecutor with the Codex profile (injected spawn) > surfaces spawn errors as non-zero outcomes 854ms
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ ✓ tests/cockpit-layout.test.ts (15 tests) 17ms
+ ✓ tests/leaf-scope-rejection-reason.test.ts (2 tests) 36ms
+ ✓ tests/scheduler-readiness-v2.test.ts (5 tests) 198ms
+ ✓ tests/run-v2-crash-recovery.test.ts (1 test) 38ms
+ ✓ tests/execution-core-granularity.test.ts (5 tests) 32ms
+ ✓ tests/local-decision-readiness.test.ts (3 tests) 53ms
+ ✓ tests/candidate-sandbox-workspace.test.ts (5 tests) 25ms
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ ✓ tests/task-graph-v1-compatibility.test.ts (2 tests) 31ms
+ ✓ tests/execution-core-dependency-installer.test.ts (5 tests) 91ms
+ ✓ tests/execution-core-batch-scheduler.test.ts (6 tests) 113ms
+ ✓ tests/granularity-regression-bank.test.ts (3 tests) 1210ms
+   ✓ granularity regression bank > reaches a verdict on every case without inventing units 716ms
+   ✓ granularity regression bank > matches the frozen decision table for every replayable case 475ms
+ ✓ tests/planning-cut-transcript.test.ts (3 tests | 1 skipped) 4109ms
+   ✓ the cut contract against a real model > replays the recorded transcript and reaches a compiled graph 3794ms
+ ✓ tests/run-coordinator-execution-facts.test.ts (2 tests) 28ms
+ ✓ tests/integration-real-git.test.ts (3 tests) 78083ms
+   ✓ IntegrationAgent with real Git > preserves the complete tree when a multi-commit composite is integrated by its parent 29587ms
+   ✓ IntegrationAgent with real Git > treats a distinct child commit with an already-satisfied patch as redundant 23014ms
+   ✓ IntegrationAgent with real Git > rejects and removes a commit created unexpectedly by the repair executor 25479ms
+ ✓ tests/decomposer-step-schema-safety.test.ts (8 tests) 24ms
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/a.ts', LF will be replaced by CRLF the next time Git touches it
+ ✓ tests/scope-path-traversal.test.ts (12 tests) 27ms
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ ✓ tests/execution-core-e2e.test.ts (4 tests) 71777ms
+   ✓ RunExecutor E2E (real git + MockCodex) > runs leaves, commits, cherry-picks into the composite, and completes 24188ms
+   ✓ RunExecutor E2E (real git + MockCodex) > keeps a dependent leaf on the immutable base and composes both commits only at integration 22708ms
+   ✓ RunExecutor E2E (real git + MockCodex) > runs integrator nodes as executable tasks before parent integration 21789ms
+   ✓ RunExecutor E2E (real git + MockCodex) > fails parent integration when a scheduled child never produced a result 3089ms
+ ✓ tests/decomposer-recursive-prompt.test.ts (5 tests) 19ms
+ ✓ tests/run-liveness-supervisor.test.ts (5 tests) 55ms
+ ✓ tests/decomposer-policy.test.ts (8 tests) 1449ms
+   ✓ pickDecomposer > selects Claude Code recursive by default without API keys 425ms
+   ✓ pickDecomposer > does not let MANYHANDS_DECOMPOSER override an explicit Codex executor selection 452ms
+   ✓ pickDecomposer > does not let MANYHANDS_DECOMPOSER override an explicit Claude executor selection 560ms
+ ✓ tests/grounding-agent-dirty-workspace.test.ts (3 tests) 23ms
+ ✓ tests/run-operation-lease.test.ts (4 tests) 26019ms
+   ✓ V2 run operation leases > rejects an old runner after takeover claims a higher fencing token 7600ms
+   ✓ V2 run operation leases > invalidating authority rejects a late completion writer 5479ms
+   ✓ V2 run operation leases > a fenced release cannot clear the newer owner's lease 6235ms
+   ✓ V2 run operation leases > permits stale takeover but rejects takeover with a fresh heartbeat 6684ms
+ ✓ tests/provider-credentials.test.ts (9 tests) 14ms
+ ✓ tests/run-coordinator-planning-candidates.test.ts (2 tests) 24ms
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ ✓ tests/contracts-v1-compatibility.test.ts (3 tests) 71ms
+ ✓ tests/process-evidence-journal.test.ts (5 tests) 554ms
+   ✓ evidence sink wiring (registry → journal) > registerLiveProcess persists durable evidence and unregister closes it 335ms
+ ✓ tests/failure-taxonomy-totality.test.ts (5 tests) 23ms
+ ✓ tests/attempt-adoption.test.ts (3 tests) 191ms
+ ✓ tests/run-v2-cancellation.test.ts (1 test) 23411ms
+   ✓ V2 cancellation > invalidates the runner, kills its live process and rejects a late result 23408ms
+ ✓ tests/effort-consumers.test.ts (5 tests) 175ms
+ ✓ tests/execution-core-scope.test.ts (7 tests) 21ms
+ ✓ tests/execution-core-executor-failure.test.ts (12 tests) 17ms
+ ✓ tests/execution-core-graph-guards.test.ts (5 tests) 36ms
+ ✓ tests/runs-list-workspace-reads.test.ts (2 tests) 12663ms
+   ✓ GET /api/runs workspace reads > does not read the workspace store once per workspace 6894ms
+   ✓ GET /api/runs workspace reads > answers an unfiltered listing with a single workspace read 5766ms
+ ✓ tests/decomposer.test.ts (7 tests) 314ms
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ ✓ tests/typography-scale.test.ts (5 tests) 125ms
+ ✓ tests/run-record-schema.test.ts (6 tests) 29ms
+ ✓ tests/documentation-current.test.ts (3 tests) 50ms
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ ✓ tests/event-schema-upcasting.test.ts (6 tests) 227ms
+ ✓ tests/run-create-stage-selection.test.ts (6 tests) 49419ms
+   ✓ POST /api/runs canonical StageSelection > persists independent planning, execution and repair selections 13386ms
+   ✓ POST /api/runs canonical StageSelection > defaults execution and repair to the planning selection 12474ms
+   ✓ POST /api/runs canonical StageSelection > rejects effort for a model that does not support it 5027ms
+   ✓ POST /api/runs canonical StageSelection > accepts every selectable model for planning 11848ms
+   ✓ POST /api/runs canonical StageSelection > rejects unknown models instead of silently remapping them 3599ms
+   ✓ POST /api/runs canonical StageSelection > rejects removed V1 create fields 3082ms
+ ✓ tests/execution-core-syntax-check.test.ts (8 tests) 591ms
+ ✓ tests/model-registry.test.ts (5 tests) 17ms
+ ✓ tests/workspace-settings.test.ts (7 tests) 7087ms
+   ✓ repository persistence of hints > persists hints on create and surfaces them on read 3065ms
+   ✓ repository persistence of hints > preserves hints on update when not overridden 3956ms
+ ✓ tests/run-store-lock-ownership-fencing.test.ts (3 tests) 158ms
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ ✓ tests/amendment-fingerprint-invalidation.test.ts (3 tests) 74ms
+ ✓ tests/planning-cli-stream.test.ts (7 tests) 42ms
+ ✓ tests/run-model-v2-fixture.test.ts (5 tests) 808ms
+   ✓ canonical V2 presentation fixture > folds every manual playback step without inventing a second state model 724ms
+ ✓ tests/run-store-fencing.test.ts (3 tests) 1982ms
+   ✓ run mutation fencing > prevents a stale owner from appending events, snapshots or delivery receipts 373ms
+   ✓ run mutation fencing > atomically mints one monotonic authority across independent store instances 1393ms
+ ✓ tests/planning-module-cli-output.test.ts (3 tests) 95ms
+ ✓ tests/decision-expiration.test.ts (3 tests) 27ms
+ ✓ tests/attempt-usage-journaled.test.ts (4 tests) 16ms
+ ✓ tests/ensure-runnable-repo.test.ts (4 tests) 13875ms
+   ✓ ensureRunnableRepo > initializes an empty folder on main with an initial commit 3193ms
+   ✓ ensureRunnableRepo > creates the initial commit for a git repo with unborn HEAD 3616ms
+   ✓ ensureRunnableRepo > does not touch a repo that already has commits 4281ms
+   ✓ ensureRunnableRepo > does not overwrite existing README.md or .gitignore when committing an unborn repo 2782ms
+ ✓ tests/contract-relations.test.ts (10 tests) 28ms
+ ✓ tests/workspace-run-reference-safety.test.ts (2 tests) 2491ms
+   ✓ workspace deletion run-reference safety > allows deletion when a legacy run explicitly belongs to another workspace 1930ms
+   ✓ workspace deletion run-reference safety > still blocks deletion when a legacy run explicitly belongs to the workspace 558ms
+ ✓ tests/failure-recovery-policy.test.ts (15 tests) 28ms
+ ✓ tests/integration-operation-journal.test.ts (4 tests) 1126ms
+   ✓ JsonIntegrationOperationJournal > rejects a stale compare-and-swap update 531ms
+   ✓ JsonIntegrationOperationJournal > allows an explicitly authorized run takeover to resume an incomplete journal 304ms
+ ✓ tests/run-granularity-strategy-selected.test.ts (3 tests) 27ms
+ ✓ tests/run-v2-execution-host.test.ts (2 tests) 184ms
+ ✓ tests/workspace-physical-identity.test.ts (15 tests) 98819ms
+   ✓ workspace physical repository identity > rejects an exact duplicate repository on create 5535ms
+   ✓ workspace physical repository identity > serializes independent repository instances without losing either successful create 5728ms
+   ✓ workspace physical repository identity > folds Windows path casing before comparison 5076ms
+   ✓ workspace physical repository identity > recognizes a symlink or junction as the same physical repository 4085ms
+   ✓ workspace physical repository identity > refreshes a persisted identity after a move plus junction and still rejects the duplicate 5045ms
+   ✓ workspace physical repository identity > keeps the same filesystem identity after a pure move with no junction 4200ms
+   ✓ workspace physical repository identity > recognizes a repository subdirectory as the same repository 4671ms
+   ✓ workspace physical repository identity > recognizes linked Git worktrees through their shared common directory 3916ms
+   ✓ workspace physical repository identity > rejects an update that would collide and preserves the previous target 8705ms
+   ✓ workspace physical repository identity > fails closed when a new repoPath has no resolvable physical Git identity 5783ms
+   ✓ workspace physical repository identity > migrates duplicate legacy records to one canonical workspace and durable id aliases 7712ms
+   ✓ workspace identity on productive routes > returns 409 when POST uses a subdirectory alias of an existing workspace 7060ms
+   ✓ workspace identity on productive routes > returns 409 when PATCH points a workspace at another workspace's repository 13274ms
+   ✓ workspace identity on productive routes > lists run history persisted under a migrated legacy workspace id 11022ms
+   ✓ RunTargetContext canonical repository path > captures the same top-level target and fingerprint through subdirectory and junction aliases 6994ms
+ ✓ tests/run-cockpit-chrome.test.ts (5 tests) 13ms
+ ✓ tests/sidebar-reveal.test.ts (9 tests) 14ms
+ ✓ tests/codex-usage-parsing.test.ts (8 tests) 13ms
+ ✓ tests/execution-core-mock-agent.test.ts (5 tests) 230ms
+ ✓ tests/manyhands-dev-poller.test.ts (2 tests) 103ms
+ ✓ tests/validation-without-commands.test.ts (3 tests) 16ms
+ ✓ tests/contracts-interface-contract.test.ts (6 tests) 22ms
+ ✓ tests/execution-core-status-channel.test.ts (7 tests) 27ms
+ ✓ tests/security-env-audit.test.ts (1 test) 278ms
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ ✓ tests/execution-core-context-packer.test.ts (5 tests) 498ms
+ ✓ tests/atomic-write-durability.test.ts (3 tests) 145ms
+ ✓ tests/input-fingerprint.test.ts (3 tests) 57ms
+ ✓ tests/run-coordinator-execution.test.ts (1 test) 30ms
+ ✓ tests/run-canvas-no-auto-fit.test.ts (2 tests) 113ms
+ ✓ tests/run-v2-record-cache-reconciliation.test.ts (1 test) 2130ms
+   ✓ V2 RunRecord cache reconciliation > repairs a stale running cache from a terminal canonical journal before responding 2118ms
+ ✓ tests/decomposer-env-sanitization.test.ts (2 tests) 3349ms
+   ✓ B-009 decomposer env sanitization > ClaudeCodeRecursiveDecomposer uses agentEnv when provided 2925ms
+   ✓ B-009 decomposer env sanitization > CodexRecursiveDecomposer uses agentEnv when provided 419ms
+ ✓ tests/cockpit-granularity-explanation.test.ts (2 tests) 10ms
+ ✓ tests/granularity-mapping.test.ts (6 tests) 13ms
+ ✓ tests/repository-index.test.ts (1 test) 333ms
+   ✓ TypeScriptRepositoryIndexer > indexes symbols and includes file content in the deterministic hash 330ms
+ ✓ tests/integration-repair-policy.test.ts (1 test) 23ms
+ ✓ tests/capability-service.test.ts (3 tests) 14ms
+ ✓ tests/local-fs.test.ts (3 tests) 6454ms
+   ✓ local filesystem workspace helpers > detects and summarizes a local git repository 3833ms
+   ✓ local filesystem workspace helpers > detects git repositories without commits 2380ms
+ ✓ tests/workspace-schema.test.ts (8 tests) 20ms
+ ✓ tests/command-detection.test.ts (3 tests) 99ms
+ ✓ tests/token-check.test.ts (2 tests) 638ms
+   ✓ token-check > accepts custom properties declared by the theme 411ms
+ ✓ tests/planning-v2-approval.test.ts (1 test) 4023ms
+   ✓ planning V2 revision approval > uses revision CAS and requires a new revision-specific approval after an edit 4005ms
+ ✓ tests/run-store-snapshot-rebuild.test.ts (1 test) 1643ms
+   ✓ discardable run snapshots > rebuilds corrupt and stale snapshots from the canonical event log 1640ms
+ ✓ tests/graph-amendment-v2.test.ts (1 test) 22ms
+ ✓ tests/run-model-tree-layout.test.ts (2 tests) 11ms
+ ✓ tests/execution-core-executor-registry.test.ts (4 tests) 1095ms
+   ✓ execution-core executor registry > constructs enabled adapters and rejects disabled executors 1084ms
+ ✓ tests/failure-retry-budget.test.ts (3 tests) 11ms
+ ✓ tests/manyhands-dev-command.test.ts (2 tests) 84ms
+ ✓ tests/dependency-validation.test.ts (5 tests) 14ms
+ ✓ tests/final-candidate.test.ts (2 tests) 18ms
+ ✓ tests/runner-state-handoff.test.ts (2 tests) 10ms
+ ✓ tests/run-target-context.test.ts (4 tests) 16751ms
+   ✓ immutable V2 RunTargetContext > captures real path, physical repository identity, branch, base and fingerprint 3725ms
+   ✓ immutable V2 RunTargetContext > resolves only the immutable captured target 5505ms
+   ✓ immutable V2 RunTargetContext > rejects a different repository and one recreated at the captured path 7508ms
+ ✓ tests/git-safe-directory-inventory.test.ts (1 test) 328ms
+   ✓ product Git subprocess inventory > routes every literal git subprocess through repo-scoped safeGitArgs 325ms
+ ✓ tests/stage-selection-ui.test.ts (4 tests) 11ms
+ ✓ tests/fixture-playback-navigation.test.ts (3 tests) 9ms
+ ✓ tests/execution-core-pre-merge.test.ts (4 tests) 30ms
+ ✓ tests/delivery-target-cleanliness.test.ts (5 tests) 9ms
+ ✓ tests/run-coordinator-boundaries.test.ts (2 tests) 98ms
+ ✓ tests/integration-contract-validation.test.ts (1 test) 29ms
+ ✓ tests/workspace-migration-ui.test.ts (1 test) 27ms
+ ✓ tests/run-record-diagnostics-index.test.ts (3 tests) 17828ms
+   ✓ bounded run-record diagnostics index > does not parse run records on the cached hot path 6979ms
+   ✓ bounded run-record diagnostics index > inspects only the configured batch, then reuses durable metadata 5586ms
+   ✓ bounded run-record diagnostics index > eventually surfaces corruption without an unbounded directory parse 5259ms
+ ✓ tests/status-pill-language.test.ts (3 tests) 9ms
+ ✓ tests/presenter.test.ts (2 tests) 35ms
+ ✓ tests/workspace-slug.test.ts (8 tests) 13ms
+ ✓ tests/artifact-registry.test.ts (1 test) 85ms
+ ✓ tests/run-loading-skeleton.test.ts (1 test) 8ms
+ ✓ tests/execution-core-executor-factory.test.ts (4 tests) 1845ms
+   ✓ DefaultAgentExecutorFactory (profile-driven) > creates executors for every enabled CLI without a hardcoded switch 1267ms
+   ✓ DefaultAgentExecutorFactory (profile-driven) > caches one executor instance per executor id 573ms
+ ✓ tests/worktree-dependency-isolation.test.ts (1 test) 382ms
+   ✓ worktree dependency isolation > never creates a node_modules link to the source checkout 376ms
+ ✓ tests/ui-copy-encoding.test.ts (1 test) 1457ms
+   ✓ web UI copy encoding > contains no common UTF-8 mojibake sequences 1453ms
+ ✓ tests/run-create-canonical-seed.test.ts (1 test) 432ms
+   ✓ run creation canonical event > makes run.created durable before the caller can read the run 428ms
+ ✓ tests/granularity-planning-brief.test.ts (1 test) 82ms
+ ✓ tests/run-abort-authority.test.ts (2 tests) 33ms
+ ✓ tests/run-abort-registry-hmr.test.ts (1 test) 15ms
+ ✓ tests/stage-selection-resolver.test.ts (2 tests) 84ms
+ ✓ tests/run-model-sse-adapter.test.ts (1 test) 10ms
+ ✓ tests/execution-core-cli-binary.test.ts (3 tests) 27ms
+ ✓ tests/status-presentation.test.ts (2 tests) 9ms
+ ✓ tests/proto-index-page.test.ts (1 test) 7ms
+ ✓ tests/execution-core-leaf-instructions.test.ts (2 tests) 15ms
+ ✓ tests/execution-core-availability.test.ts (2 tests) 10ms
+ ✓ tests/conflict-constraint-evidence.test.ts (1 test) 9ms
+ ✓ tests/run-acceptance-criteria.test.ts (1 test) 39ms
+ ✓ tests/bounded-output.test.ts (1 test) 7ms
+ ✓ tests/planning-cli-invocation.test.ts (2 tests) 17ms
+ ✓ tests/runs-list-performance.test.ts (3 tests) 17570ms
+   ✓ GET /api/runs hot path > does not start a corruption crawl for the dev console poll 6738ms
+   ✓ GET /api/runs hot path > fills the requested recent-runs slice after excluding archived records 7937ms
+   ✓ GET /api/runs hot path > ignores retired diagnostics query flags without starting a crawl 2881ms
+ ✓ tests/stage0-native-process.windows.test.ts (1 test) 12516ms
+   ✓ Stage 0 PowerShell native runner > captures a real native exit and fails closed for a missing executable 12513ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+System.Management.Automation.RemoteException
+ FAIL  tests/store-recovery-traces-security.test.ts > durable recovery, traces and bounded grounding > renews a durable lock lease before its stale deadline
+AssertionError: expected [Function] to throw error matching /Timed out/iu but got 'EPERM: operation not permitted, renam…'
+System.Management.Automation.RemoteException
+- Expected: 
+/Timed out/iu
+System.Management.Automation.RemoteException
++ Received: 
+"EPERM: operation not permitted, rename 'C:\\Users\\franc\\AppData\\Local\\Temp\\mh-lock-renew-3sjFGy\\run.lock' -> 'C:\\Users\\franc\\AppData\\Local\\Temp\\mh-lock-renew-3sjFGy\\run.lock.stale.b89588fb-77ea-40a6-8d07-0fd91e089c57'"
+System.Management.Automation.RemoteException
+ ❯ tests/store-recovery-traces-security.test.ts:65:7
+     63|       await new Promise((resolve) => setTimeout(resolve, 10));
+     64|       await lock.renew();
+     65|       await expect(acquireDurableLock(path.join(directory, "run.lock")…
+       |       ^
+     66|         staleAfterMs: 20,
+     67|         timeoutMs: 5
+System.Management.Automation.RemoteException
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+System.Management.Automation.RemoteException
+ Test Files  1 failed | 230 passed (231)
+      Tests  1 failed | 1485 passed | 4 skipped (1490)
+   Start at  18:45:38
+   Duration  145.24s (transform 24.04s, setup 0ms, collect 405.95s, tests 794.70s, environment 219ms, prepare 108.14s)
+
+EXIT_CODE=1

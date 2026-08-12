@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, utimes, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -66,6 +66,29 @@ describe("durable recovery, traces and bounded grounding", () => {
         staleAfterMs: 20,
         timeoutMs: 5
       })).rejects.toThrow(/Timed out/iu);
+    } finally {
+      await lock();
+    }
+  });
+
+  it("never reclaims another lock after its own acquisition deadline expires", async () => {
+    const directory = await tempRoot("mh-lock-deadline-");
+    const lockPath = path.join(directory, "run.lock");
+    const lock = await acquireDurableLock(lockPath, { renewIntervalMs: 0 });
+    try {
+      const ownerPath = path.join(lockPath, "owner.json");
+      const ownerBefore = await readFile(ownerPath, "utf8");
+      const expired = new Date(Date.now() - 60_000);
+      await utimes(lockPath, expired, expired);
+
+      await expect(acquireDurableLock(lockPath, {
+        staleAfterMs: 1,
+        timeoutMs: 0,
+        renewIntervalMs: 0
+      })).rejects.toThrow(/Timed out/iu);
+
+      expect(await readFile(ownerPath, "utf8")).toBe(ownerBefore);
+      expect((await readdir(directory)).filter((entry) => entry.startsWith("run.lock.stale."))).toEqual([]);
     } finally {
       await lock();
     }

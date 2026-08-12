@@ -83,6 +83,13 @@ export async function acquireDurableLock(
       return release;
     } catch (error) {
       if (!isAlreadyExists(error)) throw error;
+      // A waiter whose own deadline has expired no longer has authority to
+      // inspect and reclaim another owner's lock. Checking before stale-lock
+      // recovery also prevents a delayed event loop from turning a timeout
+      // into a destructive late reclaim.
+      if (Date.now() - startedAt >= timeoutMs) {
+        throw new Error(`Timed out waiting for durable lock ${lockPath}.`);
+      }
       try {
         const info = await stat(lockPath);
         if (Date.now() - info.mtimeMs > staleAfterMs) {
@@ -92,9 +99,6 @@ export async function acquireDurableLock(
       } catch (inspectionError) {
         if (isNotFound(inspectionError)) continue;
         throw inspectionError;
-      }
-      if (Date.now() - startedAt >= timeoutMs) {
-        throw new Error(`Timed out waiting for durable lock ${lockPath}.`);
       }
       await delay(10);
     }

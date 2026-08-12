@@ -1,0 +1,20 @@
+RECEIPT_ID=source-benchmark-markers
+CANDIDATE=0cf4b5b8d4dfe12182afeef8290e7468536872fb
+WORKING_DIRECTORY=C:\mh-g0-0cf4-08
+COMMAND=& 'C:\ProgramData\chocolatey\bin\rg.exe' '-n' '-i' '--glob' '!**/*.test.*' '--glob' '!**/tests/**' 'backorders|currentBackorders|warehouse|SP2|G5|G6|G7' 'apps/web/src' 'packages'
+packages\execution-core\src\validation\test-integrity.ts:39:    const requestedStateTerms = [...new Set([...promise.matchAll(/\bbackorders?\b/giu)].map((match) => match[0].toLowerCase()))];
+packages\execution-core\src\pricing.ts:24:  // OpenAI standard API pricing, refreshed for the G6 Codex CLI cell.
+packages\execution-core\src\v2\node-executor.ts:279:        // `verified`, with its empty artifact adopted (SP2 rehearsal, run
+packages\execution-core\src\v2\node-executor.ts:861:  const observableStateTerms = [...new Set([...input.contract.task.goal.matchAll(/\bbackorders?\b/giu)].map((match) => match[0].toLowerCase()))];
+packages\execution-core\src\v2\node-executor.ts:877:      ...(observableStateTerms.some((term) => term === "backorder" || term === "backorders")
+packages\execution-core\src\v2\node-executor.ts:878:        ? ["For recorded backorder state, expose the exact read operation `currentBackorders()`; do not substitute an events feed or a generic current-orders read."]
+packages\execution-core\src\v2\node-executor.ts:973:    // in a `scope_check_failed` trace nobody is pointed at (SP2 rehearsal, run
+apps/web/src\lib\server\runs\v2\planning-host.ts:24:  /** G5 condition label; absent means the productive adaptive policy. */
+apps/web/src\lib\server\runs\v2\run-coordinator-host.ts:39: * cost Warehouse pilot series 5, 8, 9 and 11 their planning attempts.
+packages\decomposer\src\granularity\granularity-policy.ts:42:   * Reading and producing are separate limits. Warehouse pilot W2 showed why:
+packages\decomposer\src\planner\planning-errors.ts:19: * the repair budget: Warehouse pilot series-9 lost all three planning attempts
+packages\decomposer\src\planner\recursive-planner.ts:15: * for. A one-shot whole-tree contract is what made six of six SP2 candidates
+packages\decomposer\src\planner\recursive-planner.ts:551: * The whole contract is shown literally. SP2 died on `interface`, a field the
+packages\decomposer\src\planner\recursive-planner.ts:608:      "writes": ["src/domain/backorders.js", "test/backorders.test.js"]
+EXIT_CODE=0
+COMMAND_STATUS=accepted_exit

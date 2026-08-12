@@ -1,0 +1,145 @@
+RECEIPT_ID=clean-install
+CANDIDATE=0cf4b5b8d4dfe12182afeef8290e7468536872fb
+WORKING_DIRECTORY=C:\mh-g0-0cf4-08
+COMMAND=& 'C:\mh-shim-0cf4-08\pnpm.cmd' 'install' '--frozen-lockfile' '--store-dir' 'C:\mh-store-0cf4-08'
+Scope: all 14 workspace projects
+✓ Lockfile passes supply-chain policies (verified 1h ago)
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +629
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 629, reused 0, downloaded 7, added 0
+Progress: resolved 629, reused 0, downloaded 22, added 0
+Progress: resolved 629, reused 0, downloaded 23, added 0
+Progress: resolved 629, reused 0, downloaded 25, added 0
+Progress: resolved 629, reused 0, downloaded 30, added 0
+Progress: resolved 629, reused 0, downloaded 31, added 0
+Progress: resolved 629, reused 0, downloaded 32, added 0
+Progress: resolved 629, reused 0, downloaded 40, added 0
+[WARN] Tarball download average speed 44 KiB/s (size 213 KiB) is below 50 KiB/s: https://registry.npmjs.org/simple-git/-/simple-git-3.36.0.tgz (GET)
+Packages are hard linked from the content-addressable store to the virtual store.
+  Content-addressable store is at: C:\mh-store-0cf4-08\v11
+  Virtual store is at:             node_modules/.pnpm
+Progress: resolved 629, reused 0, downloaded 44, added 3
+Progress: resolved 629, reused 0, downloaded 55, added 4
+Progress: resolved 629, reused 0, downloaded 70, added 4
+Progress: resolved 629, reused 0, downloaded 78, added 4
+Progress: resolved 629, reused 0, downloaded 86, added 5
+Progress: resolved 629, reused 0, downloaded 86, added 7
+Progress: resolved 629, reused 0, downloaded 90, added 7
+Progress: resolved 629, reused 0, downloaded 91, added 7
+Progress: resolved 629, reused 0, downloaded 100, added 8
+Progress: resolved 629, reused 0, downloaded 111, added 8
+Progress: resolved 629, reused 0, downloaded 116, added 8
+Progress: resolved 629, reused 0, downloaded 121, added 8
+Progress: resolved 629, reused 0, downloaded 127, added 8
+Progress: resolved 629, reused 0, downloaded 139, added 8
+Progress: resolved 629, reused 0, downloaded 140, added 11
+Progress: resolved 629, reused 0, downloaded 141, added 11
+Progress: resolved 629, reused 0, downloaded 146, added 12
+Progress: resolved 629, reused 0, downloaded 147, added 12
+Progress: resolved 629, reused 0, downloaded 160, added 12
+Progress: resolved 629, reused 0, downloaded 164, added 12
+Progress: resolved 629, reused 0, downloaded 165, added 12
+Progress: resolved 629, reused 0, downloaded 166, added 12
+Progress: resolved 629, reused 0, downloaded 178, added 12
+Progress: resolved 629, reused 0, downloaded 184, added 12
+Progress: resolved 629, reused 0, downloaded 195, added 15
+Progress: resolved 629, reused 0, downloaded 207, added 16
+Progress: resolved 629, reused 0, downloaded 219, added 16
+Progress: resolved 629, reused 0, downloaded 229, added 16
+Progress: resolved 629, reused 0, downloaded 240, added 16
+Progress: resolved 629, reused 0, downloaded 249, added 16
+Progress: resolved 629, reused 0, downloaded 259, added 20
+Progress: resolved 629, reused 0, downloaded 278, added 20
+Progress: resolved 629, reused 0, downloaded 287, added 20
+Progress: resolved 629, reused 0, downloaded 315, added 24
+Progress: resolved 629, reused 0, downloaded 328, added 24
+Progress: resolved 629, reused 0, downloaded 343, added 24
+Progress: resolved 629, reused 0, downloaded 353, added 25
+Progress: resolved 629, reused 0, downloaded 361, added 28
+Progress: resolved 629, reused 0, downloaded 374, added 28
+Progress: resolved 629, reused 0, downloaded 398, added 28
+Progress: resolved 629, reused 0, downloaded 405, added 28
+Progress: resolved 629, reused 0, downloaded 418, added 30
+Progress: resolved 629, reused 0, downloaded 429, added 31
+Progress: resolved 629, reused 0, downloaded 444, added 31
+Progress: resolved 629, reused 0, downloaded 474, added 32
+Progress: resolved 629, reused 0, downloaded 492, added 32
+Progress: resolved 629, reused 0, downloaded 502, added 34
+Progress: resolved 629, reused 0, downloaded 513, added 34
+Progress: resolved 629, reused 0, downloaded 526, added 34
+Progress: resolved 629, reused 0, downloaded 538, added 34
+Progress: resolved 629, reused 0, downloaded 542, added 34
+Progress: resolved 629, reused 0, downloaded 542, added 35
+Progress: resolved 629, reused 0, downloaded 554, added 36
+Progress: resolved 629, reused 0, downloaded 566, added 36
+Progress: resolved 629, reused 0, downloaded 571, added 36
+Progress: resolved 629, reused 0, downloaded 578, added 36
+Progress: resolved 629, reused 0, downloaded 592, added 37
+Progress: resolved 629, reused 0, downloaded 603, added 37
+Progress: resolved 629, reused 0, downloaded 607, added 38
+Progress: resolved 629, reused 0, downloaded 616, added 39
+Progress: resolved 629, reused 0, downloaded 625, added 45
+Progress: resolved 629, reused 0, downloaded 625, added 46
+Progress: resolved 629, reused 0, downloaded 627, added 47
+Progress: resolved 629, reused 0, downloaded 628, added 56
+Progress: resolved 629, reused 0, downloaded 628, added 82
+Progress: resolved 629, reused 0, downloaded 628, added 100
+Progress: resolved 629, reused 0, downloaded 628, added 107
+Progress: resolved 629, reused 0, downloaded 628, added 136
+Progress: resolved 629, reused 0, downloaded 628, added 144
+Progress: resolved 629, reused 0, downloaded 628, added 151
+Progress: resolved 629, reused 0, downloaded 628, added 163
+Progress: resolved 629, reused 0, downloaded 628, added 177
+Progress: resolved 629, reused 0, downloaded 628, added 191
+Progress: resolved 629, reused 0, downloaded 628, added 207
+Progress: resolved 629, reused 0, downloaded 628, added 217
+Progress: resolved 629, reused 0, downloaded 628, added 258
+Progress: resolved 629, reused 0, downloaded 628, added 320
+Progress: resolved 629, reused 0, downloaded 628, added 352
+Progress: resolved 629, reused 0, downloaded 629, added 389
+Progress: resolved 629, reused 0, downloaded 629, added 488
+Progress: resolved 629, reused 0, downloaded 629, added 626
+Progress: resolved 629, reused 0, downloaded 629, added 627
+Progress: resolved 629, reused 0, downloaded 629, added 628
+Progress: resolved 629, reused 0, downloaded 629, added 629
+Progress: resolved 629, reused 0, downloaded 629, added 629, done
+.../sharp@0.34.5/node_modules/sharp install$ node install/check.js || npm run build
+.../node-pty@1.1.0/node_modules/node-pty install$ node scripts/prebuild.js || node-gyp rebuild
+.../node_modules/unrs-resolver postinstall$ node postinstall.js
+.../esbuild@0.21.5/node_modules/esbuild postinstall$ node install.js
+.../esbuild@0.27.7/node_modules/esbuild postinstall$ node install.js
+.../node-pty@1.1.0/node_modules/node-pty install: [32m> Checking prebuilds...[0m
+.../node-pty@1.1.0/node_modules/node-pty install: Done
+.../node-pty@1.1.0/node_modules/node-pty postinstall$ node scripts/post-install.js
+.../sharp@0.34.5/node_modules/sharp install: Done
+.../node-pty@1.1.0/node_modules/node-pty postinstall: [32m> Cleaning release folder...[0m
+.../node-pty@1.1.0/node_modules/node-pty postinstall: [32m> Moving conpty.dll...[0m
+.../node-pty@1.1.0/node_modules/node-pty postinstall:   Using os.arch(): x64
+.../node-pty@1.1.0/node_modules/node-pty postinstall:   Found version 1.23.251008001
+.../node-pty@1.1.0/node_modules/node-pty postinstall:   Copying C:\mh-g0-0cf4-08\node_modules\.pnpm\node-pty@1.1.0\node_modules\node-pty\third_party\conpty\1.23.251008001\win10-x64\conpty.dll -> C:\mh-g0-0cf4-08\node_modules\.pnpm\node-pty@1.1.0\node_modules\node-pty\build\Release\conpty\conpty.dll
+.../node-pty@1.1.0/node_modules/node-pty postinstall:   Copying C:\mh-g0-0cf4-08\node_modules\.pnpm\node-pty@1.1.0\node_modules\node-pty\third_party\conpty\1.23.251008001\win10-x64\OpenConsole.exe -> C:\mh-g0-0cf4-08\node_modules\.pnpm\node-pty@1.1.0\node_modules\node-pty\build\Release\conpty\OpenConsole.exe
+.../node-pty@1.1.0/node_modules/node-pty postinstall: Done
+.../node_modules/unrs-resolver postinstall: Done
+.../esbuild@0.27.7/node_modules/esbuild postinstall: Done
+.../esbuild@0.21.5/node_modules/esbuild postinstall: Done
+
+dependencies:
++ zod 3.25.76
+
+devDependencies:
++ @types/node 22.20.1
++ @typescript-eslint/eslint-plugin 7.18.0
++ @typescript-eslint/parser 7.18.0
++ eslint 8.57.1
++ eslint-plugin-jsx-a11y 6.10.2
++ puppeteer-core 25.3.0
++ ts-morph 28.0.0
++ tsup 8.5.1
++ typescript 5.9.3
++ vitest 2.1.9
+
+Done in 2m 13s using pnpm v11.21.0
+EXIT_CODE=0
+COMMAND_STATUS=accepted_exit

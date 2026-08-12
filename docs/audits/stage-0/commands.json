@@ -179,6 +179,16 @@
       "result": "Independent review found that PowerShell case-insensitive variable names made the expected/observed version checks tautological. The exact process tree was stopped during full tests; twelve partial or completed receipts are indexed individually and none supports an accepted gate claim.",
       "logPath": "docs/audits/stage-0/logs/candidate-dc454704-final-setup.log",
       "modelId": "not_applicable"
+    },
+    {
+      "id": "0cf4b5b8-durable-lock-deadline-ordering",
+      "exactCommand": "C:/mh-shim-0cf4-08/pnpm.cmd exec vitest run --retry=0",
+      "workingDirectory": "C:/mh-g0-0cf4-08",
+      "status": "failed_root_cause_fixed_in_successor",
+      "exitCode": 1,
+      "result": "The exact Node 22 clean clone passed 230 test files and 1485 tests, then one durable-lock test exposed that an expired waiter attempted stale-lock recovery before checking its own deadline and hit Windows EPERM. Four tests were skipped. A deterministic red regression reproduced the unsafe late reclaim; the successor checks timeout before any recovery.",
+      "logPath": "docs/audits/stage-0/logs/candidate-0cf4b5b8-final-full-tests.log",
+      "modelId": "not_applicable"
     }
   ]
 }
