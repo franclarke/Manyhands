@@ -1,0 +1,133 @@
+Scope: all 14 workspace projects
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +624
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Packages are hard linked from the content-addressable store to the virtual store.
+  Content-addressable store is at: C:\Users\franc\AppData\Local\Temp\manyhands-stage0-pnpm-store-2d3ffdb5\v3
+  Virtual store is at:             node_modules/.pnpm
+Progress: resolved 624, reused 0, downloaded 10, added 2
+Progress: resolved 624, reused 0, downloaded 26, added 10
+Progress: resolved 624, reused 0, downloaded 35, added 26
+Progress: resolved 624, reused 0, downloaded 41, added 38
+Progress: resolved 624, reused 0, downloaded 48, added 46
+Progress: resolved 624, reused 0, downloaded 58, added 51
+Progress: resolved 624, reused 0, downloaded 76, added 68
+Progress: resolved 624, reused 0, downloaded 98, added 81
+Progress: resolved 624, reused 0, downloaded 107, added 95
+Progress: resolved 624, reused 0, downloaded 117, added 111
+Progress: resolved 624, reused 0, downloaded 124, added 120
+Progress: resolved 624, reused 0, downloaded 140, added 127
+Progress: resolved 624, reused 0, downloaded 152, added 139
+Progress: resolved 624, reused 0, downloaded 167, added 156
+Progress: resolved 624, reused 0, downloaded 183, added 173
+Progress: resolved 624, reused 0, downloaded 205, added 191
+Progress: resolved 624, reused 0, downloaded 213, added 206
+Progress: resolved 624, reused 0, downloaded 223, added 215
+Progress: resolved 624, reused 0, downloaded 230, added 227
+Progress: resolved 624, reused 0, downloaded 233, added 230
+Progress: resolved 624, reused 0, downloaded 240, added 238
+Progress: resolved 624, reused 0, downloaded 247, added 245
+Progress: resolved 624, reused 0, downloaded 257, added 253
+Progress: resolved 624, reused 0, downloaded 264, added 259
+Progress: resolved 624, reused 0, downloaded 268, added 266
+Progress: resolved 624, reused 0, downloaded 278, added 274
+Progress: resolved 624, reused 0, downloaded 289, added 285
+Progress: resolved 624, reused 0, downloaded 294, added 293
+Progress: resolved 624, reused 0, downloaded 303, added 299
+Progress: resolved 624, reused 0, downloaded 312, added 312
+Progress: resolved 624, reused 0, downloaded 313, added 312
+Progress: resolved 624, reused 0, downloaded 314, added 313
+Progress: resolved 624, reused 0, downloaded 317, added 317
+Progress: resolved 624, reused 0, downloaded 322, added 320
+Progress: resolved 624, reused 0, downloaded 331, added 326
+Progress: resolved 624, reused 0, downloaded 338, added 337
+Progress: resolved 624, reused 0, downloaded 341, added 341
+Progress: resolved 624, reused 0, downloaded 352, added 349
+Progress: resolved 624, reused 0, downloaded 360, added 358
+Progress: resolved 624, reused 0, downloaded 366, added 366
+Progress: resolved 624, reused 0, downloaded 374, added 374
+Progress: resolved 624, reused 0, downloaded 383, added 377
+Progress: resolved 624, reused 0, downloaded 387, added 384
+Progress: resolved 624, reused 0, downloaded 394, added 394
+Progress: resolved 624, reused 0, downloaded 405, added 402
+Progress: resolved 624, reused 0, downloaded 406, added 402
+Progress: resolved 624, reused 0, downloaded 425, added 415
+Progress: resolved 624, reused 0, downloaded 440, added 431
+Progress: resolved 624, reused 0, downloaded 454, added 446
+Progress: resolved 624, reused 0, downloaded 473, added 463
+Progress: resolved 624, reused 0, downloaded 489, added 484
+Progress: resolved 624, reused 0, downloaded 490, added 485
+Progress: resolved 624, reused 0, downloaded 500, added 492
+Progress: resolved 624, reused 0, downloaded 502, added 501
+Progress: resolved 624, reused 0, downloaded 505, added 504
+Progress: resolved 624, reused 0, downloaded 507, added 506
+Progress: resolved 624, reused 0, downloaded 509, added 508
+Progress: resolved 624, reused 0, downloaded 514, added 513
+Progress: resolved 624, reused 0, downloaded 519, added 517
+Progress: resolved 624, reused 0, downloaded 523, added 521
+Progress: resolved 624, reused 0, downloaded 527, added 524
+Progress: resolved 624, reused 0, downloaded 532, added 528
+Progress: resolved 624, reused 0, downloaded 544, added 539
+Progress: resolved 624, reused 0, downloaded 556, added 553
+Progress: resolved 624, reused 0, downloaded 562, added 561
+Progress: resolved 624, reused 0, downloaded 566, added 564
+Progress: resolved 624, reused 0, downloaded 571, added 568
+Progress: resolved 624, reused 0, downloaded 583, added 576
+Progress: resolved 624, reused 0, downloaded 587, added 583
+Progress: resolved 624, reused 0, downloaded 596, added 594
+Progress: resolved 624, reused 0, downloaded 607, added 606
+Progress: resolved 624, reused 0, downloaded 615, added 614
+Progress: resolved 624, reused 0, downloaded 615, added 615
+Progress: resolved 624, reused 0, downloaded 617, added 617
+Progress: resolved 624, reused 0, downloaded 618, added 617
+Progress: resolved 624, reused 0, downloaded 618, added 618
+Progress: resolved 624, reused 0, downloaded 620, added 620
+Progress: resolved 624, reused 0, downloaded 621, added 620
+Progress: resolved 624, reused 0, downloaded 621, added 621
+Progress: resolved 624, reused 0, downloaded 622, added 621
+Progress: resolved 624, reused 0, downloaded 622, added 622
+Progress: resolved 624, reused 0, downloaded 623, added 622
+Progress: resolved 624, reused 0, downloaded 623, added 623
+Progress: resolved 624, reused 0, downloaded 624, added 623
+Progress: resolved 624, reused 0, downloaded 624, added 624, done
+.../node-pty@1.1.0/node_modules/node-pty install$ node scripts/prebuild.js || node-gyp rebuild
+.../esbuild@0.27.7/node_modules/esbuild postinstall$ node install.js
+.../node-pty@1.1.0/node_modules/node-pty install: > Checking prebuilds...
+.../node-pty@1.1.0/node_modules/node-pty install: Done
+.../node-pty@1.1.0/node_modules/node-pty postinstall$ node scripts/post-install.js
+.../esbuild@0.27.7/node_modules/esbuild postinstall: [esbuild] Failed to find package "@esbuild/win32-x64" on the file system
+.../esbuild@0.27.7/node_modules/esbuild postinstall: This can happen if you use the "--no-optional" flag. The "optionalDependencies"
+.../esbuild@0.27.7/node_modules/esbuild postinstall: package.json feature is used by esbuild to install the correct binary executable
+.../esbuild@0.27.7/node_modules/esbuild postinstall: for your current platform. This install script will now attempt to work around
+.../esbuild@0.27.7/node_modules/esbuild postinstall: this. If that fails, you need to remove the "--no-optional" flag to use esbuild.
+.../esbuild@0.27.7/node_modules/esbuild postinstall: [esbuild] Trying to install package "@esbuild/win32-x64" using npm
+.../node-pty@1.1.0/node_modules/node-pty postinstall: > Cleaning release folder...
+.../node-pty@1.1.0/node_modules/node-pty postinstall: > Moving conpty.dll...
+.../node-pty@1.1.0/node_modules/node-pty postinstall:   Using os.arch(): x64
+.../node-pty@1.1.0/node_modules/node-pty postinstall:   Found version 1.23.251008001
+.../node-pty@1.1.0/node_modules/node-pty postinstall:   Copying C:\Users\franc\AppData\Local\Temp\manyhands-stage0-2d3ffdb5-cb5e59e173dc44789f5cf57d11c89cee\node_modules\.pnpm\node-pty@1.1.0\node_modules\node-pty\third_party\conpty\1.23.251008001\win10-x64\conpty.dll -> C:\Users\franc\AppData\Local\Temp\manyhands-stage0-2d3ffdb5-cb5e59e173dc44789f5cf57d11c89cee\node_modules\.pnpm\node-pty@1.1.0\node_modules\node-pty\build\Release\conpty\conpty.dll
+.../node-pty@1.1.0/node_modules/node-pty postinstall:   Copying C:\Users\franc\AppData\Local\Temp\manyhands-stage0-2d3ffdb5-cb5e59e173dc44789f5cf57d11c89cee\node_modules\.pnpm\node-pty@1.1.0\node_modules\node-pty\third_party\conpty\1.23.251008001\win10-x64\OpenConsole.exe -> C:\Users\franc\AppData\Local\Temp\manyhands-stage0-2d3ffdb5-cb5e59e173dc44789f5cf57d11c89cee\node_modules\.pnpm\node-pty@1.1.0\node_modules\node-pty\build\Release\conpty\OpenConsole.exe
+.../node-pty@1.1.0/node_modules/node-pty postinstall: Done
+.../esbuild@0.27.7/node_modules/esbuild postinstall: Done
+.../node_modules/unrs-resolver postinstall$ node postinstall.js
+.../esbuild@0.21.5/node_modules/esbuild postinstall$ node install.js
+.../node_modules/unrs-resolver postinstall: Done
+.../esbuild@0.21.5/node_modules/esbuild postinstall: Done
+
+dependencies:
++ zod 3.25.76
+
+devDependencies:
++ @types/node 22.20.1
++ @typescript-eslint/eslint-plugin 7.18.0
++ @typescript-eslint/parser 7.18.0
++ eslint 8.57.1
++ eslint-plugin-jsx-a11y 6.10.2
++ puppeteer-core 25.3.0
++ ts-morph 28.0.0
++ tsup 8.5.1
++ typescript 5.9.3
++ vitest 2.1.9
+
+Done in 2m 10.1s

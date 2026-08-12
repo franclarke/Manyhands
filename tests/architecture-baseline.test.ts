@@ -30,6 +30,9 @@ describe("target architecture migration baseline", () => {
     const packageResolutions = parsePackageResolutions(lockfile);
     const importerResolutions = parseImporterResolutions(lockfile);
 
+    expect(sha256Text(lockfile)).toBe(
+      "b0b6b366349c303e70a3b76c71ed757e7bcc9c808093ad0440f59aa3b20c8697"
+    );
     expect(packageResolutions).toHaveLength(778);
     expect(sha256Lines(packageResolutions)).toBe(
       "845bda9823eacae6bf087008b95b5fc99a80888a69026a967df71026b71e6673"
@@ -38,6 +41,34 @@ describe("target architecture migration baseline", () => {
     expect(sha256Lines(importerResolutions)).toBe(
       "0d5aeecdbc69dd8e6a5523c39e96855b805d214d7b7935b44b9a31310b706e5f"
     );
+  });
+
+  it("keeps clean-clone qualification reproducible and its receipts versionable", async () => {
+    const [script, gitignore, gitattributes] = await Promise.all([
+      readFile(path.join(REPO_ROOT, "scripts", "verify-stage0-clean-clone.ps1"), "utf8"),
+      readFile(path.join(REPO_ROOT, ".gitignore"), "utf8"),
+      readFile(path.join(REPO_ROOT, ".gitattributes"), "utf8")
+    ]);
+
+    expect(script).toContain("Assert-NewAbsoluteDirectory $ClonePath 'ClonePath'");
+    expect(script).toContain("--no-local");
+    expect(script).toContain("--no-hardlinks");
+    expect(script).toContain("STORE_FILES_BEFORE_INSTALL=");
+    expect(script).toContain("Node archive checksum mismatch");
+    expect(script).toContain("Node runtime mismatch");
+    expect(script).toContain("pnpm runtime mismatch");
+    expect(script).toContain("Detached clone identity changed during qualification");
+    expect(script).toContain("source-api-routes");
+    expect(script).toContain("source-legacy-imports");
+    expect(script).toContain("RG_PATH=");
+    expect(script).toContain("RG_VERSION=");
+    expect(script).toContain("'--strict-config', 'doctor', '--summary', '--ascii'");
+    expect(script).toContain("FINAL_STATUS_COUNT=");
+    expect(script).not.toMatch(/\bRemove-Item\b/u);
+    expect(gitignore).toContain("!docs/audits/stage-0/logs/");
+    expect(gitignore).toContain("docs/audits/stage-0/logs/*");
+    expect(gitignore).toContain("!docs/audits/stage-0/logs/*.log");
+    expect(gitattributes).toContain("/docs/audits/stage-0/logs/** -text");
   });
 
   it("keeps V1 records out of the canonical V2 cache schema", async () => {
@@ -322,4 +353,8 @@ function unquoteYamlScalar(value: string): string {
 
 function sha256Lines(lines: readonly string[]): string {
   return createHash("sha256").update(`${lines.join("\n")}\n`).digest("hex");
+}
+
+function sha256Text(text: string): string {
+  return createHash("sha256").update(text.replaceAll("\r\n", "\n")).digest("hex");
 }

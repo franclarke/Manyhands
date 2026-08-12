@@ -1,0 +1,23 @@
+CANDIDATE=a3f45c72b21c20853f2d4616a3429c62b81f3a20
+CLONE_PATH=C:\Users\franc\AppData\Local\Temp\manyhands-stage0-a3f45c72-5db9d271b78c4befb932961c999b98a3
+STORE_PATH=C:\Users\franc\AppData\Local\Temp\manyhands-stage0-store-a3f45c72-b8f982b9c2e44e978c420ee70a848bfa
+CLONE_EXIT=0
+Cloning into 'C:\Users\franc\AppData\Local\Temp\manyhands-stage0-a3f45c72-5db9d271b78c4befb932961c999b98a3'...
+CHECKOUT_EXIT=0
+HEAD is now at a3f45c72 build: modernize reproducible pnpm toolchain
+HEAD=a3f45c72b21c20853f2d4616a3429c62b81f3a20
+TREE=609793aec23279f7929e710c785e48ffc7cc0bee
+STATUS_BEFORE_COUNT=0
+
+INITIAL_INSTALL_RESULT=pass (630 packages materialized from empty isolated store; exit 0)
+REPEAT_VERIFICATION_BEGIN
+COMMAND=corepack pnpm install --frozen-lockfile --store-dir <isolated-store>
+PNPM_VERSION=11.21.0
+NODE_VERSION=v24.16.0
+Scope: all 14 workspace projects
+Already up to date
+Done in 506ms using pnpm v11.21.0
+COMMAND_EXIT=0
+NATIVE_BINDING_PRESENT=True
+STATUS_AFTER_COUNT=0
+REPEAT_VERIFICATION_END

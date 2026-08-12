@@ -4,9 +4,9 @@
 
 **Architecture baseline tree:** `4a8e169a0d68f3cd8a25c9a7ba098c422307d15f`
 
-**Verified candidate:** `9cf3e87a9a534bd07947cfaedb6d78f88205b642`
+**Rejected candidate:** `9cf3e87a9a534bd07947cfaedb6d78f88205b642`
 
-**Verified tree:** `694b99d80023d329502987563d2b8fb4b8df113e`
+**Rejected tree:** `694b99d80023d329502987563d2b8fb4b8df113e`
 
 **Stable clean clone:** `C:/mh-g0-9cf3-02`
 
@@ -67,9 +67,10 @@ folded into a false claim that the original toolchain was reproducible.
 Earlier pnpm 7 and long-path attempts remain in the log set and in
 [`commands.json`](commands.json). In particular,
 `candidate-9cf3-web-build.log` records an attempt whose `%TEMP%` clone passed
-installation and source checks but was externally emptied while the web build
-was running. The ensuing missing plugin/files and `ENOENT` are classified as an
-inconclusive harness/environment event, not as a ManyHands product failure.
+installation and source checks, after which the web build observed missing
+plugin/files and `ENOENT`. Later inspection found the clone, store and shim
+paths absent, but no receipt establishes why. The attempt therefore remains
+`inconclusive`; it neither proves a product defect nor a host cleanup cause.
 The stable short-path clone was then created independently and passed the same
 web build.
 
@@ -79,9 +80,15 @@ work before GProd can claim a fully green production-quality gate.
 
 ## Evidence integrity and limitations
 
-- [`logs.sha256`](logs.sha256) was regenerated and verified against the final
-  and preserved adverse log set before the closure commit; every listed log
-  matched its recorded digest.
+- [`logs.sha256`](logs.sha256) covers all 42 retained final/adverse logs, which
+  are explicitly versionable despite the repository-wide `*.log` ignore rule.
+- [`evidence-index.json`](evidence-index.json) classifies all 42 logs exactly
+  once; incomplete historical receipts preserve `null` fields and are not used
+  as accepted-candidate claims.
+- [`../../../scripts/verify-stage0-clean-clone.ps1`](../../../scripts/verify-stage0-clean-clone.ps1)
+  is the fail-closed recipe for the replacement candidate: it refuses existing
+  clone/store/shim targets and records setup, strict preflight, commands and
+  post-check identity.
 - Node v24.16.0 was used for local verification; CI is pinned to Node 22.22.0.
 - No model was invoked to establish G0 product evidence.
 - The full suite's four skips remain skips, not passes.

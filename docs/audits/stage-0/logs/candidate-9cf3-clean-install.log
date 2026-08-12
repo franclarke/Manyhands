@@ -1,0 +1,64 @@
+Scope: all 14 workspace projects
+✓ Lockfile passes supply-chain policies (verified 8m ago)
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +630
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 630, reused 0, downloaded 0, added 0
+Packages are hard linked from the content-addressable store to the virtual store.
+  Content-addressable store is at: C:\Users\franc\AppData\Local\Temp\manyhands-stage0-store-9cf3e87a-d2a47d3300c24a0792ed4b93f00897fc\v11
+  Virtual store is at:             node_modules/.pnpm
+Progress: resolved 630, reused 0, downloaded 31, added 10
+Progress: resolved 630, reused 0, downloaded 65, added 13
+Progress: resolved 630, reused 0, downloaded 103, added 17
+Progress: resolved 630, reused 0, downloaded 133, added 20
+Progress: resolved 630, reused 0, downloaded 172, added 24
+Progress: resolved 630, reused 0, downloaded 251, added 28
+Progress: resolved 630, reused 0, downloaded 368, added 44
+Progress: resolved 630, reused 0, downloaded 537, added 53
+Progress: resolved 630, reused 0, downloaded 629, added 87
+Progress: resolved 630, reused 0, downloaded 629, added 133
+Progress: resolved 630, reused 0, downloaded 629, added 218
+Progress: resolved 630, reused 0, downloaded 629, added 257
+Progress: resolved 630, reused 0, downloaded 629, added 400
+Progress: resolved 630, reused 0, downloaded 629, added 543
+Progress: resolved 630, reused 0, downloaded 630, added 628
+Progress: resolved 630, reused 0, downloaded 630, added 629
+Progress: resolved 630, reused 0, downloaded 630, added 630
+Progress: resolved 630, reused 0, downloaded 630, added 630, done
+.../node_modules/unrs-resolver postinstall$ node postinstall.js
+.../sharp@0.34.5/node_modules/sharp install$ node install/check.js || npm run build
+.../node-pty@1.1.0/node_modules/node-pty install$ node scripts/prebuild.js || node-gyp rebuild
+.../esbuild@0.21.5/node_modules/esbuild postinstall$ node install.js
+.../esbuild@0.27.7/node_modules/esbuild postinstall$ node install.js
+.../node-pty@1.1.0/node_modules/node-pty install: [32m> Checking prebuilds...[0m
+.../node-pty@1.1.0/node_modules/node-pty install: Done
+.../node-pty@1.1.0/node_modules/node-pty postinstall$ node scripts/post-install.js
+.../node-pty@1.1.0/node_modules/node-pty postinstall: [32m> Cleaning release folder...[0m
+.../node-pty@1.1.0/node_modules/node-pty postinstall: [32m> Moving conpty.dll...[0m
+.../node-pty@1.1.0/node_modules/node-pty postinstall:   Using os.arch(): x64
+.../node-pty@1.1.0/node_modules/node-pty postinstall:   Found version 1.23.251008001
+.../node-pty@1.1.0/node_modules/node-pty postinstall:   Copying C:\Users\franc\AppData\Local\Temp\manyhands-stage0-9cf3e87a-7b1afc06ca154ff3b411ce5190952809\node_modules\.pnpm\node-pty@1.1.0\node_modules\node-pty\third_party\conpty\1.23.251008001\win10-x64\conpty.dll -> C:\Users\franc\AppData\Local\Temp\manyhands-stage0-9cf3e87a-7b1afc06ca154ff3b411ce5190952809\node_modules\.pnpm\node-pty@1.1.0\node_modules\node-pty\build\Release\conpty\conpty.dll
+.../node-pty@1.1.0/node_modules/node-pty postinstall:   Copying C:\Users\franc\AppData\Local\Temp\manyhands-stage0-9cf3e87a-7b1afc06ca154ff3b411ce5190952809\node_modules\.pnpm\node-pty@1.1.0\node_modules\node-pty\third_party\conpty\1.23.251008001\win10-x64\OpenConsole.exe -> C:\Users\franc\AppData\Local\Temp\manyhands-stage0-9cf3e87a-7b1afc06ca154ff3b411ce5190952809\node_modules\.pnpm\node-pty@1.1.0\node_modules\node-pty\build\Release\conpty\OpenConsole.exe
+.../node-pty@1.1.0/node_modules/node-pty postinstall: Done
+.../node_modules/unrs-resolver postinstall: Done
+.../sharp@0.34.5/node_modules/sharp install: Done
+.../esbuild@0.27.7/node_modules/esbuild postinstall: Done
+.../esbuild@0.21.5/node_modules/esbuild postinstall: Done
+
+dependencies:
++ zod 3.25.76
+
+devDependencies:
++ @types/node 22.20.1
++ @typescript-eslint/eslint-plugin 7.18.0
++ @typescript-eslint/parser 7.18.0
++ eslint 8.57.1
++ eslint-plugin-jsx-a11y 6.10.2
++ puppeteer-core 25.6.0
++ ts-morph 28.0.0
++ tsup 8.5.1
++ typescript 5.9.3
++ vitest 2.1.9
+
+Done in 25.6s using pnpm v11.21.0

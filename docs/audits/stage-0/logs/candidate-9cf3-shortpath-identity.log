@@ -1,0 +1,9 @@
+CANDIDATE=9cf3e87a9a534bd07947cfaedb6d78f88205b642
+TREE=694b99d80023d329502987563d2b8fb4b8df113e
+BRANCH=
+DESCRIBE=9cf3e87a
+STATUS_COUNT=0
+PNPM=11.21.0
+NODE=v24.16.0
+ESLINT_PLUGIN=C:\mh-g0-9cf3-02\node_modules\.pnpm\@typescript-eslint+eslint-p_aa6521b68ee8b03a3ce7f496ea06cdf7
+TAILWIND_OXIDE=C:\mh-g0-9cf3-02\node_modules\.pnpm\@tailwindcss+oxide-win32-x64-msvc@4.3.0

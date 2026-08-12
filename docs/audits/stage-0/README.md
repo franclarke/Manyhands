@@ -40,6 +40,9 @@ review rejected its lock conversion before G0 could close.
 - [`logs.sha256`](logs.sha256) authenticates the complete evidence log set under
   [`logs/`](logs/), including the rejected `candidate-9cf3-shortpath-*` records and
   preserved adverse attempts.
+- [`evidence-index.json`](evidence-index.json) covers every retained log exactly
+  once and keeps unknown command, candidate, working-directory or exit fields
+  explicitly `null` instead of inventing attribution.
 
 ## Admitted claims
 

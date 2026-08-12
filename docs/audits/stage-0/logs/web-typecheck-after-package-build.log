@@ -1,0 +1,3 @@
+COMMAND=pnpm --filter @manyhands/web exec tsc --noEmit
+CANDIDATE=2d3ffdb5969851c5b4534aea403d701b24de7f61
+COMMAND_EXIT=0

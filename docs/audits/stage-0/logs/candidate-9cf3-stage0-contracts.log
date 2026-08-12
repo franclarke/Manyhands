@@ -1,0 +1,13 @@
+
+ RUN  v2.1.9 C:/Users/franc/AppData/Local/Temp/manyhands-stage0-9cf3e87a-7b1afc06ca154ff3b411ce5190952809
+
+ ✓ tests/documentation-current.test.ts (3 tests) 42ms
+ ✓ tests/architecture-baseline.test.ts (6 tests) 3530ms
+   ✓ target architecture migration baseline > keeps packages independent from application-layer imports 388ms
+   ✓ target architecture migration baseline > forbids productive @manyhands/core consumers 2999ms
+
+ Test Files  2 passed (2)
+      Tests  9 passed (9)
+   Start at  16:20:34
+   Duration  13.93s (transform 3.63s, setup 0ms, collect 8.35s, tests 3.57s, environment 1ms, prepare 1.96s)
+

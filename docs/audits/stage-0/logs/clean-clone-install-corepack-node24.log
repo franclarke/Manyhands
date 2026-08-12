@@ -1,0 +1,207 @@
+ WARN  using --force I sure hope you know what you are doing
+Scope: all 14 workspace projects
+corepack : (node:22996) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors 
+that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+En línea: 5 Carácter: 1
++ corepack pnpm install --frozen-lockfile --force --store-dir $isolated ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ((node:22996) [D...ulnerabilities.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +778
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ WARN  GET https://registry.npmjs.org/@esbuild/aix-ppc64/-/aix-ppc64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/android-arm/-/android-arm-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/android-arm64/-/android-arm64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/android-x64/-/android-x64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/darwin-arm64/-/darwin-arm64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/darwin-x64/-/darwin-x64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/freebsd-arm64/-/freebsd-arm64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/freebsd-x64/-/freebsd-x64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-arm/-/linux-arm-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-arm64/-/linux-arm64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-ia32/-/linux-ia32-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-loong64/-/linux-loong64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-mips64el/-/linux-mips64el-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-ppc64/-/linux-ppc64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-riscv64/-/linux-riscv64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-s390x/-/linux-s390x-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+Progress: resolved 778, reused 10, downloaded 0, added 3
+Progress: resolved 778, reused 37, downloaded 0, added 15
+Progress: resolved 778, reused 55, downloaded 0, added 48
+Progress: resolved 778, reused 131, downloaded 0, added 82
+Progress: resolved 778, reused 152, downloaded 0, added 126
+Progress: resolved 778, reused 185, downloaded 0, added 154
+Progress: resolved 778, reused 193, downloaded 0, added 185
+Progress: resolved 778, reused 206, downloaded 0, added 185
+Progress: resolved 778, reused 237, downloaded 0, added 217
+Progress: resolved 778, reused 257, downloaded 0, added 251
+ WARN  GET https://registry.npmjs.org/@esbuild/aix-ppc64/-/aix-ppc64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/android-arm/-/android-arm-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/android-arm64/-/android-arm64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/android-x64/-/android-x64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/darwin-arm64/-/darwin-arm64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/darwin-x64/-/darwin-x64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/freebsd-arm64/-/freebsd-arm64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/freebsd-x64/-/freebsd-x64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-arm/-/linux-arm-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-arm64/-/linux-arm64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-ia32/-/linux-ia32-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-loong64/-/linux-loong64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-mips64el/-/linux-mips64el-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-ppc64/-/linux-ppc64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-riscv64/-/linux-riscv64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-s390x/-/linux-s390x-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+Progress: resolved 778, reused 292, downloaded 0, added 266
+Progress: resolved 778, reused 327, downloaded 0, added 305
+Progress: resolved 778, reused 349, downloaded 0, added 338
+Progress: resolved 778, reused 363, downloaded 0, added 350
+Progress: resolved 778, reused 371, downloaded 0, added 367
+Progress: resolved 778, reused 408, downloaded 0, added 384
+Progress: resolved 778, reused 445, downloaded 0, added 429
+Progress: resolved 778, reused 459, downloaded 0, added 444
+Progress: resolved 778, reused 506, downloaded 0, added 479
+Progress: resolved 778, reused 530, downloaded 0, added 517
+Progress: resolved 778, reused 542, downloaded 0, added 535
+Progress: resolved 778, reused 552, downloaded 0, added 547
+Progress: resolved 778, reused 567, downloaded 0, added 554
+Progress: resolved 778, reused 590, downloaded 0, added 577
+Progress: resolved 778, reused 612, downloaded 0, added 601
+Progress: resolved 778, reused 618, downloaded 0, added 617
+Progress: resolved 778, reused 619, downloaded 0, added 618
+Progress: resolved 778, reused 619, downloaded 0, added 619
+Progress: resolved 778, reused 624, downloaded 0, added 619
+Progress: resolved 778, reused 624, downloaded 0, added 620
+Progress: resolved 778, reused 624, downloaded 0, added 622
+Progress: resolved 778, reused 624, downloaded 0, added 624
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-x64/-/linux-x64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/netbsd-arm64/-/netbsd-arm64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/netbsd-x64/-/netbsd-x64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/openbsd-arm64/-/openbsd-arm64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/openbsd-x64/-/openbsd-x64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/openharmony-arm64/-/openharmony-arm64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/sunos-x64/-/sunos-x64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/win32-arm64/-/win32-arm64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/win32-ia32/-/win32-ia32-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/win32-x64/-/win32-x64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-android-arm-eabi/-/rollup-android-arm-eabi-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-android-arm64/-/rollup-android-arm64-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-darwin-arm64/-/rollup-darwin-arm64-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-darwin-x64/-/rollup-darwin-x64-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-freebsd-arm64/-/rollup-freebsd-arm64-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-linux-arm-gnueabihf/-/rollup-linux-arm-gnueabihf-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-x64/-/linux-x64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/netbsd-arm64/-/netbsd-arm64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/netbsd-x64/-/netbsd-x64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/openbsd-arm64/-/openbsd-arm64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/openbsd-x64/-/openbsd-x64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/openharmony-arm64/-/openharmony-arm64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/sunos-x64/-/sunos-x64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/win32-arm64/-/win32-arm64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/win32-ia32/-/win32-ia32-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/win32-x64/-/win32-x64-0.27.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-android-arm-eabi/-/rollup-android-arm-eabi-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-android-arm64/-/rollup-android-arm64-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-darwin-arm64/-/rollup-darwin-arm64-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-darwin-x64/-/rollup-darwin-x64-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-freebsd-arm64/-/rollup-freebsd-arm64-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-linux-arm-gnueabihf/-/rollup-linux-arm-gnueabihf-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-linux-arm-musleabihf/-/rollup-linux-arm-musleabihf-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-linux-arm64-gnu/-/rollup-linux-arm64-gnu-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-linux-arm64-musl/-/rollup-linux-arm64-musl-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-linux-loong64-gnu/-/rollup-linux-loong64-gnu-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-linux-loong64-musl/-/rollup-linux-loong64-musl-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-linux-ppc64-gnu/-/rollup-linux-ppc64-gnu-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-linux-ppc64-musl/-/rollup-linux-ppc64-musl-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-linux-riscv64-gnu/-/rollup-linux-riscv64-gnu-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-linux-riscv64-musl/-/rollup-linux-riscv64-musl-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-linux-s390x-gnu/-/rollup-linux-s390x-gnu-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-linux-x64-gnu/-/rollup-linux-x64-gnu-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-linux-x64-musl/-/rollup-linux-x64-musl-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-openbsd-x64/-/rollup-openbsd-x64-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-openharmony-arm64/-/rollup-openharmony-arm64-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-win32-ia32-msvc/-/rollup-win32-ia32-msvc-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/fsevents/-/fsevents-2.3.3.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-linux-arm-musleabihf/-/rollup-linux-arm-musleabihf-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-linux-arm64-gnu/-/rollup-linux-arm64-gnu-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-linux-arm64-musl/-/rollup-linux-arm64-musl-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-linux-loong64-gnu/-/rollup-linux-loong64-gnu-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-linux-loong64-musl/-/rollup-linux-loong64-musl-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-linux-ppc64-gnu/-/rollup-linux-ppc64-gnu-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-linux-ppc64-musl/-/rollup-linux-ppc64-musl-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-linux-riscv64-gnu/-/rollup-linux-riscv64-gnu-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-linux-riscv64-musl/-/rollup-linux-riscv64-musl-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-linux-s390x-gnu/-/rollup-linux-s390x-gnu-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-linux-x64-gnu/-/rollup-linux-x64-gnu-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-linux-x64-musl/-/rollup-linux-x64-musl-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-openbsd-x64/-/rollup-openbsd-x64-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-openharmony-arm64/-/rollup-openharmony-arm64-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@rollup/rollup-win32-ia32-msvc/-/rollup-win32-ia32-msvc-4.62.2.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/fsevents/-/fsevents-2.3.3.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/aix-ppc64/-/aix-ppc64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/android-arm/-/android-arm-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/android-arm64/-/android-arm64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/android-x64/-/android-x64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/darwin-arm64/-/darwin-arm64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/darwin-x64/-/darwin-x64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/freebsd-arm64/-/freebsd-arm64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/freebsd-x64/-/freebsd-x64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-arm/-/linux-arm-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-arm64/-/linux-arm64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-ia32/-/linux-ia32-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-loong64/-/linux-loong64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-mips64el/-/linux-mips64el-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-riscv64/-/linux-riscv64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-s390x/-/linux-s390x-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-x64/-/linux-x64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/aix-ppc64/-/aix-ppc64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/android-arm/-/android-arm-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/android-arm64/-/android-arm64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/android-x64/-/android-x64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/darwin-arm64/-/darwin-arm64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/darwin-x64/-/darwin-x64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/freebsd-arm64/-/freebsd-arm64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/freebsd-x64/-/freebsd-x64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-arm/-/linux-arm-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-arm64/-/linux-arm64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-ia32/-/linux-ia32-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-loong64/-/linux-loong64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-mips64el/-/linux-mips64el-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-riscv64/-/linux-riscv64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-s390x/-/linux-s390x-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/linux-x64/-/linux-x64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/netbsd-x64/-/netbsd-x64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/openbsd-x64/-/openbsd-x64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/sunos-x64/-/sunos-x64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/win32-arm64/-/win32-arm64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/win32-ia32/-/win32-ia32-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@next/swc-darwin-arm64/-/swc-darwin-arm64-15.5.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@next/swc-darwin-x64/-/swc-darwin-x64-15.5.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@next/swc-linux-arm64-gnu/-/swc-linux-arm64-gnu-15.5.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@next/swc-linux-arm64-musl/-/swc-linux-arm64-musl-15.5.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@next/swc-linux-x64-gnu/-/swc-linux-x64-gnu-15.5.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@next/swc-linux-x64-musl/-/swc-linux-x64-musl-15.5.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@next/swc-win32-arm64-msvc/-/swc-win32-arm64-msvc-15.5.7.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@img/colour/-/colour-1.1.0.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@img/sharp-darwin-arm64/-/sharp-darwin-arm64-0.34.5.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@img/sharp-libvips-darwin-arm64/-/sharp-libvips-darwin-arm64-1.2.4.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@img/sharp-darwin-x64/-/sharp-darwin-x64-0.34.5.tgz error (ERR_INVALID_THIS). Will retry in 10 seconds. 2 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/netbsd-x64/-/netbsd-x64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/openbsd-x64/-/openbsd-x64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/sunos-x64/-/sunos-x64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/win32-arm64/-/win32-arm64-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@esbuild/win32-ia32/-/win32-ia32-0.21.5.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@next/swc-darwin-arm64/-/swc-darwin-arm64-15.5.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@next/swc-darwin-x64/-/swc-darwin-x64-15.5.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@next/swc-linux-arm64-gnu/-/swc-linux-arm64-gnu-15.5.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@next/swc-linux-arm64-musl/-/swc-linux-arm64-musl-15.5.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@next/swc-linux-x64-gnu/-/swc-linux-x64-gnu-15.5.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@next/swc-linux-x64-musl/-/swc-linux-x64-musl-15.5.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@next/swc-win32-arm64-msvc/-/swc-win32-arm64-msvc-15.5.7.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@img/colour/-/colour-1.1.0.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@img/sharp-darwin-arm64/-/sharp-darwin-arm64-0.34.5.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@img/sharp-libvips-darwin-arm64/-/sharp-libvips-darwin-arm64-1.2.4.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.
+ WARN  GET https://registry.npmjs.org/@img/sharp-darwin-x64/-/sharp-darwin-x64-0.34.5.tgz error (ERR_INVALID_THIS). Will retry in 1 minute. 1 retries left.

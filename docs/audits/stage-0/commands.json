@@ -3,8 +3,10 @@
   "status": "in_progress",
   "subjectCommit": "9cf3e87a9a534bd07947cfaedb6d78f88205b642",
   "subjectTree": "694b99d80023d329502987563d2b8fb4b8df113e",
+  "subjectDisposition": "rejected_dependency_resolution_drift",
   "clonePath": "C:/mh-g0-9cf3-02",
   "logHashManifest": "docs/audits/stage-0/logs.sha256",
+  "evidenceIndex": "docs/audits/stage-0/evidence-index.json",
   "commands": [
     {
       "id": "codex-harness-preflight",
@@ -124,18 +126,18 @@
       "workingDirectory": "C:/Users/franc/AppData/Local/Temp/manyhands-stage0-9cf3e87a-7b1afc06ca154ff3b411ce5190952809",
       "status": "inconclusive",
       "exitCode": 1,
-      "result": "The temporary clone passed installation and source checks, but its directory was externally emptied during the web build. The resulting missing plugin/files and ENOENT are preserved as harness/environment evidence and are not attributed to the product.",
+      "result": "The temporary clone passed installation and source checks, then the web build observed missing plugin/files and ENOENT. Later inspection found the clone/store/shim paths absent, but no receipt identifies the cause; the result is inconclusive and is not used as product evidence.",
       "logPath": "docs/audits/stage-0/logs/candidate-9cf3-web-build.log",
       "modelId": "not_applicable"
     },
     {
-      "id": "legacy-pnpm7-cold-install-chain",
-      "exactCommand": "See preserved clean-clone-install*.log and final-*.log command transcripts.",
-      "workingDirectory": "multiple recorded clean-clone attempts",
+      "id": "a3f45c72-full-suite",
+      "exactCommand": "pnpm test",
+      "workingDirectory": "C:/Users/franc/AppData/Local/Temp/manyhands-stage0-a3f45c72-5db9d271b78c4befb932961c999b98a3",
       "status": "fail",
       "exitCode": 1,
-      "result": "The repository-pinned pnpm 7 toolchain was not reproducible on the current host; commit a3f45c72 migrated the harness to pnpm 11.21.0 and refreshed the lockfile before Stage 1.",
-      "logPath": "docs/audits/stage-0/logs.sha256",
+      "result": "229 files ran; 228 passed and 1 failed because the Windows shim assertion expected lowercase npm.cmd while the resolved path contained npm.CMD. Commit 9cf3e87a corrected only the case-sensitive assertion.",
+      "logPath": "docs/audits/stage-0/logs/final-full-tests.log",
       "modelId": "not_applicable"
     }
   ]

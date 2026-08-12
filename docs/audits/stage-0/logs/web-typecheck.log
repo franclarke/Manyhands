@@ -1,0 +1,455 @@
+src/app/(command-center)/_components/effort-control.client.tsx(5,76): error TS2307: Cannot find module '@manyhands/shared' or its corresponding type declarations.
+src/app/(command-center)/_components/effort-control.client.tsx(93,30): error TS7006: Parameter 'level' implicitly has an 'any' type.
+src/app/(command-center)/_components/effort-control.client.tsx(93,37): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/app/api/runs/[id]/decisions/[decisionId]/route.ts(62,30): error TS18046: 'candidate' is of type 'unknown'.
+src/app/api/runs/[id]/decisions/[decisionId]/route.ts(62,67): error TS18046: 'candidate' is of type 'unknown'.
+src/app/api/runs/[id]/decisions/[decisionId]/route.ts(80,41): error TS2339: Property 'kind' does not exist on type '{}'.
+src/app/api/runs/[id]/deliver/route.ts(2,40): error TS2307: Cannot find module '@manyhands/run-coordinator' or its corresponding type declarations.
+src/app/api/runs/[id]/route.ts(44,93): error TS18046: 'current.projection' is of type 'unknown'.
+src/app/api/runs/[id]/run-events/route.ts(2,36): error TS2307: Cannot find module '@manyhands/run-store' or its corresponding type declarations.
+src/app/api/runs/[id]/run/route.ts(20,52): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/app/api/runs/route.ts(2,39): error TS2307: Cannot find module '@manyhands/execution-core' or its corresponding type declarations.
+src/app/api/runs/route.ts(44,76): error TS18046: 'run.projection' is of type 'unknown'.
+src/app/api/runs/route.ts(67,60): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/app/api/runs/route.ts(69,74): error TS2345: Argument of type '{}' is not assignable to parameter of type 'StageSelectionInput'.
+  Type '{}' is missing the following properties from type 'StageSelectionInput': executorId, model
+src/app/api/runs/route.ts(83,16): error TS18046: 'parsed.data.userPrompt' is of type 'unknown'.
+src/app/api/runs/route.ts(101,7): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/app/api/runs/route.ts(102,7): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/app/api/runs/route.ts(103,7): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/app/api/runs/route.ts(105,28): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/app/api/runs/route.ts(105,97): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/app/layout.tsx(35,22): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/app/layout.tsx(36,55): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/app/layout.tsx(37,47): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/app/runs/[runId]/_components/cockpit-run-graph.tsx(22,62): error TS2307: Cannot find module '@manyhands/task-graph' or its corresponding type declarations.
+src/app/runs/[runId]/_components/cockpit-run-graph.tsx(198,21): error TS2345: Argument of type 'RunNodeView[]' is not assignable to parameter of type 'readonly FlowLayoutNode[]'.
+  Type 'RunNodeView' is missing the following properties from type 'FlowLayoutNode': id, parentId
+src/app/runs/[runId]/_components/cockpit-run-graph.tsx(199,41): error TS2345: Argument of type 'RunNodeView[]' is not assignable to parameter of type 'readonly TreeLayoutNode[]'.
+  Type 'RunNodeView' is missing the following properties from type 'TreeLayoutNode': id, parentId
+src/app/runs/[runId]/_components/cockpit-run-graph.tsx(214,55): error TS2345: Argument of type 'RunNodeView[]' is not assignable to parameter of type 'readonly FlowLayoutNode[]'.
+  Type 'RunNodeView' is missing the following properties from type 'FlowLayoutNode': id, parentId
+src/app/runs/[runId]/_components/cockpit-run-graph.tsx(215,90): error TS2345: Argument of type 'RunNodeView[]' is not assignable to parameter of type 'readonly TreeLayoutNode[]'.
+  Type 'RunNodeView' is missing the following properties from type 'TreeLayoutNode': id, parentId
+src/app/runs/[runId]/_components/cockpit-run-graph.tsx(220,36): error TS2345: Argument of type 'RunNodeView[]' is not assignable to parameter of type 'readonly { id: string; parentId: string | null; }[]'.
+  Type 'RunNodeView' is missing the following properties from type '{ id: string; parentId: string | null; }': id, parentId
+src/app/runs/[runId]/_components/cockpit-run-graph.tsx(224,88): error TS2339: Property 'id' does not exist on type 'RunNodeView'.
+src/app/runs/[runId]/_components/cockpit-run-graph.tsx(226,16): error TS2339: Property 'id' does not exist on type 'RunNodeView'.
+src/app/runs/[runId]/_components/cockpit-run-graph.tsx(228,36): error TS2339: Property 'id' does not exist on type 'RunNodeView'.
+src/app/runs/[runId]/_components/cockpit-run-graph.tsx(232,24): error TS2339: Property 'id' does not exist on type 'RunNodeView'.
+src/app/runs/[runId]/_components/cockpit-run-graph.tsx(233,11): error TS2322: Type 'unknown[]' is not assignable to type 'readonly AttemptLike[]'.
+  Type 'unknown' is not assignable to type 'AttemptLike'.
+src/app/runs/[runId]/_components/cockpit-run-graph.tsx(234,11): error TS2322: Type 'unknown[]' is not assignable to type 'readonly IntegrationLike[]'.
+  Type 'unknown' is not assignable to type 'IntegrationLike'.
+src/app/runs/[runId]/_components/cockpit-run-graph.tsx(235,74): error TS2339: Property 'id' does not exist on type 'RunNodeView'.
+src/app/runs/[runId]/_components/cockpit-run-graph.tsx(239,43): error TS2339: Property 'id' does not exist on type 'RunNodeView'.
+src/app/runs/[runId]/_components/cockpit-run-graph.tsx(240,67): error TS2339: Property 'id' does not exist on type 'RunNodeView'.
+src/app/runs/[runId]/_components/cockpit-run-graph.tsx(243,57): error TS2339: Property 'topologicalLevel' does not exist on type 'RunNodeView'.
+src/app/runs/[runId]/_components/cockpit-run-graph.tsx(328,42): error TS2339: Property 'id' does not exist on type 'RunNodeView'.
+src/app/runs/[runId]/_components/cockpit-run-graph.tsx(328,58): error TS2339: Property 'title' does not exist on type 'RunNodeView'.
+src/app/runs/[runId]/_components/decision-diff.actions.ts(5,29): error TS2307: Cannot find module '@manyhands/execution-core' or its corresponding type declarations.
+src/app/runs/[runId]/_components/DecisionQueueDrawer.tsx(44,55): error TS2345: Argument of type 'RunNodeView[]' is not assignable to parameter of type 'readonly { id: string; parentId: string | null; }[]'.
+  Type 'RunNodeView' is missing the following properties from type '{ id: string; parentId: string | null; }': id, parentId
+src/app/runs/[runId]/_components/DecisionQueueDrawer.tsx(45,82): error TS2339: Property 'id' does not exist on type 'RunNodeView'.
+src/app/runs/[runId]/_components/DecisionQueueDrawer.tsx(95,43): error TS2345: Argument of type 'RunNodeView[]' is not assignable to parameter of type 'readonly { id: string; parentId: string | null; }[]'.
+  Type 'RunNodeView' is missing the following properties from type '{ id: string; parentId: string | null; }': id, parentId
+src/app/runs/[runId]/_components/DecisionQueueDrawer.tsx(96,86): error TS2339: Property 'id' does not exist on type 'RunNodeView'.
+src/app/runs/[runId]/_components/DecisionQueueDrawer.tsx(96,102): error TS2339: Property 'title' does not exist on type 'RunNodeView'.
+src/app/runs/[runId]/_components/DecisionQueueDrawer.tsx(162,36): error TS7006: Parameter 'option' implicitly has an 'any' type.
+src/app/runs/[runId]/_components/InteractiveRelationEdge.tsx(5,41): error TS2307: Cannot find module '@manyhands/contracts' or its corresponding type declarations.
+src/app/runs/[runId]/_components/run-model-view.client.tsx(37,56): error TS2339: Property 'id' does not exist on type 'RunNodeView'.
+src/app/runs/[runId]/_components/run-model-view.client.tsx(40,70): error TS18046: 'decision' is of type 'unknown'.
+src/app/runs/[runId]/_components/run-model-view.client.tsx(41,62): error TS18046: 'decision' is of type 'unknown'.
+src/app/runs/[runId]/_components/run-model-view.client.tsx(80,66): error TS2339: Property 'id' does not exist on type '{}'.
+src/app/runs/[runId]/_components/run-model-view.client.tsx(85,59): error TS18046: 'candidate' is of type 'unknown'.
+src/app/runs/[runId]/_components/run-model-view.client.tsx(88,38): error TS2339: Property 'affectedNodeIds' does not exist on type '{}'.
+src/app/runs/[runId]/_components/run-model-view.client.tsx(273,32): error TS7006: Parameter 'option' implicitly has an 'any' type.
+src/app/runs/[runId]/_components/run-model-view.client.tsx(273,40): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/app/runs/[runId]/_components/run-model-view.client.tsx(284,68): error TS2339: Property 'id' does not exist on type 'RunNodeView'.
+src/app/runs/[runId]/_components/run-model-view.client.tsx(284,84): error TS2339: Property 'title' does not exist on type 'RunNodeView'.
+src/app/runs/[runId]/_components/run-model-view.client.tsx(299,173): error TS2339: Property 'kind' does not exist on type 'RunNodeView'.
+src/app/runs/[runId]/_components/run-model-view.client.tsx(299,234): error TS2339: Property 'title' does not exist on type 'RunNodeView'.
+src/app/runs/[runId]/_components/run-model-view.client.tsx(300,82): error TS2339: Property 'goal' does not exist on type 'RunNodeView'.
+src/app/runs/[runId]/_components/run-model-view.client.tsx(302,567): error TS7006: Parameter 'criterion' implicitly has an 'any' type.
+src/app/runs/[runId]/_components/SeamContractInspector.tsx(3,41): error TS2307: Cannot find module '@manyhands/contracts' or its corresponding type declarations.
+src/app/runs/[runId]/_components/SeamContractInspector.tsx(26,77): error TS7006: Parameter 'seam' implicitly has an 'any' type.
+src/app/runs/[runId]/_components/SeamContractInspector.tsx(75,73): error TS2322: Type 'unknown' is not assignable to type 'ReactNode'.
+src/app/runs/[runId]/_components/task-node-v2.tsx(33,14): error TS2339: Property 'title' does not exist on type 'RunNodeView'.
+src/app/runs/[runId]/_components/task-node-v2.tsx(52,114): error TS2339: Property 'kind' does not exist on type 'RunNodeView'.
+src/app/runs/[runId]/_components/task-node-v2.tsx(62,91): error TS2339: Property 'title' does not exist on type 'RunNodeView'.
+src/app/runs/[runId]/_components/task-node-v2.tsx(63,98): error TS2339: Property 'goal' does not exist on type 'RunNodeView'.
+src/app/runs/[runId]/page.tsx(36,33): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/app/runs/[runId]/page.tsx(37,34): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/lib/api-types.ts(1,40): error TS2307: Cannot find module '@manyhands/execution-core' or its corresponding type declarations.
+src/lib/api-types.ts(2,34): error TS2307: Cannot find module '@manyhands/shared' or its corresponding type declarations.
+src/lib/decomposer-policy.ts(14,8): error TS2307: Cannot find module '@manyhands/decomposer' or its corresponding type declarations.
+src/lib/decomposer-policy.ts(15,34): error TS2307: Cannot find module '@manyhands/shared' or its corresponding type declarations.
+src/lib/models.ts(7,8): error TS2307: Cannot find module '@manyhands/shared' or its corresponding type declarations.
+src/lib/models.ts(15,8): error TS2307: Cannot find module '@manyhands/shared' or its corresponding type declarations.
+src/lib/models.ts(50,66): error TS7006: Parameter 'descriptor' implicitly has an 'any' type.
+src/lib/models.ts(52,97): error TS7006: Parameter 'descriptor' implicitly has an 'any' type.
+src/lib/models.ts(60,95): error TS7006: Parameter 'descriptor' implicitly has an 'any' type.
+src/lib/models.ts(61,26): error TS7006: Parameter 'model' implicitly has an 'any' type.
+src/lib/plan-critic.ts(1,59): error TS2307: Cannot find module '@manyhands/contracts' or its corresponding type declarations.
+src/lib/plan-critic.ts(2,61): error TS2307: Cannot find module '@manyhands/task-graph' or its corresponding type declarations.
+src/lib/plan-critic.ts(60,68): error TS18046: 'node' is of type 'unknown'.
+src/lib/plan-critic.ts(64,55): error TS18046: 'leaf' is of type 'unknown'.
+src/lib/plan-critic.ts(69,17): error TS18046: 'leaf' is of type 'unknown'.
+src/lib/plan-critic.ts(70,21): error TS18046: 'leaf' is of type 'unknown'.
+src/lib/plan-critic.ts(80,17): error TS18046: 'leaf' is of type 'unknown'.
+src/lib/plan-critic.ts(81,21): error TS18046: 'leaf' is of type 'unknown'.
+src/lib/plan-critic.ts(87,17): error TS18046: 'leaf' is of type 'unknown'.
+src/lib/plan-critic.ts(88,21): error TS18046: 'leaf' is of type 'unknown'.
+src/lib/plan-critic.ts(97,17): error TS18046: 'leaf' is of type 'unknown'.
+src/lib/plan-critic.ts(98,21): error TS18046: 'leaf' is of type 'unknown'.
+src/lib/plan-critic.ts(106,17): error TS18046: 'leaf' is of type 'unknown'.
+src/lib/plan-critic.ts(107,21): error TS18046: 'leaf' is of type 'unknown'.
+src/lib/plan-critic.ts(115,17): error TS18046: 'leaf' is of type 'unknown'.
+src/lib/plan-critic.ts(116,21): error TS18046: 'leaf' is of type 'unknown'.
+src/lib/run-model/presentation.ts(1,52): error TS2307: Cannot find module '@manyhands/run-coordinator' or its corresponding type declarations.
+src/lib/run-model/presentation.ts(2,36): error TS2307: Cannot find module '@manyhands/task-graph' or its corresponding type declarations.
+src/lib/run-model/presentation.ts(55,23): error TS18046: 'node' is of type 'unknown'.
+src/lib/run-model/presentation.ts(57,24): error TS18046: 'node' is of type 'unknown'.
+src/lib/run-model/presentation.ts(57,41): error TS18046: 'node' is of type 'unknown'.
+src/lib/run-model/presentation.ts(58,15): error TS18046: 'node' is of type 'unknown'.
+src/lib/run-model/presentation.ts(59,15): error TS18046: 'node' is of type 'unknown'.
+src/lib/run-model/presentation.ts(95,45): error TS7006: Parameter 'relation' implicitly has an 'any' type.
+src/lib/run-model/presentation.ts(107,55): error TS2339: Property 'kind' does not exist on type 'RunNodeView'.
+src/lib/run-model/presentation.ts(108,57): error TS2339: Property 'kind' does not exist on type 'RunNodeView'.
+src/lib/run-model/presentation.ts(165,16): error TS7006: Parameter 'relation' implicitly has an 'any' type.
+src/lib/run-model/presentation.ts(166,13): error TS7006: Parameter 'relation' implicitly has an 'any' type.
+src/lib/run-model/presentation.ts(179,32): error TS7006: Parameter 'relation' implicitly has an 'any' type.
+src/lib/run-model/presentation.ts(193,39): error TS7006: Parameter 'relation' implicitly has an 'any' type.
+src/lib/run-model/reducer.ts(1,67): error TS2307: Cannot find module '@manyhands/contracts' or its corresponding type declarations.
+src/lib/run-model/reducer.ts(2,83): error TS2307: Cannot find module '@manyhands/run-coordinator' or its corresponding type declarations.
+src/lib/run-model/reducer.ts(3,74): error TS2307: Cannot find module '@manyhands/task-graph' or its corresponding type declarations.
+src/lib/run-model/reducer.ts(70,24): error TS18046: 'node' is of type 'unknown'.
+src/lib/run-model/reducer.ts(71,29): error TS18046: 'node' is of type 'unknown'.
+src/lib/run-model/reducer.ts(71,83): error TS18046: 'node' is of type 'unknown'.
+src/lib/run-model/reducer.ts(73,48): error TS2339: Property 'id' does not exist on type '{ layout?: { depth: number; siblingIndex: number; siblingCount: number; } | undefined; status: NodeExecutionStatus; integrationStatus?: "completed" | "failed" | "running" | "decision_required" | undefined; attemptId?: string; artifactCount: number; decisionCount: number; }'.
+src/lib/run-model/reducer.ts(76,14): error TS2339: Property 'parentId' does not exist on type '{ layout?: { depth: number; siblingIndex: number; siblingCount: number; } | undefined; status: NodeExecutionStatus; integrationStatus?: "completed" | "failed" | "running" | "decision_required" | undefined; attemptId?: string; artifactCount: number; decisionCount: number; }'.
+src/lib/run-model/reducer.ts(77,23): error TS2339: Property 'parentId' does not exist on type '{ layout?: { depth: number; siblingIndex: number; siblingCount: number; } | undefined; status: NodeExecutionStatus; integrationStatus?: "completed" | "failed" | "running" | "decision_required" | undefined; attemptId?: string; artifactCount: number; decisionCount: number; }'.
+src/lib/run-model/reducer.ts(77,56): error TS2339: Property 'parentId' does not exist on type '{ layout?: { depth: number; siblingIndex: number; siblingCount: number; } | undefined; status: NodeExecutionStatus; integrationStatus?: "completed" | "failed" | "running" | "decision_required" | undefined; attemptId?: string; artifactCount: number; decisionCount: number; }'.
+src/lib/run-model/reducer.ts(87,60): error TS2339: Property 'id' does not exist on type 'RunNodeView'.
+src/lib/run-model/reducer.ts(142,52): error TS18046: 'node' is of type 'unknown'.
+src/lib/run-model/reducer.ts(142,77): error TS2339: Property 'id' does not exist on type '{}'.
+src/lib/run-model/reducer.ts(187,102): error TS18046: 'attempt' is of type 'unknown'.
+src/lib/run-model/reducer.ts(189,112): error TS18046: 'entry' is of type 'unknown'.
+src/lib/run-model/reducer.ts(190,112): error TS18046: 'artifact' is of type 'unknown'.
+src/lib/run-model/reducer.ts(191,105): error TS18046: 'decision' is of type 'unknown'.
+src/lib/run-model/reducer.ts(191,138): error TS18046: 'decision' is of type 'unknown'.
+src/lib/run-model/reducer.ts(194,49): error TS2339: Property 'status' does not exist on type '{}'.
+src/lib/run-model/reducer.ts(194,90): error TS2339: Property 'status' does not exist on type '{}'.
+src/lib/run-model/reducer.ts(195,25): error TS2339: Property 'status' does not exist on type '{}'.
+src/lib/run-model/reducer.ts(195,63): error TS2339: Property 'status' does not exist on type '{}'.
+src/lib/run-model/reducer.ts(195,101): error TS2339: Property 'status' does not exist on type '{}'.
+src/lib/run-model/reducer.ts(196,27): error TS2339: Property 'status' does not exist on type '{}'.
+src/lib/run-model/reducer.ts(197,25): error TS2339: Property 'status' does not exist on type '{}'.
+src/lib/run-model/reducer.ts(197,64): error TS2339: Property 'status' does not exist on type '{}'.
+src/lib/run-model/reducer.ts(197,103): error TS2339: Property 'status' does not exist on type '{}'.
+src/lib/run-model/reducer.ts(197,144): error TS2339: Property 'status' does not exist on type '{}'.
+src/lib/run-model/reducer.ts(202,58): error TS18047: 'integration' is possibly 'null'.
+src/lib/run-model/reducer.ts(202,70): error TS2339: Property 'status' does not exist on type '{}'.
+src/lib/run-model/reducer.ts(203,52): error TS18047: 'latestAttempt' is possibly 'null'.
+src/lib/run-model/reducer.ts(203,66): error TS2339: Property 'attemptId' does not exist on type '{}'.
+src/lib/run-model/types.ts(1,41): error TS2307: Cannot find module '@manyhands/contracts' or its corresponding type declarations.
+src/lib/run-model/types.ts(2,50): error TS2307: Cannot find module '@manyhands/run-coordinator' or its corresponding type declarations.
+src/lib/run-model/types.ts(3,48): error TS2307: Cannot find module '@manyhands/task-graph' or its corresponding type declarations.
+src/lib/server/providers/capability-service.ts(9,8): error TS2307: Cannot find module '@manyhands/shared' or its corresponding type declarations.
+src/lib/server/providers/capability-service.ts(73,73): error TS7006: Parameter 'descriptor' implicitly has an 'any' type.
+src/lib/server/providers/capability-service.ts(79,36): error TS7006: Parameter 'model' implicitly has an 'any' type.
+src/lib/server/providers/credentials.ts(5,99): error TS2307: Cannot find module '@manyhands/execution-core' or its corresponding type declarations.
+src/lib/server/providers/credentials.ts(27,42): error TS7006: Parameter 'name' implicitly has an 'any' type.
+src/lib/server/providers/readiness.ts(12,8): error TS2307: Cannot find module '@manyhands/execution-core' or its corresponding type declarations.
+src/lib/server/providers/readiness.ts(57,31): error TS7006: Parameter 'descriptor' implicitly has an 'any' type.
+src/lib/server/runs/executor-selection.ts(1,65): error TS2307: Cannot find module '@manyhands/execution-core' or its corresponding type declarations.
+src/lib/server/runs/executor-selection.ts(11,20): error TS2345: Argument of type 'unknown' is not assignable to parameter of type '{ [x: string]: any; executorId?: unknown; model?: unknown; effort?: unknown; }'.
+src/lib/server/runs/executor-selection.ts(15,20): error TS2345: Argument of type 'unknown' is not assignable to parameter of type '{ [x: string]: any; executorId?: unknown; model?: unknown; effort?: unknown; }'.
+src/lib/server/runs/executor-selection.ts(19,20): error TS2345: Argument of type 'unknown' is not assignable to parameter of type '{ [x: string]: any; executorId?: unknown; model?: unknown; effort?: unknown; }'.
+src/lib/server/runs/liveness-supervisor.ts(34,16): error TS18046: 'run.projection' is of type 'unknown'.
+src/lib/server/runs/liveness-supervisor.ts(43,42): error TS2345: Argument of type '{ ownerProcessPresent: true; lifecycle: any; activeOperation: unknown; staleAfterMs: number; now: string; }' is not assignable to parameter of type 'RunLivenessInput'.
+  Types of property 'activeOperation' are incompatible.
+    Type 'unknown' is not assignable to type '{ operationId: string; heartbeatAt?: string; } | undefined'.
+src/lib/server/runs/liveness-supervisor.ts(50,29): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/lib/server/runs/liveness-supervisor.ts(54,39): error TS2345: Argument of type '{ ownerProcessPresent: boolean; lifecycle: any; activeOperation: unknown; staleAfterMs: number; now: string; }' is not assignable to parameter of type 'RunLivenessInput'.
+  Types of property 'activeOperation' are incompatible.
+    Type 'unknown' is not assignable to type '{ operationId: string; heartbeatAt?: string; } | undefined'.
+src/lib/server/runs/liveness-supervisor.ts(54,84): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/lib/server/runs/liveness-supervisor.ts(58,5): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/lib/server/runs/liveness-supervisor.ts(86,41): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/lib/server/runs/presenter.ts(8,17): error TS18046: 'selection' is of type 'unknown'.
+src/lib/server/runs/presenter.ts(9,12): error TS18046: 'selection' is of type 'unknown'.
+src/lib/server/runs/presenter.ts(10,9): error TS18046: 'selection' is of type 'unknown'.
+src/lib/server/runs/presenter.ts(10,52): error TS18046: 'selection' is of type 'unknown'.
+src/lib/server/runs/presenter.ts(17,7): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/lib/server/runs/presenter.ts(18,7): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/lib/server/runs/presenter.ts(19,7): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/lib/server/runs/presenter.ts(20,7): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/lib/server/runs/presenter.ts(21,18): error TS18046: 'run.projection' is of type 'unknown'.
+src/lib/server/runs/presenter.ts(22,22): error TS18046: 'run.projection' is of type 'unknown'.
+src/lib/server/runs/presenter.ts(26,7): error TS2322: Type 'unknown' is not assignable to type 'number'.
+src/lib/server/runs/presenter.ts(27,7): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/lib/server/runs/presenter.ts(28,7): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/lib/server/runs/presenter.ts(29,11): error TS18046: 'run.projection' is of type 'unknown'.
+src/lib/server/runs/presenter.ts(29,61): error TS18046: 'run.projection' is of type 'unknown'.
+src/lib/server/runs/presenter.ts(30,11): error TS18046: 'run.projection' is of type 'unknown'.
+src/lib/server/runs/presenter.ts(30,73): error TS18046: 'run.projection' is of type 'unknown'.
+src/lib/server/runs/presenter.ts(31,11): error TS18046: 'run.projection' is of type 'unknown'.
+src/lib/server/runs/presenter.ts(31,89): error TS18046: 'run.projection' is of type 'unknown'.
+src/lib/server/runs/presenter.ts(32,11): error TS18046: 'run.projection' is of type 'unknown'.
+src/lib/server/runs/presenter.ts(32,77): error TS18046: 'run.projection' is of type 'unknown'.
+src/lib/server/runs/presenter.ts(33,11): error TS18046: 'run.projection' is of type 'unknown'.
+src/lib/server/runs/presenter.ts(33,69): error TS18046: 'run.projection' is of type 'unknown'.
+src/lib/server/runs/presenter.ts(34,11): error TS18046: 'run.projection' is of type 'unknown'.
+src/lib/server/runs/presenter.ts(34,73): error TS18046: 'run.projection' is of type 'unknown'.
+src/lib/server/runs/presenter.ts(41,58): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/lib/server/runs/presenter.ts(50,36): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/lib/server/runs/presenter.ts(52,5): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/lib/server/runs/presenter.ts(53,5): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/lib/server/runs/presenter.ts(55,5): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/lib/server/runs/presenter.ts(56,5): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/lib/server/runs/presenter.ts(57,13): error TS18046: 'run.projection' is of type 'unknown'.
+src/lib/server/runs/presenter.ts(58,5): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/lib/server/runs/presenter.ts(59,5): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/lib/server/runs/process-evidence.ts(42,8): error TS2307: Cannot find module '@manyhands/execution-core' or its corresponding type declarations.
+src/lib/server/runs/process-evidence.ts(245,27): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/lib/server/runs/process-evidence.ts(257,23): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/lib/server/runs/process-evidence.ts(314,11): error TS7006: Parameter 'entry' implicitly has an 'any' type.
+src/lib/server/runs/process-evidence.ts(315,14): error TS7006: Parameter 'pid' implicitly has an 'any' type.
+src/lib/server/runs/process-evidence.ts(333,64): error TS7006: Parameter 'verification' implicitly has an 'any' type.
+src/lib/server/runs/process-evidence.ts(346,58): error TS7006: Parameter 'verification' implicitly has an 'any' type.
+src/lib/server/runs/process-supervision.ts(22,67): error TS2307: Cannot find module '@manyhands/execution-core' or its corresponding type declarations.
+src/lib/server/runs/repo-lock.ts(34,45): error TS2307: Cannot find module '@manyhands/execution-core' or its corresponding type declarations.
+src/lib/server/runs/repo-lock.ts(380,108): error TS18046: 'run.projection' is of type 'unknown'.
+src/lib/server/runs/repo-lock.ts(382,29): error TS2769: No overload matches this call.
+  Overload 1 of 4, '(value: string | number | Date): Date', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string | number | Date'.
+  Overload 2 of 4, '(value: string | number): Date', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'string | number'.
+src/lib/server/runs/repository.ts(121,61): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/lib/server/runs/repository.ts(129,35): error TS18046: 'right.updatedAt' is of type 'unknown'.
+src/lib/server/runs/repository.ts(170,59): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/lib/server/runs/repository.ts(175,35): error TS18046: 'right.updatedAt' is of type 'unknown'.
+src/lib/server/runs/repository.ts(191,26): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/lib/server/runs/repository.ts(195,41): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/lib/server/runs/repository.ts(201,27): error TS2345: Argument of type '{}' is not assignable to parameter of type 'number'.
+src/lib/server/runs/repository.ts(202,33): error TS2345: Argument of type '{}' is not assignable to parameter of type 'number'.
+src/lib/server/runs/repository.ts(206,46): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/lib/server/runs/repository.ts(222,18): error TS18046: 'current.version' is of type 'unknown'.
+src/lib/server/runs/repository.ts(223,33): error TS2345: Argument of type '{}' is not assignable to parameter of type 'number'.
+src/lib/server/runs/repository.ts(227,46): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/lib/server/runs/repository.ts(432,14): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/lib/server/runs/run-model-projection.ts(7,5): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/lib/server/runs/run-model-projection.ts(8,5): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/lib/server/runs/run-model-projection.ts(9,5): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/lib/server/runs/run-model-projection.ts(10,16): error TS18046: 'run.projection' is of type 'unknown'.
+src/lib/server/runs/run-model-projection.ts(11,20): error TS18046: 'run.projection' is of type 'unknown'.
+src/lib/server/runs/run-operation-lease.ts(2,35): error TS2307: Cannot find module '@manyhands/run-coordinator' or its corresponding type declarations.
+src/lib/server/runs/run-operation-lease.ts(7,8): error TS2307: Cannot find module '@manyhands/run-store' or its corresponding type declarations.
+src/lib/server/runs/run-operation-lease.ts(83,48): error TS18046: 'current.projection' is of type 'unknown'.
+src/lib/server/runs/run-operation-lease.ts(84,53): error TS18046: 'current.projection' is of type 'unknown'.
+src/lib/server/runs/run-operation-lease.ts(88,53): error TS18047: 'superseded' is possibly 'null'.
+src/lib/server/runs/run-operation-lease.ts(88,64): error TS2339: Property 'operationId' does not exist on type '{}'.
+src/lib/server/runs/run-operation-lease.ts(88,79): error TS18047: 'superseded' is possibly 'null'.
+src/lib/server/runs/run-operation-lease.ts(88,90): error TS2339: Property 'fencingToken' does not exist on type '{}'.
+src/lib/server/runs/run-operation-lease.ts(94,29): error TS2345: Argument of type '{} | null' is not assignable to parameter of type '{ kind: "planning" | "execution" | "delivery" | "control" | "purge"; acquiredAt: string; operationId: string; fencingToken: number; heartbeatAt: string; }'.
+  Type 'null' is not assignable to type '{ kind: "planning" | "execution" | "delivery" | "control" | "purge"; acquiredAt: string; operationId: string; fencingToken: number; heartbeatAt: string; }'.
+src/lib/server/runs/run-operation-lease.ts(96,53): error TS18047: 'superseded' is possibly 'null'.
+src/lib/server/runs/run-operation-lease.ts(96,64): error TS2339: Property 'operationId' does not exist on type '{}'.
+src/lib/server/runs/run-operation-lease.ts(96,79): error TS18047: 'superseded' is possibly 'null'.
+src/lib/server/runs/run-operation-lease.ts(96,90): error TS2339: Property 'fencingToken' does not exist on type '{}'.
+src/lib/server/runs/run-operation-lease.ts(104,70): error TS2322: Type '{} | null' is not assignable to type '{ kind: "planning" | "execution" | "delivery" | "control" | "purge"; acquiredAt: string; operationId: string; fencingToken: number; heartbeatAt: string; }'.
+  Type 'null' is not assignable to type '{ kind: "planning" | "execution" | "delivery" | "control" | "purge"; acquiredAt: string; operationId: string; fencingToken: number; heartbeatAt: string; }'.
+src/lib/server/runs/run-operation-lease.ts(110,28): error TS18047: 'superseded' is possibly 'null'.
+src/lib/server/runs/run-operation-lease.ts(110,39): error TS2339: Property 'operationId' does not exist on type '{}'.
+src/lib/server/runs/run-operation-lease.ts(110,54): error TS18047: 'superseded' is possibly 'null'.
+src/lib/server/runs/run-operation-lease.ts(110,65): error TS2339: Property 'fencingToken' does not exist on type '{}'.
+src/lib/server/runs/run-operation-lease.ts(113,61): error TS2322: Type '{} | null' is not assignable to type '{ kind: "planning" | "execution" | "delivery" | "control" | "purge"; acquiredAt: string; operationId: string; fencingToken: number; heartbeatAt: string; }'.
+  Type 'null' is not assignable to type '{ kind: "planning" | "execution" | "delivery" | "control" | "purge"; acquiredAt: string; operationId: string; fencingToken: number; heartbeatAt: string; }'.
+src/lib/server/runs/run-operation-lease.ts(117,28): error TS18047: 'superseded' is possibly 'null'.
+src/lib/server/runs/run-operation-lease.ts(117,39): error TS2339: Property 'operationId' does not exist on type '{}'.
+src/lib/server/runs/run-operation-lease.ts(117,54): error TS18047: 'superseded' is possibly 'null'.
+src/lib/server/runs/run-operation-lease.ts(117,65): error TS2339: Property 'fencingToken' does not exist on type '{}'.
+src/lib/server/runs/run-operation-lease.ts(131,18): error TS2345: Argument of type '{}' is not assignable to parameter of type 'number'.
+src/lib/server/runs/run-operation-lease.ts(131,58): error TS2339: Property 'fencingToken' does not exist on type '{}'.
+src/lib/server/runs/run-operation-lease.ts(145,36): error TS18047: 'superseded' is possibly 'null'.
+src/lib/server/runs/run-operation-lease.ts(145,47): error TS2339: Property 'operationId' does not exist on type '{}'.
+src/lib/server/runs/run-operation-lease.ts(146,37): error TS18047: 'superseded' is possibly 'null'.
+src/lib/server/runs/run-operation-lease.ts(146,48): error TS2339: Property 'fencingToken' does not exist on type '{}'.
+src/lib/server/runs/run-operation-lease.ts(255,29): error TS2345: Argument of type '{}' is not assignable to parameter of type 'number'.
+src/lib/server/runs/run-operation-lease.ts(255,82): error TS2339: Property 'fencingToken' does not exist on type '{}'.
+src/lib/server/runs/run-operation-lease.ts(306,35): error TS2339: Property 'operationId' does not exist on type '{}'.
+src/lib/server/runs/run-operation-lease.ts(307,29): error TS2339: Property 'fencingToken' does not exist on type '{}'.
+src/lib/server/runs/run-operation-lease.ts(308,29): error TS2339: Property 'allDead' does not exist on type '{}'.
+src/lib/server/runs/run-operation-lease.ts(309,29): error TS2339: Property 'repositoryQuiescent' does not exist on type '{}'.
+src/lib/server/runs/run-operation-lease.ts(349,21): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/lib/server/runs/run-operation-lease.ts(370,5): error TS18047: 'active' is possibly 'null'.
+src/lib/server/runs/run-operation-lease.ts(370,12): error TS2339: Property 'operationId' does not exist on type '{}'.
+src/lib/server/runs/run-operation-lease.ts(371,5): error TS18047: 'active' is possibly 'null'.
+src/lib/server/runs/run-operation-lease.ts(371,12): error TS2339: Property 'fencingToken' does not exist on type '{}'.
+src/lib/server/runs/run-operation-lease.ts(381,5): error TS18046: 'current.projection' is of type 'unknown'.
+src/lib/server/runs/run-operation-lease.ts(382,5): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'number'.
+src/lib/server/runs/schema.ts(1,76): error TS2307: Cannot find module '@manyhands/execution-core' or its corresponding type declarations.
+src/lib/server/runs/schema.ts(2,36): error TS2307: Cannot find module '@manyhands/run-coordinator' or its corresponding type declarations.
+src/lib/server/runs/target-context.ts(19,29): error TS2307: Cannot find module '@manyhands/execution-core' or its corresponding type declarations.
+src/lib/server/runs/target-context.ts(94,23): error TS18046: 'run.targetContext' is of type 'unknown'.
+src/lib/server/runs/target-context.ts(95,5): error TS2345: Argument of type 'unknown' is not assignable to parameter of type '{ fingerprint: string; gitCommonDir: string; sourceRealPath: string; physicalIdentity: { version: 1; file: string; device: string; }; sourceBranch: string; sourceBaseCommit: string; capturedAt: string; remoteUrl?: string | undefined; }'.
+src/lib/server/runs/target-context.ts(97,10): error TS18046: 'run.targetContext' is of type 'unknown'.
+src/lib/server/runs/target-context.ts(113,7): error TS18046: 'run.targetContext' is of type 'unknown'.
+src/lib/server/runs/target-context.ts(113,88): error TS18046: 'run.targetContext' is of type 'unknown'.
+src/lib/server/runs/v2/command-host.ts(10,8): error TS2307: Cannot find module '@manyhands/execution-core' or its corresponding type declarations.
+src/lib/server/runs/v2/command-host.ts(19,8): error TS2307: Cannot find module '@manyhands/run-coordinator' or its corresponding type declarations.
+src/lib/server/runs/v2/command-host.ts(20,101): error TS2307: Cannot find module '@manyhands/run-store' or its corresponding type declarations.
+src/lib/server/runs/v2/command-host.ts(75,25): error TS18046: 'run.projection' is of type 'unknown'.
+src/lib/server/runs/v2/command-host.ts(76,36): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/lib/server/runs/v2/command-host.ts(77,9): error TS18046: 'current.projection' is of type 'unknown'.
+src/lib/server/runs/v2/command-host.ts(91,68): error TS7006: Parameter 'option' implicitly has an 'any' type.
+src/lib/server/runs/v2/command-host.ts(111,52): error TS2339: Property 'kind' does not exist on type '{}'.
+src/lib/server/runs/v2/command-host.ts(116,27): error TS2345: Argument of type '{}' is not assignable to parameter of type '{ kind: "planning" | "execution" | "delivery" | "control" | "purge"; acquiredAt: string; operationId: string; fencingToken: number; heartbeatAt: string; }'.
+  Type '{}' is missing the following properties from type '{ kind: "planning" | "execution" | "delivery" | "control" | "purge"; acquiredAt: string; operationId: string; fencingToken: number; heartbeatAt: string; }': kind, acquiredAt, operationId, fencingToken, heartbeatAt
+src/lib/server/runs/v2/command-host.ts(124,46): error TS2345: Argument of type '{}' is not assignable to parameter of type '{ kind: "planning" | "execution" | "delivery" | "control" | "purge"; acquiredAt: string; operationId: string; fencingToken: number; heartbeatAt: string; }'.
+  Type '{}' is missing the following properties from type '{ kind: "planning" | "execution" | "delivery" | "control" | "purge"; acquiredAt: string; operationId: string; fencingToken: number; heartbeatAt: string; }': kind, acquiredAt, operationId, fencingToken, heartbeatAt
+src/lib/server/runs/v2/command-host.ts(215,41): error TS7031: Binding element 'request' implicitly has an 'any' type.
+src/lib/server/runs/v2/command-host.ts(256,25): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/lib/server/runs/v2/command-host.ts(288,42): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/lib/server/runs/v2/command-host.ts(292,9): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/lib/server/runs/v2/command-host.ts(299,28): error TS7006: Parameter 'request' implicitly has an 'any' type.
+src/lib/server/runs/v2/command-host.ts(310,45): error TS7006: Parameter 'artifactId' implicitly has an 'any' type.
+src/lib/server/runs/v2/command-host.ts(310,118): error TS18046: 'artifact' is of type 'unknown'.
+src/lib/server/runs/v2/command-host.ts(317,27): error TS7006: Parameter '_idempotencyKey' implicitly has an 'any' type.
+src/lib/server/runs/v2/command-host.ts(317,44): error TS7006: Parameter 'requestFingerprint' implicitly has an 'any' type.
+src/lib/server/runs/v2/command-host.ts(333,47): error TS2339: Property 'fingerprint' does not exist on type '{}'.
+src/lib/server/runs/v2/command-host.ts(336,29): error TS7006: Parameter 'request' implicitly has an 'any' type.
+src/lib/server/runs/v2/command-host.ts(340,142): error TS2339: Property 'fingerprint' does not exist on type '{}'.
+src/lib/server/runs/v2/command-host.ts(345,29): error TS7006: Parameter 'request' implicitly has an 'any' type.
+src/lib/server/runs/v2/command-host.ts(349,144): error TS2339: Property 'fingerprint' does not exist on type '{}'.
+src/lib/server/runs/v2/execution-coordinator-host.ts(6,8): error TS2307: Cannot find module '@manyhands/run-coordinator' or its corresponding type declarations.
+src/lib/server/runs/v2/execution-coordinator-host.ts(7,59): error TS2307: Cannot find module '@manyhands/run-store' or its corresponding type declarations.
+src/lib/server/runs/v2/execution-coordinator-host.ts(32,15): error TS7006: Parameter 'type' implicitly has an 'any' type.
+src/lib/server/runs/v2/execution-coordinator-host.ts(32,21): error TS7006: Parameter 'sequence' implicitly has an 'any' type.
+src/lib/server/runs/v2/execution-coordinator-host.ts(38,16): error TS7031: Binding element 'runId' implicitly has an 'any' type.
+src/lib/server/runs/v2/execution-coordinator-host.ts(38,23): error TS7031: Binding element 'state' implicitly has an 'any' type.
+src/lib/server/runs/v2/execution-pipeline.ts(5,67): error TS2307: Cannot find module '@manyhands/contracts' or its corresponding type declarations.
+src/lib/server/runs/v2/execution-pipeline.ts(6,83): error TS2307: Cannot find module '@manyhands/conflict-risk' or its corresponding type declarations.
+src/lib/server/runs/v2/execution-pipeline.ts(24,8): error TS2307: Cannot find module '@manyhands/execution-core' or its corresponding type declarations.
+src/lib/server/runs/v2/execution-pipeline.ts(25,64): error TS2307: Cannot find module '@manyhands/orchestrator-graph' or its corresponding type declarations.
+src/lib/server/runs/v2/execution-pipeline.ts(26,67): error TS2307: Cannot find module '@manyhands/repository-index' or its corresponding type declarations.
+src/lib/server/runs/v2/execution-pipeline.ts(33,8): error TS2307: Cannot find module '@manyhands/run-coordinator' or its corresponding type declarations.
+src/lib/server/runs/v2/execution-pipeline.ts(34,101): error TS2307: Cannot find module '@manyhands/run-store' or its corresponding type declarations.
+src/lib/server/runs/v2/execution-pipeline.ts(35,57): error TS2307: Cannot find module '@manyhands/task-graph' or its corresponding type declarations.
+src/lib/server/runs/v2/execution-pipeline.ts(36,48): error TS2307: Cannot find module '@manyhands/shared' or its corresponding type declarations.
+src/lib/server/runs/v2/execution-pipeline.ts(37,33): error TS2307: Cannot find module '@manyhands/trace-store' or its corresponding type declarations.
+src/lib/server/runs/v2/execution-pipeline.ts(83,53): error TS7006: Parameter 'contract' implicitly has an 'any' type.
+src/lib/server/runs/v2/execution-pipeline.ts(132,28): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/lib/server/runs/v2/execution-pipeline.ts(133,40): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/lib/server/runs/v2/execution-pipeline.ts(136,40): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/lib/server/runs/v2/execution-pipeline.ts(137,32): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/lib/server/runs/v2/execution-pipeline.ts(152,7): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/lib/server/runs/v2/execution-pipeline.ts(153,72): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/lib/server/runs/v2/execution-pipeline.ts(220,17): error TS7006: Parameter 'type' implicitly has an 'any' type.
+src/lib/server/runs/v2/execution-pipeline.ts(220,23): error TS7006: Parameter 'sequence' implicitly has an 'any' type.
+src/lib/server/runs/v2/execution-pipeline.ts(239,23): error TS7006: Parameter 'input' implicitly has an 'any' type.
+src/lib/server/runs/v2/execution-pipeline.ts(245,55): error TS2339: Property 'fingerprint' does not exist on type '{}'.
+src/lib/server/runs/v2/execution-pipeline.ts(246,44): error TS2339: Property 'sourceBranch' does not exist on type '{}'.
+src/lib/server/runs/v2/execution-pipeline.ts(247,42): error TS2339: Property 'sourceBaseCommit' does not exist on type '{}'.
+src/lib/server/runs/v2/execution-pipeline.ts(252,57): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/lib/server/runs/v2/execution-pipeline.ts(257,9): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/lib/server/runs/v2/execution-pipeline.ts(279,57): error TS2339: Property 'fingerprint' does not exist on type '{}'.
+src/lib/server/runs/v2/execution-pipeline.ts(280,46): error TS2339: Property 'sourceBranch' does not exist on type '{}'.
+src/lib/server/runs/v2/execution-pipeline.ts(281,44): error TS2339: Property 'sourceBaseCommit' does not exist on type '{}'.
+src/lib/server/runs/v2/execution-pipeline.ts(298,48): error TS7006: Parameter 'error' implicitly has an 'any' type.
+src/lib/server/runs/v2/execution-pipeline.ts(308,52): error TS18046: 'state' is of type 'unknown'.
+src/lib/server/runs/v2/execution-pipeline.ts(310,33): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/lib/server/runs/v2/execution-pipeline.ts(315,9): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/lib/server/runs/v2/execution-pipeline.ts(319,74): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/lib/server/runs/v2/execution-pipeline.ts(329,21): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/lib/server/runs/v2/execution-pipeline.ts(330,24): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/lib/server/runs/v2/execution-pipeline.ts(332,40): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+src/lib/server/runs/v2/execution-pipeline.ts(337,41): error TS7006: Parameter 'constraint' implicitly has an 'any' type.
+src/lib/server/runs/v2/execution-pipeline.ts(354,44): error TS18046: 'node' is of type 'unknown'.
+src/lib/server/runs/v2/execution-pipeline.ts(354,70): error TS7006: Parameter 'artifact' implicitly has an 'any' type.
+src/lib/server/runs/v2/execution-pipeline.ts(354,111): error TS18046: 'node' is of type 'unknown'.
+src/lib/server/runs/v2/execution-pipeline.ts(355,20): error TS18046: 'node' is of type 'unknown'.
+src/lib/server/runs/v2/execution-pipeline.ts(368,21): error TS7006: Parameter 'request' implicitly has an 'any' type.
+src/lib/server/runs/v2/execution-pipeline.ts(380,28): error TS7031: Binding element 'candidateCommit' implicitly has an 'any' type.
+src/lib/server/runs/v2/execution-pipeline.ts(385,27): error TS7031: Binding element 'runId' implicitly has an 'any' type.
+src/lib/server/runs/v2/execution-pipeline.ts(385,34): error TS7031: Binding element 'integratedCommit' implicitly has an 'any' type.
+src/lib/server/runs/v2/execution-pipeline.ts(429,41): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/lib/server/runs/v2/initialize-run.ts(1,36): error TS2307: Cannot find module '@manyhands/run-store' or its corresponding type declarations.
+src/lib/server/runs/v2/initialize-run.ts(20,36): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/lib/server/runs/v2/migrate-run.ts(6,39): error TS2307: Cannot find module '@manyhands/execution-core' or its corresponding type declarations.
+src/lib/server/runs/v2/migrate-run.ts(7,45): error TS2307: Cannot find module '@manyhands/run-coordinator' or its corresponding type declarations.
+src/lib/server/runs/v2/migrate-run.ts(8,54): error TS2307: Cannot find module '@manyhands/run-store' or its corresponding type declarations.
+src/lib/server/runs/v2/migrate-run.ts(139,43): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/lib/server/runs/v2/planning-host.ts(3,163): error TS2307: Cannot find module '@manyhands/decomposer' or its corresponding type declarations.
+src/lib/server/runs/v2/planning-host.ts(4,41): error TS2307: Cannot find module '@manyhands/repository-index' or its corresponding type declarations.
+src/lib/server/runs/v2/planning-host.ts(5,224): error TS2307: Cannot find module '@manyhands/decomposer' or its corresponding type declarations.
+src/lib/server/runs/v2/planning-host.ts(6,88): error TS2307: Cannot find module '@manyhands/run-coordinator' or its corresponding type declarations.
+src/lib/server/runs/v2/planning-host.ts(7,77): error TS2307: Cannot find module '@manyhands/run-store' or its corresponding type declarations.
+src/lib/server/runs/v2/planning-host.ts(69,57): error TS18046: 'decision' is of type 'unknown'.
+src/lib/server/runs/v2/planning-host.ts(69,93): error TS18046: 'decision' is of type 'unknown'.
+src/lib/server/runs/v2/planning-host.ts(96,34): error TS7031: Binding element 'unit' implicitly has an 'any' type.
+src/lib/server/runs/v2/planning-host.ts(96,40): error TS7031: Binding element 'kind' implicitly has an 'any' type.
+src/lib/server/runs/v2/planning-host.ts(96,46): error TS7031: Binding element 'position' implicitly has an 'any' type.
+src/lib/server/runs/v2/planning-host.ts(121,37): error TS7031: Binding element 'unit' implicitly has an 'any' type.
+src/lib/server/runs/v2/planning-host.ts(121,52): error TS7031: Binding element 'unitAttempt' implicitly has an 'any' type.
+src/lib/server/runs/v2/planning-host.ts(121,65): error TS7031: Binding element 'diagnostics' implicitly has an 'any' type.
+src/lib/server/runs/v2/planning-host.ts(129,36): error TS7031: Binding element 'unit' implicitly has an 'any' type.
+src/lib/server/runs/v2/planning-host.ts(129,42): error TS7031: Binding element 'diagnostics' implicitly has an 'any' type.
+src/lib/server/runs/v2/planning-host.ts(129,55): error TS7031: Binding element 'depth' implicitly has an 'any' type.
+src/lib/server/runs/v2/planning-host.ts(129,62): error TS7031: Binding element 'position' implicitly has an 'any' type.
+src/lib/server/runs/v2/planning-host.ts(148,15): error TS7006: Parameter 'node' implicitly has an 'any' type.
+src/lib/server/runs/v2/planning-host.ts(239,79): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/lib/server/runs/v2/planning-host.ts(243,24): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/lib/server/runs/v2/planning-host.ts(302,18): error TS18046: 'assessment' is of type 'unknown'.
+src/lib/server/runs/v2/planning-host.ts(303,27): error TS18046: 'assessment' is of type 'unknown'.
+src/lib/server/runs/v2/planning-host.ts(304,19): error TS18046: 'assessment' is of type 'unknown'.
+src/lib/server/runs/v2/planning-host.ts(305,23): error TS18046: 'assessment' is of type 'unknown'.
+src/lib/server/runs/v2/planning-host.ts(306,22): error TS18046: 'assessment' is of type 'unknown'.
+src/lib/server/runs/v2/planning-host.ts(307,23): error TS18046: 'assessment' is of type 'unknown'.
+src/lib/server/runs/v2/planning-host.ts(308,23): error TS18046: 'assessment' is of type 'unknown'.
+src/lib/server/runs/v2/planning-host.ts(309,20): error TS18046: 'assessment' is of type 'unknown'.
+src/lib/server/runs/v2/planning-host.ts(383,31): error TS7006: Parameter 'critic' implicitly has an 'any' type.
+src/lib/server/runs/v2/planning-host.ts(383,240): error TS7006: Parameter 'finding' implicitly has an 'any' type.
+src/lib/server/runs/v2/planning-host.ts(401,41): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/lib/server/runs/v2/planning-host.ts(416,44): error TS7006: Parameter 'file' implicitly has an 'any' type.
+src/lib/server/runs/v2/planning-host.ts(416,50): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/lib/server/runs/v2/planning-host.ts(419,39): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/lib/server/runs/v2/planning-host.ts(419,68): error TS7006: Parameter 'entry' implicitly has an 'any' type.
+src/lib/server/runs/v2/planning-host.ts(420,42): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/lib/server/runs/v2/planning-host.ts(423,49): error TS7006: Parameter 'diagnostic' implicitly has an 'any' type.
+src/lib/server/runs/v2/planning-host.ts(423,61): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/lib/server/runs/v2/planning-host.ts(425,50): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/lib/server/runs/v2/planning-host.ts(425,56): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/lib/server/runs/v2/run-coordinator-host.ts(3,39): error TS2307: Cannot find module '@manyhands/execution-core' or its corresponding type declarations.
+src/lib/server/runs/v2/run-coordinator-host.ts(4,151): error TS2307: Cannot find module '@manyhands/decomposer' or its corresponding type declarations.
+src/lib/server/runs/v2/run-coordinator-host.ts(5,25): error TS2307: Cannot find module '@manyhands/run-coordinator' or its corresponding type declarations.
+src/lib/server/runs/v2/run-coordinator-host.ts(6,45): error TS2307: Cannot find module '@manyhands/repository-index' or its corresponding type declarations.
+src/lib/server/runs/v2/run-coordinator-host.ts(7,101): error TS2307: Cannot find module '@manyhands/run-store' or its corresponding type declarations.
+src/lib/server/runs/v2/run-coordinator-host.ts(8,87): error TS2307: Cannot find module '@manyhands/shared/node-cli-process' or its corresponding type declarations.
+src/lib/server/runs/v2/run-coordinator-host.ts(76,24): error TS7006: Parameter 'request' implicitly has an 'any' type.
+src/lib/server/runs/v2/run-coordinator-host.ts(86,29): error TS18046: 'run.executionConfig' is of type 'unknown'.
+src/lib/server/runs/v2/run-coordinator-host.ts(90,9): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/lib/server/runs/v2/run-coordinator-host.ts(92,28): error TS18046: 'run.targetContext' is of type 'unknown'.
+src/lib/server/runs/v2/run-coordinator-host.ts(93,21): error TS18046: 'run.targetContext' is of type 'unknown'.
+src/lib/server/runs/v2/run-coordinator-host.ts(95,13): error TS18046: 'run.acceptanceCriteria' is of type 'unknown'.
+src/lib/server/runs/v2/run-coordinator-host.ts(290,9): error TS18046: 'decision' is of type 'unknown'.
+src/lib/server/runs/v2/run-coordinator-host.ts(290,45): error TS18046: 'decision' is of type 'unknown'.
+src/lib/server/runs/v2/run-coordinator-host.ts(290,79): error TS18046: 'decision' is of type 'unknown'.
+src/lib/server/runs/v2/run-coordinator-host.ts(291,20): error TS18046: 'decision' is of type 'unknown'.
+src/lib/server/runs/v2/run-coordinator-host.ts(291,48): error TS7006: Parameter 'reference' implicitly has an 'any' type.
+src/lib/server/runs/v2/run-coordinator-host.ts(294,22): error TS18046: 'decision' is of type 'unknown'.
+src/lib/server/runs/v2/run-coordinator-host.ts(296,9): error TS18046: 'decision' is of type 'unknown'.
+src/lib/server/runs/v2/run-coordinator-host.ts(296,32): error TS7006: Parameter 'option' implicitly has an 'any' type.
+src/lib/server/runs/v2/run-coordinator-host.ts(296,57): error TS18046: 'decision' is of type 'unknown'.
+src/lib/server/runs/v2/run-coordinator-host.ts(297,20): error TS18046: 'decision' is of type 'unknown'.
+src/lib/server/runs/v2/run-event-reader.ts(1,36): error TS2307: Cannot find module '@manyhands/run-store' or its corresponding type declarations.
+src/lib/server/runs/v2/run-event-reader.ts(9,22): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/lib/server/runs/v2/run-failure-receipt.ts(4,33): error TS2307: Cannot find module '@manyhands/run-store' or its corresponding type declarations.
+src/lib/server/runs/v2/run-record-cache.ts(1,46): error TS2307: Cannot find module '@manyhands/run-coordinator' or its corresponding type declarations.
+src/lib/server/workspaces/ensure-runnable-repo.ts(5,29): error TS2307: Cannot find module '@manyhands/execution-core' or its corresponding type declarations.
+src/lib/server/workspaces/repo-validation.ts(5,29): error TS2307: Cannot find module '@manyhands/execution-core' or its corresponding type declarations.
+src/lib/server/workspaces/repository-identity.ts(6,29): error TS2307: Cannot find module '@manyhands/execution-core' or its corresponding type declarations.
+undefined
+C:\Users\franc\AppData\Local\Temp\manyhands-stage0-2d3ffdb5-cb5e59e173dc44789f5cf57d11c89cee\apps\web:
+ ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command failed with exit code 2: tsc --noEmit

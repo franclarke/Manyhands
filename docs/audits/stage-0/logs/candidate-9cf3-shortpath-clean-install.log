@@ -1,0 +1,127 @@
+Scope: all 14 workspace projects
+✓ Lockfile passes supply-chain policies (verified 21m ago)
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +630
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 630, reused 0, downloaded 8, added 0
+Progress: resolved 630, reused 0, downloaded 23, added 0
+Progress: resolved 630, reused 0, downloaded 24, added 0
+Progress: resolved 630, reused 0, downloaded 28, added 0
+Progress: resolved 630, reused 0, downloaded 32, added 0
+Progress: resolved 630, reused 0, downloaded 35, added 0
+Packages are hard linked from the content-addressable store to the virtual store.
+  Content-addressable store is at: C:\mh-store-9cf3-02\v11
+  Virtual store is at:             node_modules/.pnpm
+Progress: resolved 630, reused 0, downloaded 38, added 3
+Progress: resolved 630, reused 0, downloaded 44, added 4
+Progress: resolved 630, reused 0, downloaded 50, added 4
+Progress: resolved 630, reused 0, downloaded 61, added 4
+Progress: resolved 630, reused 0, downloaded 66, added 4
+Progress: resolved 630, reused 0, downloaded 71, added 4
+Progress: resolved 630, reused 0, downloaded 73, added 4
+Progress: resolved 630, reused 0, downloaded 80, added 4
+Progress: resolved 630, reused 0, downloaded 87, added 7
+Progress: resolved 630, reused 0, downloaded 95, added 8
+Progress: resolved 630, reused 0, downloaded 101, added 8
+Progress: resolved 630, reused 0, downloaded 105, added 8
+Progress: resolved 630, reused 0, downloaded 108, added 8
+Progress: resolved 630, reused 0, downloaded 117, added 8
+Progress: resolved 630, reused 0, downloaded 121, added 8
+Progress: resolved 630, reused 0, downloaded 126, added 8
+Progress: resolved 630, reused 0, downloaded 134, added 8
+Progress: resolved 630, reused 0, downloaded 135, added 8
+Progress: resolved 630, reused 0, downloaded 140, added 10
+Progress: resolved 630, reused 0, downloaded 145, added 12
+Progress: resolved 630, reused 0, downloaded 146, added 12
+Progress: resolved 630, reused 0, downloaded 147, added 12
+Progress: resolved 630, reused 0, downloaded 150, added 12
+Progress: resolved 630, reused 0, downloaded 154, added 12
+Progress: resolved 630, reused 0, downloaded 160, added 12
+Progress: resolved 630, reused 0, downloaded 164, added 12
+Progress: resolved 630, reused 0, downloaded 165, added 12
+Progress: resolved 630, reused 0, downloaded 174, added 12
+Progress: resolved 630, reused 0, downloaded 176, added 12
+Progress: resolved 630, reused 0, downloaded 183, added 12
+Progress: resolved 630, reused 0, downloaded 186, added 12
+Progress: resolved 630, reused 0, downloaded 199, added 16
+Progress: resolved 630, reused 0, downloaded 213, added 16
+Progress: resolved 630, reused 0, downloaded 226, added 16
+Progress: resolved 630, reused 0, downloaded 246, added 16
+Progress: resolved 630, reused 0, downloaded 267, added 20
+Progress: resolved 630, reused 0, downloaded 297, added 24
+Progress: resolved 630, reused 0, downloaded 322, added 24
+Progress: resolved 630, reused 0, downloaded 336, added 24
+Progress: resolved 630, reused 0, downloaded 343, added 27
+Progress: resolved 630, reused 0, downloaded 356, added 28
+Progress: resolved 630, reused 0, downloaded 371, added 28
+Progress: resolved 630, reused 0, downloaded 387, added 28
+Progress: resolved 630, reused 0, downloaded 401, added 32
+Progress: resolved 630, reused 0, downloaded 418, added 32
+Progress: resolved 630, reused 0, downloaded 437, added 32
+Progress: resolved 630, reused 0, downloaded 461, added 36
+Progress: resolved 630, reused 0, downloaded 487, added 36
+Progress: resolved 630, reused 0, downloaded 505, added 38
+Progress: resolved 630, reused 0, downloaded 531, added 40
+Progress: resolved 630, reused 0, downloaded 542, added 40
+Progress: resolved 630, reused 0, downloaded 562, added 43
+Progress: resolved 630, reused 0, downloaded 597, added 44
+Progress: resolved 630, reused 0, downloaded 627, added 54
+Progress: resolved 630, reused 0, downloaded 628, added 82
+Progress: resolved 630, reused 0, downloaded 628, added 123
+Progress: resolved 630, reused 0, downloaded 628, added 135
+Progress: resolved 630, reused 0, downloaded 628, added 159
+Progress: resolved 630, reused 0, downloaded 628, added 179
+Progress: resolved 630, reused 0, downloaded 628, added 202
+Progress: resolved 630, reused 0, downloaded 628, added 236
+Progress: resolved 630, reused 0, downloaded 628, added 277
+Progress: resolved 630, reused 0, downloaded 628, added 313
+Progress: resolved 630, reused 0, downloaded 628, added 333
+Progress: resolved 630, reused 0, downloaded 628, added 358
+Progress: resolved 630, reused 0, downloaded 629, added 385
+Progress: resolved 630, reused 0, downloaded 629, added 430
+Progress: resolved 630, reused 0, downloaded 629, added 482
+Progress: resolved 630, reused 0, downloaded 629, added 530
+Progress: resolved 630, reused 0, downloaded 629, added 615
+Progress: resolved 630, reused 0, downloaded 629, added 627
+Progress: resolved 630, reused 0, downloaded 629, added 628
+Progress: resolved 630, reused 0, downloaded 629, added 629
+Progress: resolved 630, reused 0, downloaded 630, added 629
+Progress: resolved 630, reused 0, downloaded 630, added 630
+Progress: resolved 630, reused 0, downloaded 630, added 630, done
+.../node-pty@1.1.0/node_modules/node-pty install$ node scripts/prebuild.js || node-gyp rebuild
+.../node_modules/unrs-resolver postinstall$ node postinstall.js
+.../sharp@0.34.5/node_modules/sharp install$ node install/check.js || npm run build
+.../esbuild@0.27.7/node_modules/esbuild postinstall$ node install.js
+.../esbuild@0.21.5/node_modules/esbuild postinstall$ node install.js
+.../node-pty@1.1.0/node_modules/node-pty install: [32m> Checking prebuilds...[0m
+.../node-pty@1.1.0/node_modules/node-pty install: Done
+.../node-pty@1.1.0/node_modules/node-pty postinstall$ node scripts/post-install.js
+.../sharp@0.34.5/node_modules/sharp install: Done
+.../node-pty@1.1.0/node_modules/node-pty postinstall: [32m> Cleaning release folder...[0m
+.../node-pty@1.1.0/node_modules/node-pty postinstall: [32m> Moving conpty.dll...[0m
+.../node-pty@1.1.0/node_modules/node-pty postinstall:   Using os.arch(): x64
+.../node-pty@1.1.0/node_modules/node-pty postinstall:   Found version 1.23.251008001
+.../node-pty@1.1.0/node_modules/node-pty postinstall:   Copying C:\mh-g0-9cf3-02\node_modules\.pnpm\node-pty@1.1.0\node_modules\node-pty\third_party\conpty\1.23.251008001\win10-x64\conpty.dll -> C:\mh-g0-9cf3-02\node_modules\.pnpm\node-pty@1.1.0\node_modules\node-pty\build\Release\conpty\conpty.dll
+.../node-pty@1.1.0/node_modules/node-pty postinstall:   Copying C:\mh-g0-9cf3-02\node_modules\.pnpm\node-pty@1.1.0\node_modules\node-pty\third_party\conpty\1.23.251008001\win10-x64\OpenConsole.exe -> C:\mh-g0-9cf3-02\node_modules\.pnpm\node-pty@1.1.0\node_modules\node-pty\build\Release\conpty\OpenConsole.exe
+.../node_modules/unrs-resolver postinstall: Done
+.../node-pty@1.1.0/node_modules/node-pty postinstall: Done
+.../esbuild@0.27.7/node_modules/esbuild postinstall: Done
+.../esbuild@0.21.5/node_modules/esbuild postinstall: Done
+
+dependencies:
++ zod 3.25.76
+
+devDependencies:
++ @types/node 22.20.1
++ @typescript-eslint/eslint-plugin 7.18.0
++ @typescript-eslint/parser 7.18.0
++ eslint 8.57.1
++ eslint-plugin-jsx-a11y 6.10.2
++ puppeteer-core 25.6.0
++ ts-morph 28.0.0
++ tsup 8.5.1
++ typescript 5.9.3
++ vitest 2.1.9
+
+Done in 1m 47.8s using pnpm v11.21.0

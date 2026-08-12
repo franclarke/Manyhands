@@ -1,0 +1,36 @@
+
+ RUN  v2.1.9 C:/Users/franc/AppData/Local/Temp/manyhands-stage0-9cf3e87a-7b1afc06ca154ff3b411ce5190952809
+
+ ✓ tests/local-boundary.test.ts (14 tests) 9ms
+ ✓ tests/run-v2-crash-recovery.test.ts (1 test) 29ms
+ ✓ tests/run-store-event-source.test.ts (5 tests) 513ms
+ ✓ tests/delivery-state-machine.test.ts (4 tests) 39ms
+ ✓ tests/integration-operation-recovery.test.ts (4 tests) 39ms
+ ✓ tests/run-liveness-supervisor.test.ts (5 tests) 24ms
+ ✓ tests/integration-manifest.test.ts (9 tests) 645ms
+   ✓ IntegrationManifestExecutor > recovers after persisting a repair commit without launching that repair twice 347ms
+ ✓ tests/exact-candidate-validation.test.ts (7 tests) 1333ms
+   ✓ validateExactCandidate > executes the frozen value-aware order oracle and rejects the retry-2 candidate 1303ms
+ ✓ tests/run-create-canonical-seed.test.ts (1 test) 89ms
+ ✓ tests/scheduler-readiness-v2.test.ts (5 tests) 205ms
+ ✓ tests/final-candidate.test.ts (2 tests) 16ms
+ ✓ tests/execution-core-v2-node-executor.test.ts (55 tests) 934ms
+ ✓ tests/planning-v2-approval.test.ts (1 test) 1079ms
+   ✓ planning V2 revision approval > uses revision CAS and requires a new revision-specific approval after an edit 1076ms
+ ✓ tests/run-v2-e2e.test.ts (2 tests) 943ms
+   ✓ V2 productive run > re-enters the driver after an integration journal takeover without repeating the applied child 682ms
+ ✓ tests/run-v2-execution-host.test.ts (2 tests) 100ms
+ ✓ tests/run-v2-execution-driver.test.ts (15 tests) 1556ms
+   ✓ V2ExecutionDriver > retries a transient leaf failure within the declared recovery budget 318ms
+   ✓ V2ExecutionDriver > refreshes scheduler capabilities with the inputs that replace a stale attempt 304ms
+ ✓ tests/planning-v2-pipeline.test.ts (5 tests) 2179ms
+   ✓ planning V2 vertical slice > grounds the package manifest when repository scripts form part of the command surface 944ms
+   ✓ planning V2 vertical slice > fails the run when the compiler rejects the plan, without pretending a graph exists 473ms
+ ✓ tests/run-v2-record-cache-reconciliation.test.ts (1 test) 313ms
+   ✓ V2 RunRecord cache reconciliation > repairs a stale running cache from a terminal canonical journal before responding 311ms
+
+ Test Files  18 passed (18)
+      Tests  138 passed (138)
+   Start at  16:20:34
+   Duration  14.43s (transform 11.36s, setup 0ms, collect 94.35s, tests 10.04s, environment 7ms, prepare 13.76s)
+

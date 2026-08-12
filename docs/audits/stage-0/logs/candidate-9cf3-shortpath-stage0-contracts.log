@@ -1,0 +1,11 @@
+
+ RUN  v2.1.9 C:/mh-g0-9cf3-02
+
+ ✓ tests/documentation-current.test.ts (3 tests) 11ms
+ ✓ tests/architecture-baseline.test.ts (6 tests) 257ms
+
+ Test Files  2 passed (2)
+      Tests  9 passed (9)
+   Start at  16:41:11
+   Duration  4.89s (transform 1.03s, setup 0ms, collect 3.90s, tests 268ms, environment 0ms, prepare 620ms)
+

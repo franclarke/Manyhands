@@ -15,6 +15,9 @@ build/
 tmp/
 logs/
 *.log
+!docs/audits/stage-0/logs/
+docs/audits/stage-0/logs/*
+!docs/audits/stage-0/logs/*.log
 
 .playwright-mcp/
 .playwright-cli/

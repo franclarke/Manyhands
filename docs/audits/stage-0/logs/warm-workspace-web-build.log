@@ -1,0 +1,277 @@
+
+> manyhands@0.1.0 web:build C:\Users\franc\Documents\Proyectos\Manyhands
+> pnpm build:packages && pnpm --filter @manyhands/web build
+
+
+> manyhands@0.1.0 build:packages C:\Users\franc\Documents\Proyectos\Manyhands
+> pnpm -r --filter "./packages/*" build
+
+Scope: 12 of 14 workspace projects
+packages/shared build$ tsup src/index.ts src/node-cli-process.ts --format esm,cjs --dts --clean
+packages/shared build: CLI Building entry: src/index.ts, src/node-cli-process.ts
+packages/shared build: CLI Using tsconfig: tsconfig.json
+packages/shared build: CLI tsup v8.5.1
+packages/shared build: CLI Target: es2022
+packages/shared build: CLI Cleaning output folder
+packages/shared build: ESM Build start
+packages/shared build: CJS Build start
+packages/shared build: ESM dist\index.js            9.57 KB
+packages/shared build: ESM dist\node-cli-process.js 7.61 KB
+packages/shared build: ESM ⚡️ Build success in 169ms
+packages/shared build: CJS dist\node-cli-process.cjs 9.00 KB
+packages/shared build: CJS dist\index.cjs            12.40 KB
+packages/shared build: CJS ⚡️ Build success in 170ms
+packages/shared build: DTS Build start
+packages/shared build: DTS ⚡️ Build success in 4454ms
+packages/shared build: DTS dist\index.d.ts             9.74 KB
+packages/shared build: DTS dist\node-cli-process.d.ts  2.75 KB
+packages/shared build: DTS dist\index.d.cts            9.74 KB
+packages/shared build: DTS dist\node-cli-process.d.cts 2.75 KB
+packages/shared build: Done
+packages/repository-index build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/trace-store build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/contracts build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/trace-store build: CLI Building entry: src/index.ts
+packages/trace-store build: CLI Using tsconfig: tsconfig.json
+packages/trace-store build: CLI tsup v8.5.1
+packages/trace-store build: CLI Target: es2022
+packages/trace-store build: CLI Cleaning output folder
+packages/trace-store build: ESM Build start
+packages/trace-store build: CJS Build start
+packages/repository-index build: CLI Building entry: src/index.ts
+packages/repository-index build: CLI Using tsconfig: tsconfig.json
+packages/repository-index build: CLI tsup v8.5.1
+packages/repository-index build: CLI Target: es2022
+packages/repository-index build: CLI Cleaning output folder
+packages/repository-index build: ESM Build start
+packages/repository-index build: CJS Build start
+packages/contracts build: CLI Building entry: src/index.ts
+packages/contracts build: CLI Using tsconfig: tsconfig.json
+packages/contracts build: CLI tsup v8.5.1
+packages/contracts build: CLI Target: es2022
+packages/contracts build: CLI Cleaning output folder
+packages/contracts build: ESM Build start
+packages/contracts build: CJS Build start
+packages/trace-store build: ESM dist\index.js 8.42 KB
+packages/trace-store build: ESM ⚡️ Build success in 191ms
+packages/trace-store build: CJS dist\index.cjs 11.28 KB
+packages/trace-store build: CJS ⚡️ Build success in 192ms
+packages/repository-index build: CJS dist\index.cjs 62.28 KB
+packages/repository-index build: CJS ⚡️ Build success in 211ms
+packages/repository-index build: ESM dist\index.js 55.24 KB
+packages/repository-index build: ESM ⚡️ Build success in 212ms
+packages/contracts build: CJS dist\index.cjs 45.26 KB
+packages/contracts build: CJS ⚡️ Build success in 224ms
+packages/contracts build: ESM dist\index.js 38.48 KB
+packages/contracts build: ESM ⚡️ Build success in 224ms
+packages/repository-index build: DTS Build start
+packages/trace-store build: DTS Build start
+packages/contracts build: DTS Build start
+packages/trace-store build: DTS ⚡️ Build success in 2510ms
+packages/trace-store build: DTS dist\index.d.ts  9.39 KB
+packages/trace-store build: DTS dist\index.d.cts 9.39 KB
+packages/trace-store build: Done
+packages/repository-index build: DTS ⚡️ Build success in 3129ms
+packages/repository-index build: DTS dist\index.d.ts  72.93 KB
+packages/repository-index build: DTS dist\index.d.cts 72.93 KB
+packages/contracts build: DTS ⚡️ Build success in 3130ms
+packages/contracts build: DTS dist\index.d.ts  116.41 KB
+packages/contracts build: DTS dist\index.d.cts 116.41 KB
+packages/repository-index build: Done
+packages/contracts build: Done
+packages/conflict-risk build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/task-graph build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/conflict-risk build: CLI Building entry: src/index.ts
+packages/conflict-risk build: CLI Using tsconfig: tsconfig.json
+packages/conflict-risk build: CLI tsup v8.5.1
+packages/conflict-risk build: CLI Target: es2022
+packages/conflict-risk build: CLI Cleaning output folder
+packages/conflict-risk build: ESM Build start
+packages/conflict-risk build: CJS Build start
+packages/task-graph build: CLI Building entry: src/index.ts
+packages/task-graph build: CLI Using tsconfig: tsconfig.json
+packages/task-graph build: CLI tsup v8.5.1
+packages/task-graph build: CLI Target: es2022
+packages/task-graph build: CLI Cleaning output folder
+packages/task-graph build: ESM Build start
+packages/task-graph build: CJS Build start
+packages/conflict-risk build: CJS dist\index.cjs 28.18 KB
+packages/conflict-risk build: CJS ⚡️ Build success in 157ms
+packages/conflict-risk build: ESM dist\index.js 24.88 KB
+packages/conflict-risk build: ESM ⚡️ Build success in 158ms
+packages/task-graph build: ESM dist\index.js 45.84 KB
+packages/task-graph build: ESM ⚡️ Build success in 171ms
+packages/task-graph build: CJS dist\index.cjs 50.13 KB
+packages/task-graph build: CJS ⚡️ Build success in 172ms
+packages/conflict-risk build: DTS Build start
+packages/task-graph build: DTS Build start
+packages/task-graph build: DTS ⚡️ Build success in 3141ms
+packages/task-graph build: DTS dist\index.d.ts  91.32 KB
+packages/task-graph build: DTS dist\index.d.cts 91.32 KB
+packages/task-graph build: Done
+packages/conflict-risk build: DTS ⚡️ Build success in 3368ms
+packages/conflict-risk build: DTS dist\index.d.ts  25.75 KB
+packages/conflict-risk build: DTS dist\index.d.cts 25.75 KB
+packages/conflict-risk build: Done
+packages/decomposer build$ tsup src/index.ts src/mocks/mock-decomposer.ts --format esm,cjs --dts --clean
+packages/run-coordinator build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/scheduler build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/run-coordinator build: CLI Building entry: src/index.ts
+packages/run-coordinator build: CLI Using tsconfig: tsconfig.json
+packages/run-coordinator build: CLI tsup v8.5.1
+packages/run-coordinator build: CLI Target: es2022
+packages/run-coordinator build: CLI Cleaning output folder
+packages/run-coordinator build: ESM Build start
+packages/run-coordinator build: CJS Build start
+packages/decomposer build: CLI Building entry: src/index.ts, src/mocks/mock-decomposer.ts
+packages/decomposer build: CLI Using tsconfig: tsconfig.json
+packages/decomposer build: CLI tsup v8.5.1
+packages/decomposer build: CLI Target: es2022
+packages/decomposer build: CLI Cleaning output folder
+packages/decomposer build: ESM Build start
+packages/decomposer build: CJS Build start
+packages/scheduler build: CLI Building entry: src/index.ts
+packages/scheduler build: CLI Using tsconfig: tsconfig.json
+packages/scheduler build: CLI tsup v8.5.1
+packages/scheduler build: CLI Target: es2022
+packages/scheduler build: CLI Cleaning output folder
+packages/scheduler build: ESM Build start
+packages/scheduler build: CJS Build start
+packages/run-coordinator build: CJS dist\index.cjs 87.52 KB
+packages/run-coordinator build: CJS ⚡️ Build success in 226ms
+packages/run-coordinator build: ESM dist\index.js 78.84 KB
+packages/run-coordinator build: ESM ⚡️ Build success in 226ms
+packages/scheduler build: ESM dist\index.js 29.48 KB
+packages/scheduler build: ESM ⚡️ Build success in 235ms
+packages/scheduler build: CJS dist\index.cjs 31.92 KB
+packages/scheduler build: CJS ⚡️ Build success in 234ms
+packages/decomposer build: CJS dist\mocks\mock-decomposer.cjs 794.00 B
+packages/decomposer build: CJS dist\index.cjs                 291.52 KB
+packages/decomposer build: CJS ⚡️ Build success in 293ms
+packages/decomposer build: ESM dist\chunk-6SJVMHOW.js        0 B
+packages/decomposer build: ESM dist\mocks\mock-decomposer.js 31.00 B
+packages/decomposer build: ESM dist\index.js                 280.15 KB
+packages/decomposer build: ESM ⚡️ Build success in 294ms
+packages/run-coordinator build: DTS Build start
+packages/decomposer build: DTS Build start
+packages/scheduler build: DTS Build start
+packages/scheduler build: DTS ⚡️ Build success in 4890ms
+packages/scheduler build: DTS dist\index.d.ts  17.98 KB
+packages/scheduler build: DTS dist\index.d.cts 17.98 KB
+packages/scheduler build: Done
+packages/run-coordinator build: DTS ⚡️ Build success in 6042ms
+packages/run-coordinator build: DTS dist\index.d.ts  248.24 KB
+packages/run-coordinator build: DTS dist\index.d.cts 248.24 KB
+packages/run-coordinator build: Done
+packages/decomposer build: DTS ⚡️ Build success in 7875ms
+packages/decomposer build: DTS dist\mocks\mock-decomposer.d.ts  13.00 B
+packages/decomposer build: DTS dist\index.d.ts                  147.40 KB
+packages/decomposer build: DTS dist\mocks\mock-decomposer.d.cts 13.00 B
+packages/decomposer build: DTS dist\index.d.cts                 147.40 KB
+packages/decomposer build: Done
+packages/execution-core build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/orchestrator-graph build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/run-store build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/run-store build: CLI Building entry: src/index.ts
+packages/run-store build: CLI Using tsconfig: tsconfig.json
+packages/run-store build: CLI tsup v8.5.1
+packages/run-store build: CLI Target: es2022
+packages/run-store build: CLI Cleaning output folder
+packages/run-store build: ESM Build start
+packages/run-store build: CJS Build start
+packages/orchestrator-graph build: CLI Building entry: src/index.ts
+packages/orchestrator-graph build: CLI Using tsconfig: tsconfig.json
+packages/orchestrator-graph build: CLI tsup v8.5.1
+packages/orchestrator-graph build: CLI Target: es2022
+packages/orchestrator-graph build: CLI Cleaning output folder
+packages/execution-core build: CLI Building entry: src/index.ts
+packages/orchestrator-graph build: ESM Build start
+packages/orchestrator-graph build: CJS Build start
+packages/execution-core build: CLI Using tsconfig: tsconfig.json
+packages/execution-core build: CLI tsup v8.5.1
+packages/execution-core build: CLI Target: es2022
+packages/execution-core build: CLI Cleaning output folder
+packages/execution-core build: ESM Build start
+packages/execution-core build: CJS Build start
+packages/run-store build: CJS dist\index.cjs 52.96 KB
+packages/run-store build: CJS ⚡️ Build success in 268ms
+packages/run-store build: ESM dist\index.js 48.13 KB
+packages/run-store build: ESM ⚡️ Build success in 268ms
+packages/orchestrator-graph build: CJS dist\index.cjs 35.63 KB
+packages/orchestrator-graph build: CJS ⚡️ Build success in 251ms
+packages/orchestrator-graph build: ESM dist\index.js 34.20 KB
+packages/orchestrator-graph build: ESM ⚡️ Build success in 252ms
+packages/execution-core build: CJS dist\index.cjs 413.10 KB
+packages/execution-core build: CJS ⚡️ Build success in 381ms
+packages/execution-core build: ESM dist\index.js 393.70 KB
+packages/execution-core build: ESM ⚡️ Build success in 383ms
+packages/run-store build: DTS Build start
+packages/orchestrator-graph build: DTS Build start
+packages/execution-core build: DTS Build start
+packages/run-store build: DTS ⚡️ Build success in 5863ms
+packages/run-store build: DTS dist\index.d.ts  10.28 KB
+packages/run-store build: DTS dist\index.d.cts 10.28 KB
+packages/run-store build: Done
+packages/execution-core build: DTS ⚡️ Build success in 7291ms
+packages/execution-core build: DTS dist\index.d.ts  193.36 KB
+packages/execution-core build: DTS dist\index.d.cts 193.36 KB
+packages/execution-core build: Done
+packages/orchestrator-graph build: DTS ⚡️ Build success in 8317ms
+packages/orchestrator-graph build: DTS dist\index.d.ts  8.30 KB
+packages/orchestrator-graph build: DTS dist\index.d.cts 8.30 KB
+packages/orchestrator-graph build: Done
+
+> @manyhands/web@0.1.0 build C:\Users\franc\Documents\Proyectos\Manyhands\apps\web
+> next build
+
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+   ▲ Next.js 15.5.7
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 10.5s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/3) ...
+ ✓ Generating static pages (3/3)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                               Size  First Load JS
+┌ ƒ /                                                  14.2 kB         130 kB
+├ ƒ /_not-found                                          169 B         102 kB
+├ ƒ /api/capabilities                                    169 B         102 kB
+├ ƒ /api/health                                          169 B         102 kB
+├ ƒ /api/local-fs/pick-folder                            169 B         102 kB
+├ ƒ /api/providers/readiness                             169 B         102 kB
+├ ƒ /api/runs                                            169 B         102 kB
+├ ƒ /api/runs/[id]                                       169 B         102 kB
+├ ƒ /api/runs/[id]/cancel                                169 B         102 kB
+├ ƒ /api/runs/[id]/decisions/[decisionId]                169 B         102 kB
+├ ƒ /api/runs/[id]/deliver                               169 B         102 kB
+├ ƒ /api/runs/[id]/pause                                 169 B         102 kB
+├ ƒ /api/runs/[id]/restart                               169 B         102 kB
+├ ƒ /api/runs/[id]/resume                                169 B         102 kB
+├ ƒ /api/runs/[id]/run                                   169 B         102 kB
+├ ƒ /api/runs/[id]/run-events                            169 B         102 kB
+├ ƒ /api/workspaces                                      169 B         102 kB
+├ ƒ /api/workspaces/[id]                                 169 B         102 kB
+├ ƒ /api/workspaces/migration-conflicts/[duplicateId]    169 B         102 kB
+├ ○ /icon.svg                                              0 B            0 B
+├ ƒ /runs/[runId]                                        173 B         334 kB
+├ ƒ /runs/proto                                          169 B         102 kB
+└ ƒ /runs/proto/[fixture]                              2.52 kB         341 kB
++ First Load JS shared by all                           101 kB
+  ├ chunks/233218fd-adf4450ad5a2bf98.js                54.2 kB
+  ├ chunks/235-ac214ef71b1d29e7.js                     45.2 kB
+  └ other shared chunks (total)                           2 kB
+
+
+ƒ Middleware                                           34.6 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

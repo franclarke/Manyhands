@@ -8,13 +8,14 @@
     "tree": "4a8e169a0d68f3cd8a25c9a7ba098c422307d15f",
     "remote": "https://github.com/franclarke/Manyhands.git"
   },
-  "verifiedCandidate": {
+  "rejectedCandidate": {
     "commit": "9cf3e87a9a534bd07947cfaedb6d78f88205b642",
     "tree": "694b99d80023d329502987563d2b8fb4b8df113e",
     "clonePath": "C:/mh-g0-9cf3-02",
     "initialStorePath": "C:/mh-store-9cf3-02",
     "corepackShimPath": "C:/mh-shim-9cf3-02",
-    "cloneStatus": "clean"
+    "cloneStatus": "clean",
+    "disposition": "rejected_dependency_resolution_drift"
   },
   "initialDirtyState": {
     "branch": "main",
@@ -40,7 +41,8 @@
     "codex": "0.146.0",
     "claude": "2.1.222"
   },
-  "pnpmLockSha256": "92d6ebaa559baff3ddf9990839522bf77d9bafd8aac594c462ccca1f9a41a112",
+  "rejectedCandidatePnpmLockSha256": "92d6ebaa559baff3ddf9990839522bf77d9bafd8aac594c462ccca1f9a41a112",
+  "resolutionPreservingLockSha256": "b0b6b366349c303e70a3b76c71ed757e7bcc9c808093ad0440f59aa3b20c8697",
   "preStage1HarnessRemediation": [
     {
       "commit": "a3f45c72b21c20853f2d4616a3429c62b81f3a20",

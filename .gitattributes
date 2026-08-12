@@ -9,3 +9,7 @@
 # Imported by `oracle-core.mjs` to spawn pnpm, so it is part of the pinned
 # instrument surface for the same reason.
 /scripts/manyhands-dev-command.mjs -text
+
+# Stage 0 hashes raw receipts byte-for-byte. Keep their committed bytes stable
+# across checkout-level line-ending settings.
+/docs/audits/stage-0/logs/** -text
