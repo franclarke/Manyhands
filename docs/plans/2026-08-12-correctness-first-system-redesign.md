@@ -62,8 +62,9 @@ match the code.
 | Stage | Status | Attributable evidence | Next-stage disposition |
 |---|---|---|---|
 | Stage 0 / G0 | `pass` | [`../audits/stage-0/`](../audits/stage-0/); accepted candidate `c7819799d22e920359050d4491bbca57e4a3cf8f`, tree `cb68af5cb33bbbae4db295dccc094eb517076b57`, complete 18-receipt qualification and bounded independent GO review | Stage 1 is authorized. |
-| Stage 1 / G1 | `in_progress` | G0 closure authorizes implementation; Stage 1 evidence is not yet complete | Implement the canonical correctness kernel and close G1 before Stage 2. |
-| Stages 2–11 | `not_started` | none | Must execute in normative order. |
+| Stage 1 / G1 | `pass` | [`../audits/stage-1/`](../audits/stage-1/); accepted candidate `393603debcc202761c3aae5e4f6d233ac2701e3a`, tree `5acb5ed58028a23a7747f2a4fb03410496fe6bd9`, focused 18-file/122-test suite, full 239-file/1,523-test suite and bounded independent GO review | Stage 2 is authorized. |
+| Stage 2 / GD0+GD1 | `in_progress` | G1 closure authorizes implementation; Stage 2 evidence is not yet complete | Build the durable daemon kernel and effect protocol, then close GD0 and GD1 before Stage 3. |
+| Stages 3–11 | `not_started` | none | Must execute in normative order. |
 
 ### 0.2 Required reading and execution protocol
 
