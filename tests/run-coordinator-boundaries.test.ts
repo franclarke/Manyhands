@@ -7,7 +7,7 @@ const packageRoot = path.resolve("packages/run-coordinator");
 describe("run-coordinator package boundary", () => {
   it("depends only on domain-safe shared and schema packages", async () => {
     const manifest = JSON.parse(await readFile(path.join(packageRoot, "package.json"), "utf8")) as { dependencies?: Record<string, string> };
-    expect(Object.keys(manifest.dependencies ?? {}).sort()).toEqual(["@manyhands/shared", "@manyhands/task-graph", "zod"]);
+    expect(Object.keys(manifest.dependencies ?? {}).sort()).toEqual(["@manyhands/contracts", "@manyhands/shared", "@manyhands/task-graph", "zod"]);
   });
 
   it("does not import frameworks, infrastructure, Git, filesystem or execution-core", async () => {

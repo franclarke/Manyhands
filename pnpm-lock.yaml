@@ -288,6 +288,9 @@ importers:
 
   packages/run-coordinator:
     dependencies:
+      '@manyhands/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@manyhands/shared':
         specifier: workspace:*
         version: link:../shared

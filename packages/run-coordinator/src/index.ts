@@ -1,4 +1,5 @@
 export * from "./commands.js";
+export * from "./command-envelope.js";
 export * from "./coordinator.js";
 export * from "./execution.js";
 export * from "./integration.js";
