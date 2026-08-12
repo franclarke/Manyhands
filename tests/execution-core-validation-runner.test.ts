@@ -124,7 +124,7 @@ describe("ChildProcessValidationRunner — shell handling", () => {
     expect(result.passed).toBe(true);
     expect(calls[0]?.command.toLowerCase()).toMatch(/cmd\.exe$/u);
     expect(calls[0]?.args.slice(0, 4)).toEqual(["/d", "/v:off", "/s", "/c"]);
-    expect(calls[0]?.args[4]).toContain("npm.cmd");
+    expect(calls[0]?.args[4]?.toLowerCase()).toContain("npm.cmd");
     expect(calls[0]?.args[4]).toContain("test");
     expect(calls[0]?.options.shell).toBe(false);
     expect(calls[0]?.options.windowsVerbatimArguments).toBe(true);
