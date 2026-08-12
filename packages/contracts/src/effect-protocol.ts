@@ -168,8 +168,7 @@ export type PhysicalEffectReceiptBindingIssueCode =
   | "intent_identity_invalid"
   | "receipt_identity_invalid"
   | "effect_binding_mismatch"
-  | "input_digest_mismatch"
-  | "daemon_epoch_mismatch";
+  | "input_digest_mismatch";
 
 export interface PhysicalEffectReceiptBindingIssue {
   code: PhysicalEffectReceiptBindingIssueCode;
@@ -218,13 +217,6 @@ export function validatePhysicalEffectReceiptBinding(
       message: "physical receipt observed different effect inputs"
     });
   }
-  if (receipt.daemonEpoch !== intent.daemonEpoch) {
-    issues.push({
-      code: "daemon_epoch_mismatch",
-      message: "physical receipt was produced under a different daemon epoch"
-    });
-  }
-
   return { ok: issues.length === 0, issues };
 }
 

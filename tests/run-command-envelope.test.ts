@@ -1,13 +1,37 @@
 import { describe, expect, it } from "vitest";
 import {
   RunCommandEnvelopeSchema,
+  buildCommandReceipt,
   buildRunCommandEnvelope,
   classifyRunCommandReplay,
+  validateCommandReceiptIdentity,
   validateRunCommandEnvelopeIdentity,
   type DigestHasher
 } from "@manyhands/run-coordinator";
 
 describe("run command envelope", () => {
+  it("builds a command receipt whose identity covers the durable acknowledgement", () => {
+    const hasher: DigestHasher = (value) => `digest:${value}`;
+    const receipt = buildCommandReceipt({
+      schemaVersion: 1,
+      commandId: "command:pause",
+      runId: "run:alpha",
+      commandDigest: "digest:command",
+      acceptedRevision: 13,
+      daemonEpoch: "epoch:2",
+      acceptedAt: "2026-08-12T15:00:01.000Z"
+    }, hasher);
+
+    expect(validateCommandReceiptIdentity(receipt, hasher)).toEqual({ ok: true, issues: [] });
+    expect(validateCommandReceiptIdentity({ ...receipt, acceptedRevision: 14 }, hasher)).toEqual({
+      ok: false,
+      issues: [{
+        code: "receipt_id_mismatch",
+        message: "receiptId does not identify the exact durable command acknowledgement"
+      }]
+    });
+  });
+
   it("builds a strict v1 envelope whose digest covers only the canonical command identity", () => {
     const hashedValues: string[] = [];
     const inspectHasher: DigestHasher = (value) => {

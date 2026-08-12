@@ -66,9 +66,8 @@ export type RunCommandEnvelope = z.infer<typeof RunCommandEnvelopeSchema>;
  * Durable acknowledgement that a run actor accepted and flushed a command.
  * It does not claim that any long-running work requested by the command ended.
  */
-export const CommandReceiptSchema = z.object({
+export const CommandReceiptMaterialSchema = z.object({
   schemaVersion: z.literal(1),
-  receiptId: EntityIdSchema,
   commandId: EntityIdSchema,
   runId: EntityIdSchema,
   commandDigest: CanonicalDigestSchema,
@@ -77,7 +76,54 @@ export const CommandReceiptSchema = z.object({
   acceptedAt: z.string().datetime({ offset: true })
 }).strict();
 
+export const CommandReceiptSchema = CommandReceiptMaterialSchema.extend({
+  receiptId: CanonicalDigestSchema
+}).strict();
+
+export type CommandReceiptMaterial = z.infer<typeof CommandReceiptMaterialSchema>;
 export type CommandReceipt = z.infer<typeof CommandReceiptSchema>;
+
+export function buildCommandReceipt(
+  input: CommandReceiptMaterial,
+  hasher: DigestHasher
+): CommandReceipt {
+  const material = CommandReceiptMaterialSchema.parse(input);
+  return CommandReceiptSchema.parse({
+    receiptId: computeCanonicalDigest(material, hasher),
+    ...material
+  });
+}
+
+export type CommandReceiptIdentityIssueCode = "schema_invalid" | "receipt_id_mismatch";
+
+export interface CommandReceiptIdentityValidationResult {
+  ok: boolean;
+  issues: Array<{ code: CommandReceiptIdentityIssueCode; message: string }>;
+}
+
+export function validateCommandReceiptIdentity(
+  input: unknown,
+  hasher: DigestHasher
+): CommandReceiptIdentityValidationResult {
+  const parsed = CommandReceiptSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      issues: [{ code: "schema_invalid", message: "command receipt does not match schema version 1" }]
+    };
+  }
+  const { receiptId, ...material } = parsed.data;
+  if (computeCanonicalDigest(material, hasher) !== receiptId) {
+    return {
+      ok: false,
+      issues: [{
+        code: "receipt_id_mismatch",
+        message: "receiptId does not identify the exact durable command acknowledgement"
+      }]
+    };
+  }
+  return { ok: true, issues: [] };
+}
 
 export function buildRunCommandEnvelope(
   input: RunCommandEnvelopeInput,

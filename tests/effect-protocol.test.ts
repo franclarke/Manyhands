@@ -68,7 +68,7 @@ describe("durable effect protocol", () => {
     }));
   });
 
-  it("binds a receipt to the exact intent effect, input and daemon epoch", () => {
+  it("binds a receipt to immutable effect inputs while allowing recovery under a successor epoch", () => {
     const intent = buildEffectIntent(effectIntentMaterial(), sha256);
     const receipt = buildPhysicalEffectReceipt(receiptMaterial(intent.effectId), sha256);
     expect(validatePhysicalEffectReceiptBinding(receipt, intent, sha256)).toEqual({ ok: true, issues: [] });
@@ -81,10 +81,6 @@ describe("durable effect protocol", () => {
       {
         receipt: buildPhysicalEffectReceipt({ ...receiptMaterial(intent.effectId), inputDigest: "sha256:other-input" }, sha256),
         code: "input_digest_mismatch"
-      },
-      {
-        receipt: buildPhysicalEffectReceipt({ ...receiptMaterial(intent.effectId), daemonEpoch: "daemon:epoch-2" }, sha256),
-        code: "daemon_epoch_mismatch"
       }
     ] as const;
 
@@ -92,6 +88,13 @@ describe("durable effect protocol", () => {
       expect(validatePhysicalEffectReceiptBinding(mismatch.receipt, intent, sha256).issues)
         .toContainEqual(expect.objectContaining({ code: mismatch.code }));
     }
+
+    const recoveredObservation = buildPhysicalEffectReceipt({
+      ...receiptMaterial(intent.effectId),
+      daemonEpoch: "daemon:epoch-2"
+    }, sha256);
+    expect(validatePhysicalEffectReceiptBinding(recoveredObservation, intent, sha256))
+      .toEqual({ ok: true, issues: [] });
   });
 });
 
