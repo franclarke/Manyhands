@@ -1,13 +1,22 @@
 {
   "schemaVersion": 1,
-  "status": "in_progress",
-  "subjectCommit": "9cf3e87a9a534bd07947cfaedb6d78f88205b642",
-  "subjectTree": "694b99d80023d329502987563d2b8fb4b8df113e",
-  "subjectDisposition": "rejected_dependency_resolution_drift",
-  "clonePath": "C:/mh-g0-9cf3-02",
+  "status": "pass",
+  "subjectCommit": "c7819799d22e920359050d4491bbca57e4a3cf8f",
+  "subjectTree": "cb68af5cb33bbbae4db295dccc094eb517076b57",
+  "subjectDisposition": "accepted",
+  "clonePath": "C:/mh-g0-c781-09",
   "logHashManifest": "docs/audits/stage-0/logs.sha256",
   "evidenceIndex": "docs/audits/stage-0/evidence-index.json",
-  "commands": [
+  "acceptedQualification": {
+    "candidateCommit": "c7819799d22e920359050d4491bbca57e4a3cf8f",
+    "candidateTree": "cb68af5cb33bbbae4db295dccc094eb517076b57",
+    "workingDirectory": "C:/mh-g0-c781-09",
+    "receiptCount": 18,
+    "receiptPrefix": "candidate-c7819799-final-",
+    "commandRegistry": "docs/audits/stage-0/evidence-index.json",
+    "result": "All 18 required receipts passed or matched the frozen non-blocking lint baseline on the exact clean candidate; bounded independent binary review returned GO."
+  },
+  "rejectedCandidateCommands": [
     {
       "id": "codex-harness-preflight",
       "exactCommand": "codex doctor --summary --ascii",

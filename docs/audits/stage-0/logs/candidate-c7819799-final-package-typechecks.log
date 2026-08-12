@@ -1,0 +1,31 @@
+RECEIPT_ID=package-typechecks
+CANDIDATE=c7819799d22e920359050d4491bbca57e4a3cf8f
+WORKING_DIRECTORY=C:\mh-g0-c781-09
+COMMAND=& 'C:\mh-shim-c781-09\pnpm.cmd' '-r' '--filter' './packages/*' 'typecheck'
+Scope: 12 of 14 workspace projects
+packages/shared typecheck$ tsc -p tsconfig.json --noEmit
+packages/shared typecheck: Done
+packages/contracts typecheck$ tsc -p tsconfig.json --noEmit
+packages/repository-index typecheck$ tsc -p tsconfig.json --noEmit
+packages/trace-store typecheck$ tsc -p tsconfig.json --noEmit
+packages/trace-store typecheck: Done
+packages/contracts typecheck: Done
+packages/repository-index typecheck: Done
+packages/conflict-risk typecheck$ tsc -p tsconfig.json --noEmit
+packages/task-graph typecheck$ tsc -p tsconfig.json --noEmit
+packages/task-graph typecheck: Done
+packages/conflict-risk typecheck: Done
+packages/decomposer typecheck$ tsc -p tsconfig.json --noEmit
+packages/run-coordinator typecheck$ tsc -p tsconfig.json --noEmit
+packages/scheduler typecheck$ tsc -p tsconfig.json --noEmit
+packages/scheduler typecheck: Done
+packages/run-coordinator typecheck: Done
+packages/decomposer typecheck: Done
+packages/execution-core typecheck$ tsc -p tsconfig.json --noEmit
+packages/orchestrator-graph typecheck$ tsc -p tsconfig.json --noEmit
+packages/run-store typecheck$ tsc -p tsconfig.json --noEmit
+packages/run-store typecheck: Done
+packages/execution-core typecheck: Done
+packages/orchestrator-graph typecheck: Done
+EXIT_CODE=0
+COMMAND_STATUS=accepted_exit

@@ -1,0 +1,6 @@
+RECEIPT_ID=web-typecheck
+CANDIDATE=c7819799d22e920359050d4491bbca57e4a3cf8f
+WORKING_DIRECTORY=C:\mh-g0-c781-09
+COMMAND=& 'C:\mh-shim-c781-09\pnpm.cmd' '--filter' '@manyhands/web' 'exec' 'tsc' '--noEmit'
+EXIT_CODE=0
+COMMAND_STATUS=accepted_exit

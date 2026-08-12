@@ -1,0 +1,10 @@
+RECEIPT_ID=lint
+CANDIDATE=c7819799d22e920359050d4491bbca57e4a3cf8f
+WORKING_DIRECTORY=C:\mh-g0-c781-09
+COMMAND=& 'C:\mh-shim-c781-09\pnpm.cmd' 'exec' 'eslint' '.' '--ignore-pattern' 'apps/web/**' '--format' 'json' '--output-file' 'C:\mh-runtime-c781-09\eslint-stage0.json'
+EXIT_CODE=1
+COMMAND_STATUS=accepted_exit
+LINT_FINGERPRINT_SCHEMA=eslint-json-v1
+LINT_DIAGNOSTICS=78
+LINT_FINGERPRINT=74bd6c28c7f21924479e2ec82cfea8de75b8b4d36c0707c0892a64c3db822c70
+LINT_BASELINE_STATUS=pass

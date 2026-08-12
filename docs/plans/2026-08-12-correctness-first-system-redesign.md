@@ -61,8 +61,8 @@ match the code.
 
 | Stage | Status | Attributable evidence | Next-stage disposition |
 |---|---|---|---|
-| Stage 0 / G0 | `in_progress` | [`../audits/stage-0/`](../audits/stage-0/); after earlier harness rejections, candidate `0cf4b5b8d4dfe12182afeef8290e7468536872fb` exposed a real durable-lock deadline-ordering defect in the full suite; its successor contains the red regression and root-cause fix | Qualify the fixed candidate from a fresh clean clone, bind all 18 receipts to its SHA and obtain one bounded independent review. |
-| Stage 1 / G1 | `blocked` | none | G0 must pass on the reissued candidate before Stage 1 begins. |
+| Stage 0 / G0 | `pass` | [`../audits/stage-0/`](../audits/stage-0/); accepted candidate `c7819799d22e920359050d4491bbca57e4a3cf8f`, tree `cb68af5cb33bbbae4db295dccc094eb517076b57`, complete 18-receipt qualification and bounded independent GO review | Stage 1 is authorized. |
+| Stage 1 / G1 | `in_progress` | G0 closure authorizes implementation; Stage 1 evidence is not yet complete | Implement the canonical correctness kernel and close G1 before Stage 2. |
 | Stages 2–11 | `not_started` | none | Must execute in normative order. |
 
 ### 0.2 Required reading and execution protocol

@@ -1,0 +1,26 @@
+RECEIPT_ID=source-integration-validation
+CANDIDATE=c7819799d22e920359050d4491bbca57e4a3cf8f
+WORKING_DIRECTORY=C:\mh-g0-c781-09
+COMMAND=& 'C:\ProgramData\chocolatey\bin\rg.exe' '-n' 'IntegrationManifestExecutor|ExactCandidateValidatorV2|final_candidate.verified' 'apps/web/src' 'packages'
+packages\orchestrator-graph\src\v2\execution-driver.ts:538:      facts.push(fact(`${attempt.attemptId}:final-candidate`, at, "final_candidate.verified", {
+packages\run-coordinator\src\reducer.ts:457:    case "final_candidate.verified":
+packages\run-coordinator\src\domain\events.ts:297:  event("final_candidate.verified", z.object({
+packages\run-coordinator\src\commands.ts:54:    case "verify_final_candidate": return [{ type: "final_candidate.verified", payload: { manifestId: command.manifestId, commit: command.commit, evidenceMatrixId: command.evidenceMatrixId, evidenceEligible: command.evidenceEligible, executionSucceeded: command.executionSucceeded, sourceTargetFingerprint: command.sourceTargetFingerprint, targetBranch: command.targetBranch, targetHead: command.targetHead, ...(command.finalManifest !== undefined ? { finalManifest: command.finalManifest } : {}) } }];
+apps/web/src\lib\run-model\presentation.ts:145:    "final_candidate.verified": "Resultado final verificado",
+apps/web/src\lib\run-model\fixtures\index.ts:492:  push("final_candidate.verified", {
+apps/web/src\lib\server\runs\v2\execution-pipeline.ts:9:  ExactCandidateValidatorV2,
+apps/web/src\lib\server\runs\v2\execution-pipeline.ts:198:      validator: new ExactCandidateValidatorV2({
+packages\execution-core\src\integration\manifest.ts:107:export interface IntegrationManifestExecutorDeps {
+packages\execution-core\src\integration\manifest.ts:130:export class IntegrationManifestExecutor {
+packages\execution-core\src\integration\manifest.ts:131:  constructor(private readonly deps: IntegrationManifestExecutorDeps) {}
+packages\execution-core\src\integration\agent.ts:43:  IntegrationManifestExecutor,
+packages\execution-core\src\integration\agent.ts:45:  type IntegrationManifestExecutorDeps,
+packages\execution-core\src\integration\agent.ts:895:    dependencies: Omit<IntegrationManifestExecutorDeps, "git">
+packages\execution-core\src\integration\agent.ts:897:    return new IntegrationManifestExecutor({ git: this.git, ...dependencies }).integrate(input);
+packages\execution-core\src\v2\node-executor.ts:20:  IntegrationManifestExecutor,
+packages\execution-core\src\v2\node-executor.ts:404:      const integrator = new IntegrationManifestExecutor({
+packages\execution-core\src\v2\exact-candidate-validator.ts:18:export interface ExactCandidateValidatorV2Options {
+packages\execution-core\src\v2\exact-candidate-validator.ts:57:export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
+packages\execution-core\src\v2\exact-candidate-validator.ts:60:  constructor(private readonly options: ExactCandidateValidatorV2Options) {
+EXIT_CODE=0
+COMMAND_STATUS=accepted_exit

@@ -4,35 +4,33 @@
 
 **Architecture baseline tree:** `4a8e169a0d68f3cd8a25c9a7ba098c422307d15f`
 
-**Rejected candidate:** `9cf3e87a9a534bd07947cfaedb6d78f88205b642`
+**Accepted candidate:** `c7819799d22e920359050d4491bbca57e4a3cf8f`
 
-**Rejected tree:** `694b99d80023d329502987563d2b8fb4b8df113e`
+**Accepted tree:** `cb68af5cb33bbbae4db295dccc094eb517076b57`
 
-**Stable clean clone:** `C:/mh-g0-9cf3-02`
+**Stable clean clone:** `C:/mh-g0-c781-09`
 
-**Initially empty store:** `C:/mh-store-9cf3-02`
+**Initially empty store:** `C:/mh-store-c781-09`
 
-**Corepack shims:** `C:/mh-shim-9cf3-02`
+**Corepack shims:** `C:/mh-shim-c781-09`
+
+**Pinned runtime:** `C:/mh-runtime-c781-09` (Node v22.22.0; pnpm 11.21.0)
 
 ## Gate decision
 
-G0 is `in_progress`. The stable short-path clone was clean and reproduced installation,
-the characterization checks, all current source tests, package/web typechecks,
-package builds, and the Next production build on the exact candidate. However,
-independent review rejected this candidate: converting the pnpm 7 lock to
-pnpm 11 changed four direct resolutions and a wider set of transitive
-resolutions. Stage 1 is blocked until a resolution-preserving candidate repeats
-the clean-clone checks with the corrected fail-closed runner and passes
-independent review. The rejected `dc454704` attempt reached the full suite but
-was stopped when review proved its expected/observed PowerShell version check
-was tautological; none of its twelve receipts is accepted evidence.
+G0 is `pass`. Candidate `c7819799` produced the complete 18-receipt set in a
+fresh short-path clone under the pinned Node v22.22.0 and pnpm 11.21.0
+toolchain. The final receipt confirms the exact candidate/tree and an empty Git
+status. One bounded independent binary review returned GO after checking the
+candidate identity, receipt completeness, results, lint characterization,
+secret hygiene and final cleanliness. Stage 1 is authorized and `in_progress`.
 
-Candidate `0cf4b5b8` then ran under the pinned Node 22 toolchain. Setup, the cold
-install, Stage 0 contracts and the focused route passed. Its full suite exposed
-one real safety defect after 1,485 passing tests: a lock waiter checked staleness
-before its own expired deadline and attempted a late Windows rename. A
-deterministic regression reproduced the reclaim and the successor moves the
-deadline check before every stale-lock mutation.
+The accepted candidate includes the root-cause correction for the durable-lock
+defect exposed by `0cf4b5b8`: a waiter whose acquisition deadline had expired
+could check staleness and attempt recovery before rejecting its own timeout. A
+deterministic regression now requires the deadline check before stale-lock
+mutation. Earlier candidates rejected for dependency drift or harness defects
+remain adverse evidence and are not attributed to this gate.
 
 This decision proves an attributable transition baseline only. It does not
 prove any Stage 1-11 target capability, production readiness, or thesis
@@ -42,28 +40,30 @@ hypothesis. R0-R19 remain `not_run`.
 
 | Check | Outcome | Evidence |
 |---|---|---|
-| Clone identity | `pass` | Exact candidate/tree, empty status, Node v24.16.0 and pnpm 11.21.0 in `candidate-9cf3-shortpath-identity.log`. |
-| Cold frozen install | `pass` | 630 packages installed from the initially empty isolated store in `candidate-9cf3-shortpath-clean-install.log`. |
-| Stage 0 contracts | `pass` | 2 files and 9 tests in `candidate-9cf3-shortpath-stage0-contracts.log`. |
-| Focused productive route | `pass` | 18 files and 138 tests in `candidate-9cf3-shortpath-focused-route.log`. |
-| Full suite | `pass` | 229 files; 1481 passed and 4 skipped in `candidate-9cf3-shortpath-full-tests.log`. |
-| Package typechecks | `pass` | 12 packages in `candidate-9cf3-shortpath-typechecks.log`. |
-| Web typecheck | `pass` | Dedicated command receipt with exit 0 in `candidate-9cf3-shortpath-web-typecheck.log`. |
-| Package build | `pass` | 12 packages in `candidate-9cf3-shortpath-package-build.log`. |
-| Web build | `pass` | Package build plus successful Next production build and generated route table in `candidate-9cf3-shortpath-web-build.log`. |
-| Lint baseline | `fail`, non-blocking for G0 | 78 pre-existing errors and 0 warnings in `candidate-9cf3-shortpath-lint.log`. |
+| Setup and identity | `pass` | Fresh paths; exact candidate/tree; Node v22.22.0 and pnpm 11.21.0 in `candidate-c7819799-final-setup.log`. |
+| Cold frozen install | `pass` | Isolated cold installation completed in `candidate-c7819799-final-clean-install.log`. |
+| Stage 0 contracts | `pass` | 4 files and 14 tests in `candidate-c7819799-final-stage0-contracts.log`. |
+| Focused productive route | `pass` | 18 files and 138 tests in `candidate-c7819799-final-focused-route.log`. |
+| Full suite | `pass` | 231 files; 1,487 passed and 4 skipped in `candidate-c7819799-final-full-tests.log`. |
+| Package typechecks | `pass` | All 12 package typechecks in `candidate-c7819799-final-package-typechecks.log`. |
+| Web typecheck | `pass` | Dedicated command receipt with exit 0 in `candidate-c7819799-final-web-typecheck.log`. |
+| Package build | `pass` | Package build completed in `candidate-c7819799-final-package-build.log`. |
+| Web build | `pass` | Successful Next production build in `candidate-c7819799-final-web-build.log`. |
+| Lint baseline | `frozen_nonblocking` | 78 diagnostics; fingerprint `74bd6c28c7f21924479e2ec82cfea8de75b8b4d36c0707c0892a64c3db822c70` in `candidate-c7819799-final-lint.log`. |
+| Final identity | `pass` | Exact candidate/tree, unchanged tool hashes and empty status in `candidate-c7819799-final-final-identity.log`. |
 
-The exact commands, working directories, exit codes, results, and paths are in
-[`commands.json`](commands.json). SHA-256 values for the entire log set are in
+The accepted qualification is identified in [`commands.json`](commands.json);
+its exact per-receipt commands, working directories, exit codes, results and
+paths are in [`evidence-index.json`](evidence-index.json). SHA-256 values for the entire log set are in
 [`logs.sha256`](logs.sha256); no individual hash is duplicated here.
 
 ## Pre-Stage 1 reproducibility remediation
 
-The first attributable candidate exposed a real harness/toolchain defect rather
-than a product defect:
+The first attributable candidates exposed harness/toolchain defects before the
+accepted qualification:
 
 - `a3f45c72` pins pnpm 11.21.0, updates the lockfile, and pins CI Node 22.22.0.
-  The final lockfile SHA-256 is
+  That rejected candidate's lockfile SHA-256 is
   `92d6ebaa559baff3ddf9990839522bf77d9bafd8aac594c462ccca1f9a41a112`.
 - `9cf3e87a` makes one Windows shim regression assertion case-insensitive, which
   matches Windows path semantics.
@@ -71,6 +71,9 @@ than a product defect:
 Both commits precede Stage 1 and change reproducibility/tests, not the productive
 run architecture. Their necessity and scope remain visible rather than being
 folded into a false claim that the original toolchain was reproducible.
+Candidate `c7819799` additionally contains the narrowly scoped durable-lock
+deadline fix and its regression because the full qualification found a real
+pre-existing product safety defect.
 
 ## Preserved adverse history
 
@@ -81,8 +84,8 @@ installation and source checks, after which the web build observed missing
 plugin/files and `ENOENT`. Later inspection found the clone, store and shim
 paths absent, but no receipt establishes why. The attempt therefore remains
 `inconclusive`; it neither proves a product defect nor a host cleanup cause.
-The stable short-path clone was then created independently and passed the same
-web build.
+The accepted short-path clone was later created independently and passed the
+same web build as part of the complete 18-receipt qualification.
 
 The lint failure is different: it is a reproducible current repository finding.
 It does not block G0 because G0 freezes current truth, but it remains required
@@ -96,13 +99,13 @@ work before GProd can claim a fully green production-quality gate.
   once; incomplete historical receipts preserve `null` fields and are not used
   as accepted-candidate claims.
 - [`../../../scripts/verify-stage0-clean-clone.ps1`](../../../scripts/verify-stage0-clean-clone.ps1)
-  is the fail-closed recipe for the replacement candidate: it refuses existing
+  is the fail-closed recipe used for the accepted candidate: it refuses existing
   clone/store/shim targets and records setup, strict preflight, commands and
   post-check identity.
 - [`../../../scripts/verify-stage0-closure.ps1`](../../../scripts/verify-stage0-closure.ps1)
   verifies that the gate-record commit is a single-parent, evidence-only child
   of the exact qualified candidate and contains all 18 required receipts.
-- Node v24.16.0 was used for local verification; CI is pinned to Node 22.22.0.
+- The accepted qualification used pinned Node v22.22.0 and pnpm 11.21.0.
 - No model was invoked to establish G0 product evidence.
 - The full suite's four skips remain skips, not passes.
 - A successful build and the characterized current route do not establish the

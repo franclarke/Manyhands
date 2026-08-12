@@ -17,6 +17,20 @@
     "cloneStatus": "clean",
     "disposition": "rejected_dependency_resolution_drift"
   },
+  "acceptedCandidate": {
+    "commit": "c7819799d22e920359050d4491bbca57e4a3cf8f",
+    "tree": "cb68af5cb33bbbae4db295dccc094eb517076b57",
+    "clonePath": "C:/mh-g0-c781-09",
+    "initialStorePath": "C:/mh-store-c781-09",
+    "corepackShimPath": "C:/mh-shim-c781-09",
+    "runtimePath": "C:/mh-runtime-c781-09",
+    "cloneStatus": "clean",
+    "disposition": "accepted",
+    "node": "v22.22.0",
+    "nodeSha256": "bae898add4643fcf890a83ad8ae56e20dce7e781cab161a53991ceba70c99ffb",
+    "pnpm": "11.21.0",
+    "pnpmSha256": "0ffac28fb84bc035296c4cc77bf87ff4f537eda496597a5a1fab715b8cc8366c"
+  },
   "initialDirtyState": {
     "branch": "main",
     "commit": "2339cd8b75dbea9cffaf41bb5a3c9d724caff5f3",

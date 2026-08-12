@@ -1,0 +1,222 @@
+RECEIPT_ID=package-build
+CANDIDATE=c7819799d22e920359050d4491bbca57e4a3cf8f
+WORKING_DIRECTORY=C:\mh-g0-c781-09
+COMMAND=& 'C:\mh-shim-c781-09\pnpm.cmd' 'build'
+$ pnpm build:packages
+$ pnpm -r --filter "./packages/*" build
+Scope: 12 of 14 workspace projects
+packages/shared build$ tsup src/index.ts src/node-cli-process.ts --format esm,cjs --dts --clean
+packages/shared build: CLI Building entry: src/index.ts, src/node-cli-process.ts
+packages/shared build: CLI Using tsconfig: tsconfig.json
+packages/shared build: CLI tsup v8.5.1
+packages/shared build: CLI Target: es2022
+packages/shared build: CLI Cleaning output folder
+packages/shared build: ESM Build start
+packages/shared build: CJS Build start
+packages/shared build: ESM dist\index.js            9.57 KB
+packages/shared build: ESM dist\node-cli-process.js 7.61 KB
+packages/shared build: ESM ⚡️ Build success in 220ms
+packages/shared build: CJS dist\index.cjs            12.40 KB
+packages/shared build: CJS dist\node-cli-process.cjs 9.00 KB
+packages/shared build: CJS ⚡️ Build success in 219ms
+packages/shared build: DTS Build start
+packages/shared build: DTS ⚡️ Build success in 3793ms
+packages/shared build: DTS dist\index.d.ts             9.74 KB
+packages/shared build: DTS dist\node-cli-process.d.ts  2.75 KB
+packages/shared build: DTS dist\index.d.cts            9.74 KB
+packages/shared build: DTS dist\node-cli-process.d.cts 2.75 KB
+packages/shared build: Done
+packages/contracts build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/repository-index build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/trace-store build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/trace-store build: CLI Building entry: src/index.ts
+packages/trace-store build: CLI Using tsconfig: tsconfig.json
+packages/trace-store build: CLI tsup v8.5.1
+packages/trace-store build: CLI Target: es2022
+packages/contracts build: CLI Building entry: src/index.ts
+packages/contracts build: CLI Using tsconfig: tsconfig.json
+packages/contracts build: CLI tsup v8.5.1
+packages/repository-index build: CLI Building entry: src/index.ts
+packages/repository-index build: CLI Using tsconfig: tsconfig.json
+packages/repository-index build: CLI tsup v8.5.1
+packages/trace-store build: CLI Cleaning output folder
+packages/trace-store build: ESM Build start
+packages/trace-store build: CJS Build start
+packages/contracts build: CLI Target: es2022
+packages/repository-index build: CLI Target: es2022
+packages/repository-index build: CLI Cleaning output folder
+packages/repository-index build: ESM Build start
+packages/repository-index build: CJS Build start
+packages/contracts build: CLI Cleaning output folder
+packages/contracts build: ESM Build start
+packages/contracts build: CJS Build start
+packages/trace-store build: ESM dist\index.js 8.42 KB
+packages/trace-store build: ESM ⚡️ Build success in 669ms
+packages/trace-store build: CJS dist\index.cjs 11.28 KB
+packages/trace-store build: CJS ⚡️ Build success in 685ms
+packages/contracts build: ESM dist\index.js 38.48 KB
+packages/contracts build: ESM ⚡️ Build success in 601ms
+packages/contracts build: CJS dist\index.cjs 45.26 KB
+packages/contracts build: CJS ⚡️ Build success in 602ms
+packages/repository-index build: ESM dist\index.js 55.24 KB
+packages/repository-index build: ESM ⚡️ Build success in 714ms
+packages/repository-index build: CJS dist\index.cjs 62.28 KB
+packages/repository-index build: CJS ⚡️ Build success in 713ms
+packages/trace-store build: DTS Build start
+packages/repository-index build: DTS Build start
+packages/contracts build: DTS Build start
+packages/trace-store build: DTS ⚡️ Build success in 4532ms
+packages/trace-store build: DTS dist\index.d.ts  9.39 KB
+packages/trace-store build: DTS dist\index.d.cts 9.39 KB
+packages/trace-store build: Done
+packages/repository-index build: DTS ⚡️ Build success in 5904ms
+packages/repository-index build: DTS dist\index.d.ts  72.93 KB
+packages/repository-index build: DTS dist\index.d.cts 72.93 KB
+packages/repository-index build: Done
+packages/contracts build: DTS ⚡️ Build success in 6072ms
+packages/contracts build: DTS dist\index.d.ts  116.41 KB
+packages/contracts build: DTS dist\index.d.cts 116.41 KB
+packages/contracts build: Done
+packages/conflict-risk build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/task-graph build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/conflict-risk build: CLI Building entry: src/index.ts
+packages/conflict-risk build: CLI Using tsconfig: tsconfig.json
+packages/conflict-risk build: CLI tsup v8.5.1
+packages/conflict-risk build: CLI Target: es2022
+packages/conflict-risk build: CLI Cleaning output folder
+packages/conflict-risk build: ESM Build start
+packages/conflict-risk build: CJS Build start
+packages/task-graph build: CLI Building entry: src/index.ts
+packages/task-graph build: CLI Using tsconfig: tsconfig.json
+packages/task-graph build: CLI tsup v8.5.1
+packages/task-graph build: CLI Target: es2022
+packages/task-graph build: CLI Cleaning output folder
+packages/task-graph build: ESM Build start
+packages/task-graph build: CJS Build start
+packages/conflict-risk build: ESM dist\index.js 24.88 KB
+packages/conflict-risk build: ESM ⚡️ Build success in 279ms
+packages/conflict-risk build: CJS dist\index.cjs 28.18 KB
+packages/conflict-risk build: CJS ⚡️ Build success in 279ms
+packages/task-graph build: CJS dist\index.cjs 50.13 KB
+packages/task-graph build: CJS ⚡️ Build success in 327ms
+packages/task-graph build: ESM dist\index.js 45.84 KB
+packages/task-graph build: ESM ⚡️ Build success in 329ms
+packages/conflict-risk build: DTS Build start
+packages/task-graph build: DTS Build start
+packages/task-graph build: DTS ⚡️ Build success in 5569ms
+packages/task-graph build: DTS dist\index.d.ts  91.32 KB
+packages/task-graph build: DTS dist\index.d.cts 91.32 KB
+packages/task-graph build: Done
+packages/conflict-risk build: DTS ⚡️ Build success in 5848ms
+packages/conflict-risk build: DTS dist\index.d.ts  25.75 KB
+packages/conflict-risk build: DTS dist\index.d.cts 25.75 KB
+packages/conflict-risk build: Done
+packages/run-coordinator build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/scheduler build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/decomposer build$ tsup src/index.ts src/mocks/mock-decomposer.ts --format esm,cjs --dts --clean
+packages/scheduler build: CLI Building entry: src/index.ts
+packages/scheduler build: CLI Using tsconfig: tsconfig.json
+packages/scheduler build: CLI tsup v8.5.1
+packages/run-coordinator build: CLI Building entry: src/index.ts
+packages/run-coordinator build: CLI Using tsconfig: tsconfig.json
+packages/run-coordinator build: CLI tsup v8.5.1
+packages/scheduler build: CLI Target: es2022
+packages/scheduler build: CLI Cleaning output folder
+packages/scheduler build: ESM Build start
+packages/run-coordinator build: CLI Target: es2022
+packages/scheduler build: CJS Build start
+packages/decomposer build: CLI Building entry: src/index.ts, src/mocks/mock-decomposer.ts
+packages/run-coordinator build: CLI Cleaning output folder
+packages/decomposer build: CLI Using tsconfig: tsconfig.json
+packages/run-coordinator build: ESM Build start
+packages/decomposer build: CLI tsup v8.5.1
+packages/run-coordinator build: CJS Build start
+packages/decomposer build: CLI Target: es2022
+packages/decomposer build: CLI Cleaning output folder
+packages/decomposer build: ESM Build start
+packages/decomposer build: CJS Build start
+packages/scheduler build: ESM dist\index.js 29.48 KB
+packages/scheduler build: ESM ⚡️ Build success in 331ms
+packages/scheduler build: CJS dist\index.cjs 31.92 KB
+packages/scheduler build: CJS ⚡️ Build success in 338ms
+packages/run-coordinator build: ESM dist\index.js 78.84 KB
+packages/run-coordinator build: ESM ⚡️ Build success in 365ms
+packages/run-coordinator build: CJS dist\index.cjs 87.52 KB
+packages/run-coordinator build: CJS ⚡️ Build success in 420ms
+packages/decomposer build: CJS dist\mocks\mock-decomposer.cjs 794.00 B
+packages/decomposer build: CJS dist\index.cjs                 291.52 KB
+packages/decomposer build: CJS ⚡️ Build success in 518ms
+packages/decomposer build: ESM dist\index.js                 280.15 KB
+packages/decomposer build: ESM dist\chunk-6SJVMHOW.js        0 B
+packages/decomposer build: ESM dist\mocks\mock-decomposer.js 31.00 B
+packages/decomposer build: ESM ⚡️ Build success in 519ms
+packages/scheduler build: DTS Build start
+packages/run-coordinator build: DTS Build start
+packages/decomposer build: DTS Build start
+packages/scheduler build: DTS ⚡️ Build success in 8222ms
+packages/scheduler build: DTS dist\index.d.ts  17.98 KB
+packages/scheduler build: DTS dist\index.d.cts 17.98 KB
+packages/scheduler build: Done
+packages/run-coordinator build: DTS ⚡️ Build success in 9876ms
+packages/run-coordinator build: DTS dist\index.d.ts  248.24 KB
+packages/run-coordinator build: DTS dist\index.d.cts 248.24 KB
+packages/run-coordinator build: Done
+packages/decomposer build: DTS ⚡️ Build success in 11400ms
+packages/decomposer build: DTS dist\mocks\mock-decomposer.d.ts  13.00 B
+packages/decomposer build: DTS dist\index.d.ts                  147.40 KB
+packages/decomposer build: DTS dist\mocks\mock-decomposer.d.cts 13.00 B
+packages/decomposer build: DTS dist\index.d.cts                 147.40 KB
+packages/decomposer build: Done
+packages/execution-core build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/orchestrator-graph build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/run-store build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/orchestrator-graph build: CLI Building entry: src/index.ts
+packages/orchestrator-graph build: CLI Using tsconfig: tsconfig.json
+packages/orchestrator-graph build: CLI tsup v8.5.1
+packages/orchestrator-graph build: CLI Target: es2022
+packages/orchestrator-graph build: CLI Cleaning output folder
+packages/orchestrator-graph build: ESM Build start
+packages/orchestrator-graph build: CJS Build start
+packages/execution-core build: CLI Building entry: src/index.ts
+packages/execution-core build: CLI Using tsconfig: tsconfig.json
+packages/execution-core build: CLI tsup v8.5.1
+packages/run-store build: CLI Building entry: src/index.ts
+packages/run-store build: CLI Using tsconfig: tsconfig.json
+packages/run-store build: CLI tsup v8.5.1
+packages/execution-core build: CLI Target: es2022
+packages/execution-core build: CLI Cleaning output folder
+packages/execution-core build: ESM Build start
+packages/execution-core build: CJS Build start
+packages/run-store build: CLI Target: es2022
+packages/run-store build: CLI Cleaning output folder
+packages/run-store build: ESM Build start
+packages/run-store build: CJS Build start
+packages/orchestrator-graph build: CJS dist\index.cjs 35.63 KB
+packages/orchestrator-graph build: CJS ⚡️ Build success in 346ms
+packages/orchestrator-graph build: ESM dist\index.js 34.20 KB
+packages/orchestrator-graph build: ESM ⚡️ Build success in 354ms
+packages/run-store build: ESM dist\index.js 48.13 KB
+packages/run-store build: ESM ⚡️ Build success in 498ms
+packages/run-store build: CJS dist\index.cjs 52.96 KB
+packages/run-store build: CJS ⚡️ Build success in 530ms
+packages/execution-core build: CJS dist\index.cjs 413.10 KB
+packages/execution-core build: CJS ⚡️ Build success in 827ms
+packages/execution-core build: ESM dist\index.js 393.70 KB
+packages/execution-core build: ESM ⚡️ Build success in 857ms
+packages/execution-core build: DTS Build start
+packages/run-store build: DTS Build start
+packages/orchestrator-graph build: DTS Build start
+packages/run-store build: DTS ⚡️ Build success in 10124ms
+packages/run-store build: DTS dist\index.d.ts  10.28 KB
+packages/run-store build: DTS dist\index.d.cts 10.28 KB
+packages/run-store build: Done
+packages/execution-core build: DTS ⚡️ Build success in 12144ms
+packages/execution-core build: DTS dist\index.d.ts  193.36 KB
+packages/execution-core build: DTS dist\index.d.cts 193.36 KB
+packages/execution-core build: Done
+packages/orchestrator-graph build: DTS ⚡️ Build success in 14232ms
+packages/orchestrator-graph build: DTS dist\index.d.ts  8.30 KB
+packages/orchestrator-graph build: DTS dist\index.d.cts 8.30 KB
+packages/orchestrator-graph build: Done
+EXIT_CODE=0
+COMMAND_STATUS=accepted_exit
