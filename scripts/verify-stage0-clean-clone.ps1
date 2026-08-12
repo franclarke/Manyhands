@@ -128,7 +128,12 @@ function Invoke-LoggedExternal(
   [int[]]$AllowedExitCodes = @(0)
 ) {
   Push-Location -LiteralPath $WorkingDirectory
+  $previousErrorActionPreference = $ErrorActionPreference
   try {
+    # Windows PowerShell 5.1 surfaces ordinary native stderr as a
+    # NativeCommandError when the surrounding preference is Stop. Preserve the
+    # stream in the receipt and decide success solely from the native exit code.
+    $ErrorActionPreference = 'Continue'
     & $Executable @Arguments 2>&1 | ForEach-Object {
       $line = $_.ToString()
       Write-Host $line
@@ -136,6 +141,7 @@ function Invoke-LoggedExternal(
     }
     $exitCode = $LASTEXITCODE
   } finally {
+    $ErrorActionPreference = $previousErrorActionPreference
     Pop-Location
   }
   Write-ReceiptLine $LogPath "EXIT_CODE=$exitCode"
@@ -164,10 +170,13 @@ function Invoke-ExternalText(
   [string]$WorkingDirectory
 ) {
   Push-Location -LiteralPath $WorkingDirectory
+  $previousErrorActionPreference = $ErrorActionPreference
   try {
+    $ErrorActionPreference = 'Continue'
     $lines = @(& $Executable @Arguments 2>&1 | ForEach-Object { $_.ToString() })
     $exitCode = $LASTEXITCODE
   } finally {
+    $ErrorActionPreference = $previousErrorActionPreference
     Pop-Location
   }
   if ($exitCode -ne 0) {

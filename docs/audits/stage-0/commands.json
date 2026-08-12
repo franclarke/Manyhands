@@ -139,6 +139,16 @@
       "result": "229 files ran; 228 passed and 1 failed because the Windows shim assertion expected lowercase npm.cmd while the resolved path contained npm.CMD. Commit 9cf3e87a corrected only the case-sensitive assertion.",
       "logPath": "docs/audits/stage-0/logs/final-full-tests.log",
       "modelId": "not_applicable"
+    },
+    {
+      "id": "ff26e6ce-native-stderr-harness-error",
+      "exactCommand": "git clone -c core.autocrlf=false --no-local --no-hardlinks -- \"C:/Users/franc/Documents/Proyectos/Manyhands\" \"C:/mh-g0-ff26-04\"",
+      "workingDirectory": "C:/Users/franc/Documents/Proyectos/Manyhands",
+      "status": "harness_error_before_exit_capture",
+      "exitCode": null,
+      "result": "Windows PowerShell 5.1 converted Git's ordinary clone stderr into a terminating NativeCommandError before the runner captured Git's exit. No gate claim was made; the clone path is preserved and will not be reused.",
+      "logPath": "docs/audits/stage-0/logs/candidate-ff26e6ce-final-setup.log",
+      "modelId": "not_applicable"
     }
   ]
 }

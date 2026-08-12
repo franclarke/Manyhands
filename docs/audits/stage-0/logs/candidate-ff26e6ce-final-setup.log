@@ -1,0 +1,8 @@
+RECEIPT_ID=setup
+CANDIDATE=ff26e6ce1ac5d84f2de4561fdcbb070e9c487f5b
+WORKING_DIRECTORY=C:\Users\franc\Documents\Proyectos\Manyhands
+COMMAND=git clone -c core.autocrlf=false --no-local --no-hardlinks -- "C:\Users\franc\Documents\Proyectos\Manyhands" "C:\mh-g0-ff26-04"
+CLONE_EXISTS_BEFORE=False
+STORE_EXISTS_BEFORE=False
+SHIM_EXISTS_BEFORE=False
+RUNTIME_EXISTS_BEFORE=False
