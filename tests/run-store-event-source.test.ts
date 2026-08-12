@@ -88,6 +88,7 @@ describe("canonical run event source", () => {
   it("keeps the productive persistence adapter independent from planning and execution packages", async () => {
     const manifest = JSON.parse(await readFile(path.resolve("packages/run-store/package.json"), "utf8")) as { dependencies: Record<string, string> };
     expect(Object.keys(manifest.dependencies).sort()).toEqual([
+      "@manyhands/contracts",
       "@manyhands/run-coordinator",
       "@manyhands/shared",
       "zod"
