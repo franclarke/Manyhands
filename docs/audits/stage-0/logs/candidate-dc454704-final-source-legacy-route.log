@@ -1,0 +1,24 @@
+RECEIPT_ID=source-legacy-route
+CANDIDATE=dc454704e694f7337d0a713c672a61022160a8d7
+WORKING_DIRECTORY=C:\mh-g0-dc45-07
+COMMAND=C:\ProgramData\chocolatey\bin\rg.exe -n projectSemanticPlanForLegacyCompiler|V2ExecutionDriver|selectReadyWaveV2 apps/web/src packages
+apps/web/src\lib\server\runs\v2\execution-pipeline.ts:25:import { V2ExecutionDriver, type V2NodeExecutionOutcome } from "@manyhands/orchestrator-graph";
+apps/web/src\lib\server\runs\v2\execution-pipeline.ts:223:    const driver = new V2ExecutionDriver({
+apps/web/src\lib\server\runs\v2\planning-host.ts:5:import { PLAN_CRITIC_KINDS, DEFAULT_GRANULARITY_POLICY, applyGranularitySelection, createSemanticPlan, projectPlannedTree, projectSemanticPlanForLegacyCompiler, resolveGranularityCondition, selectGranularityStrategy } from "@manyhands/decomposer";
+apps/web/src\lib\server\runs\v2\planning-host.ts:170:    const observedBreakdown = projectSemanticPlanForLegacyCompiler(semanticPlan).breakdown;
+apps/web/src\lib\server\runs\v2\planning-host.ts:184:    const selectedBreakdown = projectSemanticPlanForLegacyCompiler(selection.plan).breakdown;
+packages\orchestrator-graph\README.md:3:Package transicional que actualmente exporta `V2ExecutionDriver` y helpers de
+packages\orchestrator-graph\src\v2\execution-driver.ts:27:import { selectReadyWaveV2, type ReadinessExplanationV2, type ReadinessStateV2 } from "@manyhands/scheduler";
+packages\orchestrator-graph\src\v2\execution-driver.ts:97:export interface V2ExecutionDriverOptions {
+packages\orchestrator-graph\src\v2\execution-driver.ts:142:export class V2ExecutionDriver {
+packages\orchestrator-graph\src\v2\execution-driver.ts:143:  constructor(private readonly options: V2ExecutionDriverOptions) {}
+packages\orchestrator-graph\src\v2\execution-driver.ts:206:    const selection = selectReadyWaveV2({
+packages\orchestrator-graph\src\index.ts:2:export { V2ExecutionDriver, leafFailureObservation, orderArtifactRequirementsForMaterialization, retryBudgetFor } from "./v2/execution-driver.js";
+packages\orchestrator-graph\src\index.ts:4:  V2ExecutionDriverOptions,
+packages\decomposer\src\planner\candidate-plan.ts:12: * `projectSemanticPlanForLegacyCompiler`.
+packages\scheduler\src\wave-selector-v2.ts:27:export function selectReadyWaveV2(input: ReadyWaveSelectionInput): ReadyWaveSelection {
+packages\decomposer\src\compiler\graph-compiler.ts:17:import { projectSemanticPlanForLegacyCompiler } from "../planner/semantic-plan-projection.js";
+packages\decomposer\src\compiler\graph-compiler.ts:63:  const semanticProjection = semanticPlan === undefined ? undefined : projectSemanticPlanForLegacyCompiler(semanticPlan);
+packages\decomposer\src\planner\semantic-plan-projection.ts:12:export function projectSemanticPlanForLegacyCompiler(plan: SemanticPlan): { breakdown: WorkBreakdown; candidatePlan: CandidatePlan } {
+EXIT_CODE=0
+COMMAND_STATUS=accepted_exit

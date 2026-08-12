@@ -169,6 +169,16 @@
       "result": "Git completed the clone, but assigning an unscoped LASTEXITCODE sentinel created a local PowerShell 5.1 shadow that was not refreshed. The fail-closed runner rejected the absent observed exit; no gate claim was made and paths are not reused.",
       "logPath": "docs/audits/stage-0/logs/candidate-93afe766-final-setup.log",
       "modelId": "not_applicable"
+    },
+    {
+      "id": "dc454704-invalid-version-oracle-cancelled-run",
+      "exactCommand": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-stage0-clean-clone.ps1 -Candidate dc454704e694f7337d0a713c672a61022160a8d7 -SourceRepository C:/Users/franc/Documents/Proyectos/Manyhands -ClonePath C:/mh-g0-dc45-07 -StorePath C:/mh-store-dc45-07 -ShimPath C:/mh-shim-dc45-07 -RuntimePath C:/mh-runtime-dc45-07 -EvidenceDirectory C:/Users/franc/Documents/Proyectos/Manyhands/docs/audits/stage-0/logs -LogPrefix candidate-dc454704-final",
+      "workingDirectory": "C:/Users/franc/Documents/Proyectos/Manyhands",
+      "status": "cancelled_rejected_harness",
+      "exitCode": null,
+      "result": "Independent review found that PowerShell case-insensitive variable names made the expected/observed version checks tautological. The exact process tree was stopped during full tests; twelve partial or completed receipts are indexed individually and none supports an accepted gate claim.",
+      "logPath": "docs/audits/stage-0/logs/candidate-dc454704-final-setup.log",
+      "modelId": "not_applicable"
     }
   ]
 }

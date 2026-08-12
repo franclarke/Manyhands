@@ -61,7 +61,7 @@ match the code.
 
 | Stage | Status | Attributable evidence | Next-stage disposition |
 |---|---|---|---|
-| Stage 0 / G0 | `in_progress` | [`../audits/stage-0/`](../audits/stage-0/); candidate `9cf3e87a9a534bd07947cfaedb6d78f88205b642` rejected by independent review because its pnpm 11 lock conversion changed baseline dependency resolutions | Reissue a resolution-preserving candidate, repeat clean-clone verification and obtain independent review. |
+| Stage 0 / G0 | `in_progress` | [`../audits/stage-0/`](../audits/stage-0/); candidate `9cf3e87a9a534bd07947cfaedb6d78f88205b642` was rejected for dependency-resolution drift and candidate `dc454704e694f7337d0a713c672a61022160a8d7` was rejected because its PowerShell version oracle was tautological | Qualify the remediated resolution-preserving candidate from a fresh clean clone, bind all 18 receipts to its SHA and obtain independent review. |
 | Stage 1 / G1 | `blocked` | none | G0 must pass on the reissued candidate before Stage 1 begins. |
 | Stages 2–11 | `not_started` | none | Must execute in normative order. |
 

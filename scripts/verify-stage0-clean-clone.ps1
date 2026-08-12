@@ -30,8 +30,10 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $script:Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-$script:NodeVersion = 'v22.22.0'
-$script:PnpmVersion = '11.21.0'
+$script:ExpectedNodeVersion = 'v22.22.0'
+$script:ExpectedPnpmVersion = '11.21.0'
+$script:ExpectedLintDiagnosticCount = 78
+$script:ExpectedLintFingerprint = '74bd6c28c7f21924479e2ec82cfea8de75b8b4d36c0707c0892a64c3db822c70'
 $script:NodeArchiveName = 'node-v22.22.0-win-x64.zip'
 $script:NodeArchiveSha256 = 'c97fa376d2becdc8863fcd3ca2dd9a83a9f3468ee7ccf7a6d076ec66a645c77a'
 $script:NodeArchiveUrl = "https://nodejs.org/dist/v22.22.0/$script:NodeArchiveName"
@@ -108,6 +110,8 @@ function Write-ReceiptLine([string]$LogPath, [string]$Line) {
   )
 }
 
+. (Join-Path $PSScriptRoot 'stage0-native-process.ps1')
+
 function New-Receipt([string]$Id, [string]$WorkingDirectory, [string]$Command) {
   $path = Join-Path $script:EvidenceRoot "$LogPrefix-$Id.log"
   if (Test-Path -LiteralPath $path) {
@@ -118,55 +122,6 @@ function New-Receipt([string]$Id, [string]$WorkingDirectory, [string]$Command) {
   Write-ReceiptLine $path "WORKING_DIRECTORY=$WorkingDirectory"
   Write-ReceiptLine $path "COMMAND=$Command"
   return $path
-}
-
-function Format-Command([string]$Executable, [string[]]$Arguments) {
-  $rendered = @()
-  foreach ($argument in @($Executable) + $Arguments) {
-    $rendered += if ($argument -match '[\s"]') {
-      '"' + $argument.Replace('"', '\"') + '"'
-    } else {
-      $argument
-    }
-  }
-  return $rendered -join ' '
-}
-
-function Invoke-LoggedExternal(
-  [string]$LogPath,
-  [string]$Executable,
-  [string[]]$Arguments,
-  [string]$WorkingDirectory,
-  [int[]]$AllowedExitCodes = @(0)
-) {
-  Push-Location -LiteralPath $WorkingDirectory
-  $previousErrorActionPreference = $ErrorActionPreference
-  try {
-    # Windows PowerShell 5.1 surfaces ordinary native stderr as a
-    # NativeCommandError when the surrounding preference is Stop. Preserve the
-    # stream in the receipt and decide success solely from the native exit code.
-    $ErrorActionPreference = 'Continue'
-    # Assign the global automatic variable: assigning unscoped inside a
-    # function creates a local shadow that PowerShell 5.1 does not refresh.
-    $global:LASTEXITCODE = $null
-    & $Executable @Arguments 2>&1 | ForEach-Object {
-      $line = $_.ToString()
-      Write-Host $line
-      Write-ReceiptLine $LogPath $line
-    }
-    $exitCode = $global:LASTEXITCODE
-  } finally {
-    $ErrorActionPreference = $previousErrorActionPreference
-    Pop-Location
-  }
-  if ($null -eq $exitCode) {
-    throw "Native command did not establish an exit code: $(Format-Command $Executable $Arguments)"
-  }
-  Write-ReceiptLine $LogPath "EXIT_CODE=$exitCode"
-  if ($AllowedExitCodes -notcontains $exitCode) {
-    throw "Command failed with exit $exitCode; see $LogPath"
-  }
-  return $exitCode
 }
 
 function Invoke-Receipt(
@@ -183,29 +138,12 @@ function Invoke-Receipt(
   return $log
 }
 
-function Invoke-ExternalText(
-  [string]$Executable,
-  [string[]]$Arguments,
-  [string]$WorkingDirectory
-) {
-  Push-Location -LiteralPath $WorkingDirectory
-  $previousErrorActionPreference = $ErrorActionPreference
-  try {
-    $ErrorActionPreference = 'Continue'
-    $global:LASTEXITCODE = $null
-    $lines = @(& $Executable @Arguments 2>&1 | ForEach-Object { $_.ToString() })
-    $exitCode = $global:LASTEXITCODE
-  } finally {
-    $ErrorActionPreference = $previousErrorActionPreference
-    Pop-Location
+function Select-VersionLine([string]$Output, [string]$Pattern, [string]$Label) {
+  $matches = @($Output -split '\r?\n' | ForEach-Object { $_.Trim() } | Where-Object { $_ -match $Pattern })
+  if ($matches.Count -ne 1) {
+    throw "$Label version output must contain exactly one matching line; observed $($matches.Count): $Output"
   }
-  if ($null -eq $exitCode) {
-    throw "Native command did not establish an exit code: $(Format-Command $Executable $Arguments)"
-  }
-  if ($exitCode -ne 0) {
-    throw "Command failed with exit ${exitCode}: $(Format-Command $Executable $Arguments)"
-  }
-  return ($lines -join [Environment]::NewLine).Trim()
+  return $matches[0]
 }
 
 $sourceRoot = Resolve-ExistingDirectory $SourceRepository 'SourceRepository'
@@ -306,6 +244,7 @@ $shimNode = Join-Path $ShimPath 'node.exe'
 Copy-Item -LiteralPath $node -Destination $shimNode
 $runtimeNodeHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $node).Hash.ToLowerInvariant()
 $shimNodeHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $shimNode).Hash.ToLowerInvariant()
+$pnpmShimHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $pnpm).Hash.ToLowerInvariant()
 if ($shimNodeHash -ne $runtimeNodeHash) {
   throw "Pinned Node copy mismatch: runtime=$runtimeNodeHash shim=$shimNodeHash"
 }
@@ -315,6 +254,8 @@ $env:CI = '1'
 $env:NEXT_TELEMETRY_DISABLED = '1'
 Write-ReceiptLine $setupLog "PATH_PREFIX=$ShimPath;$nodeDistribution"
 Write-ReceiptLine $setupLog "COREPACK_HOME=$env:COREPACK_HOME"
+Write-ReceiptLine $setupLog "PNPM_PATH=$pnpm"
+Write-ReceiptLine $setupLog "PNPM_SHA256=$pnpmShimHash"
 Write-ReceiptLine $setupLog "PNPM_NODE_PATH=$node"
 Write-ReceiptLine $setupLog "PNPM_NODE_SHA256=$shimNodeHash"
 
@@ -329,25 +270,29 @@ Write-ReceiptLine $setupLog "INITIAL_STATUS_COUNT=$($initialStatus.Count)"
 if ($initialStatus.Count -ne 0) {
   throw "Detached clone was dirty before qualification; see $setupLog"
 }
-$nodeVersion = Invoke-ExternalText $node @('--version') $ClonePath
-$pnpmVersion = Invoke-ExternalText $pnpm @('--version') $ClonePath
+$observedNodeVersionOutput = Invoke-ExternalText $node @('--version') $ClonePath
+$observedPnpmVersionOutput = Invoke-ExternalText $pnpm @('--version') $ClonePath
+$observedNodeVersion = Select-VersionLine $observedNodeVersionOutput '^v\d+\.\d+\.\d+$' 'Node'
+$observedPnpmVersion = Select-VersionLine $observedPnpmVersionOutput '^\d+\.\d+\.\d+$' 'pnpm'
 $rgVersion = Invoke-ExternalText $rg @('--version') $ClonePath
 $gitVersion = Invoke-ExternalText $git @('--version') $ClonePath
 $codexVersion = Invoke-ExternalText $codex @('--version') $ClonePath
-Write-ReceiptLine $setupLog "NODE=$nodeVersion"
-Write-ReceiptLine $setupLog "PNPM=$pnpmVersion"
-Write-ReceiptLine $setupLog "PNPM_NODE=$nodeVersion"
+Write-ReceiptLine $setupLog "NODE_VERSION_OUTPUT=$($observedNodeVersionOutput -replace '\r?\n', '\\n')"
+Write-ReceiptLine $setupLog "PNPM_VERSION_OUTPUT=$($observedPnpmVersionOutput -replace '\r?\n', '\\n')"
+Write-ReceiptLine $setupLog "NODE=$observedNodeVersion"
+Write-ReceiptLine $setupLog "PNPM=$observedPnpmVersion"
+Write-ReceiptLine $setupLog "PNPM_NODE=$observedNodeVersion"
 Write-ReceiptLine $setupLog "RG_PATH=$rg"
 Write-ReceiptLine $setupLog "RG_VERSION=$($rgVersion -split '\r?\n' | Select-Object -First 1)"
 Write-ReceiptLine $setupLog "GIT_PATH=$git"
 Write-ReceiptLine $setupLog "GIT_VERSION=$gitVersion"
 Write-ReceiptLine $setupLog "CODEX_PATH=$codex"
 Write-ReceiptLine $setupLog "CODEX_VERSION=$codexVersion"
-if ($nodeVersion -ne $script:NodeVersion) {
-  throw "Node runtime mismatch: expected $script:NodeVersion, observed $nodeVersion"
+if ($observedNodeVersion -ne $script:ExpectedNodeVersion) {
+  throw "Node runtime mismatch: expected $script:ExpectedNodeVersion, observed $observedNodeVersion"
 }
-if ($pnpmVersion -ne $script:PnpmVersion) {
-  throw "pnpm runtime mismatch: expected $script:PnpmVersion, observed $pnpmVersion"
+if ($observedPnpmVersion -ne $script:ExpectedPnpmVersion) {
+  throw "pnpm runtime mismatch: expected $script:ExpectedPnpmVersion, observed $observedPnpmVersion"
 }
 Write-ReceiptLine $setupLog 'RECEIPT_STATUS=pass'
 
@@ -386,10 +331,11 @@ Write-ReceiptLine $setupLog 'RECEIPT_STATUS=pass'
 ) $ClonePath)
 
 [void](Invoke-Receipt 'stage0-contracts' $pnpm @(
-  'exec', 'vitest', 'run',
+  'exec', 'vitest', 'run', '--retry=0',
   'tests/architecture-baseline.test.ts',
   'tests/documentation-current.test.ts',
-  'tests/stage0-evidence-integrity.test.ts'
+  'tests/stage0-evidence-integrity.test.ts',
+  'tests/stage0-native-process.windows.test.ts'
 ) $ClonePath)
 
 $focusedTests = @(
@@ -412,8 +358,8 @@ $focusedTests = @(
   'tests/run-v2-crash-recovery.test.ts',
   'tests/local-boundary.test.ts'
 )
-[void](Invoke-Receipt 'focused-route' $pnpm (@('exec', 'vitest', 'run') + $focusedTests) $ClonePath)
-[void](Invoke-Receipt 'full-tests' $pnpm @('test') $ClonePath)
+[void](Invoke-Receipt 'focused-route' $pnpm (@('exec', 'vitest', 'run', '--retry=0') + $focusedTests) $ClonePath)
+[void](Invoke-Receipt 'full-tests' $pnpm @('exec', 'vitest', 'run', '--retry=0') $ClonePath)
 [void](Invoke-Receipt 'package-typechecks' $pnpm @(
   '-r', '--filter', './packages/*', 'typecheck'
 ) $ClonePath)
@@ -423,10 +369,63 @@ $focusedTests = @(
 ) $ClonePath)
 [void](Invoke-Receipt 'web-build' $pnpm @('web:build') $ClonePath)
 
-$lintLog = Invoke-Receipt 'lint' $pnpm @('lint') $ClonePath @(1)
-$lintText = Get-Content -LiteralPath $lintLog -Raw
-if ($lintText -notmatch '78 problems \(78 errors, 0 warnings\)') {
-  throw "Lint failed differently from the frozen G0 baseline; see $lintLog"
+$lintJsonPath = Join-Path $RuntimePath 'eslint-stage0.json'
+$lintLog = Invoke-Receipt 'lint' $pnpm @(
+  'exec', 'eslint', '.',
+  '--ignore-pattern', 'apps/web/**',
+  '--format', 'json',
+  '--output-file', $lintJsonPath
+) $ClonePath @(1)
+$lintResults = Get-Content -LiteralPath $lintJsonPath -Raw | ConvertFrom-Json
+$lintDiagnostics = @()
+$normalizedClonePath = (Normalize-FullPath $ClonePath) + [System.IO.Path]::DirectorySeparatorChar
+foreach ($lintResult in $lintResults) {
+  $absoluteLintPath = [System.IO.Path]::GetFullPath($lintResult.filePath)
+  if (-not $absoluteLintPath.StartsWith($normalizedClonePath, [System.StringComparison]::OrdinalIgnoreCase)) {
+    throw "Lint reported a file outside the qualified clone: $absoluteLintPath"
+  }
+  $relativeLintPath = $absoluteLintPath.Substring($normalizedClonePath.Length).Replace('\', '/')
+  foreach ($message in $lintResult.messages) {
+    $messageIdProperty = $message.PSObject.Properties['messageId']
+    $endLineProperty = $message.PSObject.Properties['endLine']
+    $endColumnProperty = $message.PSObject.Properties['endColumn']
+    $lintDiagnostics += [pscustomobject][ordered]@{
+      file = $relativeLintPath
+      ruleId = $message.ruleId
+      severity = [int]$message.severity
+      messageId = if ($null -eq $messageIdProperty) { $null } else { $messageIdProperty.Value }
+      line = [int]$message.line
+      column = [int]$message.column
+      endLine = if ($null -eq $endLineProperty -or $null -eq $endLineProperty.Value) {
+        $null
+      } else {
+        [int]$endLineProperty.Value
+      }
+      endColumn = if ($null -eq $endColumnProperty -or $null -eq $endColumnProperty.Value) {
+        $null
+      } else {
+        [int]$endColumnProperty.Value
+      }
+      message = $message.message
+    }
+  }
+}
+$orderedLintDiagnostics = @($lintDiagnostics | Sort-Object file, line, column, ruleId, message)
+$canonicalLintJson = ConvertTo-Json -InputObject $orderedLintDiagnostics -Compress -Depth 5
+$lintHashAlgorithm = [System.Security.Cryptography.SHA256]::Create()
+try {
+  $lintFingerprint = ($lintHashAlgorithm.ComputeHash(
+    [System.Text.Encoding]::UTF8.GetBytes($canonicalLintJson)
+  ) | ForEach-Object { $_.ToString('x2') }) -join ''
+} finally {
+  $lintHashAlgorithm.Dispose()
+}
+Write-ReceiptLine $lintLog 'LINT_FINGERPRINT_SCHEMA=eslint-json-v1'
+Write-ReceiptLine $lintLog "LINT_DIAGNOSTICS=$($orderedLintDiagnostics.Count)"
+Write-ReceiptLine $lintLog "LINT_FINGERPRINT=$lintFingerprint"
+if ($orderedLintDiagnostics.Count -ne $script:ExpectedLintDiagnosticCount -or
+    $lintFingerprint -ne $script:ExpectedLintFingerprint) {
+  throw "Lint diagnostics differ from the frozen G0 baseline; see $lintLog"
 }
 Write-ReceiptLine $lintLog 'LINT_BASELINE_STATUS=pass'
 
@@ -435,14 +434,20 @@ $finalCandidate = Invoke-ExternalText $git @('-C', $ClonePath, 'rev-parse', 'HEA
 $finalTree = Invoke-ExternalText $git @('-C', $ClonePath, 'show', '-s', '--format=%T', 'HEAD') $sourceRoot
 $finalStatusText = Invoke-ExternalText $git @('-C', $ClonePath, 'status', '--porcelain') $sourceRoot
 $finalStatus = @($finalStatusText -split '\r?\n' | Where-Object { $_ })
-$finalPnpmVersion = Invoke-ExternalText $pnpm @('--version') $ClonePath
-$finalNodeVersion = Invoke-ExternalText $node @('--version') $ClonePath
+$finalPnpmVersionOutput = Invoke-ExternalText $pnpm @('--version') $ClonePath
+$finalNodeVersionOutput = Invoke-ExternalText $node @('--version') $ClonePath
+$observedFinalPnpmVersion = Select-VersionLine $finalPnpmVersionOutput '^\d+\.\d+\.\d+$' 'final pnpm'
+$observedFinalNodeVersion = Select-VersionLine $finalNodeVersionOutput '^v\d+\.\d+\.\d+$' 'final Node'
+$finalPnpmShimHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $pnpm).Hash.ToLowerInvariant()
+$finalShimNodeHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $node).Hash.ToLowerInvariant()
 foreach ($entry in @(
   "FINAL_CANDIDATE=$finalCandidate",
   "FINAL_TREE=$finalTree",
   "FINAL_STATUS_COUNT=$($finalStatus.Count)",
-  "PNPM=$finalPnpmVersion",
-  "NODE=$finalNodeVersion",
+  "PNPM=$observedFinalPnpmVersion",
+  "NODE=$observedFinalNodeVersion",
+  "FINAL_PNPM_SHA256=$finalPnpmShimHash",
+  "FINAL_PNPM_NODE_SHA256=$finalShimNodeHash",
   "CLONE_EXISTS_AFTER=$(Test-Path -LiteralPath $ClonePath -PathType Container)",
   "STORE_EXISTS_AFTER=$(Test-Path -LiteralPath $StorePath -PathType Container)",
   "SHIM_EXISTS_AFTER=$(Test-Path -LiteralPath $ShimPath -PathType Container)",
@@ -458,6 +463,15 @@ if ($finalTree -ne $initialTree) {
 }
 if ($finalStatus.Count -ne 0) {
   throw "Detached clone became dirty during qualification; see $identityLog"
+}
+if ($observedFinalNodeVersion -ne $script:ExpectedNodeVersion) {
+  throw "Final Node runtime mismatch: expected $script:ExpectedNodeVersion, observed $observedFinalNodeVersion"
+}
+if ($observedFinalPnpmVersion -ne $script:ExpectedPnpmVersion) {
+  throw "Final pnpm runtime mismatch: expected $script:ExpectedPnpmVersion, observed $observedFinalPnpmVersion"
+}
+if ($finalPnpmShimHash -ne $pnpmShimHash -or $finalShimNodeHash -ne $shimNodeHash) {
+  throw 'Pinned pnpm or Node executable changed during qualification.'
 }
 Write-ReceiptLine $identityLog 'EXIT_CODE=0'
 Write-ReceiptLine $identityLog 'RECEIPT_STATUS=pass'

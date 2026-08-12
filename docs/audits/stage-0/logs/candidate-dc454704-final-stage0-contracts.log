@@ -1,0 +1,19 @@
+RECEIPT_ID=stage0-contracts
+CANDIDATE=dc454704e694f7337d0a713c672a61022160a8d7
+WORKING_DIRECTORY=C:\mh-g0-dc45-07
+COMMAND=C:\mh-shim-dc45-07\pnpm.cmd exec vitest run tests/architecture-baseline.test.ts tests/documentation-current.test.ts tests/stage0-evidence-integrity.test.ts
+
+ RUN  v2.1.9 C:/mh-g0-dc45-07
+
+ ✓ tests/documentation-current.test.ts (3 tests) 82ms
+ ✓ tests/stage0-evidence-integrity.test.ts (2 tests) 889ms
+   ✓ Stage 0 evidence integrity > covers every retained log with a matching digest and attribution record 842ms
+ ✓ tests/architecture-baseline.test.ts (8 tests) 372ms
+
+ Test Files  3 passed (3)
+      Tests  13 passed (13)
+   Start at  18:00:07
+   Duration  5.93s (transform 1.36s, setup 0ms, collect 4.86s, tests 1.34s, environment 1ms, prepare 1.19s)
+
+EXIT_CODE=0
+COMMAND_STATUS=accepted_exit

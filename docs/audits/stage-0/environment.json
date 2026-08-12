@@ -22,7 +22,7 @@
     "commit": "2339cd8b75dbea9cffaf41bb5a3c9d724caff5f3",
     "entries": [
       "M docs/plans/2026-08-12-correctness-first-system-redesign.md",
-      "?? docs/audits/"
+      "?? docs/audits/correctness-first-redesign-review.md"
     ]
   },
   "platform": {

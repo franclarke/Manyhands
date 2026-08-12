@@ -1,0 +1,18 @@
+RECEIPT_ID=source-api-routes
+CANDIDATE=dc454704e694f7337d0a713c672a61022160a8d7
+WORKING_DIRECTORY=C:\mh-g0-dc45-07
+COMMAND=C:\ProgramData\chocolatey\bin\rg.exe -n "export async function (GET|POST)" apps/web/src/app/api/runs
+apps/web/src/app/api/runs\route.ts:26:export async function GET(request: Request): Promise<NextResponse> {
+apps/web/src/app/api/runs\route.ts:56:export async function POST(request: Request): Promise<NextResponse> {
+apps/web/src/app/api/runs\[id]\resume\route.ts:14:export async function POST(request: Request, context: RouteContext): Promise<NextResponse> {
+apps/web/src/app/api/runs\[id]\deliver\route.ts:13:export async function GET(_request: Request, context: RouteContext): Promise<NextResponse> {
+apps/web/src/app/api/runs\[id]\deliver\route.ts:23:export async function POST(request: Request, context: RouteContext): Promise<NextResponse> {
+apps/web/src/app/api/runs\[id]\cancel\route.ts:12:export async function POST(_request: Request, context: RouteContext): Promise<NextResponse> {
+apps/web/src/app/api/runs\[id]\pause\route.ts:13:export async function POST(request: Request, context: RouteContext): Promise<NextResponse> {
+apps/web/src/app/api/runs\[id]\decisions\[decisionId]\route.ts:38:export async function POST(request: Request, context: RouteContext): Promise<NextResponse> {
+apps/web/src/app/api/runs\[id]\restart\route.ts:13:export async function POST(_request: Request, context: RouteContext): Promise<NextResponse> {
+apps/web/src/app/api/runs\[id]\route.ts:14:export async function GET(_request: Request, context: RouteContext): Promise<NextResponse> {
+apps/web/src/app/api/runs\[id]\run\route.ts:16:export async function POST(_request: Request, context: RouteContext): Promise<NextResponse> {
+apps/web/src/app/api/runs\[id]\run-events\route.ts:18:export async function GET(request: Request, context: RouteContext): Promise<Response> {
+EXIT_CODE=0
+COMMAND_STATUS=accepted_exit

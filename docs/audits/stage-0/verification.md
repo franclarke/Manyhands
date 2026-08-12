@@ -18,11 +18,14 @@
 
 G0 is `in_progress`. The stable short-path clone was clean and reproduced installation,
 the characterization checks, all current source tests, package/web typechecks,
-package builds, and the Next production build on the exact candidate. The
-but independent review rejected this candidate: converting the pnpm 7 lock to
+package builds, and the Next production build on the exact candidate. However,
+independent review rejected this candidate: converting the pnpm 7 lock to
 pnpm 11 changed four direct resolutions and a wider set of transitive
 resolutions. Stage 1 is blocked until a resolution-preserving candidate repeats
-the clean-clone checks and passes independent review.
+the clean-clone checks with the corrected fail-closed runner and passes
+independent review. The rejected `dc454704` attempt reached the full suite but
+was stopped when review proved its expected/observed PowerShell version check
+was tautological; none of its twelve receipts is accepted evidence.
 
 This decision proves an attributable transition baseline only. It does not
 prove any Stage 1-11 target capability, production readiness, or thesis
@@ -89,6 +92,9 @@ work before GProd can claim a fully green production-quality gate.
   is the fail-closed recipe for the replacement candidate: it refuses existing
   clone/store/shim targets and records setup, strict preflight, commands and
   post-check identity.
+- [`../../../scripts/verify-stage0-closure.ps1`](../../../scripts/verify-stage0-closure.ps1)
+  verifies that the gate-record commit is a single-parent, evidence-only child
+  of the exact qualified candidate and contains all 18 required receipts.
 - Node v24.16.0 was used for local verification; CI is pinned to Node 22.22.0.
 - No model was invoked to establish G0 product evidence.
 - The full suite's four skips remain skips, not passes.

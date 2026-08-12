@@ -44,8 +44,10 @@ describe("target architecture migration baseline", () => {
   });
 
   it("keeps clean-clone qualification reproducible and its receipts versionable", async () => {
-    const [script, gitignore, gitattributes] = await Promise.all([
+    const [script, nativeProcessScript, closureScript, gitignore, gitattributes] = await Promise.all([
       readFile(path.join(REPO_ROOT, "scripts", "verify-stage0-clean-clone.ps1"), "utf8"),
+      readFile(path.join(REPO_ROOT, "scripts", "stage0-native-process.ps1"), "utf8"),
+      readFile(path.join(REPO_ROOT, "scripts", "verify-stage0-closure.ps1"), "utf8"),
       readFile(path.join(REPO_ROOT, ".gitignore"), "utf8"),
       readFile(path.join(REPO_ROOT, ".gitattributes"), "utf8")
     ]);
@@ -57,12 +59,24 @@ describe("target architecture migration baseline", () => {
     expect(script).toContain("Node archive checksum mismatch");
     expect(script).toContain("Node runtime mismatch");
     expect(script).toContain("pnpm runtime mismatch");
+    expect(script).toContain("$script:ExpectedNodeVersion");
+    expect(script).toContain("$script:ExpectedPnpmVersion");
+    expect(script).not.toContain("$script:NodeVersion");
+    expect(script).not.toContain("$script:PnpmVersion");
+    expect(script).toContain("Final Node runtime mismatch");
+    expect(script).toContain("Final pnpm runtime mismatch");
+    expect(script).toContain("Pinned pnpm or Node executable changed during qualification");
     expect(script).toContain("PNPM_NODE_SHA256=");
+    expect(script).toContain("PNPM_PATH=");
+    expect(script).toContain("PNPM_SHA256=");
     expect(script).not.toContain("$pnpm @('exec', 'node', '--version')");
     expect(script).toContain("Detached clone identity changed during qualification");
     expect(script).toContain("RECEIPT_STATUS=pass");
-    expect(script).toContain("decide success solely from the native exit code");
-    expect(script).toContain("$global:LASTEXITCODE = $null");
+    expect(script).toContain("stage0-native-process.ps1");
+    expect(nativeProcessScript).toContain("decide success solely from the native exit code");
+    expect(nativeProcessScript).toContain("$global:LASTEXITCODE = $null");
+    expect(nativeProcessScript).toContain("Native executable is not a file");
+    expect(nativeProcessScript).toContain("PowerShell metacharacters");
     expect(script).toContain("source-api-routes");
     expect(script).toContain("source-legacy-imports");
     expect(script).toContain("RG_PATH=");
@@ -70,6 +84,19 @@ describe("target architecture migration baseline", () => {
     expect(script.indexOf("'package-build'", script.indexOf("'package-typechecks'"))).toBeLessThan(
       script.indexOf("'web-typecheck'", script.indexOf("'package-typechecks'"))
     );
+    expect(script).toContain("'vitest', 'run', '--retry=0'");
+    expect(script).toContain("--format', 'json'");
+    expect(script).toContain("LINT_FINGERPRINT_SCHEMA=eslint-json-v1");
+    expect(script).toContain("74bd6c28c7f21924479e2ec82cfea8de75b8b4d36c0707c0892a64c3db822c70");
+    expect(script).not.toContain("78 problems (78 errors, 0 warnings)");
+    expect(closureScript).toContain("'rev-list', '--parents', '-n', '1', 'HEAD'");
+    expect(closureScript).toContain("Closure must have exactly one parent equal to qualified candidate");
+    expect(closureScript).toContain("Closure receipt set mismatch");
+    expect(closureScript).toContain("Closure changed paths outside the allowlist");
+    expect(closureScript).toContain("qualificationLogFiles do not match the 18 logs added");
+    expect(closureScript).toContain("stage0-evidence-integrity.test.ts");
+    expect(closureScript).toContain("'diff', '--check', \"$architectureBaseline..HEAD\"");
+    expect(closureScript).toContain("Closure identity or worktree changed during verification");
     expect(script).toContain("'--strict-config', 'doctor', '--summary', '--ascii'");
     expect(script).toContain("FINAL_STATUS_COUNT=");
     expect(script).not.toMatch(/\bRemove-Item\b/u);
@@ -294,12 +321,12 @@ function parsePackageResolutions(lockfile: string): string[] {
   const resolutions: string[] = [];
   let packageId: string | undefined;
   for (const line of lines.slice(start + 1, end)) {
-    const packageMatch = /^  (\S.*):$/u.exec(line);
+    const packageMatch = /^ {2}(\S.*):$/u.exec(line);
     if (packageMatch) {
       packageId = unquoteYamlScalar(packageMatch[1]);
       continue;
     }
-    const resolutionMatch = /^    resolution: \{integrity: ([^,}]+).*\}$/u.exec(line);
+    const resolutionMatch = /^ {4}resolution: \{integrity: ([^,}]+).*\}$/u.exec(line);
     if (resolutionMatch && packageId) {
       resolutions.push(`${packageId}|${unquoteYamlScalar(resolutionMatch[1])}`);
       packageId = undefined;
@@ -321,25 +348,25 @@ function parseImporterResolutions(lockfile: string): string[] {
   let section: "dependencies" | "devDependencies" | "optionalDependencies" | undefined;
   let dependency: string | undefined;
   for (const line of lines.slice(start + 1, end)) {
-    const importerMatch = /^  (\S.*):$/u.exec(line);
+    const importerMatch = /^ {2}(\S.*):$/u.exec(line);
     if (importerMatch) {
       importer = unquoteYamlScalar(importerMatch[1]);
       section = undefined;
       dependency = undefined;
       continue;
     }
-    const sectionMatch = /^    (dependencies|devDependencies|optionalDependencies):$/u.exec(line);
+    const sectionMatch = /^ {4}(dependencies|devDependencies|optionalDependencies):$/u.exec(line);
     if (sectionMatch) {
       section = sectionMatch[1] as typeof section;
       dependency = undefined;
       continue;
     }
-    const dependencyMatch = /^      (\S.*):$/u.exec(line);
+    const dependencyMatch = /^ {6}(\S.*):$/u.exec(line);
     if (dependencyMatch && section) {
       dependency = unquoteYamlScalar(dependencyMatch[1]);
       continue;
     }
-    const versionMatch = /^        version: (.+)$/u.exec(line);
+    const versionMatch = /^ {8}version: (.+)$/u.exec(line);
     if (versionMatch && importer && section && dependency) {
       const encodedVersion = unquoteYamlScalar(versionMatch[1]);
       const version = encodedVersion.startsWith("link:")

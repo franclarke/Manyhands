@@ -85,9 +85,12 @@ package/web typechecks, package build, and Next production build passed. Lint
 still reports the characterized pre-existing baseline of 78 errors and 0
 warnings. Independent review then rejected the candidate because the pnpm 11
 lock conversion changed baseline direct and transitive dependency resolutions.
-G0 therefore remains `in_progress`; Stage 1 is blocked until a
-resolution-preserving candidate repeats these checks and passes review. All
-R0–R19 cells remain `not_run`.
+Subsequent harness candidates exposed fail-closed PowerShell and toolchain
+oracle defects before an accepted qualification could be recorded; their
+partial receipts remain adverse evidence. G0 therefore remains `in_progress`;
+Stage 1 is blocked until a resolution-preserving candidate produces the exact
+18-receipt set, is recorded by a direct evidence-only child commit, and passes
+independent review. All R0–R19 cells remain `not_run`.
 
 The independent G0 review is fail-closed. Its dependency-drift finding is
 preserved in [`verification.md`](verification.md); no Stage 1 work is authorized
