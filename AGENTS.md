@@ -139,6 +139,11 @@ specifications. See `CONTEXT-MAP.md` and `docs/agents/domain.md`.
 
 ## Learned Operating Rules
 
+- Keep each architecture gate bounded by its written definition of done. After
+  the required evidence and one scoped independent review pass, record further
+  theoretical hardening as follow-up debt unless it demonstrates a concrete
+  violation of a gate invariant; do not recursively expand the evidence harness
+  and delay the next implementation stage.
 - For long-running clean-clone qualification on Windows, use explicit short
   paths outside `%TEMP%` for the clone, package store and tool shims, verify
   those targets do not exist before creation, and record candidate identity and
