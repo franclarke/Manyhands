@@ -57,12 +57,18 @@ describe("target architecture migration baseline", () => {
     expect(script).toContain("Node archive checksum mismatch");
     expect(script).toContain("Node runtime mismatch");
     expect(script).toContain("pnpm runtime mismatch");
+    expect(script).toContain("PNPM_NODE_SHA256=");
+    expect(script).not.toContain("$pnpm @('exec', 'node', '--version')");
     expect(script).toContain("Detached clone identity changed during qualification");
+    expect(script).toContain("RECEIPT_STATUS=pass");
     expect(script).toContain("decide success solely from the native exit code");
     expect(script).toContain("source-api-routes");
     expect(script).toContain("source-legacy-imports");
     expect(script).toContain("RG_PATH=");
     expect(script).toContain("RG_VERSION=");
+    expect(script.indexOf("'package-build'", script.indexOf("'package-typechecks'"))).toBeLessThan(
+      script.indexOf("'web-typecheck'", script.indexOf("'package-typechecks'"))
+    );
     expect(script).toContain("'--strict-config', 'doctor', '--summary', '--ascii'");
     expect(script).toContain("FINAL_STATUS_COUNT=");
     expect(script).not.toMatch(/\bRemove-Item\b/u);

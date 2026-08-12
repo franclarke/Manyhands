@@ -1,0 +1,24 @@
+RECEIPT_ID=setup
+CANDIDATE=614b50b2083f37fdfde3c522aa5989949223f688
+WORKING_DIRECTORY=C:\Users\franc\Documents\Proyectos\Manyhands
+COMMAND=git clone -c core.autocrlf=false --no-local --no-hardlinks -- "C:\Users\franc\Documents\Proyectos\Manyhands" "C:\mh-g0-614b-05"
+CLONE_EXISTS_BEFORE=False
+STORE_EXISTS_BEFORE=False
+SHIM_EXISTS_BEFORE=False
+RUNTIME_EXISTS_BEFORE=False
+Cloning into 'C:\mh-g0-614b-05'...
+EXIT_CODE=0
+COMMAND_2=git -C "C:\mh-g0-614b-05" checkout --detach 614b50b2083f37fdfde3c522aa5989949223f688
+HEAD is now at 614b50b2 fix: capture native stderr by exit code
+EXIT_CODE=0
+STORE_FILES_BEFORE_INSTALL=0
+NODE_RUNTIME_URL=https://nodejs.org/dist/v22.22.0/node-v22.22.0-win-x64.zip
+NODE_RUNTIME_EXPECTED_SHA256=c97fa376d2becdc8863fcd3ca2dd9a83a9f3468ee7ccf7a6d076ec66a645c77a
+COMMAND_3=Invoke-WebRequest -UseBasicParsing -Uri "https://nodejs.org/dist/v22.22.0/node-v22.22.0-win-x64.zip" -OutFile "C:\mh-runtime-614b-05\node-v22.22.0-win-x64.zip"
+NODE_RUNTIME_ACTUAL_SHA256=c97fa376d2becdc8863fcd3ca2dd9a83a9f3468ee7ccf7a6d076ec66a645c77a
+COMMAND_4=Expand-Archive -LiteralPath "C:\mh-runtime-614b-05\node-v22.22.0-win-x64.zip" -DestinationPath "C:\mh-runtime-614b-05"
+COMMAND_5="C:\mh-runtime-614b-05\node-v22.22.0-win-x64\corepack.cmd" enable --install-directory "C:\mh-shim-614b-05" pnpm
+EXIT_CODE=0
+PATH_PREFIX=C:\mh-shim-614b-05;C:\mh-runtime-614b-05\node-v22.22.0-win-x64
+COREPACK_HOME=C:\mh-runtime-614b-05\corepack-home
+INITIAL_STATUS_COUNT=0

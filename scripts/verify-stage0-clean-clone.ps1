@@ -88,6 +88,18 @@ function Assert-DisjointPaths([hashtable]$Paths) {
   }
 }
 
+function Resolve-Executable([string]$Name) {
+  $matches = @(Get-Command $Name -CommandType Application -ErrorAction Stop)
+  if ($matches.Count -eq 0) {
+    throw "Required executable is unavailable: $Name"
+  }
+  $resolved = $matches[0].Source
+  if (-not (Test-Path -LiteralPath $resolved -PathType Leaf)) {
+    throw "Resolved executable is not a file: $Name -> $resolved"
+  }
+  return $resolved
+}
+
 function Write-ReceiptLine([string]$LogPath, [string]$Line) {
   [System.IO.File]::AppendAllText(
     $LogPath,
@@ -109,8 +121,8 @@ function New-Receipt([string]$Id, [string]$WorkingDirectory, [string]$Command) {
 }
 
 function Format-Command([string]$Executable, [string[]]$Arguments) {
-  $rendered = @($Executable)
-  foreach ($argument in $Arguments) {
+  $rendered = @()
+  foreach ($argument in @($Executable) + $Arguments) {
     $rendered += if ($argument -match '[\s"]') {
       '"' + $argument.Replace('"', '\"') + '"'
     } else {
@@ -134,6 +146,7 @@ function Invoke-LoggedExternal(
     # NativeCommandError when the surrounding preference is Stop. Preserve the
     # stream in the receipt and decide success solely from the native exit code.
     $ErrorActionPreference = 'Continue'
+    $LASTEXITCODE = $null
     & $Executable @Arguments 2>&1 | ForEach-Object {
       $line = $_.ToString()
       Write-Host $line
@@ -143,6 +156,9 @@ function Invoke-LoggedExternal(
   } finally {
     $ErrorActionPreference = $previousErrorActionPreference
     Pop-Location
+  }
+  if ($null -eq $exitCode) {
+    throw "Native command did not establish an exit code: $(Format-Command $Executable $Arguments)"
   }
   Write-ReceiptLine $LogPath "EXIT_CODE=$exitCode"
   if ($AllowedExitCodes -notcontains $exitCode) {
@@ -161,6 +177,7 @@ function Invoke-Receipt(
   $command = Format-Command $Executable $Arguments
   $log = New-Receipt $Id $WorkingDirectory $command
   [void](Invoke-LoggedExternal $log $Executable $Arguments $WorkingDirectory $AllowedExitCodes)
+  Write-ReceiptLine $log 'COMMAND_STATUS=accepted_exit'
   return $log
 }
 
@@ -173,11 +190,15 @@ function Invoke-ExternalText(
   $previousErrorActionPreference = $ErrorActionPreference
   try {
     $ErrorActionPreference = 'Continue'
+    $LASTEXITCODE = $null
     $lines = @(& $Executable @Arguments 2>&1 | ForEach-Object { $_.ToString() })
     $exitCode = $LASTEXITCODE
   } finally {
     $ErrorActionPreference = $previousErrorActionPreference
     Pop-Location
+  }
+  if ($null -eq $exitCode) {
+    throw "Native command did not establish an exit code: $(Format-Command $Executable $Arguments)"
   }
   if ($exitCode -ne 0) {
     throw "Command failed with exit ${exitCode}: $(Format-Command $Executable $Arguments)"
@@ -187,6 +208,9 @@ function Invoke-ExternalText(
 
 $sourceRoot = Resolve-ExistingDirectory $SourceRepository 'SourceRepository'
 $script:EvidenceRoot = Resolve-ExistingDirectory $EvidenceDirectory 'EvidenceDirectory'
+$git = Resolve-Executable 'git'
+$codex = Resolve-Executable 'codex'
+$rg = Resolve-Executable 'rg'
 Assert-NewAbsoluteDirectory $ClonePath 'ClonePath'
 Assert-NewAbsoluteDirectory $StorePath 'StorePath'
 Assert-NewAbsoluteDirectory $ShimPath 'ShimPath'
@@ -214,9 +238,11 @@ foreach ($scratch in @{
   }
 }
 
-$setupLog = New-Receipt 'setup' $sourceRoot (
-  "git clone -c core.autocrlf=false --no-local --no-hardlinks -- `"$sourceRoot`" `"$ClonePath`""
+$setupArguments = @(
+  'clone', '-c', 'core.autocrlf=false', '--no-local', '--no-hardlinks', '--',
+  $sourceRoot, $ClonePath
 )
+$setupLog = New-Receipt 'setup' $sourceRoot (Format-Command $git $setupArguments)
 foreach ($entry in @(
   "CLONE_EXISTS_BEFORE=False",
   "STORE_EXISTS_BEFORE=False",
@@ -226,12 +252,9 @@ foreach ($entry in @(
   Write-ReceiptLine $setupLog $entry
 }
 
-[void](Invoke-LoggedExternal $setupLog 'git' @(
-  'clone', '-c', 'core.autocrlf=false', '--no-local', '--no-hardlinks', '--',
-  $sourceRoot, $ClonePath
-) $sourceRoot)
-Write-ReceiptLine $setupLog "COMMAND_2=git -C `"$ClonePath`" checkout --detach $Candidate"
-[void](Invoke-LoggedExternal $setupLog 'git' @(
+[void](Invoke-LoggedExternal $setupLog $git $setupArguments $sourceRoot)
+Write-ReceiptLine $setupLog "COMMAND_2=$(Format-Command $git @('-C', $ClonePath, 'checkout', '--detach', $Candidate))"
+[void](Invoke-LoggedExternal $setupLog $git @(
   '-C', $ClonePath, 'checkout', '--detach', $Candidate
 ) $sourceRoot)
 
@@ -273,18 +296,32 @@ $pnpm = Join-Path $ShimPath 'pnpm.cmd'
 if (-not (Test-Path -LiteralPath $pnpm -PathType Leaf)) {
   throw "Corepack did not create the expected pnpm.cmd shim: $pnpm"
 }
+$pnpmShim = Get-Content -LiteralPath $pnpm -Raw
+if ($pnpmShim -notmatch [regex]::Escape('%~dp0\node.exe')) {
+  throw "Corepack pnpm shim does not support a colocated pinned node.exe: $pnpm"
+}
+$shimNode = Join-Path $ShimPath 'node.exe'
+Copy-Item -LiteralPath $node -Destination $shimNode
+$runtimeNodeHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $node).Hash.ToLowerInvariant()
+$shimNodeHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $shimNode).Hash.ToLowerInvariant()
+if ($shimNodeHash -ne $runtimeNodeHash) {
+  throw "Pinned Node copy mismatch: runtime=$runtimeNodeHash shim=$shimNodeHash"
+}
+$node = $shimNode
 $env:NO_COLOR = '1'
 $env:CI = '1'
 $env:NEXT_TELEMETRY_DISABLED = '1'
 Write-ReceiptLine $setupLog "PATH_PREFIX=$ShimPath;$nodeDistribution"
 Write-ReceiptLine $setupLog "COREPACK_HOME=$env:COREPACK_HOME"
+Write-ReceiptLine $setupLog "PNPM_NODE_PATH=$node"
+Write-ReceiptLine $setupLog "PNPM_NODE_SHA256=$shimNodeHash"
 
-$observedCandidate = Invoke-ExternalText 'git' @('-C', $ClonePath, 'rev-parse', 'HEAD') $sourceRoot
+$observedCandidate = Invoke-ExternalText $git @('-C', $ClonePath, 'rev-parse', 'HEAD') $sourceRoot
 if ($observedCandidate -ne $Candidate) {
   throw "Detached clone identity mismatch: expected $Candidate, observed $observedCandidate"
 }
-$initialTree = Invoke-ExternalText 'git' @('-C', $ClonePath, 'show', '-s', '--format=%T', 'HEAD') $sourceRoot
-$initialStatusText = Invoke-ExternalText 'git' @('-C', $ClonePath, 'status', '--porcelain') $sourceRoot
+$initialTree = Invoke-ExternalText $git @('-C', $ClonePath, 'show', '-s', '--format=%T', 'HEAD') $sourceRoot
+$initialStatusText = Invoke-ExternalText $git @('-C', $ClonePath, 'status', '--porcelain') $sourceRoot
 $initialStatus = @($initialStatusText -split '\r?\n' | Where-Object { $_ })
 Write-ReceiptLine $setupLog "INITIAL_STATUS_COUNT=$($initialStatus.Count)"
 if ($initialStatus.Count -ne 0) {
@@ -292,22 +329,27 @@ if ($initialStatus.Count -ne 0) {
 }
 $nodeVersion = Invoke-ExternalText $node @('--version') $ClonePath
 $pnpmVersion = Invoke-ExternalText $pnpm @('--version') $ClonePath
-$pnpmNodeVersion = Invoke-ExternalText $pnpm @('exec', 'node', '--version') $ClonePath
-$rg = (Get-Command 'rg' -CommandType Application -ErrorAction Stop).Source
 $rgVersion = Invoke-ExternalText $rg @('--version') $ClonePath
+$gitVersion = Invoke-ExternalText $git @('--version') $ClonePath
+$codexVersion = Invoke-ExternalText $codex @('--version') $ClonePath
 Write-ReceiptLine $setupLog "NODE=$nodeVersion"
 Write-ReceiptLine $setupLog "PNPM=$pnpmVersion"
-Write-ReceiptLine $setupLog "PNPM_NODE=$pnpmNodeVersion"
+Write-ReceiptLine $setupLog "PNPM_NODE=$nodeVersion"
 Write-ReceiptLine $setupLog "RG_PATH=$rg"
 Write-ReceiptLine $setupLog "RG_VERSION=$($rgVersion -split '\r?\n' | Select-Object -First 1)"
-if ($nodeVersion -ne $script:NodeVersion -or $pnpmNodeVersion -ne $script:NodeVersion) {
-  throw "Node runtime mismatch: expected $script:NodeVersion, observed node=$nodeVersion pnpm-node=$pnpmNodeVersion"
+Write-ReceiptLine $setupLog "GIT_PATH=$git"
+Write-ReceiptLine $setupLog "GIT_VERSION=$gitVersion"
+Write-ReceiptLine $setupLog "CODEX_PATH=$codex"
+Write-ReceiptLine $setupLog "CODEX_VERSION=$codexVersion"
+if ($nodeVersion -ne $script:NodeVersion) {
+  throw "Node runtime mismatch: expected $script:NodeVersion, observed $nodeVersion"
 }
 if ($pnpmVersion -ne $script:PnpmVersion) {
   throw "pnpm runtime mismatch: expected $script:PnpmVersion, observed $pnpmVersion"
 }
+Write-ReceiptLine $setupLog 'RECEIPT_STATUS=pass'
 
-[void](Invoke-Receipt 'codex-strict-preflight' 'codex' @(
+[void](Invoke-Receipt 'codex-strict-preflight' $codex @(
   '--strict-config', 'doctor', '--summary', '--ascii'
 ) $ClonePath)
 
@@ -373,10 +415,10 @@ $focusedTests = @(
 [void](Invoke-Receipt 'package-typechecks' $pnpm @(
   '-r', '--filter', './packages/*', 'typecheck'
 ) $ClonePath)
+[void](Invoke-Receipt 'package-build' $pnpm @('build') $ClonePath)
 [void](Invoke-Receipt 'web-typecheck' $pnpm @(
   '--filter', '@manyhands/web', 'exec', 'tsc', '--noEmit'
 ) $ClonePath)
-[void](Invoke-Receipt 'package-build' $pnpm @('build') $ClonePath)
 [void](Invoke-Receipt 'web-build' $pnpm @('web:build') $ClonePath)
 
 $lintLog = Invoke-Receipt 'lint' $pnpm @('lint') $ClonePath @(1)
@@ -384,11 +426,12 @@ $lintText = Get-Content -LiteralPath $lintLog -Raw
 if ($lintText -notmatch '78 problems \(78 errors, 0 warnings\)') {
   throw "Lint failed differently from the frozen G0 baseline; see $lintLog"
 }
+Write-ReceiptLine $lintLog 'LINT_BASELINE_STATUS=pass'
 
 $identityLog = New-Receipt 'final-identity' $ClonePath 'git rev-parse HEAD; git show -s --format=%T HEAD; git status --porcelain; pnpm --version; node --version'
-$finalCandidate = Invoke-ExternalText 'git' @('-C', $ClonePath, 'rev-parse', 'HEAD') $sourceRoot
-$finalTree = Invoke-ExternalText 'git' @('-C', $ClonePath, 'show', '-s', '--format=%T', 'HEAD') $sourceRoot
-$finalStatusText = Invoke-ExternalText 'git' @('-C', $ClonePath, 'status', '--porcelain') $sourceRoot
+$finalCandidate = Invoke-ExternalText $git @('-C', $ClonePath, 'rev-parse', 'HEAD') $sourceRoot
+$finalTree = Invoke-ExternalText $git @('-C', $ClonePath, 'show', '-s', '--format=%T', 'HEAD') $sourceRoot
+$finalStatusText = Invoke-ExternalText $git @('-C', $ClonePath, 'status', '--porcelain') $sourceRoot
 $finalStatus = @($finalStatusText -split '\r?\n' | Where-Object { $_ })
 $finalPnpmVersion = Invoke-ExternalText $pnpm @('--version') $ClonePath
 $finalNodeVersion = Invoke-ExternalText $node @('--version') $ClonePath
@@ -401,8 +444,7 @@ foreach ($entry in @(
   "CLONE_EXISTS_AFTER=$(Test-Path -LiteralPath $ClonePath -PathType Container)",
   "STORE_EXISTS_AFTER=$(Test-Path -LiteralPath $StorePath -PathType Container)",
   "SHIM_EXISTS_AFTER=$(Test-Path -LiteralPath $ShimPath -PathType Container)",
-  "RUNTIME_EXISTS_AFTER=$(Test-Path -LiteralPath $RuntimePath -PathType Container)",
-  'EXIT_CODE=0'
+  "RUNTIME_EXISTS_AFTER=$(Test-Path -LiteralPath $RuntimePath -PathType Container)"
 )) {
   Write-ReceiptLine $identityLog $entry
 }
@@ -415,6 +457,8 @@ if ($finalTree -ne $initialTree) {
 if ($finalStatus.Count -ne 0) {
   throw "Detached clone became dirty during qualification; see $identityLog"
 }
+Write-ReceiptLine $identityLog 'EXIT_CODE=0'
+Write-ReceiptLine $identityLog 'RECEIPT_STATUS=pass'
 
 Write-Output "Stage 0 clean-clone qualification passed for $Candidate ($finalTree)."
 Write-Output "Evidence: $script:EvidenceRoot"

@@ -80,9 +80,9 @@ work before GProd can claim a fully green production-quality gate.
 
 ## Evidence integrity and limitations
 
-- [`logs.sha256`](logs.sha256) covers all 42 retained final/adverse logs, which
+- [`logs.sha256`](logs.sha256) covers every retained final/adverse log, which
   are explicitly versionable despite the repository-wide `*.log` ignore rule.
-- [`evidence-index.json`](evidence-index.json) classifies all 42 logs exactly
+- [`evidence-index.json`](evidence-index.json) classifies every retained log exactly
   once; incomplete historical receipts preserve `null` fields and are not used
   as accepted-candidate claims.
 - [`../../../scripts/verify-stage0-clean-clone.ps1`](../../../scripts/verify-stage0-clean-clone.ps1)

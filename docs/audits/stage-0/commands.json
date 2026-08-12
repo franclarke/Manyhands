@@ -149,6 +149,16 @@
       "result": "Windows PowerShell 5.1 converted Git's ordinary clone stderr into a terminating NativeCommandError before the runner captured Git's exit. No gate claim was made; the clone path is preserved and will not be reused.",
       "logPath": "docs/audits/stage-0/logs/candidate-ff26e6ce-final-setup.log",
       "modelId": "not_applicable"
+    },
+    {
+      "id": "614b50b2-preinstall-runtime-check-harness-error",
+      "exactCommand": "git clone -c core.autocrlf=false --no-local --no-hardlinks -- \"C:/Users/franc/Documents/Proyectos/Manyhands\" \"C:/mh-g0-614b-05\"; setup commands recorded in the receipt",
+      "workingDirectory": "C:/Users/franc/Documents/Proyectos/Manyhands",
+      "status": "harness_error_before_setup_completion",
+      "exitCode": null,
+      "result": "The detached clone and pinned Node archive were verified, but a pre-install pnpm exec check populated node_modules outside the declared empty store and rg resolution returned multiple paths. The setup has no completion marker and supports no gate claim.",
+      "logPath": "docs/audits/stage-0/logs/candidate-614b50b2-final-setup.log",
+      "modelId": "not_applicable"
     }
   ]
 }
