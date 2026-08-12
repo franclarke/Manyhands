@@ -28,6 +28,7 @@ docs/otras tesis (NO LEER)/
 docs/UNI (NO LEER)/
 
 # Scratch de orquestación de agentes — solo se versionan las skills compartidas
+.scratch/
 .agents/*
 !.agents/skills/
 

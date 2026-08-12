@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "status": "in_progress",
+  "subjectCommit": null,
+  "clonePath": null,
+  "commands": [
+    {
+      "id": "codex-harness-preflight",
+      "exactCommand": "codex doctor --summary --ascii",
+      "workingDirectory": "C:/Users/franc/Documents/Proyectos/Manyhands",
+      "status": "pass",
+      "exitCode": 0,
+      "result": "16 ok, 0 fail; degraded only by an unrelated incomplete rollout scan",
+      "modelId": "not_applicable"
+    },
+    {
+      "id": "stage0-contracts",
+      "exactCommand": "pnpm exec vitest run tests/architecture-baseline.test.ts tests/documentation-current.test.ts",
+      "status": "not_run",
+      "exitCode": null,
+      "modelId": "not_applicable",
+      "reasonIfNotRun": "Stage 0 harness commit not frozen yet"
+    },
+    {
+      "id": "focused-route-characterization",
+      "exactCommand": "pnpm exec vitest run tests/run-create-canonical-seed.test.ts tests/planning-v2-pipeline.test.ts tests/planning-v2-approval.test.ts tests/scheduler-readiness-v2.test.ts tests/run-v2-execution-driver.test.ts tests/run-v2-execution-host.test.ts tests/execution-core-v2-node-executor.test.ts tests/integration-manifest.test.ts tests/integration-operation-recovery.test.ts tests/exact-candidate-validation.test.ts tests/final-candidate.test.ts tests/delivery-state-machine.test.ts tests/run-store-event-source.test.ts tests/run-v2-record-cache-reconciliation.test.ts tests/run-liveness-supervisor.test.ts tests/run-v2-e2e.test.ts tests/run-v2-crash-recovery.test.ts tests/local-boundary.test.ts",
+      "status": "not_run",
+      "exitCode": null,
+      "modelId": "not_applicable",
+      "reasonIfNotRun": "Stage 0 harness commit not frozen yet"
+    },
+    {
+      "id": "full-tests",
+      "exactCommand": "pnpm test",
+      "status": "not_run",
+      "exitCode": null,
+      "modelId": "not_applicable",
+      "reasonIfNotRun": "Clean clone not created yet"
+    },
+    {
+      "id": "package-typechecks",
+      "exactCommand": "pnpm -r --filter \"./packages/*\" typecheck",
+      "status": "not_run",
+      "exitCode": null,
+      "modelId": "not_applicable",
+      "reasonIfNotRun": "Clean clone not created yet"
+    },
+    {
+      "id": "web-typecheck",
+      "exactCommand": "pnpm --filter @manyhands/web exec tsc --noEmit",
+      "status": "not_run",
+      "exitCode": null,
+      "modelId": "not_applicable",
+      "reasonIfNotRun": "Clean clone not created yet"
+    },
+    {
+      "id": "package-build",
+      "exactCommand": "pnpm build",
+      "status": "not_run",
+      "exitCode": null,
+      "modelId": "not_applicable",
+      "reasonIfNotRun": "Clean clone not created yet"
+    },
+    {
+      "id": "web-build",
+      "exactCommand": "pnpm web:build",
+      "status": "not_run",
+      "exitCode": null,
+      "modelId": "not_applicable",
+      "reasonIfNotRun": "Clean clone not created yet"
+    },
+    {
+      "id": "lint-baseline",
+      "exactCommand": "pnpm lint",
+      "workingDirectory": "C:/Users/franc/Documents/Proyectos/Manyhands",
+      "status": "fail",
+      "exitCode": 1,
+      "result": "78 pre-existing errors, 0 warnings; CI currently treats lint as non-blocking",
+      "modelId": "not_applicable"
+    }
+  ]
+}

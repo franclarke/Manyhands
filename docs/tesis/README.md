@@ -1,5 +1,12 @@
 # Trabajo final de Ingeniería en Sistemas de Información — Tesis de ManyHands
 
+> **Historical draft — not current evidence.** This directory reflects an
+> earlier architecture and experimental series. The evidence paths described
+> below are not present in the current tree, and the historical `4/4` result
+> must not be used to close any current architecture gate. Preserve these claims
+> as historical material until a new post-`GProd` study replaces them with
+> attributable candidate, oracle and delivery evidence.
+
 Documento de tesis en **LaTeX** para el **Departamento de Ciencias e Ingeniería
 de la Computación (DCIC)** de la **Universidad Nacional del Sur (UNS)**.
 
