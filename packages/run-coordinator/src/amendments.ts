@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
 import {
-  reviseGraph,
-  type ArtifactRequirement,
-  type GraphRevision,
-  type GraphRevisionOperation
+  reviseLegacyGraphRevisionV2,
+  type LegacyArtifactRequirementV2,
+  type LegacyGraphRevisionV2,
+  type LegacyGraphRevisionV2Operation
 } from "@manyhands/task-graph";
 
 export interface GraphAmendmentProposal {
@@ -13,15 +13,15 @@ export interface GraphAmendmentProposal {
   kind: "artifact_requirement" | "graph_revision";
   rationale: string;
   evidenceRefs: string[];
-  operations: GraphRevisionOperation[];
+  operations: LegacyGraphRevisionV2Operation[];
 }
 
 export function proposeDiscoveredArtifactRequirement(input: {
-  graph: GraphRevision;
+  graph: LegacyGraphRevisionV2;
   producerNodeId: string;
   consumerNodeId: string;
-  artifactContract: ArtifactRequirement["artifactContract"];
-  requiredFor: ArtifactRequirement["requiredFor"];
+  artifactContract: LegacyArtifactRequirementV2["artifactContract"];
+  requiredFor: LegacyArtifactRequirementV2["requiredFor"];
   evidenceRefs: string[];
   rationale: string;
 }): GraphAmendmentProposal {
@@ -29,7 +29,7 @@ export function proposeDiscoveredArtifactRequirement(input: {
   if (input.evidenceRefs.length === 0) throw new Error("An amendment proposal requires evidence.");
   const identity = `${input.graph.graphId}:${input.graph.revision}:${input.producerNodeId}:${input.consumerNodeId}:${input.artifactContract.id}:${input.artifactContract.revision}:${input.requiredFor}`;
   const suffix = createHash("sha256").update(identity).digest("hex").slice(0, 12);
-  const requirement: ArtifactRequirement = {
+  const requirement: LegacyArtifactRequirementV2 = {
     id: `artifact-requirement-${suffix}`,
     artifactContract: { ...input.artifactContract },
     producerNodeId: input.producerNodeId,
@@ -48,13 +48,13 @@ export function proposeDiscoveredArtifactRequirement(input: {
 }
 
 export function applyApprovedGraphAmendment(
-  graph: GraphRevision,
+  graph: LegacyGraphRevisionV2,
   proposal: GraphAmendmentProposal,
   createdAt?: string
-): GraphRevision {
+): LegacyGraphRevisionV2 {
   if (proposal.graphId !== graph.graphId || proposal.sourceRevision !== graph.revision) throw new Error(`Amendment ${proposal.proposalId} targets a stale graph revision.`);
   if (proposal.evidenceRefs.length === 0) throw new Error(`Amendment ${proposal.proposalId} has no evidence.`);
-  return reviseGraph(graph, { expectedRevision: proposal.sourceRevision, operations: proposal.operations, ...(createdAt !== undefined ? { createdAt } : {}) });
+  return reviseLegacyGraphRevisionV2(graph, { expectedRevision: proposal.sourceRevision, operations: proposal.operations, ...(createdAt !== undefined ? { createdAt } : {}) });
 }
 
 export function computeAttemptFingerprintInvalidation(input: {

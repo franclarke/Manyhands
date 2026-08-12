@@ -1,13 +1,13 @@
 import {
-  GraphRevisionSchema,
-  type GraphRevision,
-  type ReviseGraphInput
+  LegacyGraphRevisionV2Schema,
+  type LegacyGraphRevisionV2,
+  type ReviseLegacyGraphV2Input
 } from "./graph-revision.js";
-import { validateGraphRevision, type GraphRevisionIssue } from "./validate-v2.js";
+import { validateLegacyGraphRevisionV2, type LegacyGraphRevisionV2Issue } from "./validate-v2.js";
 
 export interface ReduceGraphResult {
-  nextRevision: GraphRevision;
-  issues: GraphRevisionIssue[];
+  nextRevision: LegacyGraphRevisionV2;
+  issues: LegacyGraphRevisionV2Issue[];
 }
 
 export function deepFreeze<T>(obj: T): T {
@@ -23,13 +23,13 @@ export function deepFreeze<T>(obj: T): T {
   return obj;
 }
 
-export function reduceGraphRevision(
-  current: GraphRevision,
-  input: ReviseGraphInput
+export function reduceLegacyGraphRevisionV2(
+  current: LegacyGraphRevisionV2,
+  input: ReviseLegacyGraphV2Input
 ): ReduceGraphResult {
   if (current.revision !== input.expectedRevision) {
     throw new Error(
-      `Stale CAS GraphRevision write: expected revision ${input.expectedRevision}, but current revision is ${current.revision}.`
+      `Stale CAS LegacyGraphRevisionV2 write: expected revision ${input.expectedRevision}, but current revision is ${current.revision}.`
     );
   }
 
@@ -89,18 +89,18 @@ export function reduceGraphRevision(
     }
   }
 
-  const issues = validateGraphRevision(next);
+  const issues = validateLegacyGraphRevisionV2(next);
   const errors = issues.filter((i) => i.severity === "error");
 
   if (errors.length > 0) {
     throw new Error(
-      `GraphRevision reduction produced invalid graph: ${errors.map((e) => e.message).join("; ")}`
+      `LegacyGraphRevisionV2 reduction produced invalid graph: ${errors.map((e) => e.message).join("; ")}`
     );
   }
 
   deepFreeze(next);
   return {
-    nextRevision: GraphRevisionSchema.parse(next),
+    nextRevision: LegacyGraphRevisionV2Schema.parse(next),
     issues
   };
 }

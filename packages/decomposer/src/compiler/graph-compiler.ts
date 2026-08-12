@@ -1,13 +1,13 @@
 import type { SourceContract, TaskContractBundle } from "@manyhands/contracts";
 import { RepositorySnapshotSchema, type RepositorySnapshot } from "@manyhands/repository-index";
 import {
-  GraphRevisionSchema,
-  computeTopologicalLevels,
-  type ArtifactRequirement,
+  LegacyGraphRevisionV2Schema,
+  computeLegacyGraphRevisionV2TopologicalLevels,
+  type LegacyArtifactRequirementV2,
   type ConflictConstraint,
-  type GraphRevision,
-  type SeamBinding,
-  type TaskNodeV2
+  type LegacyGraphRevisionV2,
+  type LegacySeamBindingV2,
+  type LegacyTaskNodeV2
 } from "@manyhands/task-graph";
 import { assertPlanReview, reviewCompiledPlan, type PlanReview } from "../critics/review.js";
 import { WorkBreakdownSchema, type WorkBreakdown, type WorkUnit } from "../planner/schema.js";
@@ -40,7 +40,7 @@ export interface CompilationRelationTrace {
 }
 
 export interface CompiledGraphRevision {
-  graph: GraphRevision;
+  graph: LegacyGraphRevisionV2;
   contracts: TaskContractBundle[];
   review: PlanReview;
   trace: {
@@ -84,7 +84,7 @@ export function compileGraphRevision(
   }, dependencies);
   const trace: CompilationRelationTrace[] = [];
 
-  const artifactRequirements: ArtifactRequirement[] = [];
+  const artifactRequirements: LegacyArtifactRequirementV2[] = [];
   for (const candidate of breakdown.candidateArtifacts) {
     const contract = contractResult.artifactContracts.find((item) => item.id === dependencies.idFor("artifact-contract", candidate.id));
     if (contract === undefined) throw new Error(`Artifact contract for ${candidate.id} was not compiled.`);
@@ -118,7 +118,7 @@ export function compileGraphRevision(
     }
   }
 
-  const seamBindings: SeamBinding[] = [];
+  const seamBindings: LegacySeamBindingV2[] = [];
   for (const candidate of breakdown.candidateSeams) {
     const contract = contractResult.seamContracts.find((item) => item.id === dependencies.idFor("seam-contract", candidate.id));
     if (contract === undefined) throw new Error(`Seam contract for ${candidate.id} was not compiled.`);
@@ -153,7 +153,7 @@ export function compileGraphRevision(
     legacyOrderingConstraints: [],
     createdAt: dependencies.now()
   };
-  const graph = GraphRevisionSchema.parse({ ...draft, nodes: withTopologicalLevels(draft) });
+  const graph = LegacyGraphRevisionV2Schema.parse({ ...draft, nodes: withTopologicalLevels(draft) });
   const review = reviewCompiledPlan({ breakdown, repositorySnapshot, graph, contracts: contractResult.bundles, writePathsByNodeId: contractResult.writePathsByNodeId });
   assertPlanReview(review);
   return {
@@ -165,10 +165,10 @@ export function compileGraphRevision(
 }
 
 function propagateMaterializedArtifactRequirements(
-  requirements: ArtifactRequirement[],
+  requirements: LegacyArtifactRequirementV2[],
   dependencies: GraphCompilerDependencies
 ): void {
-  const directExecutionRequirements = (): ArtifactRequirement[] => requirements.filter((requirement) => requirement.requiredFor === "execution");
+  const directExecutionRequirements = (): LegacyArtifactRequirementV2[] => requirements.filter((requirement) => requirement.requiredFor === "execution");
   const known = new Set(requirements
     .filter((requirement) => requirement.requiredFor === "execution")
     .map((requirement) => `${requirement.artifactContract.id}|${requirement.consumerNodeId}`));
@@ -196,8 +196,8 @@ function propagateMaterializedArtifactRequirements(
   }
 }
 
-function compileNodes(root: WorkUnit, nodeIdByUnitKey: Record<string, string>): Record<string, TaskNodeV2> {
-  const nodes: Record<string, TaskNodeV2> = {};
+function compileNodes(root: WorkUnit, nodeIdByUnitKey: Record<string, string>): Record<string, LegacyTaskNodeV2> {
+  const nodes: Record<string, LegacyTaskNodeV2> = {};
   const visit = (unit: WorkUnit, parentId: string | null): void => {
     const id = requireNodeId(nodeIdByUnitKey, unit.key);
     nodes[id] = {
@@ -234,12 +234,12 @@ function compileNodes(root: WorkUnit, nodeIdByUnitKey: Record<string, string>): 
  */
 function withTopologicalLevels(draft: {
   graphId: string;
-  nodes: Record<string, TaskNodeV2>;
-  artifactRequirements: ArtifactRequirement[];
-}): Record<string, TaskNodeV2> {
+  nodes: Record<string, LegacyTaskNodeV2>;
+  artifactRequirements: LegacyArtifactRequirementV2[];
+}): Record<string, LegacyTaskNodeV2> {
   let levels: Record<string, number>;
   try {
-    levels = computeTopologicalLevels(draft as unknown as GraphRevision);
+    levels = computeLegacyGraphRevisionV2TopologicalLevels(draft as unknown as LegacyGraphRevisionV2);
   } catch {
     return draft.nodes;
   }
@@ -251,7 +251,7 @@ function withTopologicalLevels(draft: {
 
 function compileWriteConflicts(
   scopes: Record<string, string[]>,
-  nodes: Record<string, TaskNodeV2>,
+  nodes: Record<string, LegacyTaskNodeV2>,
   dependencies: GraphCompilerDependencies,
   trace: CompilationRelationTrace[]
 ): ConflictConstraint[] {
@@ -272,7 +272,7 @@ function compileWriteConflicts(
   return constraints;
 }
 
-function isAncestor(nodes: Record<string, TaskNodeV2>, ancestorId: string, descendantId: string): boolean {
+function isAncestor(nodes: Record<string, LegacyTaskNodeV2>, ancestorId: string, descendantId: string): boolean {
   let current = nodes[descendantId]?.parentId ?? null;
   while (current !== null) {
     if (current === ancestorId) return true;

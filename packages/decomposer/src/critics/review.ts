@@ -1,6 +1,6 @@
 import { TaskContractBundleSchema, type TaskContractBundle } from "@manyhands/contracts";
 import type { RepositorySnapshot } from "@manyhands/repository-index";
-import { validateGraphRevision, type GraphRevision } from "@manyhands/task-graph";
+import { validateLegacyGraphRevisionV2, type LegacyGraphRevisionV2 } from "@manyhands/task-graph";
 import { allocateAcceptanceIntents } from "../compiler/acceptance-allocation.js";
 import type { WorkBreakdown, WorkUnit } from "../planner/schema.js";
 
@@ -37,7 +37,7 @@ export interface PlanReview {
 export interface CompiledPlanReviewInput {
   breakdown: WorkBreakdown;
   repositorySnapshot: RepositorySnapshot;
-  graph: GraphRevision;
+  graph: LegacyGraphRevisionV2;
   contracts: TaskContractBundle[];
   /**
    * Paths each node writes. Absent for a caller that has no write model, in
@@ -98,7 +98,7 @@ function reviewContractCompatibility(input: CompiledPlanReviewInput, findings: P
 }
 
 function reviewDag(input: CompiledPlanReviewInput, findings: PlanFinding[]): void {
-  for (const issue of validateGraphRevision(input.graph)) findings.push(finding("dag_validity", issue.severity, issue.code, issue.message, "Repair the typed graph relation or hierarchy before approval.", [], issue.nodeId));
+  for (const issue of validateLegacyGraphRevisionV2(input.graph)) findings.push(finding("dag_validity", issue.severity, issue.code, issue.message, "Repair the typed graph relation or hierarchy before approval.", [], issue.nodeId));
 }
 
 function reviewScopes(input: CompiledPlanReviewInput, findings: PlanFinding[]): void {

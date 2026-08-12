@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
-  GraphRevisionSchema,
-  getExecutableReadinessV2,
-  reviseGraph,
-  validateGraphRevision,
-  type GraphRevision
+  LegacyGraphRevisionV2Schema,
+  getLegacyExecutableReadinessV2,
+  reviseLegacyGraphRevisionV2,
+  validateLegacyGraphRevisionV2,
+  type LegacyGraphRevisionV2
 } from "@manyhands/task-graph";
 
-function graph(): GraphRevision {
+function graph(): LegacyGraphRevisionV2 {
   return {
     schemaVersion: 2,
     graphId: "booking-graph",
@@ -28,11 +28,11 @@ function graph(): GraphRevision {
   };
 }
 
-describe("GraphRevision V2", () => {
+describe("LegacyGraphRevisionV2 V2", () => {
   it("accepts a valid revision without node dependency shortcuts", () => {
     const candidate = graph();
-    expect(GraphRevisionSchema.safeParse(candidate).success).toBe(true);
-    expect(validateGraphRevision(candidate)).toEqual([]);
+    expect(LegacyGraphRevisionV2Schema.safeParse(candidate).success).toBe(true);
+    expect(validateLegacyGraphRevisionV2(candidate)).toEqual([]);
     expect(candidate.nodes.ui).not.toHaveProperty("dependencies");
   });
 
@@ -42,21 +42,21 @@ describe("GraphRevision V2", () => {
     candidate.nodes = {
       api: { id: "api", parentId: null, kind: "leaf", title: "Booking API", goal: "Expose bookings" }
     };
-    expect(validateGraphRevision(candidate)).toEqual([]);
+    expect(validateLegacyGraphRevisionV2(candidate)).toEqual([]);
   });
 
   it.each([
-    ["invalid root", (candidate: GraphRevision) => { candidate.rootId = "missing"; }, "missing_root"],
-    ["hierarchy cycle", (candidate: GraphRevision) => { candidate.nodes.root!.parentId = "api"; candidate.nodes.api!.parentId = "root"; }, "hierarchy_cycle"],
-    ["missing producer", (candidate: GraphRevision) => { candidate.artifactRequirements.push(requirement({ producerNodeId: "missing" })); }, "missing_relation_node"],
-    ["missing seam contract", (candidate: GraphRevision) => { candidate.seamBindings.push({ id: "ui-api", producerNodeId: "api", consumerNodeId: "ui", seamContract: { id: "", revision: "r1" }, producerRevision: "r1", consumerRevision: "r1" }); }, "schema_invalid"],
-    ["incompatible seam revisions", (candidate: GraphRevision) => { candidate.seamBindings.push({ id: "ui-api", producerNodeId: "api", consumerNodeId: "ui", seamContract: { id: "booking-api", revision: "r2" }, producerRevision: "r1", consumerRevision: "r2" }); }, "schema_invalid"],
-    ["leaf owning a child", (candidate: GraphRevision) => { candidate.nodes.ui!.parentId = "api"; }, "invalid_node_kind"],
-    ["missing conflict node", (candidate: GraphRevision) => { candidate.conflictConstraints.push({ id: "shared-file", leftNodeId: "api", rightNodeId: "missing", reason: "Both may edit routes", risk: "high" }); }, "missing_relation_node"]
+    ["invalid root", (candidate: LegacyGraphRevisionV2) => { candidate.rootId = "missing"; }, "missing_root"],
+    ["hierarchy cycle", (candidate: LegacyGraphRevisionV2) => { candidate.nodes.root!.parentId = "api"; candidate.nodes.api!.parentId = "root"; }, "hierarchy_cycle"],
+    ["missing producer", (candidate: LegacyGraphRevisionV2) => { candidate.artifactRequirements.push(requirement({ producerNodeId: "missing" })); }, "missing_relation_node"],
+    ["missing seam contract", (candidate: LegacyGraphRevisionV2) => { candidate.seamBindings.push({ id: "ui-api", producerNodeId: "api", consumerNodeId: "ui", seamContract: { id: "", revision: "r1" }, producerRevision: "r1", consumerRevision: "r1" }); }, "schema_invalid"],
+    ["incompatible seam revisions", (candidate: LegacyGraphRevisionV2) => { candidate.seamBindings.push({ id: "ui-api", producerNodeId: "api", consumerNodeId: "ui", seamContract: { id: "booking-api", revision: "r2" }, producerRevision: "r1", consumerRevision: "r2" }); }, "schema_invalid"],
+    ["leaf owning a child", (candidate: LegacyGraphRevisionV2) => { candidate.nodes.ui!.parentId = "api"; }, "invalid_node_kind"],
+    ["missing conflict node", (candidate: LegacyGraphRevisionV2) => { candidate.conflictConstraints.push({ id: "shared-file", leftNodeId: "api", rightNodeId: "missing", reason: "Both may edit routes", risk: "high" }); }, "missing_relation_node"]
   ])("rejects %s", (_name, mutate, issueCode) => {
     const candidate = graph();
     mutate(candidate);
-    expect(validateGraphRevision(candidate)).toEqual(
+    expect(validateLegacyGraphRevisionV2(candidate)).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: issueCode, severity: "error" })])
     );
   });
@@ -80,11 +80,11 @@ describe("GraphRevision V2", () => {
       risk: "medium"
     });
 
-    expect(getExecutableReadinessV2(candidate, { availableArtifactContractIds: [] })).toEqual([
+    expect(getLegacyExecutableReadinessV2(candidate, { availableArtifactContractIds: [] })).toEqual([
       { nodeId: "api", ready: true, missingArtifactContractIds: [] },
       { nodeId: "ui", ready: false, missingArtifactContractIds: ["booking-model"] }
     ]);
-    expect(getExecutableReadinessV2(candidate, { availableArtifactContractIds: ["booking-model"] })).toEqual([
+    expect(getLegacyExecutableReadinessV2(candidate, { availableArtifactContractIds: ["booking-model"] })).toEqual([
       { nodeId: "api", ready: true, missingArtifactContractIds: [] },
       { nodeId: "ui", ready: true, missingArtifactContractIds: [] }
     ]);
@@ -92,7 +92,7 @@ describe("GraphRevision V2", () => {
 
   it("creates an immutable next revision for semantic operations", () => {
     const original = graph();
-    const revised = reviseGraph(original, {
+    const revised = reviseLegacyGraphRevisionV2(original, {
       expectedRevision: 1,
       createdAt: "2026-07-17T01:00:00.000Z",
       operations: [{ type: "update_node_goal", nodeId: "ui", goal: "Show and filter bookings" }]
@@ -102,11 +102,11 @@ describe("GraphRevision V2", () => {
     expect(revised.createdAt).toBe("2026-07-17T01:00:00.000Z");
     expect(revised.nodes.ui?.goal).toBe("Show and filter bookings");
     expect(original.nodes.ui?.goal).toBe("Show bookings");
-    expect(() => reviseGraph(original, { expectedRevision: 2, operations: [] })).toThrow(/revision/i);
+    expect(() => reviseLegacyGraphRevisionV2(original, { expectedRevision: 2, operations: [] })).toThrow(/revision/i);
   });
 });
 
-function requirement(overrides: Partial<GraphRevision["artifactRequirements"][number]> = {}) {
+function requirement(overrides: Partial<LegacyGraphRevisionV2["artifactRequirements"][number]> = {}) {
   return {
     id: "ui-needs-model",
     artifactContract: { id: "booking-model", revision: "r1" },

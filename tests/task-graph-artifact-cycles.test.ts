@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { validateGraphRevision } from "../packages/task-graph/src/validate-v2.js";
-import { type GraphRevision } from "../packages/task-graph/src/graph-revision.js";
+import { validateLegacyGraphRevisionV2 } from "../packages/task-graph/src/validate-v2.js";
+import { type LegacyGraphRevisionV2 } from "../packages/task-graph/src/graph-revision.js";
 
-function getBaseGraph(): GraphRevision {
+function getBaseGraph(): LegacyGraphRevisionV2 {
   return {
     schemaVersion: 2,
     graphId: "graph-1",
@@ -26,21 +26,21 @@ function getBaseGraph(): GraphRevision {
 describe("Task Graph Artifact Cycles (MH-REM-001)", () => {
   it("passes validation for correct graph", () => {
     const graph = getBaseGraph();
-    const issues = validateGraphRevision(graph);
+    const issues = validateLegacyGraphRevisionV2(graph);
     expect(issues.filter(i => i.severity === "error")).toHaveLength(0);
   });
 
   it("detects basic hierarchy cycle", () => {
     const graph = getBaseGraph();
     graph.nodes["n1"]!.parentId = "n2";
-    const issues = validateGraphRevision(graph);
+    const issues = validateLegacyGraphRevisionV2(graph);
     expect(issues).toContainEqual(expect.objectContaining({ code: "hierarchy_cycle", nodeId: "n1" }));
   });
 
   it("detects self relation on parentId", () => {
     const graph = getBaseGraph();
     graph.nodes["n1"]!.parentId = "n1";
-    const issues = validateGraphRevision(graph);
+    const issues = validateLegacyGraphRevisionV2(graph);
     expect(issues.some(i => i.code === "self_relation" || i.code === "hierarchy_cycle")).toBe(true);
   });
 
@@ -51,7 +51,7 @@ describe("Task Graph Artifact Cycles (MH-REM-001)", () => {
       { id: "r1", producerNodeId: "n2", consumerNodeId: "n3", requiredFor: "execution", artifactContract: { id: "a", revision: "1" } },
       { id: "r2", producerNodeId: "n3", consumerNodeId: "n2", requiredFor: "execution", artifactContract: { id: "b", revision: "1" } }
     ];
-    const issues = validateGraphRevision(graph);
+    const issues = validateLegacyGraphRevisionV2(graph);
     expect(issues).toContainEqual(expect.objectContaining({ code: "artifact_cycle" }));
   });
 
@@ -62,7 +62,7 @@ describe("Task Graph Artifact Cycles (MH-REM-001)", () => {
       { id: "r1", fromNodeId: "n2", toNodeId: "n3", reason: "test", deprecated: true, requiresReplan: true },
       { id: "r2", fromNodeId: "n3", toNodeId: "n2", reason: "test", deprecated: true, requiresReplan: true }
     ];
-    const issues = validateGraphRevision(graph);
+    const issues = validateLegacyGraphRevisionV2(graph);
     expect(issues).toContainEqual(expect.objectContaining({ code: "artifact_cycle" }));
   });
 
@@ -71,7 +71,7 @@ describe("Task Graph Artifact Cycles (MH-REM-001)", () => {
     graph.artifactRequirements = [
       { id: "r1", producerNodeId: "n2", consumerNodeId: "n1", requiredFor: "execution", artifactContract: { id: "a", revision: "1" } }
     ];
-    const issues = validateGraphRevision(graph);
+    const issues = validateLegacyGraphRevisionV2(graph);
     expect(issues).toContainEqual(expect.objectContaining({ code: "artifact_cycle" }));
   });
 
@@ -80,7 +80,7 @@ describe("Task Graph Artifact Cycles (MH-REM-001)", () => {
     graph.legacyOrderingConstraints = [
       { id: "l1", fromNodeId: "n2", toNodeId: "n1", reason: "test", deprecated: true, requiresReplan: true }
     ];
-    const issues = validateGraphRevision(graph);
+    const issues = validateLegacyGraphRevisionV2(graph);
     expect(issues).toContainEqual(expect.objectContaining({ code: "artifact_cycle" }));
   });
 
@@ -89,7 +89,7 @@ describe("Task Graph Artifact Cycles (MH-REM-001)", () => {
     graph.artifactRequirements = [
       { id: "r1", producerNodeId: "n2", consumerNodeId: "n2", requiredFor: "execution", artifactContract: { id: "a", revision: "1" } }
     ];
-    const issues = validateGraphRevision(graph);
+    const issues = validateLegacyGraphRevisionV2(graph);
     expect(issues.some(i => i.code === "schema_invalid" || i.code === "self_relation")).toBe(true);
   });
 
@@ -108,7 +108,7 @@ describe("Task Graph Artifact Cycles (MH-REM-001)", () => {
       { id: "s1", producerNodeId: "n3", consumerNodeId: "n2", seamContract: { id: "b", revision: "1" }, producerRevision: "1", consumerRevision: "1" }
     ];
 
-    const issues = validateGraphRevision(graph);
+    const issues = validateLegacyGraphRevisionV2(graph);
 
     expect(issues.filter((issue) => issue.severity === "error")).toHaveLength(0);
   });
@@ -121,7 +121,7 @@ describe("Task Graph Artifact Cycles (MH-REM-001)", () => {
       { id: "s2", producerNodeId: "n3", consumerNodeId: "n2", seamContract: { id: "b", revision: "1" }, producerRevision: "1", consumerRevision: "1" }
     ];
 
-    const issues = validateGraphRevision(graph);
+    const issues = validateLegacyGraphRevisionV2(graph);
 
     expect(issues.filter((issue) => issue.severity === "error")).toHaveLength(0);
   });
@@ -136,7 +136,7 @@ describe("Task Graph Artifact Cycles (MH-REM-001)", () => {
       { id: "s1", producerNodeId: "n2", consumerNodeId: "n3", seamContract: { id: "b", revision: "1" }, producerRevision: "1", consumerRevision: "1" }
     ];
 
-    const issues = validateGraphRevision(graph);
+    const issues = validateLegacyGraphRevisionV2(graph);
 
     expect(issues.filter((issue) => issue.severity === "error")).toHaveLength(0);
   });
@@ -146,7 +146,7 @@ describe("Task Graph Artifact Cycles (MH-REM-001)", () => {
     graph.seamBindings = [
       { id: "s1", producerNodeId: "n2", consumerNodeId: "n2", seamContract: { id: "a", revision: "1" }, producerRevision: "1", consumerRevision: "1" }
     ];
-    const issues = validateGraphRevision(graph);
+    const issues = validateLegacyGraphRevisionV2(graph);
     expect(issues.some(i => i.code === "schema_invalid" || i.code === "self_relation")).toBe(true);
   });
 
@@ -155,7 +155,7 @@ describe("Task Graph Artifact Cycles (MH-REM-001)", () => {
     graph.conflictConstraints = [
       { id: "c1", leftNodeId: "n2", rightNodeId: "n2", reason: "r", risk: "low" }
     ];
-    const issues = validateGraphRevision(graph);
+    const issues = validateLegacyGraphRevisionV2(graph);
     expect(issues.some(i => i.code === "schema_invalid" || i.code === "self_relation")).toBe(true);
   });
 
@@ -164,7 +164,7 @@ describe("Task Graph Artifact Cycles (MH-REM-001)", () => {
     graph.legacyOrderingConstraints = [
       { id: "l1", fromNodeId: "n2", toNodeId: "n2", reason: "test", deprecated: true, requiresReplan: true }
     ];
-    const issues = validateGraphRevision(graph);
+    const issues = validateLegacyGraphRevisionV2(graph);
     expect(issues.some(i => i.code === "schema_invalid" || i.code === "self_relation")).toBe(true);
   });
 
@@ -173,7 +173,7 @@ describe("Task Graph Artifact Cycles (MH-REM-001)", () => {
     graph.artifactRequirements = [
       { id: "r1", producerNodeId: "n2", consumerNodeId: "missing", requiredFor: "execution", artifactContract: { id: "a", revision: "1" } }
     ];
-    const issues = validateGraphRevision(graph);
+    const issues = validateLegacyGraphRevisionV2(graph);
     expect(issues).toContainEqual(expect.objectContaining({ code: "missing_relation_node" }));
   });
 
@@ -185,7 +185,7 @@ describe("Task Graph Artifact Cycles (MH-REM-001)", () => {
     graph.legacyOrderingConstraints = [
       { id: "dup", fromNodeId: "n1", toNodeId: "n2", reason: "test", deprecated: true, requiresReplan: true }
     ];
-    const issues = validateGraphRevision(graph);
+    const issues = validateLegacyGraphRevisionV2(graph);
     expect(issues).toContainEqual(expect.objectContaining({ code: "duplicate_relation" }));
   });
 });

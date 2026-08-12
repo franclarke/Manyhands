@@ -1,4 +1,4 @@
-import type { GraphRevision } from "./graph-revision.js";
+import type { LegacyGraphRevisionV2 } from "./graph-revision.js";
 
 /**
  * The topological level of every node: its longest path from the start of the
@@ -20,7 +20,7 @@ import type { GraphRevision } from "./graph-revision.js";
  * available only once its slowest predecessor chain is done, so banding by the
  * shortest path would draw it as reachable earlier than it can ever be.
  */
-export function computeTopologicalLevels(graph: GraphRevision): Record<string, number> {
+export function computeLegacyGraphRevisionV2TopologicalLevels(graph: LegacyGraphRevisionV2): Record<string, number> {
   const nodeIds = Object.keys(graph.nodes);
   const predecessors = new Map<string, Set<string>>(nodeIds.map((id) => [id, new Set<string>()]));
 

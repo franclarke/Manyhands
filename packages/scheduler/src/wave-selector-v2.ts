@@ -1,10 +1,10 @@
 import type { ConflictConstraintEvidence } from "@manyhands/conflict-risk";
 import { explainReadiness } from "./readiness-v2.js";
 import type { ReadinessExplanationV2, ReadinessStateV2 } from "./types-v2.js";
-import type { GraphRevision } from "@manyhands/task-graph";
+import type { LegacyGraphRevisionV2 } from "@manyhands/task-graph";
 
 export interface ReadyWaveSelectionInput {
-  graph: GraphRevision;
+  graph: LegacyGraphRevisionV2;
   nodeIds: string[];
   state: ReadinessStateV2;
   effectiveConfig: { maxParallel: number };

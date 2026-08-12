@@ -2,7 +2,7 @@ import { ContractReferenceSchema } from "@manyhands/contracts";
 import { EntityIdSchema, NonEmptyStringSchema } from "@manyhands/shared";
 import { z } from "zod";
 
-export const ArtifactRequirementSchema = z.object({
+export const LegacyArtifactRequirementV2Schema = z.object({
   id: EntityIdSchema,
   artifactContract: ContractReferenceSchema,
   producerNodeId: EntityIdSchema,
@@ -14,9 +14,9 @@ export const ArtifactRequirementSchema = z.object({
   }
 });
 
-export type ArtifactRequirement = z.infer<typeof ArtifactRequirementSchema>;
+export type LegacyArtifactRequirementV2 = z.infer<typeof LegacyArtifactRequirementV2Schema>;
 
-export const SeamBindingSchema = z.object({
+export const LegacySeamBindingV2Schema = z.object({
   id: EntityIdSchema,
   seamContract: ContractReferenceSchema,
   producerNodeId: EntityIdSchema,
@@ -32,7 +32,7 @@ export const SeamBindingSchema = z.object({
   }
 });
 
-export type SeamBinding = z.infer<typeof SeamBindingSchema>;
+export type LegacySeamBindingV2 = z.infer<typeof LegacySeamBindingV2Schema>;
 
 export const ConflictConstraintSchema = z.object({
   id: EntityIdSchema,

@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { reduceGraphRevision } from "../packages/task-graph/src/graph-reducer.js";
-import { type GraphRevision } from "../packages/task-graph/src/graph-revision.js";
+import { reduceLegacyGraphRevisionV2 } from "../packages/task-graph/src/graph-reducer.js";
+import { type LegacyGraphRevisionV2 } from "../packages/task-graph/src/graph-revision.js";
 
-function getBaseGraph(): GraphRevision {
+function getBaseGraph(): LegacyGraphRevisionV2 {
   return {
     schemaVersion: 2,
     graphId: "graph-1",
@@ -23,20 +23,20 @@ function getBaseGraph(): GraphRevision {
 }
 
 describe("GraphReducer (MH-REM-006)", () => {
-  it("rejects stale CAS GraphRevision write", () => {
+  it("rejects stale CAS LegacyGraphRevisionV2 write", () => {
     const graph = getBaseGraph();
-    expect(() => reduceGraphRevision(graph, { expectedRevision: 2, operations: [] })).toThrow(/Stale CAS/);
+    expect(() => reduceLegacyGraphRevisionV2(graph, { expectedRevision: 2, operations: [] })).toThrow(/Stale CAS/);
   });
 
   it("returns unchanged on empty operations", () => {
     const graph = getBaseGraph();
-    const res = reduceGraphRevision(graph, { expectedRevision: 1, operations: [] });
+    const res = reduceLegacyGraphRevisionV2(graph, { expectedRevision: 1, operations: [] });
     expect(res.nextRevision.revision).toBe(1);
   });
 
   it("handles upsert_node", () => {
     const graph = getBaseGraph();
-    const res = reduceGraphRevision(graph, {
+    const res = reduceLegacyGraphRevisionV2(graph, {
       expectedRevision: 1,
       operations: [{ type: "upsert_node", node: { id: "n2", parentId: "root", kind: "leaf", title: "n2", goal: "g" } }]
     });
@@ -47,13 +47,13 @@ describe("GraphReducer (MH-REM-006)", () => {
   it("handles remove_node", () => {
     const graph = getBaseGraph();
     graph.nodes["n2"] = { id: "n2", parentId: "root", kind: "leaf", title: "n2", goal: "g" };
-    const res = reduceGraphRevision(graph, { expectedRevision: 1, operations: [{ type: "remove_node", nodeId: "n2" }] });
+    const res = reduceLegacyGraphRevisionV2(graph, { expectedRevision: 1, operations: [{ type: "remove_node", nodeId: "n2" }] });
     expect(res.nextRevision.nodes["n2"]).toBeUndefined();
   });
 
   it("handles update_node_goal", () => {
     const graph = getBaseGraph();
-    const res = reduceGraphRevision(graph, { expectedRevision: 1, operations: [{ type: "update_node_goal", nodeId: "root", goal: "new_goal" }] });
+    const res = reduceLegacyGraphRevisionV2(graph, { expectedRevision: 1, operations: [{ type: "update_node_goal", nodeId: "root", goal: "new_goal" }] });
     expect(res.nextRevision.nodes["root"].goal).toBe("new_goal");
   });
 
@@ -66,7 +66,7 @@ describe("GraphReducer (MH-REM-006)", () => {
       requiredFor: "execution",
       artifactContract: { id: "art", revision: "1" }
     } as const;
-    const res = reduceGraphRevision(graph, { expectedRevision: 1, operations: [{ type: "add_artifact_requirement", requirement: req }] });
+    const res = reduceLegacyGraphRevisionV2(graph, { expectedRevision: 1, operations: [{ type: "add_artifact_requirement", requirement: req }] });
     expect(res.nextRevision.artifactRequirements.length).toBe(1);
   });
 
@@ -79,7 +79,7 @@ describe("GraphReducer (MH-REM-006)", () => {
       requiredFor: "execution",
       artifactContract: { id: "art", revision: "1" }
     }];
-    const res = reduceGraphRevision(graph, { expectedRevision: 1, operations: [{ type: "remove_artifact_requirement", requirementId: "r1" }] });
+    const res = reduceLegacyGraphRevisionV2(graph, { expectedRevision: 1, operations: [{ type: "remove_artifact_requirement", requirementId: "r1" }] });
     expect(res.nextRevision.artifactRequirements.length).toBe(0);
   });
 
@@ -93,7 +93,7 @@ describe("GraphReducer (MH-REM-006)", () => {
       producerRevision: "1",
       consumerRevision: "1"
     } as const;
-    const res = reduceGraphRevision(graph, { expectedRevision: 1, operations: [{ type: "add_seam_binding", binding }] });
+    const res = reduceLegacyGraphRevisionV2(graph, { expectedRevision: 1, operations: [{ type: "add_seam_binding", binding }] });
     expect(res.nextRevision.seamBindings.length).toBe(1);
   });
 
@@ -107,22 +107,22 @@ describe("GraphReducer (MH-REM-006)", () => {
       producerRevision: "1",
       consumerRevision: "1"
     }];
-    const res = reduceGraphRevision(graph, { expectedRevision: 1, operations: [{ type: "remove_seam_binding", bindingId: "b1" }] });
+    const res = reduceLegacyGraphRevisionV2(graph, { expectedRevision: 1, operations: [{ type: "remove_seam_binding", bindingId: "b1" }] });
     expect(res.nextRevision.seamBindings.length).toBe(0);
   });
 
   it("handles add_conflict_constraint and remove_conflict_constraint", () => {
     const graph = getBaseGraph();
     const con = { id: "c1", leftNodeId: "root", rightNodeId: "n1", reason: "r", risk: "low" } as const;
-    const res = reduceGraphRevision(graph, { expectedRevision: 1, operations: [{ type: "add_conflict_constraint", constraint: con }] });
+    const res = reduceLegacyGraphRevisionV2(graph, { expectedRevision: 1, operations: [{ type: "add_conflict_constraint", constraint: con }] });
     expect(res.nextRevision.conflictConstraints.length).toBe(1);
 
-    const res2 = reduceGraphRevision(res.nextRevision, { expectedRevision: 2, operations: [{ type: "remove_conflict_constraint", constraintId: "c1" }] });
+    const res2 = reduceLegacyGraphRevisionV2(res.nextRevision, { expectedRevision: 2, operations: [{ type: "remove_conflict_constraint", constraintId: "c1" }] });
     expect(res2.nextRevision.conflictConstraints.length).toBe(0);
   });
 
   it("throws when graph becomes invalid (e.g. invalid root operation)", () => {
     const graph = getBaseGraph();
-    expect(() => reduceGraphRevision(graph, { expectedRevision: 1, operations: [{ type: "remove_node", nodeId: "root" }] })).toThrow(/GraphRevision reduction produced invalid graph/);
+    expect(() => reduceLegacyGraphRevisionV2(graph, { expectedRevision: 1, operations: [{ type: "remove_node", nodeId: "root" }] })).toThrow(/LegacyGraphRevisionV2 reduction produced invalid graph/);
   });
 });

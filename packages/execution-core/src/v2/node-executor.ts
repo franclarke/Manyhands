@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 import type { ArtifactContract, TaskContractBundle } from "@manyhands/contracts";
 import type { CriterionEvidenceObservation, GranularityPolicyManifest } from "@manyhands/shared";
-import type { GraphRevision, TaskNodeV2 } from "@manyhands/task-graph";
+import type { LegacyGraphRevisionV2, LegacyTaskNodeV2 } from "@manyhands/task-graph";
 import type { TraceStore } from "@manyhands/trace-store";
 
 import { ExecutionBaseBuilder, type BuiltExecutionBase } from "../base/execution-base-builder";
@@ -112,8 +112,8 @@ export interface V2PhysicalNodeExecutionInput {
   attemptId: string;
   inputFingerprint: string;
   priorFailure?: { attemptId: string; reason: string };
-  graph: GraphRevision;
-  node: TaskNodeV2;
+  graph: LegacyGraphRevisionV2;
+  node: LegacyTaskNodeV2;
   contract: TaskContractBundle;
   consumedArtifacts: V2ExecutionArtifact[];
   outputArtifactContract: ArtifactContract;

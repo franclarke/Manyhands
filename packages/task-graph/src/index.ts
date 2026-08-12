@@ -12,6 +12,8 @@ export * from "./topological-level.js";
 export * from "./legacy-adapter.js";
 export * from "./relations.js";
 export * from "./validate-v2.js";
+export * from "./canonical-graph.js";
+export * from "./compatibility-reader.js";
 
 export const TaskNodeStatusSchema = z.union([
   z.literal("planned"),

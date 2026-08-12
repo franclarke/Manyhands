@@ -1,14 +1,15 @@
 import {
-  GraphRevisionSchema,
-  type GraphRevision,
-  type GraphRevisionOperation,
-  type ReviseGraphInput
+  LegacyGraphRevisionV2Schema,
+  type LegacyGraphRevisionV2,
+  type LegacyGraphRevisionV2Operation,
+  type ReviseLegacyGraphV2Input
 } from "./graph-revision.js";
 
-export type GraphRevisionIssueCode = "schema_invalid" | "missing_root" | "invalid_root" | "invalid_node_kind" | "node_key_mismatch" | "missing_parent" | "hierarchy_cycle" | "artifact_cycle" | "self_relation" | "missing_relation_node" | "duplicate_relation";
 
-export interface GraphRevisionIssue {
-  code: GraphRevisionIssueCode;
+export type LegacyGraphRevisionV2IssueCode = "schema_invalid" | "missing_root" | "invalid_root" | "invalid_node_kind" | "node_key_mismatch" | "missing_parent" | "hierarchy_cycle" | "artifact_cycle" | "self_relation" | "missing_relation_node" | "duplicate_relation";
+
+export interface LegacyGraphRevisionV2Issue {
+  code: LegacyGraphRevisionV2IssueCode;
   severity: "error" | "warning";
   message: string;
   nodeId?: string;
@@ -21,11 +22,11 @@ export interface ExecutableReadinessV2 {
   missingArtifactContractIds: string[];
 }
 
-export function validateGraphRevision(input: GraphRevision): GraphRevisionIssue[] {
-  const parsed = GraphRevisionSchema.safeParse(input);
+export function validateLegacyGraphRevisionV2(input: LegacyGraphRevisionV2): LegacyGraphRevisionV2Issue[] {
+  const parsed = LegacyGraphRevisionV2Schema.safeParse(input);
   if (!parsed.success) return parsed.error.issues.map((issue) => ({ code: "schema_invalid", severity: "error", message: `${issue.path.join(".")}: ${issue.message}` }));
   const graph = parsed.data;
-  const issues: GraphRevisionIssue[] = [];
+  const issues: LegacyGraphRevisionV2Issue[] = [];
   const root = graph.nodes[graph.rootId];
   if (root === undefined) issues.push({ code: "missing_root", severity: "error", nodeId: graph.rootId, message: `Root ${graph.rootId} does not exist.` });
   else {
@@ -49,19 +50,19 @@ export function validateGraphRevision(input: GraphRevision): GraphRevisionIssue[
   return issues;
 }
 
-export function reviseGraph(graph: GraphRevision, input: ReviseGraphInput): GraphRevision {
+export function reviseLegacyGraphRevisionV2(graph: LegacyGraphRevisionV2, input: ReviseLegacyGraphV2Input): LegacyGraphRevisionV2 {
   if (graph.revision !== input.expectedRevision) throw new Error(`Graph revision mismatch: expected ${input.expectedRevision}, found ${graph.revision}.`);
   if (input.operations.length === 0) throw new Error("A semantic graph revision requires at least one operation.");
   const next = structuredClone(graph);
   for (const operation of input.operations) applyOperation(next, operation);
   next.revision += 1;
   next.createdAt = input.createdAt ?? new Date().toISOString();
-  const errors = validateGraphRevision(next).filter((issue) => issue.severity === "error");
+  const errors = validateLegacyGraphRevisionV2(next).filter((issue) => issue.severity === "error");
   if (errors.length > 0) throw new Error(`Graph revision is invalid: ${errors.map((issue) => issue.message).join("; ")}`);
   return next;
 }
 
-export function getExecutableReadinessV2(graph: GraphRevision, options: { availableArtifactContractIds: readonly string[] }): ExecutableReadinessV2[] {
+export function getLegacyExecutableReadinessV2(graph: LegacyGraphRevisionV2, options: { availableArtifactContractIds: readonly string[] }): ExecutableReadinessV2[] {
   const available = new Set(options.availableArtifactContractIds);
   return Object.values(graph.nodes)
     .filter((node) => node.kind === "leaf" || node.kind === "integrator")
@@ -83,7 +84,7 @@ interface Edge {
   type: EdgeType;
 }
 
-function checkCyclesAndSelfRelations(graph: GraphRevision, issues: GraphRevisionIssue[]): void {
+function checkCyclesAndSelfRelations(graph: LegacyGraphRevisionV2, issues: LegacyGraphRevisionV2Issue[]): void {
   const adjacency = new Map<string, Edge[]>();
   for (const nodeId of Object.keys(graph.nodes)) adjacency.set(nodeId, []);
 
@@ -137,7 +138,7 @@ function checkCyclesAndSelfRelations(graph: GraphRevision, issues: GraphRevision
 
   const visiting = new Set<string>();
   const visited = new Set<string>();
-  const cycleIssues = new Map<string, GraphRevisionIssueCode>();
+  const cycleIssues = new Map<string, LegacyGraphRevisionV2IssueCode>();
 
   function dfs(nodeId: string, path: string[], edgesInPath: EdgeType[]) {
     if (visiting.has(nodeId)) {
@@ -146,7 +147,7 @@ function checkCyclesAndSelfRelations(graph: GraphRevision, issues: GraphRevision
         const cyclePathNodes = path.slice(startIdx);
         const cycleEdges = edgesInPath.slice(startIdx);
         const isHierarchyOnly = cycleEdges.every((e) => e === "hierarchy");
-        const code: GraphRevisionIssueCode = isHierarchyOnly ? "hierarchy_cycle" : "artifact_cycle";
+        const code: LegacyGraphRevisionV2IssueCode = isHierarchyOnly ? "hierarchy_cycle" : "artifact_cycle";
         for (const n of cyclePathNodes) {
           const existing = cycleIssues.get(n);
           if (existing !== "artifact_cycle") cycleIssues.set(n, code);
@@ -182,7 +183,7 @@ function checkCyclesAndSelfRelations(graph: GraphRevision, issues: GraphRevision
   }
 }
 
-function validateRelationNodes(graph: GraphRevision, issues: GraphRevisionIssue[]): void {
+function validateRelationNodes(graph: LegacyGraphRevisionV2, issues: LegacyGraphRevisionV2Issue[]): void {
   const relations = [
     ...graph.artifactRequirements.map((item) => ({ id: item.id, nodes: [item.producerNodeId, item.consumerNodeId] })),
     ...graph.seamBindings.map((item) => ({ id: item.id, nodes: [item.producerNodeId, item.consumerNodeId] })),
@@ -192,7 +193,7 @@ function validateRelationNodes(graph: GraphRevision, issues: GraphRevisionIssue[
   for (const relation of relations) for (const nodeId of relation.nodes) if (graph.nodes[nodeId] === undefined) issues.push({ code: "missing_relation_node", severity: "error", relationId: relation.id, nodeId, message: `Relation ${relation.id} references missing node ${nodeId}.` });
 }
 
-function validateUniqueIds(graph: GraphRevision, issues: GraphRevisionIssue[]): void {
+function validateUniqueIds(graph: LegacyGraphRevisionV2, issues: LegacyGraphRevisionV2Issue[]): void {
   const ids = [...graph.artifactRequirements, ...graph.seamBindings, ...graph.conflictConstraints, ...graph.legacyOrderingConstraints].map((item) => item.id);
   const seen = new Set<string>();
   for (const id of ids) {
@@ -201,7 +202,7 @@ function validateUniqueIds(graph: GraphRevision, issues: GraphRevisionIssue[]): 
   }
 }
 
-function applyOperation(graph: GraphRevision, operation: GraphRevisionOperation): void {
+function applyOperation(graph: LegacyGraphRevisionV2, operation: LegacyGraphRevisionV2Operation): void {
   switch (operation.type) {
     case "upsert_node": graph.nodes[operation.node.id] = structuredClone(operation.node); return;
     case "remove_node": delete graph.nodes[operation.nodeId]; return;

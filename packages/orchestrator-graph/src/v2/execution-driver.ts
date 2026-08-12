@@ -25,7 +25,7 @@ import {
   type RunProjection
 } from "@manyhands/run-coordinator";
 import { selectReadyWaveV2, type ReadinessExplanationV2, type ReadinessStateV2 } from "@manyhands/scheduler";
-import { GraphRevisionSchema, type GraphRevision, type TaskNodeV2 } from "@manyhands/task-graph";
+import { LegacyGraphRevisionV2Schema, type LegacyGraphRevisionV2, type LegacyTaskNodeV2 } from "@manyhands/task-graph";
 
 export interface V2ExecutorProfile {
   id: string;
@@ -45,8 +45,8 @@ export interface V2NodeExecutionInput {
   inputFingerprint: string;
   /** Immutable diagnostic from the failed attempt this retry replaces. */
   priorFailure?: { attemptId: string; reason: string };
-  graph: GraphRevision;
-  node: TaskNodeV2;
+  graph: LegacyGraphRevisionV2;
+  node: LegacyTaskNodeV2;
   contract: TaskContractBundle;
   consumedArtifacts: AdoptedArtifact[];
   outputArtifactContract: ArtifactContract;
@@ -102,7 +102,7 @@ export interface V2ExecutionDriverOptions {
 }
 
 export interface V2ExecutionFreshnessInputs {
-  graph: GraphRevision;
+  graph: LegacyGraphRevisionV2;
   contracts: TaskContractBundle[];
   repositoryContextDigest: string;
   executorProfile: V2ExecutorProfile;
@@ -117,7 +117,7 @@ export interface V2ExecutionFreshnessInputs {
 
 export interface V2ExecutionRunInput {
   runId: string;
-  graph: GraphRevision;
+  graph: LegacyGraphRevisionV2;
   contracts: TaskContractBundle[];
   repositoryContextDigest: string;
   executorProfile: V2ExecutorProfile;
@@ -571,7 +571,7 @@ export class V2ExecutionDriver {
 }
 
 interface PreparedExecutionRunInput extends V2ExecutionRunInput {
-  graph: GraphRevision;
+  graph: LegacyGraphRevisionV2;
   contractsByNodeId: Map<string, TaskContractBundle>;
 }
 
@@ -600,7 +600,7 @@ function createRuntimeState(): RuntimeReadinessState {
 }
 
 function prepare(input: V2ExecutionRunInput): PreparedExecutionRunInput {
-  const graph = GraphRevisionSchema.parse(input.graph);
+  const graph = LegacyGraphRevisionV2Schema.parse(input.graph);
   if (!Number.isInteger(input.effectiveConfig.maxParallel) || input.effectiveConfig.maxParallel < 1) {
     throw new Error("V2 execution requires a persisted positive maxParallel.");
   }
@@ -729,7 +729,7 @@ function pendingSchedulerDecision(explanations: ReadinessExplanationV2[]): boole
   ));
 }
 
-export function orderArtifactRequirementsForMaterialization<T extends GraphRevision["artifactRequirements"][number]>(
+export function orderArtifactRequirementsForMaterialization<T extends LegacyGraphRevisionV2["artifactRequirements"][number]>(
   requirements: readonly T[],
   allRequirements: readonly T[]
 ): T[] {

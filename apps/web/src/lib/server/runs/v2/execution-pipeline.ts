@@ -32,7 +32,7 @@ import {
   type RunProjection
 } from "@manyhands/run-coordinator";
 import { EventStoreCompactor, JsonlRunEventStore, RunSnapshotStore, verifyAndRecoverRunStore } from "@manyhands/run-store";
-import { GraphRevisionSchema, type GraphRevision } from "@manyhands/task-graph";
+import { LegacyGraphRevisionV2Schema, type LegacyGraphRevisionV2 } from "@manyhands/task-graph";
 import type { GranularityPolicyManifest } from "@manyhands/shared";
 import { JsonlTraceStore } from "@manyhands/trace-store";
 
@@ -60,7 +60,7 @@ import {
 } from "./run-failure-receipt";
 
 export interface ApprovedExecutionPlanV2 {
-  graph: GraphRevision;
+  graph: LegacyGraphRevisionV2;
   contracts: TaskContractBundle[];
   repositorySnapshot: RepositorySnapshot;
   state: RunProjection;
@@ -79,7 +79,7 @@ export function loadApprovedExecutionPlanV2(events: readonly RunEvent[]): Approv
   if (compiled?.type !== "graph.compiled") throw new Error(`Approved graph ${state.graphId}@${state.approvedGraphRevision} has no compiled event.`);
   const inspected = [...events].reverse().find((event) => event.type === "repository.inspected");
   if (inspected?.type !== "repository.inspected") throw new Error("V2 execution requires the immutable repository snapshot from planning.");
-  const graph = GraphRevisionSchema.parse(compiled.payload.graph);
+  const graph = LegacyGraphRevisionV2Schema.parse(compiled.payload.graph);
   const contracts = compiled.payload.contracts.map((contract) => TaskContractBundleSchema.parse(contract));
   const repositorySnapshot = RepositorySnapshotSchema.parse(inspected.payload.snapshot) as RepositorySnapshot;
   if (graph.repositorySnapshotId !== repositorySnapshot.snapshotId) {
@@ -333,7 +333,7 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
   }
 }
 
-function conflictEvidence(graph: GraphRevision): ConflictConstraintEvidence[] {
+function conflictEvidence(graph: LegacyGraphRevisionV2): ConflictConstraintEvidence[] {
   return graph.conflictConstraints.map((constraint) => createConflictConstraintEvidence({
     id: constraint.id,
     leftNodeId: constraint.leftNodeId,
@@ -348,7 +348,7 @@ function conflictEvidence(graph: GraphRevision): ConflictConstraintEvidence[] {
   }));
 }
 
-function materializableNodeIds(graph: GraphRevision, contracts: TaskContractBundle[]): string[] {
+function materializableNodeIds(graph: LegacyGraphRevisionV2, contracts: TaskContractBundle[]): string[] {
   const contractByNodeId = new Map(contracts.map((bundle) => [bundle.task.nodeId, bundle]));
   return Object.values(graph.nodes)
     .filter((node) => contractByNodeId.get(node.id)?.artifacts.some((artifact) => artifact.producerNodeId === node.id) === true)

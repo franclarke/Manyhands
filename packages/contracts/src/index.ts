@@ -6,12 +6,22 @@ import {
 } from "./legacy-adapter.js";
 
 export * from "./artifact-contract.js";
+export * from "./artifact-manifest.js";
+export * from "./canonical-json.js";
+export * from "./canonical-graph-relations.js";
+export * from "./canonical-reference.js";
+export * from "./canonical-validation.js";
 export * from "./contract-bundle.js";
 export * from "./contract-identity.js";
+export * from "./evidence-binding.js";
 export * from "./legacy-adapter.js";
+export * from "./goal-contract.js";
+export * from "./input-fingerprint.js";
+export * from "./proof-strategy.js";
 export * from "./relations.js";
 export * from "./scope-contract.js";
 export * from "./seam-contract.js";
+export * from "./semantic-plan.js";
 export * from "./source-contract.js";
 export * from "./task-contract.js";
 export * from "./validation-contract.js";

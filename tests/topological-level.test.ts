@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { computeTopologicalLevels, type GraphRevision } from "@manyhands/task-graph";
+import { computeLegacyGraphRevisionV2TopologicalLevels, type LegacyGraphRevisionV2 } from "@manyhands/task-graph";
 import { compileGraphRevision } from "@manyhands/decomposer";
 
 import { bookingSnapshot, compilerDependencies } from "./helpers/target-planning-fixtures";
@@ -22,7 +22,7 @@ import { bookingBreakdown } from "./helpers/target-planning-fixtures";
 function graph(input: {
   nodes: Array<{ id: string; parentId?: string | null; kind?: "root" | "composite" | "leaf" }>;
   requirements?: Array<{ producer: string; consumer: string }>;
-}): GraphRevision {
+}): LegacyGraphRevisionV2 {
   return {
     schemaVersion: 2,
     graphId: "g",
@@ -48,12 +48,12 @@ function graph(input: {
     conflictConstraints: [],
     legacyOrderingConstraints: [],
     createdAt: "2026-08-07T00:00:00.000Z"
-  } as GraphRevision;
+  } as LegacyGraphRevisionV2;
 }
 
 describe("topological level", () => {
   it("puts everything that can start at once on level zero", () => {
-    const levels = computeTopologicalLevels(graph({
+    const levels = computeLegacyGraphRevisionV2TopologicalLevels(graph({
       nodes: [{ id: "a" }, { id: "b" }, { id: "c" }]
     }));
 
@@ -61,7 +61,7 @@ describe("topological level", () => {
   });
 
   it("places a consumer one level past the producer it waits for", () => {
-    const levels = computeTopologicalLevels(graph({
+    const levels = computeLegacyGraphRevisionV2TopologicalLevels(graph({
       nodes: [{ id: "domain" }, { id: "api" }, { id: "ui" }],
       requirements: [{ producer: "domain", consumer: "api" }, { producer: "api", consumer: "ui" }]
     }));
@@ -75,7 +75,7 @@ describe("topological level", () => {
    * would draw it as available earlier than it can ever be.
    */
   it("uses the longest path when a node has predecessors of different depths", () => {
-    const levels = computeTopologicalLevels(graph({
+    const levels = computeLegacyGraphRevisionV2TopologicalLevels(graph({
       nodes: [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }],
       requirements: [
         { producer: "a", consumer: "b" },
@@ -95,7 +95,7 @@ describe("topological level", () => {
    * before — the children it integrates.
    */
   it("places a composite after the children it integrates", () => {
-    const levels = computeTopologicalLevels(graph({
+    const levels = computeLegacyGraphRevisionV2TopologicalLevels(graph({
       nodes: [
         { id: "root", parentId: null, kind: "root" },
         { id: "left", parentId: "root" },
@@ -115,7 +115,7 @@ describe("topological level", () => {
    * detail into a hang, so it refuses instead.
    */
   it("refuses a cyclic graph rather than looping", () => {
-    expect(() => computeTopologicalLevels(graph({
+    expect(() => computeLegacyGraphRevisionV2TopologicalLevels(graph({
       nodes: [{ id: "a" }, { id: "b" }],
       requirements: [{ producer: "a", consumer: "b" }, { producer: "b", consumer: "a" }]
     }))).toThrow(/cycle/iu);

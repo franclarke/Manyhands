@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { GraphRevision } from "@manyhands/task-graph";
+import type { LegacyGraphRevisionV2 } from "@manyhands/task-graph";
 import {
   applyApprovedGraphAmendment,
   proposeDiscoveredArtifactRequirement
 } from "@manyhands/run-coordinator";
 
-function graph(): GraphRevision {
+function graph(): LegacyGraphRevisionV2 {
   return {
     schemaVersion: 2,
     graphId: "graph-1",

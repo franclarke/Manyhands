@@ -1,19 +1,17 @@
 import { z } from "zod";
 import { ContractReferenceSchema } from "./contract-identity.js";
 
-/**
- * RelationType canonical enum (ADR-001 / MH-REM-005).
- */
-export const RELATION_TYPES = [
+/** Historical relation vocabulary retained only for persistence compatibility. */
+export const LEGACY_RELATION_TYPES = [
   "parentId",
   "ArtifactRequirement",
   "SeamBinding",
   "ConflictConstraint"
 ] as const;
 
-export type RelationType = (typeof RELATION_TYPES)[number];
+export type LegacyRelationType = (typeof LEGACY_RELATION_TYPES)[number];
 
-export const ParentRelationSchema = z
+export const LegacyParentRelationSchema = z
   .object({
     id: z.string().min(1),
     type: z.literal("parentId"),
@@ -22,9 +20,9 @@ export const ParentRelationSchema = z
   })
   .strict();
 
-export type ParentRelation = z.infer<typeof ParentRelationSchema>;
+export type LegacyParentRelation = z.infer<typeof LegacyParentRelationSchema>;
 
-export const ArtifactRequirementRelationSchema = z
+export const LegacyArtifactRequirementRelationSchema = z
   .object({
     id: z.string().min(1),
     type: z.literal("ArtifactRequirement"),
@@ -35,9 +33,9 @@ export const ArtifactRequirementRelationSchema = z
   })
   .strict();
 
-export type ArtifactRequirementRelation = z.infer<typeof ArtifactRequirementRelationSchema>;
+export type LegacyArtifactRequirementRelation = z.infer<typeof LegacyArtifactRequirementRelationSchema>;
 
-export const SeamBindingRelationSchema = z
+export const LegacySeamBindingRelationSchema = z
   .object({
     id: z.string().min(1),
     type: z.literal("SeamBinding"),
@@ -49,9 +47,9 @@ export const SeamBindingRelationSchema = z
   })
   .strict();
 
-export type SeamBindingRelation = z.infer<typeof SeamBindingRelationSchema>;
+export type LegacySeamBindingRelation = z.infer<typeof LegacySeamBindingRelationSchema>;
 
-export const ConflictConstraintRelationSchema = z
+export const LegacyConflictConstraintRelationSchema = z
   .object({
     id: z.string().min(1),
     type: z.literal("ConflictConstraint"),
@@ -62,19 +60,19 @@ export const ConflictConstraintRelationSchema = z
   })
   .strict();
 
-export type ConflictConstraintRelation = z.infer<typeof ConflictConstraintRelationSchema>;
+export type LegacyConflictConstraintRelation = z.infer<typeof LegacyConflictConstraintRelationSchema>;
 
-export const CanonicalRelationSchema = z.discriminatedUnion("type", [
-  ParentRelationSchema,
-  ArtifactRequirementRelationSchema,
-  SeamBindingRelationSchema,
-  ConflictConstraintRelationSchema
+export const LegacyRelationSchema = z.discriminatedUnion("type", [
+  LegacyParentRelationSchema,
+  LegacyArtifactRequirementRelationSchema,
+  LegacySeamBindingRelationSchema,
+  LegacyConflictConstraintRelationSchema
 ]);
 
-export type CanonicalRelation = z.infer<typeof CanonicalRelationSchema>;
+export type LegacyRelation = z.infer<typeof LegacyRelationSchema>;
 
-export function validateRelationEndpoints(
-  relation: CanonicalRelation,
+export function validateLegacyRelationEndpoints(
+  relation: LegacyRelation,
   existingNodeIds: ReadonlySet<string>
 ): { valid: boolean; missingNodeIds: string[] } {
   const missing: string[] = [];

@@ -12,7 +12,7 @@ import {
   type V2NodeExecutionInput,
   type V2NodeExecutionOutcome
 } from "@manyhands/orchestrator-graph";
-import type { GraphRevision } from "@manyhands/task-graph";
+import type { LegacyGraphRevisionV2 } from "@manyhands/task-graph";
 import {
   bookingBreakdown,
   bookingSnapshot,
@@ -23,7 +23,7 @@ const at = "2026-07-17T12:00:00.000Z";
 
 describe("V2ExecutionDriver", () => {
   it("materializes upstream artifact dependencies before descendant artifacts", () => {
-    type Requirement = GraphRevision["artifactRequirements"][number];
+    type Requirement = LegacyGraphRevisionV2["artifactRequirements"][number];
     const requirements: Requirement[] = [
       {
         id: "requirement-event",

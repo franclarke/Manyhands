@@ -1,4 +1,4 @@
-import type { GraphRevision } from "@manyhands/task-graph";
+import type { LegacyGraphRevisionV2 } from "@manyhands/task-graph";
 
 export type ReadinessReason =
   | { code: "missing_artifact"; artifactId: string; requiredRevision: string }
@@ -26,5 +26,5 @@ export interface ReadinessStateV2 {
   requiredContractRevisions?: Record<string, Array<{ id: string; revision: string }>>;
 }
 
-export interface ReadinessInputV2 extends ReadinessStateV2 { graph: GraphRevision; nodeId: string; }
+export interface ReadinessInputV2 extends ReadinessStateV2 { graph: LegacyGraphRevisionV2; nodeId: string; }
 export interface ReadinessExplanationV2 { nodeId: string; ready: boolean; reasons: ReadinessReason[]; deferred?: boolean; }

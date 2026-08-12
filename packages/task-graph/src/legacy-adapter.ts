@@ -1,11 +1,11 @@
 import { createHash } from "node:crypto";
 import type { InterfaceContract } from "@manyhands/contracts";
-import type { GraphRevision, TaskNodeV2 } from "./graph-revision.js";
-import type { ArtifactRequirement, LegacyOrderingConstraint, SeamBinding } from "./relations.js";
+import type { LegacyGraphRevisionV2, LegacyTaskNodeV2 } from "./graph-revision.js";
+import type { LegacyArtifactRequirementV2, LegacyOrderingConstraint, LegacySeamBindingV2 } from "./relations.js";
 import type { TaskGraph } from "./index.js";
-import { validateGraphRevision } from "./validate-v2.js";
+import { validateLegacyGraphRevisionV2 } from "./validate-v2.js";
 
-export interface LegacyGraphAdapterOptions {
+export interface PreCutoverLegacyGraphAdapterOptions {
   repositorySnapshotId: string;
 }
 
@@ -15,14 +15,14 @@ export interface LegacyGraphMigrationIssue {
   message: string;
 }
 
-export interface LegacyGraphAdapterResult {
-  graph: GraphRevision;
+export interface PreCutoverLegacyGraphAdapterResult {
+  graph: LegacyGraphRevisionV2;
   requiresReplan: boolean;
   issues: LegacyGraphMigrationIssue[];
 }
 
-export function adaptTaskGraphV1ToV2(legacy: TaskGraph, options: LegacyGraphAdapterOptions): LegacyGraphAdapterResult {
-  const artifactRequirements: ArtifactRequirement[] = [];
+export function adaptTaskGraphV1ToLegacyGraphV2(legacy: TaskGraph, options: PreCutoverLegacyGraphAdapterOptions): PreCutoverLegacyGraphAdapterResult {
+  const artifactRequirements: LegacyArtifactRequirementV2[] = [];
   const legacyOrderingConstraints: LegacyOrderingConstraint[] = [];
   const issues: LegacyGraphMigrationIssue[] = [];
 
@@ -59,7 +59,7 @@ export function adaptTaskGraphV1ToV2(legacy: TaskGraph, options: LegacyGraphAdap
     });
   }
 
-  const graph: GraphRevision = {
+  const graph: LegacyGraphRevisionV2 = {
     schemaVersion: 2,
     graphId: legacy.id,
     revision: 1,
@@ -73,17 +73,17 @@ export function adaptTaskGraphV1ToV2(legacy: TaskGraph, options: LegacyGraphAdap
     conflictConstraints: [],
     legacyOrderingConstraints
   };
-  const errors = validateGraphRevision(graph).filter((issue) => issue.severity === "error");
+  const errors = validateLegacyGraphRevisionV2(graph).filter((issue) => issue.severity === "error");
   if (errors.length > 0) throw new Error(`Legacy graph cannot be adapted: ${errors.map((issue) => issue.message).join("; ")}`);
   return { graph, requiresReplan: legacyOrderingConstraints.length > 0, issues };
 }
 
-function toNodeV2(node: TaskGraph["nodes"][string]): TaskNodeV2 {
+function toNodeV2(node: TaskGraph["nodes"][string]): LegacyTaskNodeV2 {
   return { id: node.id, parentId: node.parentId, kind: node.kind, title: node.title, goal: node.goal };
 }
 
-function inferSeamBindings(legacy: TaskGraph): SeamBinding[] {
-  const bindings = new Map<string, SeamBinding>();
+function inferSeamBindings(legacy: TaskGraph): LegacySeamBindingV2[] {
+  const bindings = new Map<string, LegacySeamBindingV2>();
   for (const producer of Object.values(legacy.nodes)) {
     for (const produced of producer.contract?.producedInterfaces ?? []) {
       for (const consumer of Object.values(legacy.nodes)) {

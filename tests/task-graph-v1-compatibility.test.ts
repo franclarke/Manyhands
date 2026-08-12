@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  adaptTaskGraphV1ToV2,
+  adaptTaskGraphV1ToLegacyGraphV2,
   validateTaskGraph,
   type TaskGraph,
   type TaskNode
@@ -11,7 +11,7 @@ describe("TaskGraph V1 compatibility", () => {
     const legacy = legacyGraph();
     expect(validateTaskGraph(legacy).filter((issue) => issue.severity === "error")).toEqual([]);
 
-    const result = adaptTaskGraphV1ToV2(legacy, {
+    const result = adaptTaskGraphV1ToLegacyGraphV2(legacy, {
       repositorySnapshotId: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     });
 
@@ -36,7 +36,7 @@ describe("TaskGraph V1 compatibility", () => {
     legacy.nodes.model!.contract!.producedInterfaces = [legacyInterface("Booking")];
     legacy.nodes.ui!.contract!.consumedInterfaces = [legacyInterface("Booking")];
 
-    const result = adaptTaskGraphV1ToV2(legacy, {
+    const result = adaptTaskGraphV1ToLegacyGraphV2(legacy, {
       repositorySnapshotId: "snapshot-1"
     });
 

@@ -19,7 +19,7 @@ import "@xyflow/react/dist/style.css";
 import type { RunModel } from "@/lib/run-model/types";
 import { layoutRunTree } from "@/lib/run-model/tree-layout";
 import { layoutRunFlow, nextLayoutOffset, offsetPositions, type FlowBand } from "@/lib/run-model/flow-layout";
-import { computeTopologicalLevels, type GraphRevision } from "@manyhands/task-graph";
+import { computeLegacyGraphRevisionV2TopologicalLevels, type LegacyGraphRevisionV2 } from "@manyhands/task-graph";
 import {
   buildRelationViews,
   relationNeighborhood,
@@ -182,9 +182,9 @@ function CockpitRunGraphInner({
  * A cycle yields nothing rather than throwing: the plan critics own that
  * diagnosis, and a layout must never be what takes the workspace down.
  */
-function levelResolver(graph: GraphRevision): (nodeId: string) => number | undefined {
+function levelResolver(graph: LegacyGraphRevisionV2): (nodeId: string) => number | undefined {
   try {
-    const levels = computeTopologicalLevels(graph);
+    const levels = computeLegacyGraphRevisionV2TopologicalLevels(graph);
     return (nodeId) => levels[nodeId];
   } catch {
     return () => undefined;

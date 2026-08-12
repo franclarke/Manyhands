@@ -1,5 +1,5 @@
 import type { GranularityStrategyProjection } from "@manyhands/run-coordinator";
-import type { GraphRevision } from "@manyhands/task-graph";
+import type { LegacyGraphRevisionV2 } from "@manyhands/task-graph";
 
 import type { RunNodeView } from "@/lib/run-model/types";
 
@@ -47,7 +47,7 @@ interface SecondaryRelation {
 }
 
 export function buildRelationViews(
-  graph: GraphRevision,
+  graph: LegacyGraphRevisionV2,
   lens: GraphLens,
   selectedNodeId: string | null
 ): GraphRelationView[] {
@@ -91,7 +91,7 @@ export function relationLaneOffset(kind: GraphRelationKind): number {
   }
 }
 
-export function bundledArtifactDeliveries(graph: GraphRevision, nodeId: string): number {
+export function bundledArtifactDeliveries(graph: LegacyGraphRevisionV2, nodeId: string): number {
   return graph.artifactRequirements.filter((relation) => (
     relation.consumerNodeId === nodeId && isAncestorOf(graph, nodeId, relation.producerNodeId)
   )).length;
@@ -159,7 +159,7 @@ export function eventPresentation(type: string): { label: string; diagnostic: bo
   };
 }
 
-function secondaryRelations(graph: GraphRevision): SecondaryRelation[] {
+function secondaryRelations(graph: LegacyGraphRevisionV2): SecondaryRelation[] {
   return [
     ...graph.artifactRequirements
       .filter((relation) => !isAncestorOf(graph, relation.consumerNodeId, relation.producerNodeId))
@@ -205,7 +205,7 @@ function secondaryRelations(graph: GraphRevision): SecondaryRelation[] {
   ];
 }
 
-function isAncestorOf(graph: GraphRevision, ancestorId: string, nodeId: string): boolean {
+function isAncestorOf(graph: LegacyGraphRevisionV2, ancestorId: string, nodeId: string): boolean {
   let current = graph.nodes[nodeId]?.parentId ?? null;
   const visited = new Set<string>();
   while (current !== null && !visited.has(current)) {
