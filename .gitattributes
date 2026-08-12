@@ -12,4 +12,4 @@
 
 # Stage 0 hashes raw receipts byte-for-byte. Keep their committed bytes stable
 # across checkout-level line-ending settings.
-/docs/audits/stage-0/logs/** -text
+/docs/audits/stage-0/logs/** -text -diff

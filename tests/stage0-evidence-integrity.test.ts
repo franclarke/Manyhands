@@ -58,6 +58,13 @@ describe("Stage 0 evidence integrity", () => {
         expect(entry.exactCommand?.length, entry.logFile).toBeGreaterThan(0);
         expect(entry.workingDirectory?.length, entry.logFile).toBeGreaterThan(0);
         expect(entry.exitCode, entry.logFile).not.toBeNull();
+        const receipt = await readFile(path.join(LOG_ROOT, entry.logFile), "utf8");
+        expect(receipt, entry.logFile).toContain(`CANDIDATE=${entry.candidateCommit}`);
+        expect(receipt, entry.logFile).toContain(`WORKING_DIRECTORY=${entry.workingDirectory}`);
+        expect(receipt, entry.logFile).toContain(`COMMAND=${entry.exactCommand}`);
+        expect(receipt, entry.logFile).toMatch(
+          new RegExp(`(?:^|\\r?\\n)EXIT_CODE=${entry.exitCode}(?:\\r?\\n|$)`, "u")
+        );
       }
     }
   });

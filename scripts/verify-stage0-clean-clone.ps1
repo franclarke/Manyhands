@@ -183,12 +183,26 @@ Assert-NewAbsoluteDirectory $StorePath 'StorePath'
 Assert-NewAbsoluteDirectory $ShimPath 'ShimPath'
 Assert-NewAbsoluteDirectory $RuntimePath 'RuntimePath'
 Assert-DisjointPaths @{
-  SourceRepository = $sourceRoot
-  EvidenceDirectory = $script:EvidenceRoot
   ClonePath = $ClonePath
   StorePath = $StorePath
   ShimPath = $ShimPath
   RuntimePath = $RuntimePath
+}
+foreach ($scratch in @{
+  ClonePath = $ClonePath
+  StorePath = $StorePath
+  ShimPath = $ShimPath
+  RuntimePath = $RuntimePath
+}.GetEnumerator()) {
+  foreach ($protected in @{
+    SourceRepository = $sourceRoot
+    EvidenceDirectory = $script:EvidenceRoot
+  }.GetEnumerator()) {
+    if ((Test-PathContains $scratch.Value $protected.Value) -or
+        (Test-PathContains $protected.Value $scratch.Value)) {
+      throw "$($scratch.Key) and $($protected.Key) must be disjoint: $($scratch.Value) ; $($protected.Value)"
+    }
+  }
 }
 
 $setupLog = New-Receipt 'setup' $sourceRoot (

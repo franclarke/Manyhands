@@ -68,7 +68,7 @@ describe("target architecture migration baseline", () => {
     expect(gitignore).toContain("!docs/audits/stage-0/logs/");
     expect(gitignore).toContain("docs/audits/stage-0/logs/*");
     expect(gitignore).toContain("!docs/audits/stage-0/logs/*.log");
-    expect(gitattributes).toContain("/docs/audits/stage-0/logs/** -text");
+    expect(gitattributes).toContain("/docs/audits/stage-0/logs/** -text -diff");
   });
 
   it("keeps V1 records out of the canonical V2 cache schema", async () => {
