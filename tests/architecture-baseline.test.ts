@@ -6,6 +6,22 @@ import { RunRecordSchema } from "@/lib/server/runs/schema";
 
 const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url));
 describe("target architecture migration baseline", () => {
+  it("pins a package-manager runtime that supports the declared Node baseline", async () => {
+    const [rootPackage, workflow] = await Promise.all([
+      readFile(path.join(REPO_ROOT, "package.json"), "utf8"),
+      readFile(path.join(REPO_ROOT, ".github", "workflows", "ci.yml"), "utf8")
+    ]);
+    const manifest = JSON.parse(rootPackage) as {
+      packageManager?: string;
+      engines?: { node?: string; pnpm?: string };
+    };
+
+    expect(manifest.packageManager).toBe("pnpm@11.21.0");
+    expect(manifest.engines).toEqual({ node: ">=22.13", pnpm: "11.21.0" });
+    expect(workflow).toContain("version: 11.21.0");
+    expect(workflow).toContain("node-version: 22.22.0");
+  });
+
   it("keeps V1 records out of the canonical V2 cache schema", async () => {
     const fixture = JSON.parse(
       await readFile(path.join(REPO_ROOT, "tests", "fixtures", "current-run-record-v1.json"), "utf8")
