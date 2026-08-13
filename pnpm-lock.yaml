@@ -48,6 +48,9 @@ importers:
       '@manyhands/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@manyhands/execution-core':
+        specifier: workspace:*
+        version: link:../../packages/execution-core
       '@manyhands/run-coordinator':
         specifier: workspace:*
         version: link:../../packages/run-coordinator

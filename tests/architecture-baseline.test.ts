@@ -31,6 +31,7 @@ describe("target architecture migration baseline", () => {
     const importerResolutions = parseImporterResolutions(lockfile);
     const declaredTransitionResolutions = [
       "apps/daemon|dependencies|@manyhands/contracts|link:../../packages/contracts",
+      "apps/daemon|dependencies|@manyhands/execution-core|link:../../packages/execution-core",
       "apps/daemon|dependencies|@manyhands/run-coordinator|link:../../packages/run-coordinator",
       "apps/daemon|dependencies|@manyhands/run-engine|link:../../packages/run-engine",
       "apps/daemon|dependencies|@manyhands/run-store|link:../../packages/run-store",
