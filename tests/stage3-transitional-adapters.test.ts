@@ -4,9 +4,16 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { DigestHasher, EffectKind } from "@manyhands/contracts";
+import {
+  buildEffectInput,
+  buildEffectIntent,
+  type DigestHasher,
+  type EffectInputSpec,
+  type EffectKind,
+  type PhysicalEffectReceipt
+} from "@manyhands/contracts";
 import { compileGraphRevision } from "@manyhands/decomposer";
 import {
   buildRunCommandEnvelope,
@@ -16,7 +23,12 @@ import {
   type RunEventInput,
   type RunProjection
 } from "@manyhands/run-coordinator";
-import type { PhysicalEffectAdapter } from "@manyhands/run-engine";
+import type {
+  PhysicalEffectAdapter,
+  PhysicalEffectAdapterContext,
+  PhysicalEffectObservationInput
+} from "@manyhands/run-engine";
+import { JsonlRunEventStore } from "@manyhands/run-store";
 import { startProductiveDaemon } from "../apps/daemon/src/productive-daemon.js";
 import { resolveDaemonProfile } from "../apps/daemon/src/daemon-profile.js";
 import { createCurrentDeliveryPort } from "../apps/daemon/src/current-lifecycle-adapters.js";
@@ -42,6 +54,35 @@ afterEach(async () => {
 });
 
 describe("Stage 3 transitional unsafe adapters", () => {
+  it.each(["model_call", "delivery"] as const)(
+    "does not restart invalidated %s recovery when its durable sidecar is absent",
+    async (kind) => {
+      const harness = await invalidatedRecoveryHarness(kind, false);
+
+      await harness.adapter.reconcile(harness.intent, harness.context);
+
+      expect(harness.plannerPlan).not.toHaveBeenCalled();
+      expect(harness.deliveryPublish).not.toHaveBeenCalled();
+      expect(harness.records).toEqual([]);
+    }
+  );
+
+  it.each(["model_call", "delivery"] as const)(
+    "adopts an existing %s sidecar even after the intent was invalidated",
+    async (kind) => {
+      const harness = await invalidatedRecoveryHarness(kind, true);
+
+      await harness.adapter.reconcile(harness.intent, harness.context);
+
+      expect(harness.plannerPlan).not.toHaveBeenCalled();
+      expect(harness.deliveryPublish).not.toHaveBeenCalled();
+      expect(harness.records).toEqual([expect.objectContaining({
+        observation: "succeeded",
+        resultDigest: expect.stringMatching(/^sha256:/u)
+      })]);
+    }
+  );
+
   it("validates canonical delivery metadata and recovers an already published fast-forward", async () => {
     const repository = await deliveryRepository();
     const delivery = createCurrentDeliveryPort();
@@ -465,6 +506,118 @@ async function temporaryRoot(): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "mh-stage3-transitional-"));
   roots.push(root);
   return root;
+}
+
+async function invalidatedRecoveryHarness(
+  kind: "model_call" | "delivery",
+  withSidecar: boolean
+) {
+  const root = await temporaryRoot();
+  const recoveryRunId = `run:stage3:invalidated:${kind}`;
+  const store = new MemoryLifecycleResultStore();
+  const plannerPlan = vi.fn(async () => planningResult());
+  const deliveryPublish = vi.fn(async () => deliveredReceipt());
+  const profile = createTransitionalUnsafeProfile({
+    stateRoot: root,
+    nodeExecutable: process.execPath,
+    workerScriptPath: path.resolve("apps/daemon/dist/transitional-unsafe-worker.js"),
+    cwd: process.cwd(),
+    resultStore: store,
+    planner: { plan: plannerPlan },
+    delivery: { publish: deliveryPublish }
+  });
+  const adapter = profile.adapters.find((candidate) => candidate.kind === kind);
+  if (adapter === undefined) throw new Error(`Missing ${kind} adapter.`);
+  const effect = recoveryEffect(kind, recoveryRunId);
+  await seedRecoveryRun(root, recoveryRunId, kind);
+  if (withSidecar) {
+    if (kind === "model_call") {
+      await store.writePlanning(effect.intent.effectId, planningResult());
+    } else {
+      await store.writeDelivery(effect.intent.effectId, deliveredReceipt());
+    }
+  }
+  const records: PhysicalEffectObservationInput[] = [];
+  const context: PhysicalEffectAdapterContext = {
+    observerDaemonEpoch: "daemon:stage3:recovery",
+    inputSpec: effect.inputSpec,
+    priorReceipts: [],
+    invalidationReason: async () => "operation.cancel_requested is durable",
+    async record(observation) {
+      records.push(structuredClone(observation));
+      return {} as PhysicalEffectReceipt;
+    }
+  };
+  return {
+    adapter,
+    intent: effect.intent,
+    context,
+    records,
+    plannerPlan,
+    deliveryPublish
+  };
+}
+
+function recoveryEffect(kind: "model_call" | "delivery", runId: string) {
+  const inputSpec: EffectInputSpec = kind === "model_call"
+    ? {
+        schemaVersion: 1,
+        kind,
+        payload: {
+          repositoryViewDigest: sha256("repository"),
+          requestDigest: sha256("request"),
+          modelProfileDigest: sha256("model")
+        }
+      }
+    : {
+        schemaVersion: 1,
+        kind,
+        payload: {
+          destinationRef: "main",
+          expectedHeadSha: "base-current",
+          expectedTreeSha: "tree-current",
+          candidateCommitSha: "candidate-current",
+          candidateTreeSha: "tree-current"
+        }
+      };
+  return {
+    inputSpec,
+    intent: buildEffectIntent({
+      runId,
+      attemptId: kind === "model_call" ? "stage3:planning" : "stage3:delivery",
+      kind,
+      inputDigest: buildEffectInput(inputSpec, sha256).inputDigest,
+      daemonEpoch: "daemon:stage3:original",
+      idempotency: "reconcile_then_repeat",
+      requestedAt: at
+    }, sha256)
+  };
+}
+
+async function seedRecoveryRun(
+  root: string,
+  runId: string,
+  kind: "model_call" | "delivery"
+): Promise<void> {
+  const events = new JsonlRunEventStore({ directory: path.join(root, "runs") });
+  const authority = { operationId: "test:invalidated-recovery", fencingToken: 1 };
+  await events.advanceFence(runId, authority);
+  const initial: RunEventInput[] = [{
+    eventId: `${runId}:created`,
+    occurredAt: at,
+    type: "run.created",
+    payload: { goal: definition().userPrompt, definition: definition() }
+  }];
+  if (kind === "delivery") {
+    initial.push(
+      input("graph.revision.proposed", { graphId: "graph-current", revision: 1 }),
+      input("graph.revision.approved", { graphId: "graph-current", revision: 1 }),
+      input("evidence.matrix_recorded", { matrix: verifiedMatrix() }),
+      ...executionResult().events.filter((event) => event.type === "final_candidate.verified"),
+      input("delivery.started", { approval: approval() })
+    );
+  }
+  await events.appendFenced(runId, 0, authority, initial);
 }
 
 async function deliveryRepository(): Promise<{

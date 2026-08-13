@@ -184,6 +184,7 @@ function createPlanningAdapter(input: {
       if (projection.definition === undefined) {
         throw new Error(`Run ${intent.runId} has no immutable definition for planning.`);
       }
+      if (await context.invalidationReason?.() !== undefined) return;
       result = normalizedResult(await input.planner.plan({
         runId: intent.runId,
         definition: projection.definition,
@@ -218,6 +219,7 @@ function createDeliveryAdapter(input: {
       if (projection.definition === undefined || projection.deliveryApproval === undefined) {
         throw new Error(`Run ${intent.runId} has no approved delivery input.`);
       }
+      if (await context.invalidationReason?.() !== undefined) return;
       receipt = DeliveryReceiptSchema.parse(await input.delivery.publish({
         runId: intent.runId,
         definition: projection.definition,
