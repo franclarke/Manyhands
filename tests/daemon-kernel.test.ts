@@ -1,8 +1,10 @@
 import { createHash, randomUUID } from "node:crypto";
-import { appendFile, mkdtemp, rm } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { access, appendFile, mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { promisify } from "node:util";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import {
   EffectKindSchema,
   buildEffectIntent,
@@ -19,11 +21,39 @@ import {
 import { FileEffectInputStore, JsonlRunEventStore } from "@manyhands/run-store";
 import type { PhysicalEffectAdapter } from "@manyhands/run-engine";
 import { startDaemonKernel } from "../apps/daemon/src/daemon-kernel.js";
+import {
+  createWindowsIpcAclProtector,
+  createWindowsIpcAclVerifier,
+  verifyWindowsRestrictedNamedPipe
+} from "../apps/daemon/src/windows-ipc-acl.js";
 import { createLocalIpcClient } from "../apps/web/src/lib/server/daemon/local-ipc-client.js";
 
 const temporaryRoots: string[] = [];
+const execFileAsync = promisify(execFile);
 const sha256: DigestHasher = (value) =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`;
+let windowsAclSuiteRoot: string | undefined;
+let windowsAclHelperPath: string | undefined;
+
+beforeAll(async () => {
+  if (process.platform !== "win32") return;
+  windowsAclSuiteRoot = await mkdtemp(path.join(os.tmpdir(), "mh-daemon-kernel-acl-"));
+  windowsAclHelperPath = path.join(windowsAclSuiteRoot, "manyhands-windows-ipc-acl.exe");
+  await execFileAsync("rustc.exe", [
+    "--edition=2021",
+    path.resolve("native/windows-ipc-acl/src/main.rs"),
+    "-O",
+    "-o",
+    windowsAclHelperPath
+  ], { windowsHide: true });
+  await access(windowsAclHelperPath);
+}, 60_000);
+
+afterAll(async () => {
+  if (windowsAclSuiteRoot !== undefined) {
+    await rm(windowsAclSuiteRoot, { recursive: true, force: true });
+  }
+});
 
 afterEach(async () => {
   await Promise.all(temporaryRoots.splice(0).map((root) =>
@@ -180,25 +210,35 @@ describe("durable daemon composition root", () => {
     }
   });
 
-  it("separates Windows capability protection from later verification", async () => {
+  it("composes Windows production IPC with physical capability and named-pipe ACLs", async () => {
     if (process.platform !== "win32") return;
     const root = await temporaryRoot();
+    const runId = "run:kernel-acl";
+    await seedRun(root, runId);
     const protectedPaths: string[] = [];
     const verifiedPaths: string[] = [];
+    const helperPath = windowsAclHelperPath!;
+    const physicalProtect = createWindowsIpcAclProtector(helperPath);
+    const physicalVerify = createWindowsIpcAclVerifier(helperPath);
     const protect: IpcCapabilityOsProtection = async (targetPath, kind) => {
       protectedPaths.push(`${kind}:${targetPath}`);
+      await physicalProtect(targetPath, kind);
     };
     const verify: IpcCapabilityOsProtection = async (targetPath, kind) => {
       verifiedPaths.push(`${kind}:${targetPath}`);
+      await physicalVerify(targetPath, kind);
     };
 
     const kernel = await startKernel(root, "daemon:acl", {
       production: true,
       protectCapabilityPath: protect,
       assertOsRestrictedCapabilityPath: verify,
-      assertOsRestrictedEndpoint: async () => undefined
+      windowsPipeAclHelperPath: helperPath
     });
     try {
+      expect(kernel.transportSecurity).toBe("os_restricted");
+      await expect(verifyWindowsRestrictedNamedPipe(helperPath, kernel.endpoint))
+        .resolves.toBeUndefined();
       expect(protectedPaths.map((entry) => entry.split(":", 1)[0])).toEqual([
         "directory",
         "file",
@@ -209,6 +249,14 @@ describe("durable daemon composition root", () => {
         "directory",
         "file"
       ]);
+      const client = createLocalIpcClient({
+        endpoint: kernel.endpoint,
+        capabilityFilePath: kernel.capabilityFilePath,
+        production: true,
+        assertOsRestrictedCapabilityPath: verify
+      });
+      await expect(client.query({ runId, query: "projection" }))
+        .resolves.toMatchObject({ runId, sequence: 1 });
     } finally {
       await kernel.close();
     }
@@ -221,7 +269,7 @@ interface StartKernelOverrides {
   startupRecoveryRunLimit?: number;
   protectCapabilityPath?: IpcCapabilityOsProtection;
   assertOsRestrictedCapabilityPath?: IpcCapabilityOsProtection;
-  assertOsRestrictedEndpoint?: (endpoint: string) => void | Promise<void>;
+  windowsPipeAclHelperPath?: string;
 }
 
 async function startKernel(

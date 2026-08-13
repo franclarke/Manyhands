@@ -1,4 +1,4 @@
-import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { chmod, lstat, readFile, stat } from "node:fs/promises";
 import net, { type Server, type Socket } from "node:net";
 import path from "node:path";
@@ -26,6 +26,11 @@ import {
   type IpcUnsignedResponse,
   type RunCommandEnvelope
 } from "@manyhands/run-coordinator";
+import {
+  startWindowsRestrictedNamedPipeProxy,
+  verifyWindowsRestrictedNamedPipe,
+  type WindowsRestrictedNamedPipeProxy
+} from "./windows-ipc-acl.js";
 
 export type LocalIpcTransportSecurity = "os_restricted" | "capability_only";
 
@@ -40,7 +45,7 @@ export interface StartLocalIpcServerOptions {
   capabilityFilePath: string;
   handlers: LocalIpcServerHandlers;
   production?: boolean;
-  assertOsRestrictedEndpoint?: (endpoint: string) => void | Promise<void>;
+  windowsPipeAclHelperPath?: string;
   assertOsRestrictedCapabilityPath?: IpcCapabilityOsProtection;
   now?: () => number;
   maxFrameBytes?: number;
@@ -53,11 +58,6 @@ export interface StartLocalIpcServerOptions {
 
 export interface LocalIpcServer {
   readonly endpoint: string;
-  /**
-   * Node cannot assert the Windows named-pipe DACL. Even when an injected
-   * verifier authorizes production startup, the built-in transport claim stays
-   * capability_only rather than overstating OS enforcement.
-   */
   readonly transportSecurity: LocalIpcTransportSecurity;
   close(): Promise<void>;
 }
@@ -67,8 +67,8 @@ export async function startLocalIpcServer(
 ): Promise<LocalIpcServer> {
   const endpoint = assertLocalEndpoint(options.endpoint);
   const production = options.production ?? process.env.NODE_ENV === "production";
-  if (process.platform === "win32" && production && options.assertOsRestrictedEndpoint === undefined) {
-    throw new Error("Windows production IPC requires an injected OS-restricted endpoint ACL assertion.");
+  if (process.platform === "win32" && production && options.windowsPipeAclHelperPath === undefined) {
+    throw new Error("Windows production IPC requires the native OS-restricted named-pipe owner.");
   }
   if (process.platform === "win32" && production && options.assertOsRestrictedCapabilityPath === undefined) {
     throw new Error("Windows production IPC requires an injected OS-restricted capability ACL assertion.");
@@ -94,6 +94,7 @@ export async function startLocalIpcServer(
   const sockets = new Set<Socket>();
   let ready = false;
   let closed = false;
+  let windowsPipeProxy: WindowsRestrictedNamedPipeProxy | undefined;
 
   const server = net.createServer({ allowHalfOpen: true }, (socket) => {
     sockets.add(socket);
@@ -114,21 +115,36 @@ export async function startLocalIpcServer(
   });
 
   try {
-    await listen(server, endpoint);
-    if (process.platform === "win32") {
-      await options.assertOsRestrictedEndpoint?.(endpoint);
+    const listenEndpoint = process.platform === "win32" && production
+      ? windowsBackendEndpoint()
+      : endpoint;
+    await listen(server, listenEndpoint);
+    if (process.platform === "win32" && production) {
+      const helperPath = options.windowsPipeAclHelperPath!;
+      windowsPipeProxy = await startWindowsRestrictedNamedPipeProxy({
+        helperPath,
+        endpoint,
+        backendEndpoint: listenEndpoint,
+        onUnexpectedExit(error) {
+          ready = false;
+          options.onError?.(error);
+          void closeServer(server, sockets);
+        }
+      });
+      await verifyWindowsRestrictedNamedPipe(helperPath, endpoint);
     } else {
-      await assertPrivateUnixSocket(endpoint);
+      if (process.platform !== "win32") await assertPrivateUnixSocket(endpoint);
     }
     ready = true;
   } catch (error) {
+    await windowsPipeProxy?.close().catch(() => undefined);
     await closeServer(server, sockets);
     capability.fill(0);
     throw error;
   }
 
   server.on("error", (error) => options.onError?.(error));
-  const transportSecurity: LocalIpcTransportSecurity = process.platform === "win32"
+  const transportSecurity: LocalIpcTransportSecurity = process.platform === "win32" && !production
     ? "capability_only"
     : "os_restricted";
 
@@ -139,10 +155,18 @@ export async function startLocalIpcServer(
       if (closed) return;
       closed = true;
       ready = false;
-      await closeServer(server, sockets);
-      capability.fill(0);
+      try {
+        await windowsPipeProxy?.close();
+      } finally {
+        await closeServer(server, sockets);
+        capability.fill(0);
+      }
     }
   });
+}
+
+function windowsBackendEndpoint(): string {
+  return `\\\\.\\pipe\\manyhands-ipc-backend-${process.pid}-${randomUUID()}`;
 }
 
 interface ConnectionContext {

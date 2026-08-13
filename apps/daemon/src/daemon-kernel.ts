@@ -48,7 +48,7 @@ export interface StartDaemonKernelOptions {
   createDaemonEpoch?: () => string;
   protectCapabilityPath?: IpcCapabilityOsProtection;
   assertOsRestrictedCapabilityPath?: IpcCapabilityOsProtection;
-  assertOsRestrictedEndpoint?: (endpoint: string) => void | Promise<void>;
+  windowsPipeAclHelperPath?: string;
   ipcNow?: () => number;
   onIpcError?: (error: Error) => void;
 }
@@ -168,9 +168,9 @@ export async function startDaemonKernel(
       ...(options.assertOsRestrictedCapabilityPath === undefined
         ? {}
         : { assertOsRestrictedCapabilityPath: options.assertOsRestrictedCapabilityPath }),
-      ...(options.assertOsRestrictedEndpoint === undefined
+      ...(options.windowsPipeAclHelperPath === undefined
         ? {}
-        : { assertOsRestrictedEndpoint: options.assertOsRestrictedEndpoint }),
+        : { windowsPipeAclHelperPath: options.windowsPipeAclHelperPath }),
       ...(options.ipcNow === undefined ? {} : { now: options.ipcNow }),
       ...(options.onIpcError === undefined ? {} : { onError: options.onIpcError })
     });

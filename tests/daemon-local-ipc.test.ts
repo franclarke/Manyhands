@@ -1,9 +1,11 @@
 import { createHash, createHmac, randomBytes, randomUUID } from "node:crypto";
-import { chmod, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { access, chmod, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import net from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import {
   IPC_PROTOCOL_VERSION,
@@ -20,6 +22,11 @@ import {
   type LocalIpcServerHandlers
 } from "../apps/daemon/src/local-ipc-server.js";
 import {
+  createWindowsIpcAclProtector,
+  createWindowsIpcAclVerifier,
+  verifyWindowsRestrictedNamedPipe
+} from "../apps/daemon/src/windows-ipc-acl.js";
+import {
   LocalIpcAuthenticationError,
   createLocalIpcClient
 } from "../apps/web/src/lib/server/daemon/local-ipc-client.js";
@@ -27,6 +34,29 @@ import {
 const temporaryDirectories: string[] = [];
 const servers: LocalIpcServer[] = [];
 const rawServers: net.Server[] = [];
+const execFileAsync = promisify(execFile);
+let windowsAclSuiteDirectory: string | undefined;
+let windowsAclHelperPath: string | undefined;
+
+beforeAll(async () => {
+  if (process.platform !== "win32") return;
+  windowsAclSuiteDirectory = await mkdtemp(path.join(tmpdir(), "manyhands-local-ipc-acl-"));
+  windowsAclHelperPath = path.join(windowsAclSuiteDirectory, "manyhands-windows-ipc-acl.exe");
+  await execFileAsync("rustc.exe", [
+    "--edition=2021",
+    path.resolve("native/windows-ipc-acl/src/main.rs"),
+    "-O",
+    "-o",
+    windowsAclHelperPath
+  ], { windowsHide: true });
+  await access(windowsAclHelperPath);
+}, 60_000);
+
+afterAll(async () => {
+  if (windowsAclSuiteDirectory !== undefined) {
+    await rm(windowsAclSuiteDirectory, { recursive: true, force: true });
+  }
+});
 
 afterEach(async () => {
   await Promise.all(servers.splice(0).map((server) => server.close()));
@@ -115,7 +145,7 @@ describe("authenticated local daemon IPC", () => {
       capabilityFilePath: capability.filePath,
       handlers: handlers(),
       production: true,
-      assertOsRestrictedEndpoint: allowProtection,
+      windowsPipeAclHelperPath: windowsAclHelperPath,
       assertOsRestrictedCapabilityPath: rejectFile
     })).rejects.toBe(verificationFailure);
 
@@ -151,6 +181,41 @@ describe("authenticated local daemon IPC", () => {
       process.platform === "win32" ? "capability_only" : "os_restricted"
     );
   });
+
+  it("serves Windows production IPC through a current-user plus SYSTEM pipe DACL", async () => {
+    if (process.platform !== "win32") return;
+    const helperPath = windowsAclHelperPath!;
+    const root = await createTemporaryDirectory();
+    const protect = createWindowsIpcAclProtector(helperPath);
+    const verify = createWindowsIpcAclVerifier(helperPath);
+    const capability = await ensureInstallationCapability(path.join(root, "private"), {
+      production: true,
+      protectOrVerifyOsRestrictedPath: protect
+    });
+    const endpoint = windowsPipeName();
+    const fixtureHandlers = handlers();
+    const server = await startLocalIpcServer({
+      endpoint,
+      capabilityFilePath: capability.filePath,
+      handlers: fixtureHandlers,
+      production: true,
+      windowsPipeAclHelperPath: helperPath,
+      assertOsRestrictedCapabilityPath: verify
+    });
+    servers.push(server);
+    const client = createLocalIpcClient({
+      endpoint,
+      capabilityFilePath: capability.filePath,
+      production: true,
+      assertOsRestrictedCapabilityPath: verify
+    });
+
+    expect(server.transportSecurity).toBe("os_restricted");
+    await expect(verifyWindowsRestrictedNamedPipe(helperPath, endpoint)).resolves.toBeUndefined();
+    await expect(client.query({ runId: "run:1", query: "projection" })).resolves.toEqual({
+      lifecycle: "running"
+    });
+  }, 30_000);
 
   it("rejects an authenticated nonce replay without invoking the handler twice", async () => {
     const fixture = await startFixture({
@@ -234,13 +299,11 @@ describe("authenticated local daemon IPC", () => {
       endpoint: fixture.endpoint,
       capabilityFilePath: fixture.capabilityFilePath,
       handlers: fixture.handlers,
-      production: true,
-      assertOsRestrictedEndpoint: async () => undefined,
-      assertOsRestrictedCapabilityPath: async () => undefined
+      production: false
     })).rejects.toThrow(/address|endpoint|use|listen/i);
   });
 
-  it("fails closed on Windows production startup without an injected ACL assertion", async () => {
+  it("fails closed on Windows production startup without the native pipe owner", async () => {
     if (process.platform !== "win32") return;
     const root = await createTemporaryDirectory();
     const capability = await ensureInstallationCapability(path.join(root, "private"), {
@@ -253,7 +316,7 @@ describe("authenticated local daemon IPC", () => {
       capabilityFilePath: capability.filePath,
       handlers: handlers(),
       production: true
-    })).rejects.toThrow(/os-restricted|acl/i);
+    })).rejects.toThrow(/native|named-pipe|os-restricted|acl/i);
   });
 
   it("rejects stale timestamps", async () => {
@@ -263,8 +326,7 @@ describe("authenticated local daemon IPC", () => {
       endpoint: fixture.endpoint,
       capabilityFilePath: fixture.capabilityFilePath,
       now: () => now - 120_000,
-      production: true,
-      assertOsRestrictedCapabilityPath: async () => undefined
+      production: false
     });
 
     await expect(staleClient.query({ runId: "run:1", query: "projection" })).rejects.toBeInstanceOf(
@@ -301,8 +363,7 @@ describe("authenticated local daemon IPC", () => {
     const client = createLocalIpcClient({
       endpoint,
       capabilityFilePath: capability.filePath,
-      production: true,
-      assertOsRestrictedCapabilityPath: async () => undefined
+      production: false
     });
 
     await expect(client.query({ runId: "run:1", query: "projection" })).rejects.toBeInstanceOf(
@@ -323,10 +384,7 @@ interface FixtureOptions {
 
 async function startFixture(options: FixtureOptions = {}) {
   const root = await createTemporaryDirectory();
-  const capability = await ensureInstallationCapability(path.join(root, "private"), {
-    production: true,
-    protectOrVerifyOsRestrictedPath: async () => undefined
-  });
+  const capability = await ensureInstallationCapability(path.join(root, "private"));
   const endpoint = process.platform === "win32"
     ? windowsPipeName()
     : path.join(root, "daemon.sock");
@@ -335,21 +393,18 @@ async function startFixture(options: FixtureOptions = {}) {
     endpoint,
     capabilityFilePath: capability.filePath,
     handlers: fixtureHandlers,
-    production: true,
+    production: false,
     ...(options.maxFrameBytes === undefined ? {} : { maxFrameBytes: options.maxFrameBytes }),
     ...(options.now === undefined ? {} : { now: options.now }),
     ...(options.maxClockSkewMs === undefined ? {} : { maxClockSkewMs: options.maxClockSkewMs }),
     ...(options.nonceTtlMs === undefined ? {} : { nonceTtlMs: options.nonceTtlMs }),
-    ...(options.maxNonces === undefined ? {} : { maxNonces: options.maxNonces }),
-    assertOsRestrictedEndpoint: async () => undefined,
-    assertOsRestrictedCapabilityPath: async () => undefined
+    ...(options.maxNonces === undefined ? {} : { maxNonces: options.maxNonces })
   });
   servers.push(server);
   const client = createLocalIpcClient({
     endpoint,
     capabilityFilePath: capability.filePath,
-    production: true,
-    assertOsRestrictedCapabilityPath: async () => undefined,
+    production: false,
     ...(options.maxFrameBytes === undefined ? {} : { maxFrameBytes: options.maxFrameBytes }),
     ...(options.now === undefined ? {} : { now: options.now }),
     ...(options.maxClockSkewMs === undefined ? {} : { maxClockSkewMs: options.maxClockSkewMs }),
