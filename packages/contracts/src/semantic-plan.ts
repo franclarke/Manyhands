@@ -1,4 +1,4 @@
-import { EntityIdSchema, NonEmptyStringSchema } from "@manyhands/shared";
+import { EntityIdSchema, EpistemicAssessmentSchema, NonEmptyStringSchema } from "@manyhands/shared";
 import { z } from "zod";
 import { computeCanonicalDigest, sortedUniqueStrings, type DigestHasher } from "./canonical-json.js";
 import {
@@ -8,14 +8,8 @@ import {
   RepositoryViewRefSchema
 } from "./canonical-reference.js";
 
-export const EpistemicAssessmentSchema = z.discriminatedUnion("state", [
-  z.object({ state: z.literal("unknown"), reason: NonEmptyStringSchema, evidenceRefs: z.tuple([]) }).strict(),
-  z.object({
-    state: z.enum(["known", "partial", "conflicting"]),
-    confidence: z.enum(["high", "medium", "low"]),
-    evidenceRefs: z.array(NonEmptyStringSchema).min(1)
-  }).strict()
-]);
+export { EpistemicAssessmentSchema } from "@manyhands/shared";
+export type { EpistemicAssessment } from "@manyhands/shared";
 
 export const GranularityDecisionSchema = z.object({
   disposition: z.enum(["leaf", "split", "frontier"]),

@@ -17,6 +17,7 @@ import {
   selectGranularityStrategy,
   type CutRequest,
   type GoalCriterion,
+  type RepositoryEvidence,
   type WorkBreakdown,
   type WorkUnit
 } from "@manyhands/decomposer";
@@ -30,7 +31,15 @@ import {
   type TransactionalDeliveryApproval,
   type TransactionalDeliveryReceipt
 } from "@manyhands/execution-core";
-import { buildFastRepositorySnapshot, type RepositorySnapshot } from "@manyhands/repository-index";
+import {
+  composeRepositoryView,
+  createRepositoryQuery,
+  inspectRepositoryModelWithSnapshot,
+  type RepositoryQueryBudget,
+  type RepositoryQueryItem,
+  type RepositorySnapshot,
+  type RepositoryView
+} from "@manyhands/repository-index";
 import type {
   DeliveryReceipt,
   ProductRunDefinition,
@@ -68,6 +77,59 @@ export interface CreateCurrentTransitionalUnsafeProfileOptions
   readonly spawnProcess?: typeof spawn;
 }
 
+const PRODUCTIVE_REPOSITORY_QUERY_BUDGET: RepositoryQueryBudget = {
+  maxResults: 64,
+  maxBytes: 64 * 1024,
+  maxDepth: 1
+};
+
+export interface ProductiveRepositoryGrounding {
+  snapshot: RepositorySnapshot;
+  view: RepositoryView;
+  evidence: RepositoryEvidence[];
+  queryDigests: string[];
+  budget: RepositoryQueryBudget;
+}
+
+/** Stage 4 boundary: exact Git facts and bounded queries consumed by the transitional planner. */
+export async function buildProductiveRepositoryGrounding(input: {
+  rootPath: string;
+  targetFingerprint: string;
+  baseCommit: string;
+  goal: string;
+  acceptanceCriteria: readonly string[];
+}): Promise<ProductiveRepositoryGrounding> {
+  const inspection = await inspectRepositoryModelWithSnapshot({
+    rootPath: input.rootPath,
+    targetFingerprint: input.targetFingerprint,
+    baseCommit: input.baseCommit
+  });
+  const view = await composeRepositoryView({
+    rootPath: input.rootPath,
+    inspection,
+    overlays: []
+  });
+  const query = createRepositoryQuery({ rootPath: input.rootPath, view });
+  const budget = { ...PRODUCTIVE_REPOSITORY_QUERY_BUDGET };
+  const terms = repositoryGoalTerms([input.goal, ...input.acceptanceCriteria]);
+  const anchorPackage = view.model.packages.find((boundary) => boundary.rootPath === "")
+    ?? view.model.packages[0];
+  const answers = [
+    query.searchGoalTerms(terms, budget),
+    ...(anchorPackage === undefined
+      ? []
+      : [query.inspectBoundary(`package:${anchorPackage.rootPath || "."}`, budget)]),
+    query.validationCapabilities(budget)
+  ];
+  return {
+    snapshot: inspection.snapshot,
+    view,
+    evidence: legacyRepositoryEvidence(answers.flatMap((answer) => answer.items)),
+    queryDigests: answers.map((answer) => answer.digest),
+    budget
+  };
+}
+
 /** Concrete composition used by the explicit productive CLI profile. */
 export function createCurrentTransitionalUnsafeProfile(
   options: CreateCurrentTransitionalUnsafeProfileOptions
@@ -98,13 +160,16 @@ export function createCurrentPlannerPort(
     async plan({ runId, definition }): Promise<TransitionalLifecycleResult> {
       const repoPath = absoluteTargetPath(definition);
       return withTransitionalRepositoryLease({ repoRoot: repoPath, runId }, async () => {
-      const snapshot = await buildFastRepositorySnapshot({
+      const grounding = await buildProductiveRepositoryGrounding({
         rootPath: repoPath,
         targetFingerprint: stringField(definition.targetContext, "fingerprint"),
-        baseCommit: stringField(definition.targetContext, "sourceBaseCommit")
+        baseCommit: stringField(definition.targetContext, "sourceBaseCommit"),
+        goal: definition.userPrompt,
+        acceptanceCriteria: definition.acceptanceCriteria
       });
+      const { snapshot } = grounding;
       const criteria = goalCriteria(definition);
-      const evidence = repositoryEvidence(snapshot);
+      const { evidence } = grounding;
       const planner = new RecursivePlanner({
         model: {
           proposeCut: (request) => invokeCurrentPlanningCli({
@@ -183,7 +248,14 @@ export function createCurrentPlannerPort(
           fact(`repository:${snapshot.snapshotId}:inspection`, now(), "repository.inspected", {
             snapshotId: snapshot.snapshotId,
             disposition: snapshot.inspectionDisposition,
-            snapshot: asRecord(snapshot)
+            snapshot: asRecord(snapshot),
+            repositoryModelDigest: grounding.view.model.digest,
+            repositoryView: {
+              digest: grounding.view.digest,
+              treeSha: grounding.view.treeSha,
+              resourceCatalogDigest: grounding.view.resourceCatalogDigest
+            },
+            queryDigests: grounding.queryDigests
           }),
           fact(`planning:${selected.plan.planId}:completed:${runId}`, now(), "planning.completed", {
             breakdownId: selected.plan.planId,
@@ -529,36 +601,44 @@ function strategyEvent(
   });
 }
 
-function repositoryEvidence(snapshot: RepositorySnapshot) {
-  const paths = snapshot.index?.files.map((file, index) => ({
-    id: `path-${index}`,
-    kind: "path" as const,
-    reference: file.path,
-    observation: `Repository ${file.kind} file`,
-    confidence: 1
-  })) ?? [];
-  const scripts = Object.entries(snapshot.capabilities.scripts).map(([name, command], index) => ({
-    id: `script-${index}`,
-    kind: "script" as const,
-    reference: name,
-    observation: command,
-    confidence: 1
-  }));
-  const stack = snapshot.capabilities.stack.map((item, index) => ({
-    id: `stack-${index}`,
-    kind: "stack" as const,
-    reference: item.name,
-    observation: item.evidence.join("; ") || `Detected ${item.name}`,
-    confidence: item.confidence
-  }));
-  const diagnostics = snapshot.diagnostics.map((item, index) => ({
-    id: `diagnostic-${index}`,
-    kind: "diagnostic" as const,
-    reference: item.filePath ?? snapshot.rootPath,
-    observation: item.message,
-    confidence: item.severity === "error" ? 0.3 : 0.7
-  }));
-  return [...paths, ...scripts, ...stack, ...diagnostics];
+function legacyRepositoryEvidence(items: readonly RepositoryQueryItem[]): RepositoryEvidence[] {
+  const evidence = new Map<string, RepositoryEvidence>();
+  for (const item of items) {
+    for (const evidenceRef of item.evidenceRefs) {
+      if (evidence.has(evidenceRef)) continue;
+      evidence.set(evidenceRef, {
+        id: evidenceRef,
+        kind: legacyEvidenceKind(item),
+        reference: legacyEvidenceReference(item),
+        observation: item.summary,
+        confidence: 1
+      });
+    }
+  }
+  return [...evidence.values()].sort((left, right) => left.id.localeCompare(right.id));
+}
+
+function legacyEvidenceKind(item: RepositoryQueryItem): RepositoryEvidence["kind"] {
+  if (item.kind === "symbol") return "symbol";
+  if (item.kind === "command") return "script";
+  if (item.kind === "diagnostic") return "diagnostic";
+  return "path";
+}
+
+function legacyEvidenceReference(item: RepositoryQueryItem): string {
+  if (item.kind === "command") return item.name ?? item.locator;
+  if (item.locator.startsWith("path:")) return item.locator.slice("path:".length);
+  if (item.locator.startsWith("module:")) return item.locator.slice("module:".length);
+  if (item.locator.startsWith("package:")) {
+    const packagePath = item.locator.slice("package:".length);
+    return packagePath === "." ? "." : packagePath;
+  }
+  return item.locator;
+}
+
+function repositoryGoalTerms(values: readonly string[]): string[] {
+  return [...new Set(values.flatMap((value) => value.toLocaleLowerCase("en-US").match(/[a-z0-9][a-z0-9_-]{2,}/gu) ?? []))]
+    .sort();
 }
 
 function goalCriteria(definition: ProductRunDefinition): GoalCriterion[] {

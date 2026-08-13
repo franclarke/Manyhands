@@ -1,4 +1,4 @@
-import { EffectIntentSchema, PhysicalEffectReceiptSchema } from "@manyhands/contracts";
+import { EffectIntentSchema, PhysicalEffectReceiptSchema, RepositoryViewRefSchema } from "@manyhands/contracts";
 import { EntityIdSchema, FinalArtifactManifestSchema, IsoTimestampSchema, NonEmptyStringSchema } from "@manyhands/shared";
 import { z } from "zod";
 import { CommandReceiptSchema, RunCommandEnvelopeSchema } from "../command-envelope.js";
@@ -152,7 +152,14 @@ export const RunEventSchema = z.discriminatedUnion("type", [
     disposition: z.literal("requires_revalidation"),
     warnings: z.array(NonEmptyStringSchema)
   }).strict()),
-  event("repository.inspected", z.object({ snapshotId: NonEmptyStringSchema, disposition: z.enum(["complete", "partial", "unavailable"]), snapshot: z.record(z.unknown()) }).strict()),
+  event("repository.inspected", z.object({
+    snapshotId: NonEmptyStringSchema,
+    disposition: z.enum(["complete", "partial", "unavailable"]),
+    snapshot: z.record(z.unknown()),
+    repositoryModelDigest: NonEmptyStringSchema.optional(),
+    repositoryView: RepositoryViewRefSchema.optional(),
+    queryDigests: z.array(NonEmptyStringSchema).optional()
+  }).strict()),
   event("planning.attempt_started", z.object({ attempt: z.number().int().positive() }).strict()),
   event("planning.node_discovered", z.object({
     attempt: z.number().int().positive(),

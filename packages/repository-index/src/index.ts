@@ -14,6 +14,10 @@ import { parseRepositoryFile, type ParsedRepositoryFile } from "./source-parser.
 
 export * from "./capabilities.js";
 export * from "./fast-indexer.js";
+export * from "./repository-model.js";
+export * from "./repository-query.js";
+export * from "./repository-view.js";
+export * from "./resource-catalog.js";
 export * from "./snapshot.js";
 
 export const RepositoryFileKindSchema = z.union([

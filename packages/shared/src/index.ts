@@ -10,6 +10,17 @@ export const ReasoningEffortSchema = z.enum(EFFORT_LEVELS);
 
 export const NonEmptyStringSchema = z.string().trim().min(1);
 
+export const EpistemicAssessmentSchema = z.discriminatedUnion("state", [
+  z.object({ state: z.literal("unknown"), reason: NonEmptyStringSchema, evidenceRefs: z.tuple([]) }).strict(),
+  z.object({
+    state: z.enum(["known", "partial", "conflicting"]),
+    confidence: z.enum(["high", "medium", "low"]),
+    evidenceRefs: z.array(NonEmptyStringSchema).min(1)
+  }).strict()
+]);
+
+export type EpistemicAssessment = z.infer<typeof EpistemicAssessmentSchema>;
+
 export const EntityIdSchema = NonEmptyStringSchema.regex(
   /^[A-Za-z0-9._:-]+$/,
   "ids may contain letters, digits, dots, underscores, colons and hyphens"
