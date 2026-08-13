@@ -183,6 +183,7 @@ describe("projection to a semantic plan", () => {
 
   it("declares a write absent from the snapshot as a planned path, and a present one as evidence", () => {
     const projected = project();
+    if (projected.draft.root.kind !== "composite") throw new Error("Expected a composite root.");
     const domain = projected.draft.root.children[0]!;
 
     expect(domain.plannedPaths).toEqual(["src/domain/backorders.js", "test/domain.test.js"]);
@@ -198,6 +199,7 @@ describe("projection to a semantic plan", () => {
       observation: "package manifest used as repository context",
       confidence: 1
     };
+    if (projected.draft.root.kind !== "composite") throw new Error("Expected a composite root.");
     const domain = projected.draft.root.children[0]!;
     domain.evidenceIds = [...domain.evidenceIds, packageEvidence.id];
     projected.draft.repositoryEvidence = [...projected.draft.repositoryEvidence, packageEvidence];
@@ -219,6 +221,7 @@ describe("projection to a semantic plan", () => {
 
   it("keeps disjoint criterion coverage on one leaf each", () => {
     const projected = project();
+    if (projected.draft.root.kind !== "composite") throw new Error("Expected a composite root.");
     const owners = projected.draft.root.children.flatMap((child) =>
       child.outcomes.flatMap((outcome) => outcome.criterionIds));
 
@@ -259,6 +262,7 @@ describe("projection to a semantic plan", () => {
 
   it("rejects unknown criterion ids in a newly produced V2 semantic plan", () => {
     const projected = project();
+    if (projected.draft.root.kind !== "composite") throw new Error("Expected a composite root.");
     for (const child of projected.draft.root.children) {
       for (const outcome of child.outcomes) outcome.criterionIds = ["criterion:unknown"];
     }

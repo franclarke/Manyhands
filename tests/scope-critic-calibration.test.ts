@@ -190,7 +190,7 @@ describe("ScopeCritic Calibration (MH-REM-004)", () => {
     const review = reviewCompiledPlan(input);
     const scopeFindings = review.findings.filter(f => f.critic === "scope_isolation" && f.code === "unmodeled_scope_overlap");
     expect(scopeFindings.length).toBe(1);
-    expect(scopeFindings[0].message).toContain("nodeA and nodeB overlap");
+    expect(scopeFindings[0]!.message).toContain("nodeA and nodeB overlap");
   });
 
   it("rejects modification overlap without conflictConstraint", () => {

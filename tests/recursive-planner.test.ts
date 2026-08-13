@@ -127,6 +127,7 @@ describe("recursive planner", () => {
 
     expect(result.unresolved).toHaveLength(0);
     expect(result.root.kind).toBe("composite");
+    if (result.root.kind !== "composite") throw new Error("Expected a composite root.");
     expect(result.root.children).toHaveLength(1);
     expect(result.root.children[0]?.kind).toBe("leaf");
   });

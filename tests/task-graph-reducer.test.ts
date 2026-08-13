@@ -54,7 +54,7 @@ describe("GraphReducer (MH-REM-006)", () => {
   it("handles update_node_goal", () => {
     const graph = getBaseGraph();
     const res = reduceLegacyGraphRevisionV2(graph, { expectedRevision: 1, operations: [{ type: "update_node_goal", nodeId: "root", goal: "new_goal" }] });
-    expect(res.nextRevision.nodes["root"].goal).toBe("new_goal");
+    expect(res.nextRevision.nodes["root"]!.goal).toBe("new_goal");
   });
 
   it("handles add_artifact_requirement", () => {

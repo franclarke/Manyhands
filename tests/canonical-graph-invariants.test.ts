@@ -77,8 +77,9 @@ describe("canonical graph identity", () => {
   });
 
   it("requires consecutive revisions with changed identity", () => {
-    const graph = { graphId: "g", revision: 1, digest: "same" } as never;
-    expect(validateGraphRevisionTransition(graph, { ...graph, revision: 3 } as never).map((f) => f.code)).toEqual(["nonconsecutive_revision", "content_identity_unchanged"]);
+    const graph = { graphId: "g", revision: 1, digest: "same" } as unknown as Parameters<typeof validateGraphRevisionTransition>[0];
+    const next = { ...graph, revision: 3 } as Parameters<typeof validateGraphRevisionTransition>[1];
+    expect(validateGraphRevisionTransition(graph, next).map((f) => f.code)).toEqual(["nonconsecutive_revision", "content_identity_unchanged"]);
   });
 
   it("reports artifact cycles independently from the valid child-to-composite hierarchy", () => {

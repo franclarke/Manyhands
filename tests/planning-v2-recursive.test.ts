@@ -137,7 +137,7 @@ describe("productive planning with the recursive planner", () => {
 
     // The compiled graph is the fixpoint's tree, whatever the formula scored:
     // node ids are derived from the planner's keys.
-    const compiled = journal.find((entry) => entry.type === "graph.compiled")!.payload as {
+    const compiled = journal.find((entry) => entry.type === "graph.compiled")!.payload as unknown as {
       graph: { nodes: Record<string, unknown> };
     };
     expect(Object.keys(compiled.graph.nodes).sort()).toEqual(["node-domain", "node-root", "node-surface"]);
