@@ -68,6 +68,7 @@ describe("Stage 5 deterministic plan verifier", () => {
 });
 
 function withoutDigest(plan: ReturnType<typeof stage5Fixture>["plan"]) {
-  const { digest: _digest, ...material } = structuredClone(plan);
+  const material = structuredClone(plan);
+  Reflect.deleteProperty(material, "digest");
   return material;
 }
