@@ -29,6 +29,7 @@ mod windows {
     const FALSE: Bool = 0;
     const TRUE: Bool = 1;
     const INVALID_HANDLE_VALUE: Handle = -1isize as Handle;
+    const ERROR_FILE_NOT_FOUND: Dword = 2;
     const ERROR_ALREADY_EXISTS: Dword = 183;
     const ERROR_INVALID_PARAMETER: Dword = 87;
     const ERROR_ACCESS_DENIED: Dword = 5;
@@ -558,8 +559,35 @@ mod windows {
         let custodian_pid = custodian_pid
             .parse::<u32>()
             .map_err(|_| invalid_request())?;
-        let custodian_job = open_job(&custodian_job_name(job_name))?;
-        let provider_job = open_job(&provider_job_name(job_name))?;
+        let custodian_job = open_job_if_present(&custodian_job_name(job_name))?;
+        let provider_job = open_job_if_present(&provider_job_name(job_name))?;
+
+        let (custodian_job, provider_job) = match (custodian_job, provider_job) {
+            (Some(custodian_job), Some(provider_job)) => (custodian_job, provider_job),
+            (None, None) => {
+                // A custodian crash closes the final named Job handles. Recovery
+                // may then converge only when the kernel can prove that neither
+                // exact durable identity exists. PID reuse and access-denied
+                // probes remain fail-closed and are never individually killed.
+                let provider = probe_identity(provider_pid, provider_expected);
+                let custodian = probe_identity(custodian_pid, custodian_expected);
+                if provider == "dead" && custodian == "dead" {
+                    return Ok(());
+                }
+                return Err(io::Error::new(
+                    io::ErrorKind::PermissionDenied,
+                    format!(
+                        "Job Objects are absent but durable identities are not provably dead: provider={provider}, custodian={custodian}"
+                    ),
+                ));
+            }
+            _ => {
+                return Err(io::Error::new(
+                    io::ErrorKind::PermissionDenied,
+                    "only one durable Job Object remains; refusing partial termination",
+                ));
+            }
+        };
 
         // The exact custodian creation identity is the live authority for these
         // named Jobs. A missing/reused PID fails closed; it never authorizes a
@@ -609,7 +637,7 @@ mod windows {
             } else if code == ERROR_ACCESS_DENIED {
                 "unknown"
             } else {
-                "dead"
+                "unknown"
             };
         }
         let process = OwnedHandle(raw);
@@ -668,18 +696,23 @@ mod windows {
         Ok(job)
     }
 
-    fn open_job(name: &str) -> io::Result<OwnedHandle> {
+    fn open_job_if_present(name: &str) -> io::Result<Option<OwnedHandle>> {
         let name = wide(name);
-        OwnedHandle::new(
-            unsafe {
-                OpenJobObjectW(
-                    JOB_OBJECT_TERMINATE | JOB_OBJECT_QUERY,
-                    FALSE,
-                    name.as_ptr(),
-                )
-            },
-            "OpenJobObjectW",
-        )
+        let raw = unsafe {
+            OpenJobObjectW(
+                JOB_OBJECT_TERMINATE | JOB_OBJECT_QUERY,
+                FALSE,
+                name.as_ptr(),
+            )
+        };
+        if raw.is_null() {
+            return if unsafe { GetLastError() } == ERROR_FILE_NOT_FOUND {
+                Ok(None)
+            } else {
+                Err(last_error("OpenJobObjectW"))
+            };
+        }
+        Ok(Some(OwnedHandle(raw)))
     }
 
     fn open_exact_process(pid: Dword, expected: &str) -> io::Result<Option<OwnedHandle>> {

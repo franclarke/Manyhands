@@ -118,7 +118,32 @@ describe.skipIf(process.platform !== "win32")("ProcessSupervisor physical Window
       .toMatchObject({ phase: "final", outcome: "terminated" });
   }, 30_000);
 
-  it("kills the owned child tree when the custodian itself crashes", async () => {
+  it("fails closed when Job Objects are absent but the durable identities are still live", async () => {
+    const receiptRoot = path.join(suiteDirectory, "missing-job-live-identities-receipts");
+    const supervisor = windowsSupervisor(receiptRoot);
+    const handle = await supervisor.spawn(request("effect:missing-job-live-identities", [
+      "-e",
+      "setInterval(() => {}, 1000)"
+    ]));
+
+    await expect(execFileAsync(helperPath, [
+      "terminate",
+      `${handle.started.platformOwnership}-absent`,
+      String(handle.started.processIdentity.pid),
+      handle.started.processIdentity.creationIdentity,
+      String(handle.started.custodianIdentity.pid),
+      handle.started.custodianIdentity.creationIdentity
+    ], { windowsHide: true })).rejects.toThrow(/not provably dead/i);
+
+    expect(isAlive(handle.started.processIdentity.pid)).toBe(true);
+    expect(isAlive(handle.started.custodianIdentity.pid)).toBe(true);
+    await expect(handle.terminate("test_cleanup")).resolves.toMatchObject({
+      outcome: "terminated",
+      reason: "test_cleanup"
+    });
+  }, 30_000);
+
+  it("recovers a started-only effect after a custodian crash without repeating or blindly killing it", async () => {
     const receiptRoot = path.join(suiteDirectory, "custodian-crash-receipts");
     const pidFile = path.join(suiteDirectory, "crash-tree-pids.json");
     const childMarker = path.join(suiteDirectory, "crash-child-late.txt");
@@ -142,6 +167,28 @@ describe.skipIf(process.platform !== "win32")("ProcessSupervisor physical Window
     await expect(access(grandchildMarker)).rejects.toMatchObject({ code: "ENOENT" });
     expect(await readProcessSupervisorReceipts(receiptRoot, "effect:custodian-crash"))
       .toEqual([expect.objectContaining({ phase: "started" })]);
+
+    const restartedSupervisor = windowsSupervisor(receiptRoot);
+    const final = await restartedSupervisor.terminate(
+      "effect:custodian-crash",
+      "recovered_after_custodian_crash"
+    );
+
+    expect(final).toMatchObject({
+      phase: "final",
+      outcome: "terminated",
+      reason: "recovered_after_custodian_crash",
+      startedReceiptChecksum: handle.started.receiptChecksum
+    });
+    expect(await readProcessSupervisorReceipts(receiptRoot, "effect:custodian-crash"))
+      .toEqual([
+        expect.objectContaining({ phase: "started" }),
+        expect.objectContaining({
+          phase: "final",
+          outcome: "terminated",
+          startedReceiptChecksum: handle.started.receiptChecksum
+        })
+      ]);
   }, 30_000);
 });
 
