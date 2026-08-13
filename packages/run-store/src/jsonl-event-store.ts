@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { createWriteStream, fsync } from "node:fs";
-import { mkdir, readFile, stat, truncate } from "node:fs/promises";
+import { mkdir, readdir, readFile, stat, truncate } from "node:fs/promises";
 import path from "node:path";
 import {
   RunEventSchema,
@@ -71,6 +71,76 @@ export class JsonlRunEventStore implements FencedRunEventStore {
       throw new CorruptRunEventLogError(runId, inspection.reason ?? "invalid durable record");
     }
     return inspection.events;
+  }
+
+  /**
+   * Discovers canonical run journals for daemon startup. Discovery is bounded
+   * and validates every selected journal before returning, so startup never
+   * silently skips excess runs or accepts a corrupt identity/index entry.
+   */
+  async listRunIds(options: { limit: number }): Promise<string[]> {
+    if (!Number.isInteger(options.limit) || options.limit < 1) {
+      throw new TypeError("Run journal discovery limit must be a positive integer.");
+    }
+
+    let entries;
+    try {
+      entries = await readdir(this.directory, { withFileTypes: true });
+    } catch (error) {
+      if (isNotFound(error)) return [];
+      throw error;
+    }
+
+    const candidates = entries
+      .filter((entry) => isJournalIdentityFile(entry.name))
+      .sort((left, right) => left.name.localeCompare(right.name));
+    for (const candidate of candidates) {
+      if (!candidate.isFile()) {
+        throw new Error(`Run journal identity path ${candidate.name} is not a regular file.`);
+      }
+    }
+
+    const runIds = new Set<string>();
+    const emptyEventLogs: string[] = [];
+    for (const candidate of candidates) {
+      const filePath = path.join(this.directory, candidate.name);
+      const runId = candidate.name.endsWith(COMPACTION_MANIFEST_SUFFIX)
+        ? await readManifestRunId(filePath)
+        : await readActiveJournalRunId(filePath);
+      if (runId === null) {
+        emptyEventLogs.push(candidate.name);
+        continue;
+      }
+      assertIdentityFileName(candidate.name, runId);
+      runIds.add(runId);
+      if (runIds.size > options.limit) {
+        throw new Error(
+          `Run journal discovery found more than the configured limit of ${options.limit} runs.`
+        );
+      }
+    }
+
+    for (const eventLogName of emptyEventLogs) {
+      const stem = eventLogName.slice(0, -EVENT_LOG_SUFFIX.length);
+      if (!candidates.some((entry) => entry.name === `${stem}${COMPACTION_MANIFEST_SUFFIX}`)) {
+        throw new Error(`Empty run journal ${eventLogName} has no compacted generation manifest.`);
+      }
+    }
+
+    const discovered = [...runIds].sort((left, right) => left.localeCompare(right));
+    for (const runId of discovered) {
+      const inspection = await this.inspect(runId);
+      if (inspection.status === "corrupt") {
+        throw new CorruptRunEventLogError(
+          runId,
+          inspection.reason ?? "invalid durable record"
+        );
+      }
+      if (inspection.events.length === 0) {
+        throw new CorruptRunEventLogError(runId, "journal contains no run.created event");
+      }
+    }
+    return discovered;
   }
 
   async inspect(runId: string): Promise<RunEventLogInspection> {
@@ -383,6 +453,67 @@ function validateAuthority(authority: FencingAuthority): void {
 
 function safeName(runId: string): string {
   return runId.replace(/[^A-Za-z0-9._-]/gu, "_");
+}
+
+const EVENT_LOG_SUFFIX = ".events.v2.jsonl";
+const COMPACTION_MANIFEST_SUFFIX = ".compaction-manifest.v1.json";
+
+function isJournalIdentityFile(fileName: string): boolean {
+  return fileName.endsWith(EVENT_LOG_SUFFIX)
+    || fileName.endsWith(COMPACTION_MANIFEST_SUFFIX);
+}
+
+async function readActiveJournalRunId(filePath: string): Promise<string | null> {
+  const contents = await readFile(filePath, "utf8");
+  if (contents.length === 0) return null;
+  const newline = contents.indexOf("\n");
+  if (newline < 0) {
+    throw new Error(`Run journal ${path.basename(filePath)} has no complete identity record.`);
+  }
+  try {
+    const envelope = JSON.parse(contents.slice(0, newline)) as {
+      schemaVersion?: unknown;
+      event?: unknown;
+      events?: unknown;
+    };
+    if (typeof envelope.schemaVersion !== "number") {
+      throw new Error("missing schema version");
+    }
+    const rawEvent = Array.isArray(envelope.events)
+      ? envelope.events[0]
+      : envelope.event;
+    if (rawEvent === undefined) throw new Error("missing first event");
+    return RunEventSchema.parse(
+      upcastEventToCurrent(envelope.schemaVersion, rawEvent)
+    ).runId;
+  } catch (error) {
+    throw new Error(
+      `Run journal ${path.basename(filePath)} has an invalid identity record: ${errorMessage(error)}`
+    );
+  }
+}
+
+async function readManifestRunId(filePath: string): Promise<string> {
+  try {
+    const manifest = JSON.parse(await readFile(filePath, "utf8")) as { runId?: unknown };
+    if (typeof manifest.runId !== "string" || manifest.runId.trim().length === 0) {
+      throw new Error("missing runId");
+    }
+    return manifest.runId;
+  } catch (error) {
+    throw new Error(
+      `Run journal manifest ${path.basename(filePath)} has an invalid identity: ${errorMessage(error)}`
+    );
+  }
+}
+
+function assertIdentityFileName(fileName: string, runId: string): void {
+  const expected = fileName.endsWith(EVENT_LOG_SUFFIX)
+    ? `${safeName(runId)}${EVENT_LOG_SUFFIX}`
+    : `${safeName(runId)}${COMPACTION_MANIFEST_SUFFIX}`;
+  if (fileName !== expected) {
+    throw new Error(`Run journal identity ${runId} is stored under unexpected path ${fileName}.`);
+  }
 }
 
 function isNotFound(error: unknown): boolean {

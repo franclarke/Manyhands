@@ -1,16 +1,22 @@
 import { createHash, randomUUID } from "node:crypto";
-import { mkdtemp, rm } from "node:fs/promises";
+import { appendFile, mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { EffectKindSchema, type DigestHasher } from "@manyhands/contracts";
+import {
+  EffectKindSchema,
+  buildEffectIntent,
+  type DigestHasher,
+  type EffectInputSpec
+} from "@manyhands/contracts";
 import {
   CommandReceiptSchema,
+  buildCommandReceipt,
   buildRunCommandEnvelope,
   type IpcCapabilityOsProtection,
   type RunCommandEnvelope
 } from "@manyhands/run-coordinator";
-import { JsonlRunEventStore } from "@manyhands/run-store";
+import { FileEffectInputStore, JsonlRunEventStore } from "@manyhands/run-store";
 import type { PhysicalEffectAdapter } from "@manyhands/run-engine";
 import { startDaemonKernel } from "../apps/daemon/src/daemon-kernel.js";
 import { createLocalIpcClient } from "../apps/web/src/lib/server/daemon/local-ipc-client.js";
@@ -26,6 +32,83 @@ afterEach(async () => {
 });
 
 describe("durable daemon composition root", () => {
+  it("reconciles journals with pending effects before startup succeeds", async () => {
+    const root = await temporaryRoot();
+    const runId = "run:startup-recovery";
+    const intent = await seedPendingEffect(root, runId);
+    const reconciled: Array<{ effectId: string; inputSpec: EffectInputSpec }> = [];
+
+    const kernel = await startKernel(root, "daemon:recovery", {
+      adapters: recoveryAdapters((effectId, inputSpec) => {
+        reconciled.push({ effectId, inputSpec: structuredClone(inputSpec) });
+      })
+    });
+    try {
+      expect(reconciled).toEqual([{
+        effectId: intent.effectId,
+        inputSpec: {
+          schemaVersion: 1,
+          kind: "cleanup",
+          payload: { operation: "recover-on-daemon-startup" }
+        }
+      }]);
+
+      const client = createLocalIpcClient({
+        endpoint: kernel.endpoint,
+        capabilityFilePath: kernel.capabilityFilePath,
+        production: false
+      });
+      const projection = await client.query({ runId, query: "projection" });
+      expect(projection).toMatchObject({
+        runId,
+        sequence: 5,
+        effectTerminals: {
+          [intent.effectId]: { status: "completed" }
+        }
+      });
+      expect((await kernel.eventStore.load(runId)).map((event) => event.type)).toEqual([
+        "run.created",
+        "command.accepted",
+        "effect.requested",
+        "effect.observed",
+        "effect.completed"
+      ]);
+    } finally {
+      await kernel.close();
+    }
+
+    const replayedReconciliations: string[] = [];
+    const restarted = await startKernel(root, "daemon:recovery-restart", {
+      adapters: recoveryAdapters((effectId) => replayedReconciliations.push(effectId))
+    });
+    try {
+      expect(replayedReconciliations).toEqual([]);
+      expect((await restarted.eventStore.load(runId))).toHaveLength(5);
+    } finally {
+      await restarted.close();
+    }
+  });
+
+  it("fails startup when journal discovery exceeds its explicit bound", async () => {
+    const root = await temporaryRoot();
+    await seedRun(root, "run:bounded-a");
+    await seedRun(root, "run:bounded-b");
+
+    await expect(startKernel(root, "daemon:bounded", {
+      startupRecoveryRunLimit: 1
+    })).rejects.toThrow(/more than the configured limit of 1 runs/i);
+  });
+
+  it("fails startup closed when a discovered journal is corrupt", async () => {
+    const root = await temporaryRoot();
+    const runId = "run:corrupt-startup";
+    const store = await seedRun(root, runId);
+    await appendFile(store.eventLogPath(runId), "not-json\n", "utf8");
+
+    await expect(startKernel(root, "daemon:corrupt"))
+      .rejects.toThrow(/run event log.*corrupt/i);
+  });
+
   it("survives client and daemon restarts without inventing lifecycle events", async () => {
     const root = await temporaryRoot();
     await seedRun(root, "run:kernel");
@@ -134,6 +217,8 @@ describe("durable daemon composition root", () => {
 
 interface StartKernelOverrides {
   production?: boolean;
+  adapters?: readonly PhysicalEffectAdapter[];
+  startupRecoveryRunLimit?: number;
   protectCapabilityPath?: IpcCapabilityOsProtection;
   assertOsRestrictedCapabilityPath?: IpcCapabilityOsProtection;
   assertOsRestrictedEndpoint?: (endpoint: string) => void | Promise<void>;
@@ -178,7 +263,7 @@ function noEffectAdapters(): PhysicalEffectAdapter[] {
   }));
 }
 
-async function seedRun(root: string, runId: string): Promise<void> {
+async function seedRun(root: string, runId: string): Promise<JsonlRunEventStore> {
   const store = new JsonlRunEventStore({ directory: path.join(root, "runs") });
   const authority = await store.claimAuthority(runId, "seed");
   await store.appendFenced(runId, 0, authority, [{
@@ -187,6 +272,90 @@ async function seedRun(root: string, runId: string): Promise<void> {
     type: "run.created",
     payload: { goal: "Survive the daemon restart" }
   }]);
+  return store;
+}
+
+async function seedPendingEffect(root: string, runId: string) {
+  const inputSpec: EffectInputSpec = {
+    schemaVersion: 1,
+    kind: "cleanup",
+    payload: { operation: "recover-on-daemon-startup" }
+  };
+  const inputStore = new FileEffectInputStore({
+    directory: path.join(root, "effects", "inputs"),
+    hasher: sha256
+  });
+  const effectInput = await inputStore.put(inputSpec);
+  const command = buildRunCommandEnvelope({
+    commandId: "command:startup-recovery",
+    runId,
+    expectedRevision: 1,
+    submittedAt: "2026-08-12T22:10:00.000Z",
+    command: { type: "start" }
+  }, sha256);
+  const receipt = buildCommandReceipt({
+    schemaVersion: 1,
+    commandId: command.commandId,
+    runId,
+    commandDigest: command.commandDigest,
+    acceptedRevision: 2,
+    daemonEpoch: "daemon:crashed",
+    acceptedAt: "2026-08-12T22:10:01.000Z"
+  }, sha256);
+  const intent = buildEffectIntent({
+    runId,
+    attemptId: "attempt:startup-recovery",
+    kind: inputSpec.kind,
+    inputDigest: effectInput.inputDigest,
+    daemonEpoch: "daemon:crashed",
+    idempotency: "reconcile_then_repeat",
+    requestedAt: "2026-08-12T22:10:02.000Z"
+  }, sha256);
+  const store = new JsonlRunEventStore({ directory: path.join(root, "runs") });
+  const authority = await store.claimAuthority(runId, "daemon:crashed");
+  await store.appendFenced(runId, 0, authority, [
+    {
+      eventId: "event:startup-recovery:created",
+      occurredAt: "2026-08-12T22:00:00.000Z",
+      type: "run.created",
+      payload: { goal: "Recover without command redelivery" }
+    },
+    {
+      eventId: "event:startup-recovery:command",
+      occurredAt: receipt.acceptedAt,
+      type: "command.accepted",
+      payload: { receipt }
+    },
+    {
+      eventId: "event:startup-recovery:effect",
+      occurredAt: intent.requestedAt,
+      type: "effect.requested",
+      payload: { intent }
+    }
+  ]);
+  return intent;
+}
+
+function recoveryAdapters(
+  onReconcile: (effectId: string, inputSpec: EffectInputSpec) => void
+): PhysicalEffectAdapter[] {
+  return EffectKindSchema.options.map((kind): PhysicalEffectAdapter => ({
+    kind,
+    async execute() {
+      throw new Error(`Startup recovery must not execute a new ${kind} effect.`);
+    },
+    async reconcile(intent, context) {
+      if (kind !== "cleanup") {
+        throw new Error(`Unexpected ${kind} reconciliation during startup.`);
+      }
+      onReconcile(intent.effectId, context.inputSpec);
+      await context.record({
+        observation: "succeeded",
+        resultDigest: sha256("startup-recovered"),
+        observedAt: "2026-08-12T22:30:01.000Z"
+      });
+    }
+  }));
 }
 
 function commandEnvelope(): RunCommandEnvelope {

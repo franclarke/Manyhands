@@ -42,6 +42,7 @@ export interface StartDaemonKernelOptions {
   adapters: readonly PhysicalEffectAdapter[];
   decide: RunActorOptions["decide"];
   clock(): string;
+  startupRecoveryRunLimit?: number;
   production?: boolean;
   createLeaseNonce?: () => string;
   createDaemonEpoch?: () => string;
@@ -137,6 +138,14 @@ export async function startDaemonKernel(
       assertInstallationAuthority: () => lease.assertCurrent(),
       hasher: options.hasher
     });
+
+    const runIds = await eventStore.listRunIds({
+      limit: options.startupRecoveryRunLimit ?? 10_000
+    });
+    for (const runId of runIds) {
+      await registry.getOrCreate(runId);
+    }
+    await lease.assertCurrent();
 
     server = await startLocalIpcServer({
       endpoint: options.endpoint,
