@@ -1,6 +1,7 @@
 import type { PlanningFinding, SemanticPlan } from "@manyhands/contracts";
 import type { GraphRevision } from "@manyhands/task-graph";
 import type { CompiledPlanContracts } from "../compiler/direct-plan-compiler.js";
+import { flattenSemanticWorkUnits, type SemanticPlan as CurrentSemanticPlan } from "../planner/semantic-plan.js";
 
 export interface ResponsibilityOracle {
   id: string;
@@ -38,7 +39,30 @@ export interface PlanningCandidate {
   plan?: SemanticPlan;
   graph?: GraphRevision;
   contracts?: CompiledPlanContracts;
+  observedTopology?: ObservedPlanningTopology;
   unavailableReason?: string;
+}
+
+export interface ObservedPlanningTopology {
+  responsibilities: Array<{ id: string; text: string }>;
+  seams: Array<{ producerText: string; consumerTexts: string[]; semantics: string }>;
+  ownership: Array<{ ownerText: string; paths: string[] }>;
+  criterionIds: string[];
+}
+
+export function observeCurrentPlannerTopology(plan: CurrentSemanticPlan): ObservedPlanningTopology {
+  const units = flattenSemanticWorkUnits(plan.root);
+  const byId = new Map(units.map((unit) => [unit.key, unit]));
+  return {
+    responsibilities: units.map((unit) => ({ id: unit.key, text: `${unit.title} ${unit.objective} ${unit.concerns.join(" ")}` })),
+    seams: plan.seams.map((seam) => ({
+      producerText: unitText(byId.get(seam.producerUnitKey)),
+      consumerTexts: seam.consumerUnitKeys.map((id) => unitText(byId.get(id))),
+      semantics: `${seam.purpose} ${seam.interface.promise} ${seam.interface.compatibility}`
+    })),
+    ownership: units.map((unit) => ({ ownerText: unitText(unit), paths: [...new Set([...(unit.writePaths ?? []), ...(unit.plannedPaths ?? [])])].sort() })),
+    criterionIds: [...new Set(plan.criteria.map(({ id }) => id))].sort()
+  };
 }
 
 export interface TopologyEvaluation {
@@ -73,6 +97,9 @@ function evaluateCandidate(candidate: PlanningCandidate, oracle: PlanningTopolog
   const plan = candidate.plan;
   const graph = candidate.graph;
   const contracts = candidate.contracts;
+  if (candidate.observedTopology !== undefined) {
+    return evaluateObserved(candidate.label, candidate.observedTopology, oracle);
+  }
   if (plan === undefined || graph === undefined || contracts === undefined) {
     issues.push({ code: "candidate_unavailable", message: candidate.unavailableReason ?? "Candidate has no compileable graph." });
     return evaluation(candidate.label, issues, graph);
@@ -137,6 +164,42 @@ function evaluateCandidate(candidate: PlanningCandidate, oracle: PlanningTopolog
   return evaluation(candidate.label, issues, graph);
 }
 
+function evaluateObserved(label: PlanningCandidate["label"], observed: ObservedPlanningTopology, oracle: PlanningTopologyOracle): TopologyEvaluation {
+  const issues: TopologyEvaluation["issues"] = [];
+  for (const responsibility of oracle.requiredResponsibilities) {
+    if (!observed.responsibilities.some(({ text }) => matches(text, responsibility.terms))) {
+      issues.push({ code: "missing_responsibility", oracleId: responsibility.id, message: `No unit expresses responsibility ${responsibility.id}.` });
+    }
+  }
+  for (const responsibility of oracle.forbiddenResponsibilities) {
+    if (observed.responsibilities.some(({ text }) => matches(text, responsibility.terms))) {
+      issues.push({ code: "forbidden_responsibility", oracleId: responsibility.id, message: `A unit expresses forbidden responsibility ${responsibility.id}.` });
+    }
+  }
+  for (const seam of oracle.requiredSeams) {
+    if (!observed.seams.some((candidate) => matches(candidate.producerText, seam.producerTerms)
+      && candidate.consumerTexts.some((text) => matches(text, seam.consumerTerms))
+      && matches(candidate.semantics, seam.semanticTerms))) {
+      issues.push({ code: "missing_seam", oracleId: seam.id, message: `No seam satisfies ${seam.id}.` });
+    }
+  }
+  for (const ownership of oracle.requiredOwnership) {
+    const owners = observed.ownership.filter(({ paths }) => paths.includes(ownership.path));
+    if (owners.length !== 1 || !matches(owners[0]!.ownerText, ownership.ownerTerms)) {
+      issues.push({ code: "ownership_mismatch", oracleId: ownership.id, message: `Expected one matching owner for ${ownership.path}; observed ${owners.length}.` });
+    }
+  }
+  for (const criterionId of oracle.requiredCriterionIds) {
+    if (!observed.criterionIds.includes(criterionId)) issues.push({ code: "missing_proof_criterion", oracleId: criterionId, message: `Criterion ${criterionId} is not represented.` });
+  }
+  return {
+    candidate: label,
+    passed: issues.length === 0,
+    issues: issues.sort((left, right) => `${left.code}\0${left.oracleId ?? ""}`.localeCompare(`${right.code}\0${right.oracleId ?? ""}`)),
+    observations: { nodes: observed.responsibilities.length, leaves: 0, seams: observed.seams.length, resourceClaims: observed.ownership.reduce((sum, item) => sum + item.paths.length, 0) }
+  };
+}
+
 function evaluation(label: PlanningCandidate["label"], issues: TopologyEvaluation["issues"], graph: GraphRevision | undefined): TopologyEvaluation {
   const nodes = Object.values(graph?.nodes ?? {});
   return {
@@ -159,6 +222,10 @@ function matches(text: string, terms: readonly string[]): boolean {
 
 function nodeText(node: GraphRevision["nodes"][string]): string {
   return `${node.title} ${node.goal}`;
+}
+
+function unitText(unit: { title: string; objective: string; concerns: string[] } | undefined): string {
+  return unit === undefined ? "" : `${unit.title} ${unit.objective} ${unit.concerns.join(" ")}`;
 }
 
 export interface OfflinePreviewInput {

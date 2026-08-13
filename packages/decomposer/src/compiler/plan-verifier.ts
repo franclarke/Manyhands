@@ -131,6 +131,8 @@ function verifyUnits(plan: SemanticPlan, strategies: readonly ProofStrategy[], o
       const strategy = strategiesById.get(obligation.proofStrategyId);
       if (strategy === undefined) {
         out.push(finding("missing_proof_strategy", `Validation ${obligation.obligationId} has no ProofStrategy.`, obligation.obligationId));
+      } else if (strategy.obligationId !== obligation.obligationId) {
+        out.push(finding("proof_obligation_mismatch", `Proof ${strategy.id} is bound to ${strategy.obligationId}, not ${obligation.obligationId}.`, obligation.obligationId));
       } else if (strategy.criterionId !== rootCriterionFor(plan, unit, obligation.criterionId)) {
         out.push(finding("proof_criterion_mismatch", `Proof ${strategy.id} does not cover validation ${obligation.obligationId}.`, obligation.obligationId));
       }
@@ -141,6 +143,8 @@ function verifyUnits(plan: SemanticPlan, strategies: readonly ProofStrategy[], o
       }
       if (!strategiesById.has(unit.integration.proofStrategyId)) {
         out.push(finding("missing_proof_strategy", `Integration ${unit.integration.obligationId} has no ProofStrategy.`, unit.id));
+      } else if (strategiesById.get(unit.integration.proofStrategyId)?.obligationId !== unit.integration.obligationId) {
+        out.push(finding("proof_obligation_mismatch", `Integration ${unit.integration.obligationId} uses a ProofStrategy bound to another obligation.`, unit.id));
       }
     }
   }

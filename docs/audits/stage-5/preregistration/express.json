@@ -67,9 +67,12 @@
     "digest": "sha256:27d2288af2a7c2dd6cb4dd5d7c564de641ea21bd3d41fd7894d3844381260e21"
   },
   "proofStrategies": [
-    { "id": "proof:request-id", "obligationId": "validation:request-id", "criterionId": "criterion:request-id", "mode": "executable", "authority": "orchestrator_deterministic", "independence": "independent_required", "procedureRef": "command:express-request-id" },
-    { "id": "proof:opt-in", "obligationId": "validation:opt-in", "criterionId": "criterion:opt-in", "mode": "executable", "authority": "orchestrator_deterministic", "independence": "protected_baseline_or_negative_control", "procedureRef": "command:express-baseline" },
-    { "id": "proof:documented", "obligationId": "validation:documented", "criterionId": "criterion:documented", "mode": "static", "authority": "orchestrator_deterministic", "independence": "independent_required", "procedureRef": "source-scan:express-docs" }
+    { "id": "proof:root", "obligationId": "validation:root", "criterionId": "criterion:request-id", "mode": "executable", "authority": "orchestrator_deterministic", "independence": "independent_required", "procedureRef": "command:express-request-id" },
+    { "id": "proof:configuration", "obligationId": "validation:configuration", "criterionId": "criterion:opt-in", "mode": "executable", "authority": "orchestrator_deterministic", "independence": "protected_baseline_or_negative_control", "procedureRef": "command:express-baseline" },
+    { "id": "proof:request", "obligationId": "validation:request", "criterionId": "criterion:request-id", "mode": "executable", "authority": "orchestrator_deterministic", "independence": "independent_required", "procedureRef": "command:express-request-id" },
+    { "id": "proof:response", "obligationId": "validation:response", "criterionId": "criterion:request-id", "mode": "executable", "authority": "orchestrator_deterministic", "independence": "independent_required", "procedureRef": "command:express-response-header" },
+    { "id": "proof:tests", "obligationId": "validation:tests", "criterionId": "criterion:request-id", "mode": "executable", "authority": "orchestrator_deterministic", "independence": "independent_required", "procedureRef": "command:express-focused-tests" },
+    { "id": "proof:docs", "obligationId": "validation:docs", "criterionId": "criterion:documented", "mode": "static", "authority": "orchestrator_deterministic", "independence": "independent_required", "procedureRef": "source-scan:express-docs" }
   ],
   "inspection": {
     "queryTerms": ["request", "response", "header", "application", "middleware", "test", "documentation"],

@@ -71,8 +71,12 @@
     "digest": "sha256:cd4522c0c75eb24777b0f6e0c30086fa1cd668367dd712a56179c5e47ef19523"
   },
   "proofStrategies": [
-    { "id": "proof:canonical-route", "obligationId": "validation:canonical-route", "criterionId": "criterion:canonical-route", "mode": "executable", "authority": "orchestrator_deterministic", "independence": "independent_required", "procedureRef": "command:stage6-productive-planning" },
-    { "id": "proof:legacy-unreachable", "obligationId": "validation:legacy-unreachable", "criterionId": "criterion:legacy-unreachable", "mode": "static", "authority": "orchestrator_deterministic", "independence": "protected_baseline_or_negative_control", "procedureRef": "source-scan:productive-planning" },
+    { "id": "proof:root", "obligationId": "validation:root", "criterionId": "criterion:canonical-route", "mode": "executable", "authority": "orchestrator_deterministic", "independence": "independent_required", "procedureRef": "command:stage6-productive-planning" },
+    { "id": "proof:daemon", "obligationId": "validation:daemon", "criterionId": "criterion:canonical-route", "mode": "executable", "authority": "orchestrator_deterministic", "independence": "independent_required", "procedureRef": "command:daemon-planning-composition" },
+    { "id": "proof:planner", "obligationId": "validation:planner", "criterionId": "criterion:canonical-route", "mode": "executable", "authority": "orchestrator_deterministic", "independence": "independent_required", "procedureRef": "command:canonical-planning-engine" },
+    { "id": "proof:verifier", "obligationId": "validation:verifier", "criterionId": "criterion:canonical-route", "mode": "executable", "authority": "orchestrator_deterministic", "independence": "independent_required", "procedureRef": "command:deterministic-verifier" },
+    { "id": "proof:compiler", "obligationId": "validation:compiler", "criterionId": "criterion:canonical-route", "mode": "executable", "authority": "orchestrator_deterministic", "independence": "independent_required", "procedureRef": "command:direct-compiler" },
+    { "id": "proof:legacy", "obligationId": "validation:legacy", "criterionId": "criterion:legacy-unreachable", "mode": "static", "authority": "orchestrator_deterministic", "independence": "protected_baseline_or_negative_control", "procedureRef": "source-scan:productive-planning" },
     { "id": "proof:regression", "obligationId": "validation:regression", "criterionId": "criterion:regression", "mode": "executable", "authority": "orchestrator_deterministic", "independence": "independent_required", "procedureRef": "command:prior-gates" }
   ],
   "inspection": {
