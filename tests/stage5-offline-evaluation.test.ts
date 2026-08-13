@@ -74,6 +74,32 @@ describe("Stage 5 offline evaluation", () => {
 
     expect(result.candidates[0]).toEqual(expect.objectContaining({ passed: true }));
   });
+
+  it("attributes ownership through modify output artifacts, not broad observed scopes", () => {
+    const fixture = stage5Fixture();
+    const material = structuredClone(fixture.plan);
+    Reflect.deleteProperty(material, "digest");
+    material.units["unit:b"]!.repositorySurface.resourceRefs.push("resource:a");
+    material.units["unit:b"]!.repositorySurface.pathHints.push("src/a.ts");
+    material.units["unit:b"]!.resourceIntents.push({
+      resourceId: "resource:a",
+      access: "observe",
+      inputArtifactId: "artifact:a",
+      evidenceRefs: ["evidence:a"],
+      epistemic: { state: "known", confidence: "high", evidenceRefs: ["evidence:a"] }
+    });
+    const plan = buildSemanticPlan(material, stage5Sha256);
+    const compiled = compilePlan({ ...fixture, plan, hasher: stage5Sha256, idFactory: ids });
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) return;
+
+    const result = evaluatePlanningCandidates({
+      oracle: oracle(fixture),
+      candidates: [{ label: "stage5", plan, graph: compiled.graph, contracts: compiled.contracts }]
+    });
+
+    expect(result.candidates[0]).toEqual(expect.objectContaining({ passed: true }));
+  });
 });
 
 function oracle(fixture: ReturnType<typeof stage5Fixture>) {

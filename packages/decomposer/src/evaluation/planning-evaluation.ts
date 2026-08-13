@@ -46,7 +46,7 @@ export interface PlanningCandidate {
 export interface ObservedPlanningTopology {
   responsibilities: Array<{ id: string; text: string }>;
   seams: Array<{ producerText: string; consumerTexts: string[]; semantics: string }>;
-  ownership: Array<{ ownerText: string; paths: string[] }>;
+  ownership: Array<{ ownerText: string; paths: string[]; role?: "leaf" | "composite" }>;
   criterionIds: string[];
 }
 
@@ -63,7 +63,11 @@ export function observeCurrentPlannerTopology(
       consumerTexts: seam.consumerUnitKeys.map((id) => unitText(byId.get(id))),
       semantics: `${seam.purpose} ${seam.interface.promise} ${seam.interface.compatibility}`
     })),
-    ownership: units.map((unit) => ({ ownerText: unitText(unit), paths: [...new Set([...(unit.writePaths ?? []), ...(unit.plannedPaths ?? [])])].sort() })),
+    ownership: units.map((unit) => ({
+      ownerText: unitText(unit),
+      paths: [...new Set([...(unit.writePaths ?? []), ...(unit.plannedPaths ?? [])])].sort(),
+      role: unit.kind
+    })),
     criterionIds: [...new Set(canonicalCriterionIds ?? plan.criteria.map(({ id }) => id))].sort()
   };
 }
@@ -145,15 +149,18 @@ function evaluateCandidate(candidate: PlanningCandidate, oracle: PlanningTopolog
     }
   }
   for (const ownership of oracle.requiredOwnership) {
-    const writerIds = new Set(graph.resourceClaims.filter(({ access }) => access === "modify").map(({ nodeId }) => nodeId));
-    const owners = Object.entries(contracts.taskBundles).filter(([unitId, bundle]) =>
-      writerIds.has(unitId) && bundle.scope.allowedPaths.some((path) => path === ownership.path || path.startsWith(`${ownership.path}/`))
-    );
-    if (owners.length !== 1 || !matches(nodeText(graph.nodes[owners[0]![0]]!), ownership.ownerTerms)) {
+    const ownerIds = [...new Set(graph.resourceClaims.flatMap((claim) => {
+      if (claim.access !== "modify") return [];
+      const artifact = contracts.artifacts[claim.outputArtifact.id];
+      return artifact?.expectedPaths.some((path) => path === ownership.path || path.startsWith(`${ownership.path}/`)) === true
+        ? [claim.nodeId]
+        : [];
+    }))];
+    if (ownerIds.length !== 1 || !matches(nodeText(graph.nodes[ownerIds[0]!]!), ownership.ownerTerms)) {
       issues.push({
         code: "ownership_mismatch",
         oracleId: ownership.id,
-        message: `Expected one matching owner for ${ownership.path}; observed ${owners.length}.`
+        message: `Expected one matching owner for ${ownership.path}; observed ${ownerIds.length}.`
       });
     }
   }
@@ -191,7 +198,7 @@ function evaluateObserved(label: PlanningCandidate["label"], observed: ObservedP
     }
   }
   for (const ownership of oracle.requiredOwnership) {
-    const owners = observed.ownership.filter(({ paths }) => paths.includes(ownership.path));
+    const owners = observed.ownership.filter(({ paths, role }) => role !== "composite" && paths.includes(ownership.path));
     if (owners.length !== 1 || !matches(owners[0]!.ownerText, ownership.ownerTerms)) {
       issues.push({ code: "ownership_mismatch", oracleId: ownership.id, message: `Expected one matching owner for ${ownership.path}; observed ${owners.length}.` });
     }
