@@ -88,6 +88,15 @@ async function executeProcessSpawn(
   if (processHandle.custodianPid !== started.custodianIdentity.pid) {
     throw new Error(`Process supervisor returned a custodian PID that differs from its durable receipt.`);
   }
+  const invalidationReason = await context.invalidationReason?.();
+  if (invalidationReason !== undefined) {
+    const terminated = ProcessSupervisorFinalReceiptSchema.parse(
+      await processHandle.terminate(invalidationReason)
+    );
+    assertFinalReceiptBinding(terminated, started);
+    await recordSpawnTerminal(context, terminated, "failed");
+    return;
+  }
   await recordStartedIfMissing(context, started);
   const final = ProcessSupervisorFinalReceiptSchema.parse(await processHandle.completion);
   assertFinalReceiptBinding(final, started);

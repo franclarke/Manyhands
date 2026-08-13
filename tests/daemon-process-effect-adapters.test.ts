@@ -66,6 +66,47 @@ describe("daemon process physical effect adapters", () => {
     ]);
   });
 
+  it("terminates a newly supervised tree when cancellation becomes durable during spawn", async () => {
+    const started = startedReceipt();
+    const terminated = finalReceipt(started, "terminated", {
+      reason: "operator cancelled during supervisor startup"
+    });
+    const terminate = vi.fn<SupervisedProcess["terminate"]>().mockResolvedValue(terminated);
+    const spawnReturned = deferred();
+    const allowSpawnReturn = deferred();
+    const handle: SupervisedProcess = {
+      started,
+      custodianPid: started.custodianIdentity.pid,
+      completion: Promise.resolve(terminated),
+      terminate
+    };
+    const supervisor = fakeSupervisor({
+      spawn: vi.fn<ProcessSupervisorPort["spawn"]>().mockImplementation(async () => {
+        spawnReturned.resolve();
+        await allowSpawnReturn.promise;
+        return handle;
+      })
+    });
+    const invalidation = { reason: undefined as string | undefined };
+    const adapter = createProcessSpawnPhysicalEffectAdapter({ supervisor });
+    const observed = recordingContext("process_spawn", spawnPayload(), [], async () => invalidation.reason);
+
+    const execution = adapter.execute(intent("process_spawn"), observed.context);
+    await spawnReturned.promise;
+    invalidation.reason = "operator cancelled during supervisor startup";
+    allowSpawnReturn.resolve();
+    await execution;
+
+    expect(terminate).toHaveBeenCalledOnce();
+    expect(terminate).toHaveBeenCalledWith("operator cancelled during supervisor startup");
+    expect(observed.records).toEqual([{
+      observation: "failed",
+      observedAt: "2026-08-12T22:00:02.000Z",
+      processIdentity: PROCESS_IDENTITY,
+      resultDigest: `sha256:${"b".repeat(64)}`
+    }]);
+  });
+
   it("reconciles a durable start by terminating the old tree without spawning a duplicate", async () => {
     const started = startedReceipt();
     const interrupted = finalReceipt(started, "terminated", {
@@ -342,7 +383,8 @@ function fakeSupervisor(
 function recordingContext(
   kind: EffectIntent["kind"],
   payload: EffectInputSpec["payload"],
-  priorReceipts: readonly PhysicalEffectReceipt[] = []
+  priorReceipts: readonly PhysicalEffectReceipt[] = [],
+  invalidationReason: () => Promise<string | undefined> = async () => undefined
 ): {
   context: PhysicalEffectAdapterContext;
   records: PhysicalEffectObservationInput[];
@@ -354,10 +396,22 @@ function recordingContext(
       observerDaemonEpoch: "daemon:epoch-one",
       inputSpec: { schemaVersion: 1, kind, payload },
       priorReceipts,
+      invalidationReason,
       async record(observation) {
         records.push(structuredClone(observation));
         return {} as PhysicalEffectReceipt;
       }
     }
   };
+}
+
+function deferred(): {
+  promise: Promise<void>;
+  resolve(): void;
+} {
+  let resolve!: () => void;
+  const promise = new Promise<void>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
 }

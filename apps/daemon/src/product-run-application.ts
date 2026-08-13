@@ -108,7 +108,12 @@ async function decide(
         eventsAfterAcceptance: [event(options, context.runId, "run.resume_requested", {
           reason: command.reason
         }, envelope.commandDigest)],
-        effects: [executionEffect(context, requireDefinition(projection), options)]
+        effects: [executionEffect(
+          context,
+          requireDefinition(projection),
+          options,
+          nextExecutionAttempt(projection)
+        )]
       };
     }
     case "restart_run": {
@@ -118,7 +123,12 @@ async function decide(
         eventsAfterAcceptance: [event(options, context.runId, "run.restart_requested", {
           reason: command.reason
         }, envelope.commandDigest)],
-        effects: [executionEffect(context, requireDefinition(projection), options)]
+        effects: [executionEffect(
+          context,
+          requireDefinition(projection),
+          options,
+          nextExecutionAttempt(projection)
+        )]
       };
     }
     case "cancel_run":

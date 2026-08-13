@@ -26,7 +26,10 @@ import {
   type RunProjection
 } from "@manyhands/run-coordinator";
 import { foldRun } from "@manyhands/run-coordinator";
-import type { EffectInputStorePort } from "./effect-dispatcher.js";
+import type {
+  EffectDispatchInvalidationPort,
+  EffectInputStorePort
+} from "./effect-dispatcher.js";
 
 /**
  * Stage 2 limited the actor adapter to protocol facts while the web process
@@ -48,8 +51,15 @@ export interface RunActorJournalPort {
 }
 
 export interface RunActorDispatcherPort {
-  observe(intent: EffectIntent): Promise<PhysicalEffectReceipt[]>;
-  reconcile(intent: EffectIntent, observerDaemonEpoch: string): Promise<PhysicalEffectReceipt[]>;
+  observe(
+    intent: EffectIntent,
+    invalidation?: EffectDispatchInvalidationPort
+  ): Promise<PhysicalEffectReceipt[]>;
+  reconcile(
+    intent: EffectIntent,
+    observerDaemonEpoch: string,
+    invalidation?: EffectDispatchInvalidationPort
+  ): Promise<PhysicalEffectReceipt[]>;
 }
 
 export interface RunActorDecisionContext {
@@ -314,9 +324,12 @@ export class RunActor {
         await this.enqueue(() => this.recordObservations(intent, [], mode));
         return;
       }
+      const invalidation: EffectDispatchInvalidationPort = {
+        reason: () => this.enqueue(() => this.loadPersistedInterruptionReason(intent))
+      };
       const receipts = mode === "observe"
-        ? await this.options.dispatcher.observe(intent)
-        : await this.options.dispatcher.reconcile(intent, this.options.daemonEpoch);
+        ? await this.options.dispatcher.observe(intent, invalidation)
+        : await this.options.dispatcher.reconcile(intent, this.options.daemonEpoch, invalidation);
       await this.enqueue(() => this.recordObservations(intent, receipts, mode));
     })();
     const task = operation.catch((error) => {
@@ -328,6 +341,13 @@ export class RunActor {
     this.effectTasks.set(intent.effectId, task);
     void task.catch(() => undefined);
     return task;
+  }
+
+  private async loadPersistedInterruptionReason(intent: EffectIntent): Promise<string | undefined> {
+    await this.options.journal.assertAuthority(this.options.runId, this.options.daemonEpoch);
+    const events = await this.options.journal.load(this.options.runId);
+    this.rememberPersistedInterruptions(events);
+    return persistedInterruptionReason(events, intent);
   }
 
   private async recordObservations(

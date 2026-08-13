@@ -36,10 +36,16 @@ export interface PhysicalEffectObservationInput {
   resultDigest?: string;
 }
 
+export interface EffectDispatchInvalidationPort {
+  /** Read-only, actor-authoritative reason when this durable intent is obsolete. */
+  reason(): Promise<string | undefined>;
+}
+
 export interface PhysicalEffectAdapterContext {
   readonly observerDaemonEpoch: string;
   readonly inputSpec: Readonly<EffectInputSpec>;
   readonly priorReceipts: readonly Readonly<PhysicalEffectReceipt>[];
+  invalidationReason?(): Promise<string | undefined>;
   record(observation: PhysicalEffectObservationInput): Promise<Readonly<PhysicalEffectReceipt>>;
 }
 
@@ -75,18 +81,24 @@ export class KindAwarePhysicalEffectDispatcher {
     this.adapters = buildAdapterRegistry(options.adapters);
   }
 
-  async observe(input: EffectIntent): Promise<PhysicalEffectReceipt[]> {
+  async observe(
+    input: EffectIntent,
+    invalidation?: EffectDispatchInvalidationPort
+  ): Promise<PhysicalEffectReceipt[]> {
     const intent = parseIntent(input, this.options.hasher);
-    return this.enqueue(intent.effectId, () => this.dispatch(intent, intent.daemonEpoch, "observe"));
+    return this.enqueue(intent.effectId, () =>
+      this.dispatch(intent, intent.daemonEpoch, "observe", invalidation));
   }
 
   async reconcile(
     input: EffectIntent,
-    observerDaemonEpoch: string
+    observerDaemonEpoch: string,
+    invalidation?: EffectDispatchInvalidationPort
   ): Promise<PhysicalEffectReceipt[]> {
     const intent = parseIntent(input, this.options.hasher);
     assertObserverEpoch(observerDaemonEpoch);
-    return this.enqueue(intent.effectId, () => this.dispatch(intent, observerDaemonEpoch, "reconcile"));
+    return this.enqueue(intent.effectId, () =>
+      this.dispatch(intent, observerDaemonEpoch, "reconcile", invalidation));
   }
 
   private enqueue<T>(effectId: string, operation: () => Promise<T>): Promise<T> {
@@ -102,18 +114,26 @@ export class KindAwarePhysicalEffectDispatcher {
   private async dispatch(
     intent: Readonly<EffectIntent>,
     observerDaemonEpoch: string,
-    mode: "observe" | "reconcile"
+    mode: "observe" | "reconcile",
+    invalidation: EffectDispatchInvalidationPort | undefined
   ): Promise<PhysicalEffectReceipt[]> {
     assertObserverEpoch(observerDaemonEpoch);
     const inputSpec = await this.loadEffectInput(intent);
     const priorReceipts = await this.loadBoundReceipts(intent);
     if (authoritativeTerminal(priorReceipts) !== undefined) return priorReceipts;
+    if (await invalidation?.reason() !== undefined) return priorReceipts;
 
     const adapter = this.adapters.get(intent.kind);
     if (adapter === undefined) {
       throw new Error(`No physical effect adapter is registered for ${intent.kind}.`);
     }
-    const context = this.createContext(intent, observerDaemonEpoch, inputSpec, priorReceipts);
+    const context = this.createContext(
+      intent,
+      observerDaemonEpoch,
+      inputSpec,
+      priorReceipts,
+      invalidation
+    );
     if (mode === "observe" && priorReceipts.length === 0) {
       await adapter.execute(intent, context);
     } else {
@@ -122,6 +142,7 @@ export class KindAwarePhysicalEffectDispatcher {
 
     const completedReceipts = await this.loadBoundReceipts(intent);
     if (authoritativeTerminal(completedReceipts) === undefined) {
+      if (await invalidation?.reason() !== undefined) return completedReceipts;
       if (
         mode === "reconcile"
         && intent.idempotency === "never_repeat_unknown"
@@ -143,12 +164,14 @@ export class KindAwarePhysicalEffectDispatcher {
     intent: Readonly<EffectIntent>,
     observerDaemonEpoch: string,
     inputSpec: Readonly<EffectInputSpec>,
-    priorReceipts: readonly PhysicalEffectReceipt[]
+    priorReceipts: readonly PhysicalEffectReceipt[],
+    invalidation: EffectDispatchInvalidationPort | undefined
   ): PhysicalEffectAdapterContext {
     return Object.freeze({
       observerDaemonEpoch,
       inputSpec,
       priorReceipts: Object.freeze(priorReceipts.map((receipt) => Object.freeze(structuredClone(receipt)))),
+      invalidationReason: () => invalidation?.reason() ?? Promise.resolve(undefined),
       record: async (observation: PhysicalEffectObservationInput) => {
         const candidate = buildPhysicalEffectReceipt({
           ...observation,
