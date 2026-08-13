@@ -100,7 +100,8 @@ function resultReadyEvents(approval: DeliveryApproval): RunEvent[] {
             justification: "The exact candidate passed.",
             evidenceRefs: ["evidence-final"]
           }],
-          outcome: "verified"
+          outcome: "verified",
+          observations: []
         }
       }
     },

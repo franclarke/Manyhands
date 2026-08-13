@@ -194,7 +194,8 @@ function success(input: V2NodeExecutionInput, root: boolean, candidateCommit = `
         evidenceRefs: [`evidence-${input.node.id}`]
       }],
       outcome: "verified",
-      validationRecipeDigest: "sha256:recipe-v2"
+      validationRecipeDigest: "sha256:recipe-v2",
+      observations: []
     },
     artifactLocation: `commit-${input.node.id}`,
     ...(root ? {

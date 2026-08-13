@@ -96,7 +96,7 @@ function readyEvents(): RunEvent[] {
   ];
 }
 function verifiedMatrix(matrixId: string, candidateCommit: string) {
-  return { matrixId, candidateCommit, validationContract: { id: "validation-final", revision: "revision-1" }, criteria: [{ criterionId: "criterion-final", obligationId: "obligation-final", status: "satisfied" as const, justification: "The exact candidate passed.", evidenceRefs: ["evidence-final"] }], outcome: "verified" as const, validationRecipeDigest: "sha256:recipe" };
+  return { matrixId, candidateCommit, validationContract: { id: "validation-final", revision: "revision-1" }, criteria: [{ criterionId: "criterion-final", obligationId: "obligation-final", status: "satisfied" as const, justification: "The exact candidate passed.", evidenceRefs: ["evidence-final"] }], outcome: "verified" as const, validationRecipeDigest: "sha256:recipe", observations: [] };
 }
 function coordinatorFor(events: RunEvent[], publish: ReturnType<typeof vi.fn>): RunCoordinator {
   return new RunCoordinator({ events: { load: async () => [...events], append: async (_id, expected, inputs) => { const added = inputs.map((input, index) => event(expected + index + 1, input.type, input.payload)); events.push(...added); return added; } }, delivery: { publish }, clock: () => "2026-07-17T00:00:00.000Z", eventId: (type, sequence) => `${type}-${sequence}` });

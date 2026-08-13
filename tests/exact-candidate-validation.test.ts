@@ -8,11 +8,13 @@ import {
   validateExactCandidate,
   type ValidationRecipe
 } from "@manyhands/execution-core";
-import type { ValidationContract } from "@manyhands/contracts";
+import type { ValidationContract, ValidationEvidenceBinding } from "@manyhands/contracts";
 import type { RepositoryCapabilities } from "@manyhands/repository-index";
 
 const recipe: ValidationRecipe = {
   schemaVersion: 1,
+  templateId: "template-1",
+  programId: "template-1",
   recipeId: "recipe-1",
   validationContract: { id: "validation-1", revision: "rev-1" },
   repositorySnapshotId: "snapshot-1",
@@ -56,10 +58,17 @@ describe("validateExactCandidate", () => {
       const controlledRecipe: ValidationRecipe = {
         ...recipe,
         recipeId: `recipe-control-${detectedFailure}`,
-        steps: recipe.steps.map((step) => ({
+        steps: recipe.steps.map((step): ValidationRecipe["steps"][number] => ({
           ...step,
           negativeControl: "required",
-          attributions: step.attributions?.map((attribution) => ({ ...attribution, negativeControl: "required" }))
+          ...(step.attributions === undefined
+            ? {}
+            : {
+                attributions: step.attributions.map((attribution) => ({
+                  ...attribution,
+                  negativeControl: "required"
+                }))
+              })
         }))
       };
       const result = await validateExactCandidate({
@@ -80,13 +89,13 @@ describe("validateExactCandidate", () => {
   );
 
   it("executes declared shared evidence once and attributes the exact observation to every listed criterion", async () => {
-    const shared = {
+    const shared: Extract<ValidationEvidenceBinding, { kind: "shared_command" }> = {
       kind: "shared_command",
       criterionIds: ["criterion-order", "criterion-values"],
       references: ["tests/projections.test.ts"],
       rationale: "The value-aware projection test asserts both ordering and values."
-    } as const;
-    const contract = {
+    };
+    const contract: ValidationContract = {
       schemaVersion: 2,
       id: "validation-shared",
       revision: "rev-shared",
@@ -96,7 +105,7 @@ describe("validateExactCandidate", () => {
         { id: "obligation-order", criterionId: "criterion-order", layer: "unit", severity: "required", acceptableEvidence: ["test_result"], baselinePolicy: "not_required", negativeControl: "not_required", flakyPolicy: "forbid", evidence: shared },
         { id: "obligation-values", criterionId: "criterion-values", layer: "unit", severity: "required", acceptableEvidence: ["test_result"], baselinePolicy: "not_required", negativeControl: "not_required", flakyPolicy: "forbid", evidence: shared }
       ]
-    } as ValidationContract;
+    };
     const capabilities = {
       packageManager: { name: "pnpm", evidence: "pnpm-lock.yaml" },
       scripts: { test: "vitest run" },

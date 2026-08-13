@@ -17,13 +17,17 @@ import type { ValidationObligation } from "@manyhands/contracts";
 const OBLIGATION: ValidationObligation = {
   id: "obligation-1",
   criterionId: "criterion-1",
-  layer: "leaf",
+  layer: "unit",
   severity: "required",
   acceptableEvidence: ["test_result"],
   baselinePolicy: "not_required",
   negativeControl: "not_required",
   flakyPolicy: "forbid",
-  evidence: { kind: "suite_command", references: ["test"] }
+  evidence: {
+    kind: "focused_command",
+    selectors: ["tests/validation-without-commands.test.ts"],
+    references: ["tests/validation-without-commands.test.ts"]
+  }
 };
 
 const CAPABILITIES = {

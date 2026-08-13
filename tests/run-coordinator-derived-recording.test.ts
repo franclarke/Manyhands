@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  EvidenceMatrixRecordSchema,
   RunCoordinator,
   RunEventSchema,
   type RunEvent,
@@ -10,7 +11,7 @@ const at = "2026-07-29T12:00:00.000Z";
 
 describe("RunCoordinator.recordDerived", () => {
   it("recognizes a durably committed batch after an ambiguous append error", async () => {
-    let events: RunEvent[] = [
+    const events: RunEvent[] = [
       event(1, "created", "run.created", { goal: "Test ambiguous append" }),
       event(2, "proposed-r1", "graph.revision.proposed", { graphId: "graph", revision: 1 }),
       event(3, "approved-r1", "graph.revision.approved", { graphId: "graph", revision: 1 })
@@ -55,7 +56,7 @@ describe("RunCoordinator.recordDerived", () => {
   });
 
   it("re-derives facts after optimistic contention changes the current revision", async () => {
-    let events: RunEvent[] = [
+    const events: RunEvent[] = [
       event(1, "created", "run.created", { goal: "Test derived recording" }),
       event(2, "proposed-r1", "graph.revision.proposed", { graphId: "graph", revision: 1 }),
       event(3, "approved-r1", "graph.revision.approved", { graphId: "graph", revision: 1 })
@@ -118,7 +119,7 @@ describe("RunCoordinator.recordDerived", () => {
    * conflicting one, and a run that hit contention aborted instead of settling.
    */
   it("recognizes a persisted batch whose schema filled in a default", async () => {
-    const matrix = {
+    const matrixInput = {
       matrixId: "matrix-1",
       candidateCommit: "commit-1",
       validationContract: { id: "validation-1", revision: "sha256:validation" },
@@ -131,6 +132,9 @@ describe("RunCoordinator.recordDerived", () => {
       }],
       outcome: "verified"
     };
+    const matrix = EvidenceMatrixRecordSchema.parse(matrixInput);
+    const derivedMatrix = structuredClone(matrix);
+    Reflect.deleteProperty(derivedMatrix, "observations");
     const events: RunEvent[] = [
       event(1, "created", "run.created", { goal: "Test schema defaults" }),
       event(2, "proposed-r1", "graph.revision.proposed", { graphId: "graph", revision: 1 }),
@@ -164,14 +168,17 @@ describe("RunCoordinator.recordDerived", () => {
       eventId: (type, sequence) => `${type}:${sequence}`
     });
 
-    // Precondition: the persisted event carries the default this input omits.
-    expect((events[5]!.payload as { matrix: { observations?: unknown } }).matrix.observations).toEqual([]);
+    // Precondition: schema parsing fills the canonical field omitted by the
+    // boundary input before the event becomes a durable domain fact.
+    expect(matrixInput).not.toHaveProperty("observations");
+    expect(matrix.observations).toEqual([]);
+    expect(derivedMatrix).not.toHaveProperty("observations");
 
     const state = await coordinator.recordDerived("run-derived", () => [{
       eventId: "derived-validation",
       occurredAt: at,
       type: "validation.completed",
-      payload: { attemptId: "run-derived:attempt:node-a:1", nodeId: "node-a", matrix }
+      payload: { attemptId: "run-derived:attempt:node-a:1", nodeId: "node-a", matrix: derivedMatrix }
     }]);
 
     expect(state.evidenceMatrices).toEqual(["matrix-1"]);

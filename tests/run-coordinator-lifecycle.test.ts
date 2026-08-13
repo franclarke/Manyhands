@@ -222,7 +222,8 @@ function evidenceMatrix(outcome: "verified" | "unverified" | "failed") {
       justification: "Observed validation outcome.",
       evidenceRefs: ["evidence-1"]
     }],
-    outcome
+    outcome,
+    observations: []
   };
 }
 

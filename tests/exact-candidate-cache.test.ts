@@ -2,12 +2,14 @@ import { describe, expect, it, vi } from "vitest";
 import {
   InMemoryEvidenceValidationCache,
   validateExactCandidate,
-  type ValidationObligation,
   type ValidationRecipe
 } from "@manyhands/execution-core";
+import type { ValidationObligation } from "@manyhands/contracts";
 
 const recipe: ValidationRecipe = {
   schemaVersion: 1,
+  templateId: "template-1",
+  programId: "template-1",
   recipeId: "recipe-1",
   validationContract: { id: "validation-1", revision: "rev-1" },
   repositorySnapshotId: "snapshot-1",

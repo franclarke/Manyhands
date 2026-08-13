@@ -593,7 +593,8 @@ describe("V2ExecutionDriver", () => {
               evidenceRefs: [`evidence-${input.node.id}`]
             }],
             outcome: "verified",
-            validationRecipeDigest: "sha256:recipe-v2"
+            validationRecipeDigest: "sha256:recipe-v2",
+            observations: []
           },
           artifactLocation: `commit-${input.node.id}`,
           ...(input.node.id === compiled.graph.rootId
@@ -680,7 +681,8 @@ describe("V2ExecutionDriver", () => {
               evidenceRefs: ["evidence-parent-failure"]
             }],
             outcome: "failed",
-            validationRecipeDigest: "sha256:recipe-root"
+            validationRecipeDigest: "sha256:recipe-root",
+            observations: []
           },
           reason: "parent_validation_failed: exact candidate is not verified"
         };
@@ -849,7 +851,8 @@ function success(input: V2NodeExecutionInput): V2NodeExecutionOutcome {
       validationContract: { id: input.contract.validation.id, revision: input.contract.validation.revision },
       criteria: [{ criterionId: obligation.criterionId, obligationId: obligation.id, status: "satisfied", justification: "Passed.", evidenceRefs: [`evidence-${input.node.id}`] }],
       outcome: "verified",
-      validationRecipeDigest: "sha256:recipe-v2"
+      validationRecipeDigest: "sha256:recipe-v2",
+      observations: []
     },
     finalManifest: {
       commitSha: `commit-${input.node.id}`,
