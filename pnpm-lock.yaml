@@ -309,6 +309,9 @@ importers:
       '@manyhands/run-coordinator':
         specifier: workspace:*
         version: link:../run-coordinator
+      '@manyhands/run-store':
+        specifier: workspace:*
+        version: link:../run-store
 
   packages/run-store:
     dependencies:

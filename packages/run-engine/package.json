@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@manyhands/contracts": "workspace:*",
-    "@manyhands/run-coordinator": "workspace:*"
+    "@manyhands/run-coordinator": "workspace:*",
+    "@manyhands/run-store": "workspace:*"
   }
 }
