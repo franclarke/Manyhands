@@ -114,6 +114,49 @@ describe("KindAwarePhysicalEffectDispatcher", () => {
     expect(receipts.at(-1)).toEqual(expect.objectContaining({ daemonEpoch: "daemon:epoch-2" }));
   });
 
+  it("reconciles a recovered intent with no receipt instead of repeating an unknown effect", async () => {
+    const store = new MemoryReceiptStore();
+    const effect = buildEffectIntent({
+      runId: "run:dispatcher",
+      attemptId: "attempt:delivery:unknown",
+      kind: "delivery",
+      inputDigest: "sha256:delivery:unknown",
+      daemonEpoch: "daemon:epoch-1",
+      idempotency: "never_repeat_unknown",
+      requestedAt: "2026-08-12T21:00:00.000Z"
+    }, sha256);
+    let executeCount = 0;
+    let reconcileCount = 0;
+    const dispatcher = new KindAwarePhysicalEffectDispatcher({
+      receiptStore: store,
+      hasher: sha256,
+      adapters: allEffectKinds.map((kind): PhysicalEffectAdapter => ({
+        kind,
+        async execute() {
+          executeCount += 1;
+          throw new Error("recovery must not execute an effect with unknown physical state");
+        },
+        async reconcile(_received, context) {
+          if (kind !== "delivery") throw new Error(`unexpected reconcile for ${kind}`);
+          reconcileCount += 1;
+          await context.record({
+            observation: "failed",
+            resultDigest: "sha256:delivery:interrupted",
+            observedAt: "2026-08-12T21:00:01.000Z"
+          });
+        }
+      }))
+    });
+
+    const receipts = await dispatcher.reconcile(effect, "daemon:epoch-2");
+
+    expect(executeCount).toBe(0);
+    expect(reconcileCount).toBe(1);
+    expect(receipts).toEqual([
+      expect.objectContaining({ observation: "failed", daemonEpoch: "daemon:epoch-2" })
+    ]);
+  });
+
   it("replays one durable terminal receipt without invoking an adapter again", async () => {
     const store = new MemoryReceiptStore();
     let executeCount = 0;
@@ -257,7 +300,10 @@ describe("KindAwarePhysicalEffectDispatcher", () => {
       hasher: sha256,
       adapters: allEffectKinds.map((kind): PhysicalEffectAdapter => ({
         kind,
-        async execute(_received, context) {
+        async execute() {
+          throw new Error("recovered effects must reconcile");
+        },
+        async reconcile(_received, context) {
           await context.record({
             observation: "succeeded",
             observedAt: "2026-08-12T21:00:01.000Z",
@@ -265,8 +311,7 @@ describe("KindAwarePhysicalEffectDispatcher", () => {
             inputDigest: "sha256:adapter-controlled",
             daemonEpoch: "daemon:adapter-controlled"
           } as Parameters<typeof context.record>[0]);
-        },
-        async reconcile() {}
+        }
       }))
     });
 

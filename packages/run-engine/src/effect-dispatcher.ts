@@ -67,7 +67,7 @@ export class KindAwarePhysicalEffectDispatcher {
 
   async observe(input: EffectIntent): Promise<PhysicalEffectReceipt[]> {
     const intent = parseIntent(input, this.options.hasher);
-    return this.enqueue(intent.effectId, () => this.dispatch(intent, intent.daemonEpoch));
+    return this.enqueue(intent.effectId, () => this.dispatch(intent, intent.daemonEpoch, "observe"));
   }
 
   async reconcile(
@@ -76,7 +76,7 @@ export class KindAwarePhysicalEffectDispatcher {
   ): Promise<PhysicalEffectReceipt[]> {
     const intent = parseIntent(input, this.options.hasher);
     assertObserverEpoch(observerDaemonEpoch);
-    return this.enqueue(intent.effectId, () => this.dispatch(intent, observerDaemonEpoch));
+    return this.enqueue(intent.effectId, () => this.dispatch(intent, observerDaemonEpoch, "reconcile"));
   }
 
   private enqueue<T>(effectId: string, operation: () => Promise<T>): Promise<T> {
@@ -91,7 +91,8 @@ export class KindAwarePhysicalEffectDispatcher {
 
   private async dispatch(
     intent: Readonly<EffectIntent>,
-    observerDaemonEpoch: string
+    observerDaemonEpoch: string,
+    mode: "observe" | "reconcile"
   ): Promise<PhysicalEffectReceipt[]> {
     assertObserverEpoch(observerDaemonEpoch);
     const priorReceipts = await this.loadBoundReceipts(intent);
@@ -102,7 +103,7 @@ export class KindAwarePhysicalEffectDispatcher {
       throw new Error(`No physical effect adapter is registered for ${intent.kind}.`);
     }
     const context = this.createContext(intent, observerDaemonEpoch, priorReceipts);
-    if (priorReceipts.length === 0) {
+    if (mode === "observe" && priorReceipts.length === 0) {
       await adapter.execute(intent, context);
     } else {
       await adapter.reconcile(intent, context);
