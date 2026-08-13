@@ -43,6 +43,21 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.1)
 
+  apps/daemon:
+    dependencies:
+      '@manyhands/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@manyhands/run-coordinator':
+        specifier: workspace:*
+        version: link:../../packages/run-coordinator
+      '@manyhands/run-engine':
+        specifier: workspace:*
+        version: link:../../packages/run-engine
+      '@manyhands/run-store':
+        specifier: workspace:*
+        version: link:../../packages/run-store
+
   apps/web:
     dependencies:
       '@assistant-ui/react':
