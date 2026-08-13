@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "gate": "GRepo",
+  "status": "pass",
+  "capturedAt": "2026-08-13",
+  "timezone": "America/Buenos_Aires",
+  "branch": "codex/correctness-first-full-implementation",
+  "stage3AcceptedBase": "4e495abd0805c62f7641dc73c19b82ffc7eedc38",
+  "candidateSha": "292daaee3803404cdb473f929c1fbfa36a8b4964",
+  "candidateTree": "8cd98afa812d3e7927985d6edf99c1744e4b5f5d",
+  "runtime": {
+    "node": "22.22.0",
+    "nodePath": "C:\\mh-runtime-c781-09\\node-v22.22.0-win-x64\\node.exe",
+    "pnpm": "11.21.0",
+    "vitest": "2.1.9",
+    "typescript": "5.9.3",
+    "eslint": "8.57.1",
+    "tsup": "8.5.1",
+    "next": "15.5.7",
+    "git": "2.40.1.windows.1",
+    "cargo": "1.93.1",
+    "rustc": "1.93.1"
+  },
+  "freshProcessEvidence": {
+    "processCount": 2,
+    "repositoryState": "partial",
+    "results": 32,
+    "evidenceItems": 32,
+    "budget": {
+      "maxResults": 32,
+      "maxBytes": 32768,
+      "maxDepth": 2
+    },
+    "modelDigest": "sha256:d3f07567068c0d0cb47fe9f95300fb383c50db84122388701c939441c5c0c064",
+    "viewDigest": "sha256:b5a1feb4b1902fd795708a3c279fb121b869ff070743ec159b485ad663167d82",
+    "catalogDigest": "sha256:10e8405e06b892d62aa8aad71f5f7b7e26c433d9fb8aa31dd06cd473998746bc",
+    "answerDigest": "sha256:d9a3d7190b75716241ad18b5471670090ecdfc14d4ab2bbdde41275895ca8b0f"
+  },
+  "verification": {
+    "stage4Focused": { "files": 4, "passed": 11, "failed": 0, "retry": 0 },
+    "stage3Regression": { "files": 19, "passed": 110, "failed": 0, "retry": 0 },
+    "fullSuite": { "files": 247, "passed": 1663, "skipped": 4, "failed": 0, "retry": 0 },
+    "typechecks": "pass",
+    "packageBuilds": "pass",
+    "nextProductionBuild": "pass",
+    "rust": "pass",
+    "scopedLint": "pass",
+    "diffCheck": "pass",
+    "independentReview": "GO"
+  },
+  "prohibitedWork": {
+    "stage5Started": false,
+    "liveModelUsed": false,
+    "experimentRun": false,
+    "thesisModified": false
+  }
+}

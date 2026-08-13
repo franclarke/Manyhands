@@ -58,13 +58,14 @@ describe("B-033 current product documentation", () => {
     expect(cells.match(/\| `not_run` \|/gu)).toHaveLength(20);
   });
 
-  it("records the attributable Stage 3 closure and leaves Stage 4 not started", async () => {
-    const [docsReadme, plan, stage2, stage3, historicalHandoff, currentHandoff, study] =
+  it("records the attributable Stage 4 closure and leaves Stage 5 not started", async () => {
+    const [docsReadme, plan, stage2, stage3, stage4, historicalHandoff, stage4Handoff, study] =
       await Promise.all([
         readFile(path.join(root, "docs", "README.md"), "utf8"),
         readFile(path.join(root, "docs", "plans", "2026-08-12-correctness-first-system-redesign.md"), "utf8"),
         readFile(path.join(root, "docs", "audits", "stage-2", "README.md"), "utf8"),
         readFile(path.join(root, "docs", "audits", "stage-3", "README.md"), "utf8"),
+        readFile(path.join(root, "docs", "audits", "stage-4", "README.md"), "utf8"),
         readFile(path.join(root, "docs", "handoffs", "2026-08-12-stage-2-to-stage-3.md"), "utf8"),
         readFile(path.join(root, "docs", "handoffs", "2026-08-13-stage-3-to-stage-4.md"), "utf8"),
         readFile(path.join(root, "docs", "plans", "2026-08-13-exploratory-longitudinal-study.md"), "utf8")
@@ -80,15 +81,21 @@ describe("B-033 current product documentation", () => {
     expect(historicalHandoff).toContain("**Stage 3 / GR:** `not_started`");
     expect(docsReadme).toContain("[`audits/stage-3/`](audits/stage-3/)");
     expect(plan).toContain("| Stage 3 / GR | `pass` |");
-    expect(plan).toContain("| Stages 4–11 | `not_started` |");
     expect(stage3).toContain("**Status:** `pass`");
     expect(stage3).toContain("4e495abd0805c62f7641dc73c19b82ffc7eedc38");
     expect(stage3).toContain("84a59b1d9db2ee978d87b6a079dafee281e38a64");
     expect(stage3).toContain("../../handoffs/2026-08-13-stage-3-to-stage-4.md");
-    expect(currentHandoff).toContain("**Stage 4 / GRepo:** `not_started`");
-    expect(currentHandoff).toContain("`gpt-5.6-sol`");
-    expect(currentHandoff).toContain("**esfuerzo principal:** `high`");
-    expect(currentHandoff).toContain("4e495abd0805c62f7641dc73c19b82ffc7eedc38");
+    expect(docsReadme).toContain("[`audits/stage-4/`](audits/stage-4/)");
+    expect(plan).toContain("| Stage 4 / GRepo | `pass` |");
+    expect(plan).toContain("| Stages 5–11 | `not_started` |");
+    expect(stage4).toContain("**Status:** `pass`");
+    expect(stage4).toContain("292daaee3803404cdb473f929c1fbfa36a8b4964");
+    expect(stage4).toContain("8cd98afa812d3e7927985d6edf99c1744e4b5f5d");
+    expect(stage4).toContain("Stage 5 permanece");
+    expect(stage4Handoff).toContain("**Stage 4 / GRepo:** `not_started`");
+    expect(stage4Handoff).toContain("`gpt-5.6-sol`");
+    expect(stage4Handoff).toContain("**esfuerzo principal:** `high`");
+    expect(stage4Handoff).toContain("4e495abd0805c62f7641dc73c19b82ffc7eedc38");
     expect(plan).toContain("2026-08-13-stage-3-to-stage-4.md");
     expect(plan).toContain("2026-08-13-exploratory-longitudinal-study.md");
     expect(study).toContain("Corrida 1 — producto visual inicial");
