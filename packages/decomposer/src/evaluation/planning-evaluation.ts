@@ -65,7 +65,7 @@ export function observeCurrentPlannerTopology(
     })),
     ownership: units.map((unit) => ({
       ownerText: unitText(unit),
-      paths: [...new Set([...(unit.writePaths ?? []), ...(unit.plannedPaths ?? [])])].sort(),
+      paths: [...new Set(unit.writePaths ?? unit.plannedPaths ?? [])].sort(),
       role: unit.kind
     })),
     criterionIds: [...new Set(canonicalCriterionIds ?? plan.criteria.map(({ id }) => id))].sort()
