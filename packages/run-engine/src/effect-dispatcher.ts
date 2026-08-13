@@ -122,6 +122,9 @@ export class KindAwarePhysicalEffectDispatcher {
     const priorReceipts = await this.loadBoundReceipts(intent);
     if (authoritativeTerminal(priorReceipts) !== undefined) return priorReceipts;
     const invalidationReason = await invalidation?.reason();
+    if (mode === "observe" && priorReceipts.length === 0 && invalidationReason !== undefined) {
+      return priorReceipts;
+    }
 
     const adapter = this.adapters.get(intent.kind);
     if (adapter === undefined) {

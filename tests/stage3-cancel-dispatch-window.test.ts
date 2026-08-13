@@ -108,15 +108,47 @@ describe("Stage 3 cancellation during the dispatcher pre-dispatch window", () =>
     dispatchGate.release.resolve();
     await actor.drainEffects();
 
-    expect(adapterCalls).toEqual([
-      { kind: "process_spawn", mode: "reconcile" },
-      { kind: "cleanup", mode: "execute" }
-    ]);
+    expect(adapterCalls).toEqual([{ kind: "cleanup", mode: "execute" }]);
     const projection = foldRun(journal.events);
     expect(projection.effectTerminals[spawn.intent.effectId]?.status).toBe("interrupted");
     expect(projection.effectTerminals[cleanup.intent.effectId]?.status).toBe("completed");
     expect(receiptStore.receipts.filter((receipt) => receipt.effectId === spawn.intent.effectId)).toEqual([]);
   }
+
+  it("does not invoke a reconcile adapter that can start physical work for an invalidated first observe", async () => {
+    const inputStore = new BlockingEffectInputStore(false);
+    const receiptStore = new MemoryReceiptStore(false);
+    const modelCall = effect("model_call", "attempt:model", {
+      repositoryViewDigest: "sha256:repository-view",
+      requestDigest: "sha256:request",
+      modelProfileDigest: "sha256:model-profile"
+    });
+    await inputStore.put(modelCall.inputSpec);
+    const execute = vi.fn();
+    const reconcile = vi.fn<PhysicalEffectAdapter["reconcile"]>(async (_intent, context) => {
+      await context.record({
+        observation: "succeeded",
+        resultDigest: "sha256:forbidden-post-cancel-work",
+        observedAt: "2026-08-13T13:00:05.000Z"
+      });
+    });
+    const dispatcher = new KindAwarePhysicalEffectDispatcher({
+      inputStore,
+      receiptStore,
+      hasher: sha256,
+      adapters: EffectKindSchema.options.map((kind): PhysicalEffectAdapter => kind === "model_call"
+        ? { kind, execute, reconcile }
+        : { kind, execute: async () => undefined, reconcile: async () => undefined })
+    });
+
+    const receipts = await dispatcher.observe(modelCall.intent, {
+      reason: async () => "Run cancellation is durable."
+    });
+
+    expect(execute).not.toHaveBeenCalled();
+    expect(reconcile).not.toHaveBeenCalled();
+    expect(receipts).toEqual([]);
+  });
 
   it("reconciles durable physical state after cancellation instead of short-circuiting recovery", async () => {
     const inputStore = new BlockingEffectInputStore(false);
