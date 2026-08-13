@@ -1,0 +1,1527 @@
+You are producing two offline planning proposals for a pre-registered ManyHands Stage 5 evaluation.
+
+Do not call tools. Do not inspect the filesystem. Use only the exact GoalContract, RepositoryView evidence, resource map and oracle below.
+
+Return the three required JSON-string fields through the provided outer response schema. No prose outside those fields.
+
+A proposal is not implementation and must not claim runtime success.
+
+Return canonicalMaterialJson as a JSON string containing exactly one SemanticPlanMaterial:
+{ id, revision:1, goalContract:{id,revision,digest}, repositorySnapshot:{id,digest}, repositoryView:{digest,treeSha,resourceCatalogDigest}, rootUnitId, units:Record, seams:Record, artifacts:Record, decisions:[], evidence:[], status:"ready" }.
+Each unit is {id,parentId?,role:"leaf"|"composite",title,objective,boundary:{kind,evidenceRefs},outcomes:[{id,statement}],criteria:[{criterionId,statement,sourceCriterionId}],repositorySurface:{resourceRefs,pathHints},resourceIntents,consumes,produces,seamRefs,validation,uncertainty:[],granularity,expansion,integration?}.
+An observe intent is {resourceId,access:"observe",inputArtifactId?,evidenceRefs,epistemic}. A modify intent is {resourceId,access:"modify",ownerPhase:"implementation"|"integration",inputArtifactId?,outputArtifactId,evidenceRefs,epistemic}.
+Validation is {obligationId,criterionId,proofStrategyId,layer,severity,acceptableEvidence,baselinePolicy,negativeControl,flakyPolicy}; use ONLY an exact registered proof strategy whose obligationId and criterionId both match.
+Granularity leaf requires disposition:"leaf" and all feasibility yes/true/false as appropriate. Composite requires disposition:"split", at least one splitReason/evidenceRef, integrationObligationId, and integration {obligationId,objective,criterionIds,proofStrategyId,artifactIds,seamIds}.
+Artifact is {id,producerUnitId,consumerUnitIds,artifactType,mediaType?,materialization:"commit"|"patch"|"files"|"manifest"|"logical",expectedPaths}. Every consumed artifact names the consumer and every produced artifact names the producer. Every consumed artifact must be output by a modify resource intent of its producer.
+Seam is {id,kind,specification,producerUnitId,consumerUnitIds,semanticFacts,compatibility:{mode,rules},artifactId,validationObligationIds}. Producer and consumers must all list seamRefs. Seam artifact must flow producer to every seam consumer.
+Use only listed resourceId values and their exact paths. One path has one modifying leaf owner. Root/composites may describe broad surfaces but should not modify child-owned resources.
+
+Return currentDraftJson as a JSON string containing the current planner draft {root,seams,repositoryEvidence,uncertainties:[],questions:[]}.
+Current units use {key,kind,title,objective,concerns,evidenceIds,plannedPaths?,writePaths?,outcomes}; composite also has cut:{criterion,rationale},children. Outcomes use criterionIds "criterion-1", "criterion-2", ... in the same order as GoalContract acceptanceCriteria, and {verification:{kind:"existing"|"author_test"|"manual",references,rationale?}}. Each leaf must cite an exact supplied evidence id and declare exact writePaths. Seams use {id,producerUnitKey,consumerUnitKeys,purpose,paths,interface:{kind,promise,compatibility,materialization,verification},evidenceIds}. repositoryEvidence must be the exact supplied current evidence array.
+
+Return criticFindingsJson as a JSON string containing an array of zero or more advisory findings {code,message,evidenceRefs,resolution}. resolution is deterministic_check, repository_query or human_decision. These findings cannot approve or reject.
+
+Pre-registration:
+{
+  "schemaVersion": 1,
+  "caseId": "gp1:manyhands-canonical-planning",
+  "repository": {
+    "id": "repo:manyhands",
+    "source": ".",
+    "baseCommit": "963544a7a1b0e46e6faeb285bceff0f322811b86",
+    "treeSha": "d869635b11a2fa49728018883eaf98ed4e988ae8",
+    "snapshot": {
+      "id": "sha256:edcaf3e06b29078c971dfae1e22f8dddb504d112605cebbe25dacd2f82173719",
+      "digest": "sha256:00459afe315bab01fa60b7772be0ee11f58d343b144882f231f573cce3577543"
+    },
+    "modelDigest": "sha256:fb978e52cdc6d447a8aca8569c98cce46c8b5c47a480715541aaddd858b30f86",
+    "viewDigest": "sha256:73814cb0a91939cbb49f62aee02f5aa2a519dd057a6e7ac05bf6d1e1ff6b57a6",
+    "catalogDigest": "sha256:d4263669033d68dc0c10d19d6e8f567900ccfff2a688d7bd5fa2df5bb172c3c5",
+    "coverage": "partial"
+  },
+  "goal": {
+    "id": "goal:manyhands-canonical-planning-cutover",
+    "revision": 1,
+    "goal": "Cut over ManyHands productive planning in the daemon to the canonical PlanningEngine, deterministic verifier and direct SemanticPlan to GraphRevision compiler while preserving lifecycle ownership and making the legacy WorkBreakdown projection unreachable.",
+    "acceptanceCriteria": [
+      {
+        "id": "criterion:canonical-route",
+        "statement": "The daemon composes the canonical planner, verifier and direct compiler as the only productive planning route.",
+        "required": true,
+        "level": "product",
+        "protectedReferences": [],
+        "verification": {
+          "allowedProofs": [
+            {
+              "mode": "executable",
+              "authority": "orchestrator_deterministic"
+            }
+          ],
+          "independence": "independent_required"
+        }
+      },
+      {
+        "id": "criterion:legacy-unreachable",
+        "statement": "RecursivePlanner, WorkBreakdown projection and the legacy graph compiler are unreachable from productive planning entrypoints.",
+        "required": true,
+        "level": "constraint",
+        "protectedReferences": [],
+        "verification": {
+          "allowedProofs": [
+            {
+              "mode": "static",
+              "authority": "orchestrator_deterministic"
+            }
+          ],
+          "independence": "protected_baseline_or_negative_control"
+        }
+      },
+      {
+        "id": "criterion:regression",
+        "statement": "Daemon lifecycle ownership, repository grounding and existing gates remain green after cutover.",
+        "required": true,
+        "level": "quality",
+        "protectedReferences": [],
+        "verification": {
+          "allowedProofs": [
+            {
+              "mode": "executable",
+              "authority": "orchestrator_deterministic"
+            }
+          ],
+          "independence": "independent_required"
+        }
+      }
+    ],
+    "constraints": [
+      "Do not introduce another plan or graph representation.",
+      "Do not move planning ownership into apps/web.",
+      "Preserve the exact repository view and daemon lifecycle boundary."
+    ],
+    "qualityAttributes": [
+      {
+        "kind": "maintainability",
+        "statement": "Keep the canonical planner/compiler seam explicit and replayable."
+      },
+      {
+        "kind": "operability",
+        "statement": "Planning failures remain typed and attributable."
+      }
+    ],
+    "target": {
+      "repositoryId": "repo:manyhands",
+      "baseCommit": "963544a7a1b0e46e6faeb285bceff0f322811b86",
+      "treeSha": "d869635b11a2fa49728018883eaf98ed4e988ae8"
+    },
+    "digest": "sha256:cd4522c0c75eb24777b0f6e0c30086fa1cd668367dd712a56179c5e47ef19523"
+  },
+  "proofStrategies": [
+    {
+      "id": "proof:root",
+      "obligationId": "validation:root",
+      "criterionId": "criterion:canonical-route",
+      "mode": "executable",
+      "authority": "orchestrator_deterministic",
+      "independence": "independent_required",
+      "procedureRef": "command:stage6-productive-planning"
+    },
+    {
+      "id": "proof:daemon",
+      "obligationId": "validation:daemon",
+      "criterionId": "criterion:canonical-route",
+      "mode": "executable",
+      "authority": "orchestrator_deterministic",
+      "independence": "independent_required",
+      "procedureRef": "command:daemon-planning-composition"
+    },
+    {
+      "id": "proof:planner",
+      "obligationId": "validation:planner",
+      "criterionId": "criterion:canonical-route",
+      "mode": "executable",
+      "authority": "orchestrator_deterministic",
+      "independence": "independent_required",
+      "procedureRef": "command:canonical-planning-engine"
+    },
+    {
+      "id": "proof:verifier",
+      "obligationId": "validation:verifier",
+      "criterionId": "criterion:canonical-route",
+      "mode": "executable",
+      "authority": "orchestrator_deterministic",
+      "independence": "independent_required",
+      "procedureRef": "command:deterministic-verifier"
+    },
+    {
+      "id": "proof:compiler",
+      "obligationId": "validation:compiler",
+      "criterionId": "criterion:canonical-route",
+      "mode": "executable",
+      "authority": "orchestrator_deterministic",
+      "independence": "independent_required",
+      "procedureRef": "command:direct-compiler"
+    },
+    {
+      "id": "proof:legacy",
+      "obligationId": "validation:legacy",
+      "criterionId": "criterion:legacy-unreachable",
+      "mode": "static",
+      "authority": "orchestrator_deterministic",
+      "independence": "protected_baseline_or_negative_control",
+      "procedureRef": "source-scan:productive-planning"
+    },
+    {
+      "id": "proof:regression",
+      "obligationId": "validation:regression",
+      "criterionId": "criterion:regression",
+      "mode": "executable",
+      "authority": "orchestrator_deterministic",
+      "independence": "independent_required",
+      "procedureRef": "command:prior-gates"
+    }
+  ],
+  "inspection": {
+    "queryTerms": [
+      "planning",
+      "daemon",
+      "semantic",
+      "compiler",
+      "WorkBreakdown",
+      "GraphRevision",
+      "repository"
+    ],
+    "excerptPaths": [
+      "apps/daemon/src/current-lifecycle-adapters.ts",
+      "apps/daemon/src/transitional-unsafe-profile.ts",
+      "packages/contracts/src/semantic-plan.ts",
+      "packages/decomposer/src/compiler/graph-compiler.ts",
+      "packages/decomposer/src/planner/planning-module.ts",
+      "packages/task-graph/src/canonical-graph.ts"
+    ],
+    "budget": {
+      "maxResults": 40,
+      "maxBytes": 120000,
+      "maxDepth": 2
+    }
+  },
+  "planningBudget": {
+    "modelCalls": 1,
+    "repositoryQueries": 2,
+    "queryBytes": 120000,
+    "revisions": 1,
+    "repairs": 0,
+    "expansions": 0
+  },
+  "provider": {
+    "cli": "codex-cli",
+    "cliVersion": "0.146.0",
+    "model": "gpt-5.6-sol",
+    "reasoningEffort": "high",
+    "profile": "stage5-gp1-offline-v1",
+    "sandbox": "read-only",
+    "ephemeral": true,
+    "initialSessions": 1,
+    "repeatPolicy": "forbidden_without_recorded_causal_change"
+  },
+  "topologyOracle": {
+    "id": "oracle:manyhands-canonical-planning",
+    "repositoryId": "repo:manyhands",
+    "goalDigest": "sha256:cd4522c0c75eb24777b0f6e0c30086fa1cd668367dd712a56179c5e47ef19523",
+    "repositoryViewDigest": "sha256:73814cb0a91939cbb49f62aee02f5aa2a519dd057a6e7ac05bf6d1e1ff6b57a6",
+    "requiredResponsibilities": [
+      {
+        "id": "daemon-composition",
+        "terms": [
+          "daemon",
+          "planning"
+        ]
+      },
+      {
+        "id": "canonical-planning",
+        "terms": [
+          "planning",
+          "engine"
+        ]
+      },
+      {
+        "id": "deterministic-verification",
+        "terms": [
+          "verif"
+        ]
+      },
+      {
+        "id": "direct-compilation",
+        "terms": [
+          "direct",
+          "compil"
+        ]
+      },
+      {
+        "id": "legacy-retirement",
+        "terms": [
+          "legacy",
+          "unreachable"
+        ]
+      },
+      {
+        "id": "regression-proof",
+        "terms": [
+          "regression",
+          "gate"
+        ]
+      }
+    ],
+    "forbiddenResponsibilities": [
+      {
+        "id": "web-planning-owner",
+        "terms": [
+          "web",
+          "planning owner"
+        ]
+      },
+      {
+        "id": "parallel-plan-representation",
+        "terms": [
+          "new",
+          "workbreakdown"
+        ]
+      }
+    ],
+    "requiredSeams": [
+      {
+        "id": "daemon-to-planner",
+        "producerTerms": [
+          "daemon"
+        ],
+        "consumerTerms": [
+          "planning",
+          "engine"
+        ],
+        "semanticTerms": [
+          "planning"
+        ]
+      },
+      {
+        "id": "planner-to-compiler",
+        "producerTerms": [
+          "planning"
+        ],
+        "consumerTerms": [
+          "compil"
+        ],
+        "semanticTerms": [
+          "semanticplan"
+        ]
+      }
+    ],
+    "requiredOwnership": [
+      {
+        "id": "daemon-owner",
+        "path": "apps/daemon/src/current-lifecycle-adapters.ts",
+        "ownerTerms": [
+          "daemon"
+        ]
+      },
+      {
+        "id": "planner-owner",
+        "path": "packages/decomposer/src/planner/planning-module.ts",
+        "ownerTerms": [
+          "planning"
+        ]
+      },
+      {
+        "id": "compiler-owner",
+        "path": "packages/decomposer/src/compiler/graph-compiler.ts",
+        "ownerTerms": [
+          "compil"
+        ]
+      }
+    ],
+    "requiredCriterionIds": [
+      "criterion:canonical-route",
+      "criterion:legacy-unreachable",
+      "criterion:regression"
+    ],
+    "acceptableAlternatives": [
+      "Verifier and direct compiler may be one cohesive unit if their authority remains deterministic and separately named.",
+      "Legacy retirement may be integrated by the daemon-composition owner if reachability proof remains explicit."
+    ]
+  },
+  "browserOracle": {
+    "requiredSections": [
+      "Responsibility hierarchy",
+      "Explicit seams",
+      "Proof coverage",
+      "Advisory findings"
+    ],
+    "requiredVisibleTerms": [
+      "daemon",
+      "planning",
+      "compiler",
+      "legacy",
+      "regression"
+    ],
+    "viewports": [
+      {
+        "width": 1440,
+        "height": 1000
+      },
+      {
+        "width": 390,
+        "height": 844
+      }
+    ],
+    "requirements": [
+      "read_only",
+      "no_daemon_endpoint",
+      "no_horizontal_page_overflow",
+      "hierarchy_understandable_to_non_technical_viewer"
+    ]
+  }
+}
+
+Canonical GoalContract:
+{
+  "id": "goal:manyhands-canonical-planning-cutover",
+  "revision": 1,
+  "goal": "Cut over ManyHands productive planning in the daemon to the canonical PlanningEngine, deterministic verifier and direct SemanticPlan to GraphRevision compiler while preserving lifecycle ownership and making the legacy WorkBreakdown projection unreachable.",
+  "acceptanceCriteria": [
+    {
+      "id": "criterion:canonical-route",
+      "statement": "The daemon composes the canonical planner, verifier and direct compiler as the only productive planning route.",
+      "required": true,
+      "level": "product",
+      "protectedReferences": [],
+      "verification": {
+        "allowedProofs": [
+          {
+            "mode": "executable",
+            "authority": "orchestrator_deterministic"
+          }
+        ],
+        "independence": "independent_required"
+      }
+    },
+    {
+      "id": "criterion:legacy-unreachable",
+      "statement": "RecursivePlanner, WorkBreakdown projection and the legacy graph compiler are unreachable from productive planning entrypoints.",
+      "required": true,
+      "level": "constraint",
+      "protectedReferences": [],
+      "verification": {
+        "allowedProofs": [
+          {
+            "mode": "static",
+            "authority": "orchestrator_deterministic"
+          }
+        ],
+        "independence": "protected_baseline_or_negative_control"
+      }
+    },
+    {
+      "id": "criterion:regression",
+      "statement": "Daemon lifecycle ownership, repository grounding and existing gates remain green after cutover.",
+      "required": true,
+      "level": "quality",
+      "protectedReferences": [],
+      "verification": {
+        "allowedProofs": [
+          {
+            "mode": "executable",
+            "authority": "orchestrator_deterministic"
+          }
+        ],
+        "independence": "independent_required"
+      }
+    }
+  ],
+  "constraints": [
+    "Do not introduce another plan or graph representation.",
+    "Do not move planning ownership into apps/web.",
+    "Preserve the exact repository view and daemon lifecycle boundary."
+  ],
+  "qualityAttributes": [
+    {
+      "kind": "maintainability",
+      "statement": "Keep the canonical planner/compiler seam explicit and replayable."
+    },
+    {
+      "kind": "operability",
+      "statement": "Planning failures remain typed and attributable."
+    }
+  ],
+  "target": {
+    "repositoryId": "repo:manyhands",
+    "baseCommit": "963544a7a1b0e46e6faeb285bceff0f322811b86",
+    "treeSha": "d869635b11a2fa49728018883eaf98ed4e988ae8"
+  },
+  "digest": "sha256:cd4522c0c75eb24777b0f6e0c30086fa1cd668367dd712a56179c5e47ef19523"
+}
+
+Allowed ProofStrategies:
+[
+  {
+    "id": "proof:root",
+    "revision": 1,
+    "goalContractDigest": "sha256:cd4522c0c75eb24777b0f6e0c30086fa1cd668367dd712a56179c5e47ef19523",
+    "criterionId": "criterion:canonical-route",
+    "obligationId": "validation:root",
+    "mode": "executable",
+    "authority": "orchestrator_deterministic",
+    "repositoryViewDigest": "sha256:73814cb0a91939cbb49f62aee02f5aa2a519dd057a6e7ac05bf6d1e1ff6b57a6",
+    "procedureRef": "command:stage6-productive-planning",
+    "selectorDigest": "sha256:a5a778021d69aa36a2bc4d462c159c6b54534f1614253c9b9d0fa67f63ecd2d1",
+    "environmentPolicyDigest": "sha256:3c723a3ac12ede388dbcca39cd1bcd0d07b2535703ca6eaf25fac2996b0e6f33",
+    "independence": "independent_required",
+    "digest": "sha256:823b1ecd84262ef670437eacc7b7e08c9077bd6cdb17dc0001c6dd3f4c2cc57f"
+  },
+  {
+    "id": "proof:daemon",
+    "revision": 1,
+    "goalContractDigest": "sha256:cd4522c0c75eb24777b0f6e0c30086fa1cd668367dd712a56179c5e47ef19523",
+    "criterionId": "criterion:canonical-route",
+    "obligationId": "validation:daemon",
+    "mode": "executable",
+    "authority": "orchestrator_deterministic",
+    "repositoryViewDigest": "sha256:73814cb0a91939cbb49f62aee02f5aa2a519dd057a6e7ac05bf6d1e1ff6b57a6",
+    "procedureRef": "command:daemon-planning-composition",
+    "selectorDigest": "sha256:268c40174fa872701981174234f39dc633568d26d5d0ecfef1b2ecf4484eb8ab",
+    "environmentPolicyDigest": "sha256:3c723a3ac12ede388dbcca39cd1bcd0d07b2535703ca6eaf25fac2996b0e6f33",
+    "independence": "independent_required",
+    "digest": "sha256:32ade62ed1f9d7cd31469c29f0d439d5766db75bf6154207bb85e30a88a64994"
+  },
+  {
+    "id": "proof:planner",
+    "revision": 1,
+    "goalContractDigest": "sha256:cd4522c0c75eb24777b0f6e0c30086fa1cd668367dd712a56179c5e47ef19523",
+    "criterionId": "criterion:canonical-route",
+    "obligationId": "validation:planner",
+    "mode": "executable",
+    "authority": "orchestrator_deterministic",
+    "repositoryViewDigest": "sha256:73814cb0a91939cbb49f62aee02f5aa2a519dd057a6e7ac05bf6d1e1ff6b57a6",
+    "procedureRef": "command:canonical-planning-engine",
+    "selectorDigest": "sha256:8bcc3a2c543e13c9a3a23ddfcda35ac83f1f18623050425aaa32387c5cd641b3",
+    "environmentPolicyDigest": "sha256:3c723a3ac12ede388dbcca39cd1bcd0d07b2535703ca6eaf25fac2996b0e6f33",
+    "independence": "independent_required",
+    "digest": "sha256:c31c092f782bf81866c4be4b66c3d6a30f2ca51ff27a79a797ca792022dd14ba"
+  },
+  {
+    "id": "proof:verifier",
+    "revision": 1,
+    "goalContractDigest": "sha256:cd4522c0c75eb24777b0f6e0c30086fa1cd668367dd712a56179c5e47ef19523",
+    "criterionId": "criterion:canonical-route",
+    "obligationId": "validation:verifier",
+    "mode": "executable",
+    "authority": "orchestrator_deterministic",
+    "repositoryViewDigest": "sha256:73814cb0a91939cbb49f62aee02f5aa2a519dd057a6e7ac05bf6d1e1ff6b57a6",
+    "procedureRef": "command:deterministic-verifier",
+    "selectorDigest": "sha256:8382842209d8a580717e321a88eb2ea8bda331b9d6f2e13f9f752af5ee022389",
+    "environmentPolicyDigest": "sha256:3c723a3ac12ede388dbcca39cd1bcd0d07b2535703ca6eaf25fac2996b0e6f33",
+    "independence": "independent_required",
+    "digest": "sha256:b426c2858d585a1b1c4fb79eba42f3e29bd1a50d6c6923879920d2b05874f071"
+  },
+  {
+    "id": "proof:compiler",
+    "revision": 1,
+    "goalContractDigest": "sha256:cd4522c0c75eb24777b0f6e0c30086fa1cd668367dd712a56179c5e47ef19523",
+    "criterionId": "criterion:canonical-route",
+    "obligationId": "validation:compiler",
+    "mode": "executable",
+    "authority": "orchestrator_deterministic",
+    "repositoryViewDigest": "sha256:73814cb0a91939cbb49f62aee02f5aa2a519dd057a6e7ac05bf6d1e1ff6b57a6",
+    "procedureRef": "command:direct-compiler",
+    "selectorDigest": "sha256:fb3e134c9144b60cbfcc8679a639fa0732bc76020adbf5ff89ac6b5a50486ecd",
+    "environmentPolicyDigest": "sha256:3c723a3ac12ede388dbcca39cd1bcd0d07b2535703ca6eaf25fac2996b0e6f33",
+    "independence": "independent_required",
+    "digest": "sha256:1a1c0cf9e1eb5c6ea5e9937c6fdd25797cfd51c88a76b1fc2687296c317615d2"
+  },
+  {
+    "id": "proof:legacy",
+    "revision": 1,
+    "goalContractDigest": "sha256:cd4522c0c75eb24777b0f6e0c30086fa1cd668367dd712a56179c5e47ef19523",
+    "criterionId": "criterion:legacy-unreachable",
+    "obligationId": "validation:legacy",
+    "mode": "static",
+    "authority": "orchestrator_deterministic",
+    "repositoryViewDigest": "sha256:73814cb0a91939cbb49f62aee02f5aa2a519dd057a6e7ac05bf6d1e1ff6b57a6",
+    "procedureRef": "source-scan:productive-planning",
+    "selectorDigest": "sha256:68fade89cbdbaf03f2797c89cbe2a9a74e0f0d8f14181e4d9462d1680fb24267",
+    "environmentPolicyDigest": "sha256:3c723a3ac12ede388dbcca39cd1bcd0d07b2535703ca6eaf25fac2996b0e6f33",
+    "independence": "protected_baseline_or_negative_control",
+    "digest": "sha256:23d614b0b088d2cbf1a4ee6d48b9c0e9cedfb6f956d4c3ecbcdb13cdbb5897f7"
+  },
+  {
+    "id": "proof:regression",
+    "revision": 1,
+    "goalContractDigest": "sha256:cd4522c0c75eb24777b0f6e0c30086fa1cd668367dd712a56179c5e47ef19523",
+    "criterionId": "criterion:regression",
+    "obligationId": "validation:regression",
+    "mode": "executable",
+    "authority": "orchestrator_deterministic",
+    "repositoryViewDigest": "sha256:73814cb0a91939cbb49f62aee02f5aa2a519dd057a6e7ac05bf6d1e1ff6b57a6",
+    "procedureRef": "command:prior-gates",
+    "selectorDigest": "sha256:4a0045f6680b423b0d6ff868908cc93c6f61cea8b37cced4095d659de15cf972",
+    "environmentPolicyDigest": "sha256:3c723a3ac12ede388dbcca39cd1bcd0d07b2535703ca6eaf25fac2996b0e6f33",
+    "independence": "independent_required",
+    "digest": "sha256:b85e2034afe85c62a348ba971da0a068eef247d672ca54bc20b6249fdf69f995"
+  }
+]
+
+Exact RepositoryView ref:
+{
+  "digest": "sha256:73814cb0a91939cbb49f62aee02f5aa2a519dd057a6e7ac05bf6d1e1ff6b57a6",
+  "treeSha": "d869635b11a2fa49728018883eaf98ed4e988ae8",
+  "resourceCatalogDigest": "sha256:d4263669033d68dc0c10d19d6e8f567900ccfff2a688d7bd5fa2df5bb172c3c5"
+}
+
+Allowed writable/observable resources:
+[
+  {
+    "path": "apps/daemon/src/current-lifecycle-adapters.ts",
+    "resourceId": "catalog-resource:b63d0bab5fb18fa8c1b3e20b",
+    "evidenceRefs": [
+      "evidence:fcb5757df3a9a22deb2e761b"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:fcb5757df3a9a22deb2e761b"
+      ]
+    },
+    "generated": {
+      "state": "unknown",
+      "reason": "No explicit generated-output policy classifies this exact Git entry as source or generated.",
+      "evidenceRefs": [
+        "evidence:fcb5757df3a9a22deb2e761b"
+      ]
+    }
+  },
+  {
+    "path": "apps/daemon/src/transitional-unsafe-profile.ts",
+    "resourceId": "catalog-resource:5a3cbab4bff56f2d1197c979",
+    "evidenceRefs": [
+      "evidence:5880d3244ee8a85739d37c25"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:5880d3244ee8a85739d37c25"
+      ]
+    },
+    "generated": {
+      "state": "unknown",
+      "reason": "No explicit generated-output policy classifies this exact Git entry as source or generated.",
+      "evidenceRefs": [
+        "evidence:5880d3244ee8a85739d37c25"
+      ]
+    }
+  },
+  {
+    "path": "packages/contracts/src/semantic-plan.ts",
+    "resourceId": "catalog-resource:62f79c52f8bd51a50a6c1211",
+    "evidenceRefs": [
+      "evidence:479035e214f31497694608ec"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:479035e214f31497694608ec"
+      ]
+    },
+    "generated": {
+      "state": "unknown",
+      "reason": "No explicit generated-output policy classifies this exact Git entry as source or generated.",
+      "evidenceRefs": [
+        "evidence:479035e214f31497694608ec"
+      ]
+    }
+  },
+  {
+    "path": "packages/decomposer/src/compiler/graph-compiler.ts",
+    "resourceId": "catalog-resource:4d35de4235f3aa5881857757",
+    "evidenceRefs": [
+      "evidence:e0bdd93c8e711aa126d09c2f"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:e0bdd93c8e711aa126d09c2f"
+      ]
+    },
+    "generated": {
+      "state": "unknown",
+      "reason": "No explicit generated-output policy classifies this exact Git entry as source or generated.",
+      "evidenceRefs": [
+        "evidence:e0bdd93c8e711aa126d09c2f"
+      ]
+    }
+  },
+  {
+    "path": "packages/decomposer/src/planner/planning-module.ts",
+    "resourceId": "catalog-resource:b7d6aea5ac8ff61b3c39d622",
+    "evidenceRefs": [
+      "evidence:a02a2deaacd09ebd1c5155fe"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:a02a2deaacd09ebd1c5155fe"
+      ]
+    },
+    "generated": {
+      "state": "unknown",
+      "reason": "No explicit generated-output policy classifies this exact Git entry as source or generated.",
+      "evidenceRefs": [
+        "evidence:a02a2deaacd09ebd1c5155fe"
+      ]
+    }
+  },
+  {
+    "path": "packages/task-graph/src/canonical-graph.ts",
+    "resourceId": "catalog-resource:535fd8df5f0334d0d00998ca",
+    "evidenceRefs": [
+      "evidence:1001b59c63702da6a83ef538"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:1001b59c63702da6a83ef538"
+      ]
+    },
+    "generated": {
+      "state": "unknown",
+      "reason": "No explicit generated-output policy classifies this exact Git entry as source or generated.",
+      "evidenceRefs": [
+        "evidence:1001b59c63702da6a83ef538"
+      ]
+    }
+  }
+]
+
+Bounded repository search answer:
+[
+  {
+    "id": "module:9e867a655a05258f7ad5381d",
+    "kind": "module",
+    "locator": "module:apps/daemon/src/transitional-repository-lease.ts",
+    "summary": "apps/daemon/src/transitional-repository-lease.ts withTransitionalRepositoryLease",
+    "evidenceRefs": [
+      "evidence:b0db26d9d9c88eb262d93267"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:b0db26d9d9c88eb262d93267"
+      ]
+    }
+  },
+  {
+    "id": "module:535483222c201f9c9cc263de",
+    "kind": "module",
+    "locator": "module:packages/decomposer/src/planner/schema.ts",
+    "summary": "packages/decomposer/src/planner/schema.ts AcceptanceIntentSchema CandidateArtifactSchema CandidateSeamSchema ComplexitySignals ComplexitySignalsSchema PlanningArchitectureVersion PlanningArchitectureVersionSchema RepositoryEvidence RepositoryEvidenceSchema SemanticCutSchema WorkBreakdown WorkBreakdownSchema WorkQuestionSchema WorkUncertaintySchema WorkUnit WorkUnitComposite WorkUnitLeaf WorkUnitSchema",
+    "evidenceRefs": [
+      "evidence:4ff7c7a852958f40657f6f9b"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:4ff7c7a852958f40657f6f9b"
+      ]
+    }
+  },
+  {
+    "id": "symbol:5d74b458e8c092d540efcf72",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/current-lifecycle-adapters.ts#buildProductiveRepositoryGrounding",
+    "name": "buildProductiveRepositoryGrounding",
+    "summary": "function buildProductiveRepositoryGrounding in apps/daemon/src/current-lifecycle-adapters.ts",
+    "evidenceRefs": [
+      "evidence:2c9f7b78684cc2169b8cc1e7"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:2c9f7b78684cc2169b8cc1e7"
+      ]
+    }
+  },
+  {
+    "id": "symbol:f46090d678a3808b8b731645",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/current-lifecycle-adapters.ts#codexPlanningArgs",
+    "name": "codexPlanningArgs",
+    "summary": "function codexPlanningArgs in apps/daemon/src/current-lifecycle-adapters.ts",
+    "evidenceRefs": [
+      "evidence:0b6ea81a77ccf85f7151f85c"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:0b6ea81a77ccf85f7151f85c"
+      ]
+    }
+  },
+  {
+    "id": "symbol:cc8f5e9e7a2c81f9dae1c5b5",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/current-lifecycle-adapters.ts#invokeCurrentPlanningCli",
+    "name": "invokeCurrentPlanningCli",
+    "summary": "function invokeCurrentPlanningCli in apps/daemon/src/current-lifecycle-adapters.ts",
+    "evidenceRefs": [
+      "evidence:fa070c39c96c9ab517a26337"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:fa070c39c96c9ab517a26337"
+      ]
+    }
+  },
+  {
+    "id": "symbol:7a40d6f25cef0471394a18c3",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/current-lifecycle-adapters.ts#legacyRepositoryEvidence",
+    "name": "legacyRepositoryEvidence",
+    "summary": "function legacyRepositoryEvidence in apps/daemon/src/current-lifecycle-adapters.ts",
+    "evidenceRefs": [
+      "evidence:c6dcbaac9d846ab2d7f0d4a9"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:c6dcbaac9d846ab2d7f0d4a9"
+      ]
+    }
+  },
+  {
+    "id": "symbol:b160c6478bcf02cc6835d6a5",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/current-lifecycle-adapters.ts#PRODUCTIVE_REPOSITORY_QUERY_BUDGET",
+    "name": "PRODUCTIVE_REPOSITORY_QUERY_BUDGET",
+    "summary": "const PRODUCTIVE_REPOSITORY_QUERY_BUDGET in apps/daemon/src/current-lifecycle-adapters.ts",
+    "evidenceRefs": [
+      "evidence:dc47800a86f3ad5388da48af"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:dc47800a86f3ad5388da48af"
+      ]
+    }
+  },
+  {
+    "id": "symbol:5b2a83f9f81b1d8b70ff39dc",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/current-lifecycle-adapters.ts#ProductiveRepositoryGrounding",
+    "name": "ProductiveRepositoryGrounding",
+    "summary": "interface ProductiveRepositoryGrounding in apps/daemon/src/current-lifecycle-adapters.ts",
+    "evidenceRefs": [
+      "evidence:3f8603f09933f728e823211e"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:3f8603f09933f728e823211e"
+      ]
+    }
+  },
+  {
+    "id": "symbol:900137e57fb9042d0d489433",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/current-lifecycle-adapters.ts#repositoryGoalTerms",
+    "name": "repositoryGoalTerms",
+    "summary": "function repositoryGoalTerms in apps/daemon/src/current-lifecycle-adapters.ts",
+    "evidenceRefs": [
+      "evidence:c19b04c240a0ee8c71b6a150"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:c19b04c240a0ee8c71b6a150"
+      ]
+    }
+  },
+  {
+    "id": "symbol:92e0c54de75a2aa1b411e418",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/product-run-application.ts#planningCompletedEvents",
+    "name": "planningCompletedEvents",
+    "summary": "function planningCompletedEvents in apps/daemon/src/product-run-application.ts",
+    "evidenceRefs": [
+      "evidence:3290a79e3ba2b6c0281e0107"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:3290a79e3ba2b6c0281e0107"
+      ]
+    }
+  },
+  {
+    "id": "symbol:b30ed89b0b30b57cffbdba3f",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/product-run-application.ts#planningEffect",
+    "name": "planningEffect",
+    "summary": "function planningEffect in apps/daemon/src/product-run-application.ts",
+    "evidenceRefs": [
+      "evidence:522f6089fa27646f9d840681"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:522f6089fa27646f9d840681"
+      ]
+    }
+  },
+  {
+    "id": "symbol:04a3d651a4b1d5e8aafd31a3",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/transitional-repository-lease.ts#acquire",
+    "name": "acquire",
+    "summary": "function acquire in apps/daemon/src/transitional-repository-lease.ts",
+    "evidenceRefs": [
+      "evidence:3d30c05c1a18012a45823d21"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:3d30c05c1a18012a45823d21"
+      ]
+    }
+  },
+  {
+    "id": "symbol:fafe038fcfc1dd8928633c89",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/transitional-repository-lease.ts#ACQUIRE_GRACE_MS",
+    "name": "ACQUIRE_GRACE_MS",
+    "summary": "const ACQUIRE_GRACE_MS in apps/daemon/src/transitional-repository-lease.ts",
+    "evidenceRefs": [
+      "evidence:6bfcb4f4d8500a30861e6857"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:6bfcb4f4d8500a30861e6857"
+      ]
+    }
+  },
+  {
+    "id": "symbol:f00f182ad36b929c3cfe1240",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/transitional-repository-lease.ts#assertCurrent",
+    "name": "assertCurrent",
+    "summary": "function assertCurrent in apps/daemon/src/transitional-repository-lease.ts",
+    "evidenceRefs": [
+      "evidence:18065d44dcc8fd4b618491f9"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:18065d44dcc8fd4b618491f9"
+      ]
+    }
+  },
+  {
+    "id": "symbol:40dae27cb8c2c16f77ef2714",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/transitional-repository-lease.ts#delay",
+    "name": "delay",
+    "summary": "function delay in apps/daemon/src/transitional-repository-lease.ts",
+    "evidenceRefs": [
+      "evidence:e951f3a9c1d2c0e150044b28"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:e951f3a9c1d2c0e150044b28"
+      ]
+    }
+  },
+  {
+    "id": "symbol:7cebbe102b40ad6fe0acb9f4",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/transitional-repository-lease.ts#execFileAsync",
+    "name": "execFileAsync",
+    "summary": "const execFileAsync in apps/daemon/src/transitional-repository-lease.ts",
+    "evidenceRefs": [
+      "evidence:d1e0ed96c109c5ceb99b88d2"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:d1e0ed96c109c5ceb99b88d2"
+      ]
+    }
+  },
+  {
+    "id": "symbol:320830d02c65d9f16faeddfb",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/transitional-repository-lease.ts#generationAt",
+    "name": "generationAt",
+    "summary": "function generationAt in apps/daemon/src/transitional-repository-lease.ts",
+    "evidenceRefs": [
+      "evidence:6af41a84ac20de76f4d79cf2"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:6af41a84ac20de76f4d79cf2"
+      ]
+    }
+  },
+  {
+    "id": "symbol:ae4596765992593e7ae3bb03",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/transitional-repository-lease.ts#heartbeat",
+    "name": "heartbeat",
+    "summary": "function heartbeat in apps/daemon/src/transitional-repository-lease.ts",
+    "evidenceRefs": [
+      "evidence:8fef658b1150cb159a74b3cd"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:8fef658b1150cb159a74b3cd"
+      ]
+    }
+  },
+  {
+    "id": "symbol:a272aaff04a7af8a31a40eda",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/transitional-repository-lease.ts#HEARTBEAT_MS",
+    "name": "HEARTBEAT_MS",
+    "summary": "const HEARTBEAT_MS in apps/daemon/src/transitional-repository-lease.ts",
+    "evidenceRefs": [
+      "evidence:6f4469ba181397cf85b3b7dd"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:6f4469ba181397cf85b3b7dd"
+      ]
+    }
+  },
+  {
+    "id": "symbol:fc765dcec451d43c5d148598",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/transitional-repository-lease.ts#heartbeatPath",
+    "name": "heartbeatPath",
+    "summary": "function heartbeatPath in apps/daemon/src/transitional-repository-lease.ts",
+    "evidenceRefs": [
+      "evidence:03b6543c806527898b4156bc"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:03b6543c806527898b4156bc"
+      ]
+    }
+  },
+  {
+    "id": "symbol:23409238bf7487ac9ba4b37b",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/transitional-repository-lease.ts#lockBase",
+    "name": "lockBase",
+    "summary": "function lockBase in apps/daemon/src/transitional-repository-lease.ts",
+    "evidenceRefs": [
+      "evidence:001f0142298e754afd8c77bc"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:001f0142298e754afd8c77bc"
+      ]
+    }
+  },
+  {
+    "id": "symbol:6b339d1ccdbfa5d69bec2869",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/transitional-repository-lease.ts#ownerIsLive",
+    "name": "ownerIsLive",
+    "summary": "function ownerIsLive in apps/daemon/src/transitional-repository-lease.ts",
+    "evidenceRefs": [
+      "evidence:5f02ec4686a317fb72ee5190"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:5f02ec4686a317fb72ee5190"
+      ]
+    }
+  },
+  {
+    "id": "symbol:8cc9521263296fcf4de603af",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/transitional-repository-lease.ts#readOwner",
+    "name": "readOwner",
+    "summary": "function readOwner in apps/daemon/src/transitional-repository-lease.ts",
+    "evidenceRefs": [
+      "evidence:ca952f6834a856abf95480c1"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:ca952f6834a856abf95480c1"
+      ]
+    }
+  },
+  {
+    "id": "symbol:56fdc027e50eab9b9f5120d1",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/transitional-repository-lease.ts#readOwnerWithGrace",
+    "name": "readOwnerWithGrace",
+    "summary": "function readOwnerWithGrace in apps/daemon/src/transitional-repository-lease.ts",
+    "evidenceRefs": [
+      "evidence:d3c59062780c248b70033713"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:d3c59062780c248b70033713"
+      ]
+    }
+  },
+  {
+    "id": "symbol:c7df67d4efd3805a38825ffe",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/transitional-repository-lease.ts#release",
+    "name": "release",
+    "summary": "function release in apps/daemon/src/transitional-repository-lease.ts",
+    "evidenceRefs": [
+      "evidence:398344bc3a4b5514ce0fc1dc"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:398344bc3a4b5514ce0fc1dc"
+      ]
+    }
+  },
+  {
+    "id": "symbol:13a8d0156e07e3e1311b77f1",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/transitional-repository-lease.ts#removeOwnClaim",
+    "name": "removeOwnClaim",
+    "summary": "function removeOwnClaim in apps/daemon/src/transitional-repository-lease.ts",
+    "evidenceRefs": [
+      "evidence:05dde392b35b49d277343fad"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:05dde392b35b49d277343fad"
+      ]
+    }
+  },
+  {
+    "id": "symbol:905c0f3bcf9b3bc201efb023",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/transitional-repository-lease.ts#RepositoryLeaseOwner",
+    "name": "RepositoryLeaseOwner",
+    "summary": "interface RepositoryLeaseOwner in apps/daemon/src/transitional-repository-lease.ts",
+    "evidenceRefs": [
+      "evidence:e900643f9984b6ddcc70de5e"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:e900643f9984b6ddcc70de5e"
+      ]
+    }
+  },
+  {
+    "id": "symbol:8eac3c50e2a8e6299ff5b9f7",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/transitional-repository-lease.ts#STALE_MS",
+    "name": "STALE_MS",
+    "summary": "const STALE_MS in apps/daemon/src/transitional-repository-lease.ts",
+    "evidenceRefs": [
+      "evidence:d0f261505b0f67b3185688ac"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:d0f261505b0f67b3185688ac"
+      ]
+    }
+  },
+  {
+    "id": "symbol:bdd3bb936fedd17f0b15708c",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/transitional-repository-lease.ts#TransitionalRepositoryLease",
+    "name": "TransitionalRepositoryLease",
+    "summary": "interface TransitionalRepositoryLease in apps/daemon/src/transitional-repository-lease.ts",
+    "evidenceRefs": [
+      "evidence:7a52f2473855d774ec4b531c"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:7a52f2473855d774ec4b531c"
+      ]
+    }
+  },
+  {
+    "id": "symbol:4a49d87ec9e3ed8e904b0a06",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/transitional-repository-lease.ts#withTransitionalRepositoryLease",
+    "name": "withTransitionalRepositoryLease",
+    "summary": "function withTransitionalRepositoryLease in apps/daemon/src/transitional-repository-lease.ts",
+    "evidenceRefs": [
+      "evidence:e62ce8b418196fbc421def77"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:e62ce8b418196fbc421def77"
+      ]
+    }
+  },
+  {
+    "id": "symbol:5e45eb7c4d6dd9643f05650e",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/transitional-repository-lease.ts#writeAtomic",
+    "name": "writeAtomic",
+    "summary": "function writeAtomic in apps/daemon/src/transitional-repository-lease.ts",
+    "evidenceRefs": [
+      "evidence:886edb16ad4f03825d11db59"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:886edb16ad4f03825d11db59"
+      ]
+    }
+  },
+  {
+    "id": "symbol:7f0bdac92f29b5b4f06d661b",
+    "kind": "symbol",
+    "locator": "symbol:apps/daemon/src/transitional-unsafe-profile.ts#createPlanningAdapter",
+    "name": "createPlanningAdapter",
+    "summary": "function createPlanningAdapter in apps/daemon/src/transitional-unsafe-profile.ts",
+    "evidenceRefs": [
+      "evidence:e6a15be44729c438717dfbcc"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:e6a15be44729c438717dfbcc"
+      ]
+    }
+  },
+  {
+    "id": "symbol:823bd5af23f381e5756c92d1",
+    "kind": "symbol",
+    "locator": "symbol:packages/contracts/src/semantic-plan.ts#PlanningDecisionSchema",
+    "name": "PlanningDecisionSchema",
+    "summary": "const PlanningDecisionSchema in packages/contracts/src/semantic-plan.ts",
+    "evidenceRefs": [
+      "evidence:69c6465656288c408cd4f6e4"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:69c6465656288c408cd4f6e4"
+      ]
+    }
+  },
+  {
+    "id": "symbol:8b62a0b278f819fc2bb032b4",
+    "kind": "symbol",
+    "locator": "symbol:packages/contracts/src/semantic-plan.ts#PlanningEvidenceSchema",
+    "name": "PlanningEvidenceSchema",
+    "summary": "const PlanningEvidenceSchema in packages/contracts/src/semantic-plan.ts",
+    "evidenceRefs": [
+      "evidence:2b17584315ba99d904efcf45"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:2b17584315ba99d904efcf45"
+      ]
+    }
+  },
+  {
+    "id": "symbol:d399e91cf7a17eeb5c01131a",
+    "kind": "symbol",
+    "locator": "symbol:packages/decomposer/src/compiler/contract-compiler.ts#normalizeRepositoryPath",
+    "name": "normalizeRepositoryPath",
+    "summary": "function normalizeRepositoryPath in packages/decomposer/src/compiler/contract-compiler.ts",
+    "evidenceRefs": [
+      "evidence:903c6d1c28fd9d65e94d2fec"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:903c6d1c28fd9d65e94d2fec"
+      ]
+    }
+  },
+  {
+    "id": "symbol:5c7b63f2aec70c3f262d9ebf",
+    "kind": "symbol",
+    "locator": "symbol:packages/decomposer/src/compiler/graph-compiler.ts#CompiledGraphRevision",
+    "name": "CompiledGraphRevision",
+    "summary": "interface CompiledGraphRevision in packages/decomposer/src/compiler/graph-compiler.ts",
+    "evidenceRefs": [
+      "evidence:f05d1e3b3d143486238802af"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:f05d1e3b3d143486238802af"
+      ]
+    }
+  },
+  {
+    "id": "symbol:9a3dc10db183140913878458",
+    "kind": "symbol",
+    "locator": "symbol:packages/decomposer/src/compiler/graph-compiler.ts#compileGraphRevision",
+    "name": "compileGraphRevision",
+    "summary": "function compileGraphRevision in packages/decomposer/src/compiler/graph-compiler.ts",
+    "evidenceRefs": [
+      "evidence:34dd783adc06bc3f60547bd5"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:34dd783adc06bc3f60547bd5"
+      ]
+    }
+  },
+  {
+    "id": "symbol:da6a367bf030dd00f4cb8da7",
+    "kind": "symbol",
+    "locator": "symbol:packages/decomposer/src/planner/planning-module.ts#SemanticPlanningModel",
+    "name": "SemanticPlanningModel",
+    "summary": "interface SemanticPlanningModel in packages/decomposer/src/planner/planning-module.ts",
+    "evidenceRefs": [
+      "evidence:bc792ea83f0f7150ade900cc"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:bc792ea83f0f7150ade900cc"
+      ]
+    }
+  },
+  {
+    "id": "symbol:3c68048689452f8aacf9af7d",
+    "kind": "symbol",
+    "locator": "symbol:packages/decomposer/src/planner/planning-module.ts#SemanticPlanningModelRequest",
+    "name": "SemanticPlanningModelRequest",
+    "summary": "interface SemanticPlanningModelRequest in packages/decomposer/src/planner/planning-module.ts",
+    "evidenceRefs": [
+      "evidence:aff6a306ae8b4b88f05f6a65"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:aff6a306ae8b4b88f05f6a65"
+      ]
+    }
+  },
+  {
+    "id": "symbol:1cee0df7b6e7b43aa0137900",
+    "kind": "symbol",
+    "locator": "symbol:packages/decomposer/src/planner/planning-module.ts#SemanticPlanningObserver",
+    "name": "SemanticPlanningObserver",
+    "summary": "interface SemanticPlanningObserver in packages/decomposer/src/planner/planning-module.ts",
+    "evidenceRefs": [
+      "evidence:323d869024a67aca30a1c8bf"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:323d869024a67aca30a1c8bf"
+      ]
+    }
+  }
+]
+
+Exact bounded excerpts:
+[
+  {
+    "locator": "path:apps/daemon/src/current-lifecycle-adapters.ts",
+    "text": "import { execFile, spawn, type ChildProcess } from \"node:child_process\";\nimport { createHash } from \"node:crypto\";\nimport path from \"node:path\";\nimport { promisify } from \"node:util\";\n\nimport {\n  DEFAULT_GRANULARITY_POLICY,\n  PLAN_CRITIC_KINDS,\n  PlanningCapacityError,\n  RecursivePlanner,\n  applyGranularitySelection,\n  compileGraphRevision,\n  createSemanticPlan,\n  projectPlannedTree,\n  projectSemanticPlanForLegacyCompiler,\n  resolveGranularityCondition,\n  selectGranularityStrategy,\n  type CutRequest,\n  type GoalCriterion,\n  type RepositoryEvidence,\n  type WorkBreakdown,\n  type WorkUnit\n} from \"@manyhands/decomposer\";\nimport {\n  buildAgentEnvironment,\n  deliveryRequestFingerprint,\n  resolveCliBinaryPath,\n  safeGitArgs,\n  targetWorkingTreeIsClean,\n  TransactionalDeliveryPublisher,\n  type TransactionalDeliveryApproval,\n  type TransactionalDeliveryReceipt\n} from \"@manyhands/execution-core\";\nimport {\n  composeRepositoryView,\n  createRepositoryQuery,\n  inspectRepositoryModelWithSnapshot,\n  type RepositoryQueryAnswer,\n  type RepositoryQueryBudget,\n  type RepositorySnapshot,\n  type RepositoryView\n} from \"@manyhands/repository-index\";\nimport type {\n  DeliveryReceipt,\n  ProductRunDefinition,\n  RunEventInput,\n  RunProjection\n} from \"@manyhands/run-coordinator\";\nimport { resolveCliProcessInvocation } from \"@manyhands/shared/node-cli-process\";\n\nimport type {\n  TransitionalDeliveryPort,\n  TransitionalLifecycleResult,\n  TransitionalPlannerPort\n} from \"./transitional-unsafe-profile.js\";\nimport {\n  createTransitionalUnsafeProfile,\n  type CreateTransitionalUnsafeProfileOptions\n} from \"./transitional-unsafe-profile.js\";\nimport { withTransitionalRepositoryLease } from \"./transitional-repository-lease.js\";\n\nconst execFileAsync = promisify(execFile);\nconst PROVIDER_CAPACITY_PATTERN = /rate.?limit|too many requests|overloaded|capacity|quota/i;\n\nexport interface CurrentLifecycleAdapterOptions {\n  readonly clock?: () => string;\n  readonly planningStepTimeoutMs?: number;\n  readonly spawnProcess?: typeof spawn;\n}\n\nexport interface CreateCurrentTransitionalUnsafeProfileOptions\n  extends Pick<\n    CreateTransitionalUnsafeProfileOptions,\n    \"stateRoot\" | \"nodeExecutable\" | \"workerScriptPath\" | \"cwd\" | \"clock\"\n  > {\n  readonly planningStepTimeoutMs?: number;\n  readonly spawnProcess?: typeof spawn;\n}\n\nconst PRODUCTIVE_REPOSITORY_QUERY_BUDGET: RepositoryQueryBudget = {\n  maxResults: 64,\n  maxBytes: 64 * 1024,\n  maxDepth: 1\n};\n\nexport interface ProductiveRepositoryGrounding {\n  snapshot: RepositorySnapshot;\n  view: RepositoryView;\n  evidence: RepositoryEvidence[];\n  queryDigests: string[];\n  budget: RepositoryQueryBudget;\n}\n\n/** Stage 4 boundary: exact Git facts and bounded queries consumed by the transitional planner. */\nexport async function buildProductiveRepositoryGrounding(input: {\n  rootPath: string;\n  targetFingerprint: string;\n  baseCommit: string;\n  goal: string;\n  acceptanceCriteria: readonly string[];\n}): Promise<ProductiveRepositoryGrounding> {\n  const inspection = await inspectRepositoryModelWithSnapshot({\n    rootPath: input.rootPath,\n    targetFingerprint: input.targetFingerprint,\n    baseCommit: input.baseCommit\n  });\n  const view = await composeRepositoryView({\n    rootPath: input.rootPath,\n    inspection,\n    overlays: []\n  });\n  const query = createRepositoryQuery({ rootPath: input.rootPath, view });\n  const budget = { ...PRODUCTIVE_REPOSITORY_QUERY_BUDGET };\n  const terms = repositoryGoalTerms([input.goal, ...input.acceptanceCriteria]);\n  const anchorPackage = view.model.packages.find((boundary) => boundary.rootPath === \"\")\n    ?? view.model.packages[0];\n  const answers = [\n    query.searchGoalTerms(terms, budget),\n    ...(anchorPackage === undefined\n      ? []\n      : [query.inspectBoundary(`package:${anchorPackage.rootPath || \".\"}`, budget)]),\n    query.validationCapabilities(budget)\n  ];\n  return {\n    snapshot: inspection.snapshot,\n    view,\n    evidence: legacyRepositoryEvidence(answers),\n    queryDigests: answers.map((answer) => answer.digest),\n    budget\n  };\n}\n\n/** Concrete composition used by the explicit productive CLI profile. */\nexport function createCurrentTransitionalUnsafeProfile(\n  options: CreateCurrentTransitionalUnsafeProfileOptions\n) {\n  return createTransitionalUnsafeProfile({\n    stateRoot: options.stateRoot,\n    nodeExecutable: options.nodeExecutable,\n    workerScriptPath: options.workerScriptPath,\n    cwd: options.cwd,\n    planner: createCurrentPlannerPort({\n      ...(options.clock === undefined ? {} : { clock: options.clock }),\n      ...(options.planningStepTimeoutMs === undefined\n        ? {}\n        : { planningStepTimeoutMs: options.planningStepTimeoutMs }),\n      ...(options.spawnProcess === undefined ? {} : { spawnProcess: options.spawnProcess })\n    }),\n    delivery: createCurrentDeliveryPort(),\n    ...(options.clock === undefined ? {} : { clock: options.clock })\n  });\n}\n\n/** Current Stage 3 planner composition, moved out of Next and behind the daemon effect seam. */\nexport function createCurrentPlannerPort(\n  options: CurrentLifecycleAdapterOptions = {}\n): TransitionalPlannerPort {\n  const now = options.clock ?? (() => new Date().toISOString());\n  return {\n    async plan({ runId, definition }): Promise<TransitionalLifecycleResult> {\n      const repoPath = absoluteTargetPath(definition);\n      return withTransitionalRepositoryLease({ repoRoot: repoPath, runId }, async () => {\n      const grounding = await buildProductiveRepositoryGrounding({\n        rootPath: repoPath,\n        targetFingerprint: stringField(definition.targetContext, \"fingerprint\"),\n        baseCommit: stringField(definition.targetContext, \"sourceBaseCommit\"),\n        goal: definition.userPrompt,\n        acceptanceCriteria: definition.acceptanceCriteria\n      });\n      const { snapshot } = grounding;\n      const criteria = goalCriteria(definition);\n      const { evidence } = grounding;\n      const planner = new RecursivePlanner({\n        model: {\n          proposeCut: (request) => invokeCurrentPlanningCli({\n            runId,\n            cwd: repoPath,\n            selection: definition.planningSelection,\n            request,\n            ...(options.planningStepTimeoutMs === undefined\n              ? {}\n              : { timeoutMs: options.planningStepTimeoutMs }),\n            ...(options.spawnProcess === undefined ? {} : { spawnProcess: options.spawnProcess })\n          })\n        },\n        budget: { maxScopePaths: DEFAULT_GRANULARITY_POLICY.maxLeafScopePaths },\n        maxAttemptsPerUnit: positiveIntegerField(definition.executionConfig, \"maxPlanningAttempts\") ?? 2\n      });\n      const plan = await planner.plan({\n        root: {\n          key: \"root\",\n          objective: definition.userPrompt,\n          criteria,\n          reads: evidence.filter((item) => item.kind === \"path\").map((item) => item.reference),\n          writes: []\n        },\n        criteria,\n        evidence\n      });\n      if (plan.unresolved.length > 0) {\n        throw new Error(`no_safe_cut: ${plan.unresolved\n          .map((unit) => `${unit.unit.key}: ${unit.diagnostics.join(\"; \")}`)\n          .join(\" | \")}`);\n      }\n      const projected = projectPlannedTree({\n        tree: plan.root,\n        goal: definition.userPrompt,\n        criteria,\n        evidence,\n        repositorySnapshotId: snapshot.snapshotId\n      });\n      const semanticPlan = createSemanticPlan({\n        goal: definition.userPrompt,\n        repositorySnapshotId: snapshot.snapshotId,\n        criteria: [...projected.criteria],\n        draft: projected.draft\n      });\n      const candidateBreakdown = projectSemanticPlanForLegacyCompiler(semanticPlan).breakdown;\n      const strategy = selectGranularityStrategy({\n        condition: resolveGranularityCondition(definition.granularityCondition),\n        breakdown: candidateBreakdown,\n        repositorySnapshot: snapshot,\n        config: DEFAULT_GRANULARITY_POLICY\n      });\n      if (strategy.requiresSemanticReplan) {\n        throw new Error(\n          \"no_executable_frontier: the current granularity policy requires a semantic replan.\"\n        );\n      }\n      const selected = applyGranularitySelection({\n        plan: semanticPlan,\n        assessments: strategy.assessments\n      });\n      const selectedBreakdown = projectSemanticPlanForLegacyCompiler(selected.plan).breakdown;\n      const compiled = compileGraphRevision({\n        semanticPlan: selected.plan,\n        repositorySnapshot: snapshot,\n        sourceContract: {\n          goal: definition.userPrompt,\n          acceptanceCriteria: criteria.map((criterion) => criterion.description),\n          constraints: []\n        }\n      }, { idFor: stableId, now });\n      const graph = compiled.graph;\n      const decisionId = `approve-plan:${graph.graphId}:r${graph.revision}`;\n      return {\n        events: [\n          fact(`repository:${snapshot.snapshotId}:inspection`, now(), \"repository.inspected\", {\n            snapshotId: snapshot.snapshotId,\n            disposition: snapshot.inspectionDisposition,\n            snapshot: asRecord(snapshot),\n            repositoryModelDigest: grounding.view.model.digest,\n            repositoryView: {\n              digest: grounding.view.digest,\n              treeSha: grounding.view.treeSha,\n              resourceCatalogDigest: grounding.view.resourceCatalogDigest\n            },\n            queryDigests: grounding.queryDigests\n          }),\n          fact(`planning:${selected.plan.planId}:completed:${runId}`, now(), \"planning.completed\", {\n            breakdownId: selected.plan.planId,\n            breakdown: asRecord(selected.plan)\n          }),\n          fact(`graph:${graph.graphId}:r${graph.revision}:compiled`, now(), \"graph.compiled\", {\n            graphId: graph.graphId,\n            revision: graph.revision,\n            graph: asRecord(graph),\n            contracts: compiled.contracts.map(asRecord),\n            review: asRecord(compiled.review),\n            trace: asRecord(compiled.trace)\n          }),\n          ...PLAN_CRITIC_KINDS.map((critic) => fact(\n            `graph:${graph.graphId}:r${graph.revision}:critic:${critic}`,\n            now(),\n            \"planning.critic_recorded\",\n            {\n              critic,\n              findings: compiled.review.findings\n                .filter((finding) => finding.critic === critic)\n                .map(asRecord)\n            }\n          )),\n          strategyEvent(runId, strategy, candidateBreakdown, selectedBreakdown, now),\n          fact(`graph:${graph.graphId}:r${graph.revision}:proposed`, now(), \"graph.revision.proposed\", {\n            graphId: graph.graphId,\n            revision: graph.revision\n          }),\n          fact(decisionId, now(), \"decision.raised\", {\n            decision: {\n              id: decisionId,\n              kind: \"approve_plan\",\n              question: `Approve graph revision ${graph.revision}?`,\n              options: [\n                { id: \"approve\", label: \"Approve plan\" },\n                { id: \"request_changes\", label: \"Request changes\" }\n              ],\n              affectedNodeIds: [graph.rootId],\n              evidenceRefs: [`graph:${graph.graphId}:r${graph.revision}`],\n              impact: \"acceptance\"\n            }\n          })\n        ]\n      };\n      });\n    }\n  };\n}\n\n/** Current compare-and-publish delivery semantics, now invoked only by the daemon adapter. */\nexport function createCurrentDeliveryPort(): TransitionalDeliveryPort {\n  return {\n    async publish({ runId, definition, approval, projection }): Promise<DeliveryReceipt> {\n      const repoRoot = absoluteTargetPath(definition);\n      return withTransitionalRepositoryLease({ repoRoot, runId }, async () => {\n        const publisher = new TransactionalDeliveryPublisher({\n          validate: (request) => validateCanonicalDelivery(\n            projection,\n            request,\n            repoRoot,\n            stringField(definition.targetContext, \"fingerprint\")\n          ),\n          journal: {\n            claim: async (_idempotencyKey, requestFingerprint) => {\n              if (!sameApproval(projection.deliveryApproval, approval)) {\n                throw new Error(\"The canonical delivery journal belongs to a different approval.\");\n              }\n              const receipt = projection.deliveryReceipt === undefined\n                ? undefined\n                : transactionalReceipt(projection.deliveryReceipt);\n              return {\n                requestFingerprint,\n                ...(receipt === undefined ? {} : { receipt })\n              };\n            },\n            // The daemon actor records delivery.published after this physical\n            // result returns; the adapter never writes lifecycle state itself.\n            complete: async () => undefined\n          },\n          repository: {\n            inspect: async () => ({\n              branch: await git(repoRoot, [\"symbolic-ref\", \"--short\", \"HEAD\"]),\n              head: await git(repoRoot, [\"rev-parse\", \"HEAD\"]),\n              fingerprint: stringField(definition.targetContext, \"fingerprint\"),\n              clean: targetWorkingTreeIsClean(await git(\n                repoRoot,\n                [\"status\", \"--porcelain=v1\", \"--untracked-files=all\"]\n              ))\n            }),\n            recover: async (request) => {\n              const [branch, head, status] = await Promise.all([\n                git(repoRoot, [\"symbolic-ref\", \"--short\", \"HEAD\"]),\n                git(repoRoot, [\"rev-parse\", \"HEAD\"]),\n                git(repoRoot, [\"status\", \"--porcelain=v1\", \"--untracked-files=all\"])\n              ]);\n              if (\n                branch !== request.targetBranch\n                || head !== request.finalSha\n                || !targetWorkingTreeIsClean(status)\n                || request.targetFingerprint !== stringField(definition.targetContext, \"fingerprint\")\n              ) {\n                return undefined;\n              }\n              return deliveryReceipt(request, head);\n            },\n            publish: async (request) => {\n              const [branch, head, status] = await Promise.all([\n                git(repoRoot, [\"symbolic-ref\", \"--short\", \"HEAD\"]),\n                git(repoRoot, [\"rev-parse\", \"HEAD\"]),\n                git(repoRoot, [\"status\", \"--porcelain=v1\", \"--untracked-files=all\"])\n              ]);\n              if (\n                branch !== request.targetBranch\n                || head !== request.targetHead\n                || !targetWorkingTreeIsClean(status)\n                || request.targetFingerprint !== stringField(definition.targetContext, \"fingerprint\")\n              ) {\n                throw new Error(\n                  \"The delivery target changed immediately before publication; nothing was published.\"\n                );\n              }\n              await git(repoRoot, [\"merge\", \"--ff-only\", request.finalSha]);\n              const deliveredHead = await git(repoRoot, [\"rev-parse\", \"HEAD\"]);\n              if (deliveredHead !== request.finalSha) {\n                throw new Error(\"Delivery did not publish the approved final SHA.\");\n              }\n              return deliveryReceipt(request, deliveredHead);\n            }\n          }\n        });\n        const receipt = await publisher.publish(approval);\n        return { ...receipt, destination: approval.targetBranch };\n      });\n    }\n  };\n}\n\nasync function validateCanonicalDelivery(\n  projection: RunProjection,\n  approval: TransactionalDeliveryApproval,\n  repoRoot: string,\n  targetFingerprint: string\n): Promise<void> {\n  const candidate = projection.finalCandidate;\n  const manifest = candidate?.finalManifest;\n  if (candidate === undefined || manifest === undefined) {\n    throw new Error(\"Delivery requires the complete final artifact manifest.\");\n  }\n  if (\n    targetFingerprint !== approval.targetFingerprint\n    || candidate.manifestId !== approval.manifestId\n    || candidate.commit !== approval.finalSha\n    || candidate.sourceTargetFingerprint !== approval.targetFingerprint\n    || candidate.targetBranch !== approval.targetBranch\n    || candidate.targetHead !== approval.targetHead\n    || manifest.commitSha !== approval.finalSha\n    || manifest.deliveryTarget !== approval.targetBranch\n  ) {\n    throw new Error(\"Delivery approval does not match the durable final artifact manifest.\");\n  }\n  const matrix = projection.evidenceMatrixSummaries[manifest.evidenceMatrixId];\n  const adoptedContractIds = new Set(\n    Object.values(projection.adoptedArtifacts).map((artifact) => artifact.contract.id)\n  );\n  if (\n    manifest.graphRevision !== projection.approvedGraphRevision\n    || manifest.evidenceMatrixId !== candidate.evidenceMatrixId\n    || matrix?.candidateCommit !== approval.finalSha\n    || matrix.outcome !== \"verified\"\n    || matrix.validationRecipeDigest !== manifest.validationRecipeDigest\n    || manifest.artifactIds.some((artifactId) => !adoptedContractIds.has(artifactId))\n  ) {\n    throw new Error(\n      \"Delivery metadata does not match the canonical graph, evidence, or adopted artifacts.\"\n    );\n  }\n  const treeSha = await git(repoRoot, [\"rev-parse\", `${approval.finalSha}^{tree}`]);\n  if (treeSha !== manifest.treeSha) {\n    throw new Error(\"The final artifact manifest tree no longer matches the candidate commit.\");\n  }\n}\n\nfunction deliveryReceipt(\n  approval: TransactionalDeliveryApproval,\n  targetHeadAfter: string\n): TransactionalDeliveryReceipt {\n  return {\n    receiptId: `delivery:${approval.idempotencyKey}`,\n    requestFingerprint: deliveryRequestFingerprint(approval),\n    manifestId: approval.manifestId,\n    finalSha: approval.finalSha,\n    targetBranch: approval.targetBranch,\n    targetHeadBefore: approval.targetHead,\n    targetHeadAfter,\n    disposition: \"delivered\",\n    confirmed: true\n  };\n}\n\nfunction transactionalReceipt(receipt: DeliveryReceipt): TransactionalDeliveryReceipt {\n  if (\n    receipt.requestFingerprint === undefined\n    || receipt.finalSha === undefined\n    || receipt.targetBranch === undefined\n    || receipt.targetHeadBefore === undefined\n    || receipt.targetHeadAfter === undefined\n    || receipt.disposition !== \"delivered\"\n    || receipt.confirmed !== true\n  ) {\n    throw new Error(\"The persisted delivery receipt is incomplete.\");\n  }\n  return {\n    receiptId: receipt.receiptId,\n    requestFingerprint: receipt.requestFingerprint,\n    manifestId: receipt.manifestId,\n    finalSha: receipt.finalSha,\n    targetBranch: receipt.targetBranch,\n    targetHeadBefore: receipt.targetHeadBefore,\n    targetHeadAfter: receipt.targetHeadAfter,\n    disposition: \"delivered\",\n    confirmed: true\n  };\n}\n\nfunction sameApproval(\n  left: RunProjection[\"deliveryApproval\"],\n  right: TransactionalDeliveryApproval\n): boolean {\n  return left !== undefined\n    && left.manifestId === right.manifestId\n    && left.finalSha === right.finalSha\n    && left.targetBranch === right.targetBranch\n    && left.targetHead === right.targetHead\n    && left.targetFingerprint === right.targetFingerprint\n    && left.actor === right.actor\n    && left.idempotencyKey === right.idempotencyKey;\n}\n\nasync function invokeCurrentPlanningCli(input: {\n  runId: string;\n  cwd: string;\n  selection: ProductRunDefinition[\"planningSelection\"];\n  request: Pick<CutRequest, \"system\" | \"user\" | \"attempt\" | \"repairIssues\">;\n  timeoutMs?: number;\n  spawnProcess?: typeof spawn;\n}): Promise<string> {\n  const repair = input.request.repairIssues.length === 0\n    ? \"\"\n    : `\\n\\nRepair every issue from the previous invalid response:\\n- ${input.request.repairIssues.join(\"\\n- \")}`;\n  const prompt = `${input.request.system}\\n\\n${input.request.user}${repair}`;\n  const isCodex = input.selection.executorId === \"codex-cli\";\n  if (!isCodex && input.selection.executorId !== \"claude-code-cli\") {\n    throw new Error(`Current planning does not support executor ${input.selection.executorId}.`);\n  }\n  const binary = resolveCliBinaryPath(isCodex\n    ? process.env.MANYHANDS_CODEX_BIN ?? \"codex\"\n    : process.env.MANYHANDS_CLAUDE_BIN ?? \"claude\");\n  const args = isCodex\n    ? codexPlanningArgs(input.selection)\n    : [\"-p\", \"-\", \"--model\", input.selection.model, \"--output-format\", \"json\", \"--permission-mode\", \"plan\"];\n  const invocation = resolveCliProcessInvocation(binary, args);\n  const spawnProcess = input.spawnProcess ?? spawn;\n  const timeoutMs = positive(input.timeoutMs ?? Number(process.env.MANYHANDS_PLANNING_STEP_TIMEOUT_MS ?? 600_000));\n  return new Promise((resolve, reject) => {\n    const child = spawnProcess(invocation.command, invocation.args, {\n      cwd: input.cwd,\n      env: buildAgentEnvironment() as NodeJS.ProcessEnv,\n      stdio: [\"pipe\", \"pipe\", \"pipe\"],\n      shell: false,\n      detached: process.platform !== \"win32\",\n      ...(invocation.windowsVerbatimArguments === undefined\n        ? {}\n        : { windowsVerbatimArguments: invocation.windowsVerbatimArguments })\n    });\n    let stdout = \"\";\n    let stderr = \"\";\n    let settled = false;\n    const timer = setTimeout(() => {\n      void terminateTree(child).finally(() => finish(() => reject(\n        new Error(`${input.selection.executorId} planning timed out after ${timeoutMs}ms.`)\n      )));\n    }, timeoutMs);\n    const finish = (complete: () => void) => {\n      if (settled) return;\n      settled = true;\n      clearTimeout(timer);\n      complete();\n    };\n    child.stdout?.on(\"data\", (chunk) => { stdout += String(chunk); });\n    child.stderr?.on(\"data\", (chunk) => { stderr = `${stderr}${String(chunk)}`.slice(-16_384); });\n    child.once(\"error\", (error) => finish(() => reject(error)));\n    child.once(\"close\", (code) => finish(() => {\n      if (code !== 0) {\n        const message = `${stderr}\\n${stdout}`.trim();\n        reject(PROVIDER_CAPACITY_PATTERN.test(message)\n          ? new PlanningCapacityError(`${input.selection.executorId} was throttled by the provider.`)\n          : new Error(`${input.selection.executorId} planning failed with exit code ${code}: ${message}`));\n        return;\n      }\n      try {\n        resolve(isCodex ? stdout : claudeResult(stdout));\n      } catch (error) {\n        reject(error);\n      }\n    }));\n    child.stdin?.end(prompt);\n  });\n}\n\nfunction strategyEvent(\n  runId: string,\n  strategy: ReturnType<typeof selectGranularityStrategy>,\n  candidate: WorkBreakdown,\n  selected: WorkBreakdown,\n  now: () => string\n): RunEventInput {\n  return fact(`planning:${candidate.breakdownId}:strategy:${runId}`, now(), \"planning.granularity_strategy_selected\", {\n    policyVersion: strategy.policyVersion,\n    condition: strategy.condition,\n    candidateTreeHash: strategy.candidateTreeHash,\n    candidateTree: {\n      root: asRecord(candidate.root),\n      candidateArtifacts: candidate.candidateArtifacts.map(asRecord),\n      candidateSeams: candidate.candidateSeams.map(asRecord)\n    },\n    config: {\n      maxLeafContextTokens: strategy.config.maxLeafContextTokens,\n      maxLeafScopePaths: strategy.config.maxLeafScopePaths,\n      maxLeafPlannedPaths: strategy.config.maxLeafPlannedPaths\n    },\n    assessments: Object.values(strategy.assessments).map((assessment) => ({\n      unitKey: assessment.unitKey,\n      nodeId: stableId(\"node\", assessment.unitKey),\n      selected: assessment.selected,\n      leafFeasible: assessment.leafFeasible,\n      splitViable: assessment.splitViable,\n      reasons: { ...assessment.reasons },\n      evidenceRefs: assessment.evidenceRefs,\n      rationale: assessment.rationale\n    })),\n    metrics: structuralMetrics(selected.root)\n  });\n}\n\nfunction legacyRepositoryEvidence(answers: readonly RepositoryQueryAnswer[]): RepositoryEvidence[] {\n  const evidence = new Map<string, RepositoryEvidence>();\n  for (const answer of answers) {\n    const confidence = legacyEvidenceConfidence(answer.epistemic);\n    for (const item of answer.items) {\n      for (const evidenceRef of item.evidenceRefs) {\n        const candidate: RepositoryEvidence = {\n          id: evidenceRef,\n          kind: legacyEvidenceKind(item),\n          reference: legacyEvidenceReference(item),\n          observation: item.summary,\n          confidence\n        };\n        const existing = evidence.get(evidenceRef);\n        if (existing === undefined || candidate.confidence < existing.confidence) {\n          evidence.set(evidenceRef, candidate);\n        }\n      }\n    }\n  }\n  return [...evidence.values()].sort((left, right) => left.id.localeCompare(right.id));\n}\n\nfunction legacyEvidenceConfidence(epistemic: RepositoryQueryAnswer[\"epistemic\"]): number {\n  if (epistemic.state === \"known\") return epistemic.confidence === \"high\" ? 1 : epistemic.confidence === \"medium\" ? 0.8 : 0.6;\n  if (epistemic.state === \"partial\") return epistemic.confidence === \"high\" ? 0.7 : epistemic.confidence === \"medium\" ? 0.5 : 0.3;\n  if (epistemic.state === \"conflicting\") return 0.2;\n  return 0;\n}\n\nfunction legacyEvidenceKind(item: RepositoryQueryAnswer[\"items\"][number]): RepositoryEvidence[\"kind\"] {\n  if (item.kind === \"symbol\") return \"symbol\";\n  if (item.kind === \"command\") return \"script\";\n  if (item.kind === \"diagnostic\") return \"diagnostic\";\n  return \"path\";\n}\n\nfunction legacyEvidenceReference(item: RepositoryQueryAnswer[\"items\"][number]): string {\n  if (item.kind === \"command\") return item.name ?? item.locator;\n  if (item.locator.startsWith(\"path:\")) return item.locator.slice(\"path:\".length);\n  if (item.locator.startsWith(\"module:\")) return item.locator.slice(\"module:\".length);\n  if (item.locator.startsWith(\"package:\")) {\n    const packagePath = item.locator.slice(\"package:\".length);\n    return packagePath === \".\" ? \".\" : packagePath;\n  }\n  return item.locator;\n}\n\nfunction repositoryGoalTerms(values: readonly string[]): string[] {\n  return [...new Set(values.flatMap((value) => value.toLocaleLowerCase(\"en-US\").match(/[a-z0-9][a-z0-9_-]{2,}/gu) ?? []))]\n    .sort();\n}\n\nfunction goalCriteria(definition: ProductRunDefinition): GoalCriterion[] {\n  const source = definition.acceptanceCriteria.length > 0\n    ? definition.acceptanceCriteria\n    : [definition.userPrompt];\n  return source.map((description, index) => ({\n    id: `criterion-${index + 1}`,\n    description,\n    required: true\n  }));\n}\n\nfunction structuralMetrics(root: WorkUnit) {\n  const units = flatten(root);\n  const composites = units.filter((unit): unit is Extract<WorkUnit, { kind: \"composite\" }> =>\n    unit.kind === \"composite\");\n  const depth = (unit: WorkUnit): number => unit.kind === \"leaf\"\n    ? 0\n    : 1 + Math.max(...unit.children.map(depth));\n  return {\n    maxGraphDepth: depth(root),\n    totalLeafCount: units.filter((unit) => unit.kind === \"leaf\").length,\n    averageBranchingFactor: composites.length === 0\n      ? 0\n      : composites.reduce((sum, unit) => sum + unit.children.length, 0) / composites.length\n  };\n}\n\nfunction flatten(root: WorkUnit): WorkUnit[] {\n  return root.kind === \"leaf\" ? [root] : [root, ...root.children.flatMap(flatten)];\n}\n\nfunction codexPlanningArgs(selection: ProductRunDefinition[\"planningSelection\"]): string[] {\n  return [\n    \"exec\", \"--model\", selection.model,\n    \"--sandbox\", \"read-only\",\n    \"--ephemeral\", \"--ignore-user-config\", \"--skip-git-repo-check\",\n    ...(selection.effort === undefined ? [] : [\"-c\", `model_reasoning_effort=\"${selection.effort}\"`]),\n    \"-\"\n  ];\n}\n\nfunction claudeResult(stdout: string): string {\n  const parsed = JSON.parse(stdout) as unknown;\n  if (typeof parsed === \"object\" && parsed !== null && \"result\" in parsed && typeof parsed.result === \"string\") {\n    return parsed.result;\n  }\n  throw new Error(\"Claude planning output did not contain a string result.\");\n}\n\nasync function terminateTree(child: ChildProcess): Promise<void> {\n  if (child.pid === undefined || child.exitCode !== null) return;\n  if (process.platform === \"win32\") {\n    await execFileAsync(\"taskkill.exe\", [\"/pid\", String(child.pid), \"/t\", \"/f\"], { windowsHide: true })\n      .catch(() => child.kill(\"SIGKILL\"));\n    return;\n  }\n  try {\n    process.kill(-child.pid, \"SIGKILL\");\n  } catch {\n    child.kill(\"SIGKILL\");\n  }\n}\n\nasync function git(repoRoot: string, args: string[]): Promise<string> {\n  const { stdout } = await execFileAsync(\"git\", safeGitArgs(repoRoot, args), {\n    cwd: repoRoot,\n    windowsHide: true,\n    encoding: \"utf8\"\n  });\n  return stdout.trim();\n}\n\nfunction fact<T extends RunEventInput[\"type\"]>(\n  eventId: string,\n  occurredAt: string,\n  type: T,\n  payload: Extract<RunEventInput, { type: T }>[\"payload\"]\n): Extract<RunEventInput, { type: T }> {\n  return { eventId, occurredAt, type, payload } as Extract<RunEventInput, { type: T }>;\n}\n\nfunction stableId(kind: string, key: string): string {\n  const readable = key.replace(/[^A-Za-z0-9._:-]/gu, \"-\").slice(0, 48);\n  return `${kind}-${readable}-${createHash(\"sha256\").update(`${kind}:${key}`).digest(\"hex\").slice(0, 10)}`;\n}\n\nfunction absoluteTargetPath(definition: ProductRunDefinition): string {\n  const value = stringField(definition.targetContext, \"sourceRealPath\");\n  if (!path.isAbsolute(value)) throw new Error(\"The captured target path must be absolute.\");\n  return path.resolve(value);\n}\n\nfunction stringField(record: Record<string, unknown>, key: string): string {\n  const value = record[key];\n  if (typeof value !== \"string\" || value.length === 0) throw new Error(`Target context ${key} is required.`);\n  return value;\n}\n\nfunction positiveIntegerField(record: Record<string, unknown>, key: string): number | undefined {\n  const value = record[key];\n  return typeof value === \"number\" && Number.isInteger(value) && value > 0 ? value : undefined;\n}\n\nfunction positive(value: number): number {\n  return Number.isFinite(value) && value > 0 ? value : 600_000;\n}\n\nfunction asRecord<T>(value: T): Record<string, unknown> {\n  return value as unknown as Record<string, unknown>;\n}\n",
+    "truncated": false,
+    "evidenceRefs": [
+      "evidence:fcb5757df3a9a22deb2e761b"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:fcb5757df3a9a22deb2e761b"
+      ]
+    }
+  },
+  {
+    "locator": "path:apps/daemon/src/transitional-unsafe-profile.ts",
+    "text": "import { createHash } from \"node:crypto\";\nimport { readFile } from \"node:fs/promises\";\nimport path from \"node:path\";\n\nimport {\n  DeliveryReceiptSchema,\n  RunEventSchema,\n  foldRun,\n  type DeliveryApproval,\n  type DeliveryReceipt,\n  type ProductRunDefinition,\n  type RunEvent,\n  type RunEventInput,\n  type RunProjection\n} from \"@manyhands/run-coordinator\";\nimport type {\n  PhysicalEffectAdapter,\n  PhysicalEffectAdapterContext\n} from \"@manyhands/run-engine\";\nimport { JsonlRunEventStore, atomicWriteJson } from \"@manyhands/run-store\";\n\nimport type { TransitionalUnsafeExecutionProfile } from \"./productive-daemon.js\";\n\nexport interface TransitionalLifecycleResult {\n  readonly events: readonly RunEventInput[];\n}\n\nexport interface TransitionalLifecycleResultStore {\n  writePlanning(effectId: string, result: TransitionalLifecycleResult): Promise<void>;\n  readPlanning(effectId: string): Promise<TransitionalLifecycleResult | undefined>;\n  writeExecution(runId: string, attemptId: string, result: TransitionalLifecycleResult): Promise<void>;\n  readExecution(runId: string, attemptId: string): Promise<TransitionalLifecycleResult | undefined>;\n  writeDelivery(effectId: string, receipt: DeliveryReceipt): Promise<void>;\n  readDelivery(effectId: string): Promise<DeliveryReceipt | undefined>;\n}\n\nexport interface TransitionalPlannerPort {\n  plan(input: {\n    runId: string;\n    definition: ProductRunDefinition;\n    events: readonly ReturnType<typeof RunEventSchema.parse>[];\n  }): Promise<TransitionalLifecycleResult>;\n}\n\nexport interface TransitionalDeliveryPort {\n  publish(input: {\n    runId: string;\n    definition: ProductRunDefinition;\n    approval: DeliveryApproval;\n    projection: RunProjection;\n    events: readonly RunEvent[];\n  }): Promise<DeliveryReceipt>;\n}\n\nexport interface CreateTransitionalUnsafeProfileOptions {\n  readonly stateRoot: string;\n  readonly nodeExecutable: string;\n  readonly workerScriptPath: string;\n  readonly cwd: string;\n  readonly planner: TransitionalPlannerPort;\n  readonly delivery: TransitionalDeliveryPort;\n  readonly resultStore?: TransitionalLifecycleResultStore;\n  readonly processAdapters?: readonly PhysicalEffectAdapter[];\n  readonly clock?: () => string;\n  readonly executionProcess?: TransitionalUnsafeExecutionProfile[\"executionProcess\"];\n}\n\n/**\n * Explicit Stage 3 bridge to the current lifecycle implementation.\n *\n * The profile is deliberately named unsafe: current model/executor internals\n * retain their pre-GLeaf trust model. The daemon still owns every lifecycle\n * append; adapters can only publish immutable results which the actor adopts.\n */\nexport function createTransitionalUnsafeProfile(\n  options: CreateTransitionalUnsafeProfileOptions\n): TransitionalUnsafeExecutionProfile {\n  const stateRoot = absolute(options.stateRoot, \"stateRoot\");\n  const nodeExecutable = absolute(options.nodeExecutable, \"nodeExecutable\");\n  const workerScriptPath = absolute(options.workerScriptPath, \"workerScriptPath\");\n  const cwd = absolute(options.cwd, \"cwd\");\n  const clock = options.clock ?? (() => new Date().toISOString());\n  const results = options.resultStore ?? new FileTransitionalLifecycleResultStore(\n    path.join(stateRoot, \"transitional-results\")\n  );\n  const events = new JsonlRunEventStore({ directory: path.join(stateRoot, \"runs\") });\n  const adapters: PhysicalEffectAdapter[] = [\n    createPlanningAdapter({ events, planner: options.planner, results, clock }),\n    ...failClosedUnusedAdapters(clock),\n    createDeliveryAdapter({ events, delivery: options.delivery, results, clock }),\n    createCleanupAdapter(clock),\n    ...(options.processAdapters ?? [])\n  ];\n\n  return Object.freeze({\n    kind: \"transitional_unsafe\",\n    adapters,\n    executionProcess: options.executionProcess ?? ((_definition: ProductRunDefinition, context: {\n      runId: string;\n      attemptId: string;\n    } | undefined) => {\n      if (context === undefined) throw new Error(\"Transitional execution requires run and attempt identity.\");\n      return {\n        executable: nodeExecutable,\n        argv: [\n          workerScriptPath,\n          \"--state-root\", stateRoot,\n          \"--run-id\", context.runId,\n          \"--attempt-id\", context.attemptId\n        ],\n        cwd,\n        env: inheritedWorkerEnvironment()\n      };\n    }),\n    loadPlanningResult: async (effectId: string) => {\n      const result = await results.readPlanning(effectId);\n      if (result === undefined) throw new Error(`Planning adapter result ${effectId} is missing.`);\n      return validateLifecycleEvents(result.events);\n    },\n    loadExecutionResult: async (runId: string, attemptId: string) => {\n      const result = await results.readExecution(runId, attemptId);\n      if (result === undefined) throw new Error(`Execution adapter result ${runId}/${attemptId} is missing.`);\n      return validateLifecycleEvents(result.events);\n    },\n    loadDeliveryResult: async (effectId: string) => {\n      const result = await results.readDelivery(effectId);\n      if (result === undefined) throw new Error(`Delivery adapter result ${effectId} is missing.`);\n      return DeliveryReceiptSchema.parse(result);\n    }\n  });\n}\n\nexport class FileTransitionalLifecycleResultStore implements TransitionalLifecycleResultStore {\n  constructor(private readonly root: string) {\n    absolute(root, \"transitional result root\");\n  }\n\n  writePlanning(effectId: string, result: TransitionalLifecycleResult): Promise<void> {\n    return atomicWriteJson(this.file(\"planning\", effectId), normalizedResult(result));\n  }\n\n  async readPlanning(effectId: string): Promise<TransitionalLifecycleResult | undefined> {\n    return readLifecycleResult(this.file(\"planning\", effectId));\n  }\n\n  writeExecution(runId: string, attemptId: string, result: TransitionalLifecycleResult): Promise<void> {\n    return atomicWriteJson(this.file(\"execution\", `${runId}:${attemptId}`), normalizedResult(result));\n  }\n\n  async readExecution(runId: string, attemptId: string): Promise<TransitionalLifecycleResult | undefined> {\n    return readLifecycleResult(this.file(\"execution\", `${runId}:${attemptId}`));\n  }\n\n  writeDelivery(effectId: string, receipt: DeliveryReceipt): Promise<void> {\n    return atomicWriteJson(this.file(\"delivery\", effectId), DeliveryReceiptSchema.parse(receipt));\n  }\n\n  async readDelivery(effectId: string): Promise<DeliveryReceipt | undefined> {\n    const value = await readJson(this.file(\"delivery\", effectId));\n    return value === undefined ? undefined : DeliveryReceiptSchema.parse(value);\n  }\n\n  private file(kind: string, identity: string): string {\n    const digest = createHash(\"sha256\").update(identity).digest(\"hex\");\n    return path.join(this.root, kind, `${digest}.json`);\n  }\n}\n\nfunction createPlanningAdapter(input: {\n  events: JsonlRunEventStore;\n  planner: TransitionalPlannerPort;\n  results: TransitionalLifecycleResultStore;\n  clock: () => string;\n}): PhysicalEffectAdapter {\n  const converge = async (\n    intent: Parameters<PhysicalEffectAdapter[\"execute\"]>[0],\n    context: PhysicalEffectAdapterContext\n  ): Promise<void> => {\n    if (terminalRecorded(context)) return;\n    let result = await input.results.readPlanning(intent.effectId);\n    if (result === undefined) {\n      const events = await input.events.load(intent.runId);\n      const projection = foldRun(events);\n      if (projection.definition === undefined) {\n        throw new Error(`Run ${intent.runId} has no immutable definition for planning.`);\n      }\n      if (await context.invalidationReason?.() !== undefined) return;\n      result = normalizedResult(await input.planner.plan({\n        runId: intent.runId,\n        definition: projection.definition,\n        events\n      }));\n      await input.results.writePlanning(intent.effectId, result);\n    }\n    await context.record({\n      observation: \"succeeded\",\n      resultDigest: digest(result),\n      observedAt: input.clock()\n    });\n  };\n  return { kind: \"model_call\", execute: converge, reconcile: converge };\n}\n\nfunction createDeliveryAdapter(input: {\n  events: JsonlRunEventStore;\n  delivery: TransitionalDeliveryPort;\n  results: TransitionalLifecycleResultStore;\n  clock: () => string;\n}): PhysicalEffectAdapter {\n  const converge = async (\n    intent: Parameters<PhysicalEffectAdapter[\"execute\"]>[0],\n    context: PhysicalEffectAdapterContext\n  ): Promise<void> => {\n    if (terminalRecorded(context)) return;\n    let receipt = await input.results.readDelivery(intent.effectId);\n    if (receipt === undefined) {\n      const runEvents = await input.events.load(intent.runId);\n      const projection = foldRun(runEvents);\n      if (projection.definition === undefined || projection.deliveryApproval === undefined) {\n        throw new Error(`Run ${intent.runId} has no approved delivery input.`);\n      }\n      if (await context.invalidationReason?.() !== undefined) return;\n      receipt = DeliveryReceiptSchema.parse(await input.delivery.publish({\n        runId: intent.runId,\n        definition: projection.definition,\n        approval: projection.deliveryApproval,\n        projection,\n        events: runEvents\n      }));\n      await input.results.writeDelivery(intent.effectId, receipt);\n    }\n    await context.record({\n      observation: \"succeeded\",\n      resultDigest: digest(receipt),\n      observedAt: input.clock()\n    });\n  };\n  return { kind: \"delivery\", execute: converge, reconcile: converge };\n}\n\nfunction failClosedUnusedAdapters(clock: () => string): PhysicalEffectAdapter[] {\n  const kinds = [\"sandbox_create\", \"git_mutation\", \"artifact_materialize\", \"validation\"] as const;\n  return kinds.map((kind) => {\n    const reject = async (\n      intent: Parameters<PhysicalEffectAdapter[\"execute\"]>[0],\n      context: PhysicalEffectAdapterContext\n    ): Promise<void> => {\n      if (terminalRecorded(context)) return;\n      await context.record({\n        observation: \"failed\",\n        resultDigest: digest({ kind, effectId: intent.effectId, reason: \"not_requested_by_stage3_bridge\" }),\n        observedAt: clock()\n      });\n    };\n    return { kind, execute: reject, reconcile: reject };\n  });\n}\n\nfunction createCleanupAdapter(clock: () => string): PhysicalEffectAdapter {\n  const converge = async (\n    intent: Parameters<PhysicalEffectAdapter[\"execute\"]>[0],\n    context: PhysicalEffectAdapterContext\n  ): Promise<void> => {\n    if (terminalRecorded(context)) return;\n    await context.record({\n      observation: \"succeeded\",\n      resultDigest: digest({ effectId: intent.effectId, state: \"quiescent\" }),\n      observedAt: clock()\n    });\n  };\n  return { kind: \"cleanup\", execute: converge, reconcile: converge };\n}\n\nfunction terminalRecorded(context: PhysicalEffectAdapterContext): boolean {\n  return context.priorReceipts.some((receipt) => receipt.observation !== \"started\");\n}\n\nfunction normalizedResult(result: TransitionalLifecycleResult): TransitionalLifecycleResult {\n  return { events: validateLifecycleEvents(result.events) };\n}\n\nfunction validateLifecycleEvents(events: readonly RunEventInput[]): RunEventInput[] {\n  return events.map((event, index) => {\n    const parsed = RunEventSchema.parse({\n      ...structuredClone(event),\n      runId: \"run:transitional:validation\",\n      sequence: index + 1\n    });\n    const { runId, sequence, ...input } = parsed;\n    void runId;\n    void sequence;\n    return input as RunEventInput;\n  });\n}\n\nasync function readLifecycleResult(filePath: string): Promise<TransitionalLifecycleResult | undefined> {\n  const value = await readJson(filePath);\n  if (value === undefined || typeof value !== \"object\" || value === null || !(\"events\" in value)) {\n    return value === undefined ? undefined : (() => { throw new Error(`Invalid lifecycle result ${filePath}.`); })();\n  }\n  const events = (value as { events: unknown }).events;\n  if (!Array.isArray(events)) throw new Error(`Invalid lifecycle result ${filePath}.`);\n  return { events: validateLifecycleEvents(events as RunEventInput[]) };\n}\n\nasync function readJson(filePath: string): Promise<unknown | undefined> {\n  try {\n    return JSON.parse(await readFile(filePath, \"utf8\")) as unknown;\n  } catch (error) {\n    if (error instanceof Error && \"code\" in error && error.code === \"ENOENT\") return undefined;\n    throw error;\n  }\n}\n\nfunction inheritedWorkerEnvironment(): Record<string, string> {\n  const names = [\n    \"PATH\", \"PATHEXT\", \"SystemRoot\", \"WINDIR\", \"TEMP\", \"TMP\",\n    \"MANYHANDS_CODEX_BIN\", \"MANYHANDS_CLAUDE_BIN\", \"MANYHANDS_PLANNING_STEP_TIMEOUT_MS\"\n  ];\n  return Object.fromEntries(names.flatMap((name) => {\n    const value = process.env[name];\n    return value === undefined ? [] : [[name, value]];\n  }));\n}\n\nfunction digest(value: unknown): string {\n  return `sha256:${createHash(\"sha256\").update(JSON.stringify(value)).digest(\"hex\")}`;\n}\n\nfunction absolute(value: string, label: string): string {\n  if (!path.isAbsolute(value)) throw new TypeError(`${label} must be an absolute path.`);\n  return path.resolve(value);\n}\n",
+    "truncated": false,
+    "evidenceRefs": [
+      "evidence:5880d3244ee8a85739d37c25"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:5880d3244ee8a85739d37c25"
+      ]
+    }
+  },
+  {
+    "locator": "path:packages/contracts/src/semantic-plan.ts",
+    "text": "import { EntityIdSchema, EpistemicAssessmentSchema, NonEmptyStringSchema } from \"@manyhands/shared\";\nimport { z } from \"zod\";\nimport { computeCanonicalDigest, sortedUniqueStrings, type DigestHasher } from \"./canonical-json.js\";\nimport {\n  CanonicalContractRefSchema,\n  CanonicalDigestSchema,\n  RepositorySnapshotRefSchema,\n  RepositoryViewRefSchema\n} from \"./canonical-reference.js\";\n\nexport { EpistemicAssessmentSchema } from \"@manyhands/shared\";\nexport type { EpistemicAssessment } from \"@manyhands/shared\";\n\nexport const GranularityDecisionSchema = z.object({\n  disposition: z.enum([\"leaf\", \"split\", \"frontier\"]),\n  feasibility: z.object({\n    coherentResponsibility: z.boolean(),\n    boundedContext: z.enum([\"yes\", \"no\", \"unknown\"]),\n    boundedChangeSurface: z.enum([\"yes\", \"no\", \"unknown\"]),\n    independentlyValidatable: z.enum([\"yes\", \"no\", \"unknown\"]),\n    unresolvedArchitectureDecision: z.boolean()\n  }).strict(),\n  splitReasons: z.array(z.enum([\n    \"capacity\",\n    \"independent_delivery\",\n    \"parallelism\",\n    \"risk_isolation\",\n    \"integration_boundary\",\n    \"specialization\"\n  ])).default([]),\n  expectedBenefits: z.array(NonEmptyStringSchema).default([]),\n  expectedCosts: z.array(NonEmptyStringSchema).default([]),\n  integrationObligationId: EntityIdSchema.optional(),\n  evidenceRefs: z.array(NonEmptyStringSchema).default([]),\n  epistemic: EpistemicAssessmentSchema\n}).strict().superRefine((decision, context) => {\n  if (decision.disposition === \"split\") {\n    if (decision.splitReasons.length === 0) issue(context, [\"splitReasons\"], \"split requires at least one reason\");\n    if (decision.evidenceRefs.length === 0) issue(context, [\"evidenceRefs\"], \"split requires evidence\");\n    if (decision.integrationObligationId === undefined) {\n      issue(context, [\"integrationObligationId\"], \"split requires a parent integration obligation\");\n    }\n  }\n  if (decision.disposition === \"leaf\") {\n    const feasibility = decision.feasibility;\n    if (!feasibility.coherentResponsibility) issue(context, [\"feasibility\", \"coherentResponsibility\"], \"leaf must be coherent\");\n    for (const field of [\"boundedContext\", \"boundedChangeSurface\", \"independentlyValidatable\"] as const) {\n      if (feasibility[field] === \"no\") issue(context, [\"feasibility\", field], \"leaf feasibility cannot be no\");\n    }\n    if (feasibility.unresolvedArchitectureDecision) {\n      issue(context, [\"feasibility\", \"unresolvedArchitectureDecision\"], \"leaf cannot retain an unresolved architecture decision\");\n    }\n  }\n});\nexport type GranularityDecision = z.infer<typeof GranularityDecisionSchema>;\n\nconst PlannedOutcomeSchema = z.object({ id: EntityIdSchema, statement: NonEmptyStringSchema }).strict();\nconst CriterionRefinementSchema = z.object({\n  criterionId: EntityIdSchema,\n  statement: NonEmptyStringSchema,\n  sourceCriterionId: EntityIdSchema\n}).strict();\n\nexport const WorkUnitSchema = z.object({\n  id: EntityIdSchema,\n  parentId: EntityIdSchema.optional(),\n  role: z.enum([\"leaf\", \"composite\"]),\n  title: NonEmptyStringSchema,\n  objective: NonEmptyStringSchema,\n  boundary: z.object({\n    kind: z.enum([\"application\", \"package\", \"module\", \"domain\", \"vertical_slice\", \"cross_cutting\"]),\n    evidenceRefs: z.array(NonEmptyStringSchema).default([])\n  }).strict(),\n  outcomes: z.array(PlannedOutcomeSchema).min(1),\n  criteria: z.array(CriterionRefinementSchema).min(1),\n  repositorySurface: z.object({\n    resourceRefs: z.array(NonEmptyStringSchema).default([]),\n    pathHints: z.array(NonEmptyStringSchema).default([])\n  }).strict(),\n  resourceIntents: z.array(z.object({\n    resourceRef: NonEmptyStringSchema,\n    access: z.enum([\"read\", \"write\", \"coordinate\"])\n  }).strict()).default([]),\n  consumes: z.array(EntityIdSchema).default([]),\n  produces: z.array(EntityIdSchema).default([]),\n  seamRefs: z.array(EntityIdSchema).default([]),\n  validation: z.array(z.object({\n    obligationId: EntityIdSchema,\n    criterionId: EntityIdSchema\n  }).strict()).default([]),\n  uncertainty: z.array(z.object({\n    id: EntityIdSchema,\n    statement: NonEmptyStringSchema,\n    evidenceRefs: z.array(NonEmptyStringSchema).default([])\n  }).strict()).default([]),\n  granularity: GranularityDecisionSchema,\n  expansion: z.enum([\"leaf\", \"expanded\", \"frontier\"]),\n  integration: z.object({ obligationId: EntityIdSchema, strategyRef: EntityIdSchema.optional() }).strict().optional()\n}).strict();\nexport type WorkUnit = z.infer<typeof WorkUnitSchema>;\n\nconst PlannedSeamSchema = z.object({ id: EntityIdSchema, contract: CanonicalContractRefSchema }).strict();\nconst PlannedArtifactSchema = z.object({ id: EntityIdSchema, contract: CanonicalContractRefSchema }).strict();\nconst PlanningDecisionSchema = z.object({ id: EntityIdSchema, statement: NonEmptyStringSchema }).strict();\nconst PlanningEvidenceSchema = z.object({\n  id: EntityIdSchema,\n  snapshotId: EntityIdSchema,\n  kind: z.enum([\"file\", \"symbol\", \"relationship\", \"test\", \"command\", \"convention\", \"diagnostic\"]),\n  locator: NonEmptyStringSchema,\n  digest: CanonicalDigestSchema,\n  epistemic: EpistemicAssessmentSchema\n}).strict();\n\nconst SemanticPlanMaterialObjectSchema = z.object({\n  id: EntityIdSchema,\n  revision: z.number().int().positive(),\n  goalContract: CanonicalContractRefSchema,\n  repositorySnapshot: RepositorySnapshotRefSchema,\n  repositoryView: RepositoryViewRefSchema,\n  rootUnitId: EntityIdSchema,\n  units: z.record(WorkUnitSchema),\n  seams: z.record(PlannedSeamSchema),\n  artifacts: z.record(PlannedArtifactSchema),\n  decisions: z.array(PlanningDecisionSchema).default([]),\n  evidence: z.array(PlanningEvidenceSchema).default([]),\n  status: z.enum([\"ready\", \"needs_input\", \"rejected\"])\n}).strict();\n\nexport const SemanticPlanMaterialSchema = SemanticPlanMaterialObjectSchema.superRefine((plan, context) => {\n  if (plan.units[plan.rootUnitId] === undefined) issue(context, [\"rootUnitId\"], \"rootUnitId must resolve to a work unit\");\n  for (const [key, unit] of Object.entries(plan.units)) {\n    if (unit.id !== key) issue(context, [\"units\", key, \"id\"], \"work unit id must match its record key\");\n    if (unit.parentId !== undefined && plan.units[unit.parentId] === undefined) {\n      issue(context, [\"units\", key, \"parentId\"], \"parentId must resolve to a work unit\");\n    }\n  }\n});\n\nexport const SemanticPlanSchema = SemanticPlanMaterialObjectSchema.extend({ digest: CanonicalDigestSchema }).strict().superRefine((plan, context) => {\n  if (plan.units[plan.rootUnitId] === undefined) issue(context, [\"rootUnitId\"], \"rootUnitId must resolve to a work unit\");\n  for (const [key, unit] of Object.entries(plan.units)) {\n    if (unit.id !== key) issue(context, [\"units\", key, \"id\"], \"work unit id must match its record key\");\n    if (unit.parentId !== undefined && plan.units[unit.parentId] === undefined) {\n      issue(context, [\"units\", key, \"parentId\"], \"parentId must resolve to a work unit\");\n    }\n  }\n});\nexport type SemanticPlanMaterial = z.infer<typeof SemanticPlanMaterialSchema>;\nexport type SemanticPlan = z.infer<typeof SemanticPlanSchema>;\n\nexport function buildSemanticPlan(input: SemanticPlanMaterial, hasher: DigestHasher): SemanticPlan {\n  const parsed = SemanticPlanMaterialSchema.parse(input);\n  const units = Object.fromEntries(Object.entries(parsed.units).map(([id, unit]) => [id, normalizeWorkUnit(unit)]));\n  const material: SemanticPlanMaterial = { ...parsed, units };\n  return { ...material, digest: computeCanonicalDigest(material, hasher) };\n}\n\nfunction normalizeWorkUnit(unit: WorkUnit): WorkUnit {\n  return {\n    ...unit,\n    boundary: { ...unit.boundary, evidenceRefs: sortedUniqueStrings(unit.boundary.evidenceRefs) },\n    repositorySurface: {\n      resourceRefs: sortedUniqueStrings(unit.repositorySurface.resourceRefs),\n      pathHints: sortedUniqueStrings(unit.repositorySurface.pathHints)\n    },\n    resourceIntents: [...unit.resourceIntents].sort((left, right) =>\n      `${left.resourceRef}\\0${left.access}`.localeCompare(`${right.resourceRef}\\0${right.access}`)\n    ),\n    consumes: sortedUniqueStrings(unit.consumes),\n    produces: sortedUniqueStrings(unit.produces),\n    seamRefs: sortedUniqueStrings(unit.seamRefs),\n    granularity: {\n      ...unit.granularity,\n      splitReasons: [...new Set(unit.granularity.splitReasons)].sort(),\n      evidenceRefs: sortedUniqueStrings(unit.granularity.evidenceRefs)\n    }\n  };\n}\n\nfunction issue(context: z.RefinementCtx, path: Array<string | number>, message: string): void {\n  context.addIssue({ code: z.ZodIssueCode.custom, path, message });\n}\n",
+    "truncated": false,
+    "evidenceRefs": [
+      "evidence:479035e214f31497694608ec"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:479035e214f31497694608ec"
+      ]
+    }
+  },
+  {
+    "locator": "path:packages/decomposer/src/compiler/graph-compiler.ts",
+    "text": "import type { SourceContract, TaskContractBundle } from \"@manyhands/contracts\";\nimport { RepositorySnapshotSchema, type RepositorySnapshot } from \"@manyhands/repository-index\";\nimport {\n  LegacyGraphRevisionV2Schema,\n  computeLegacyGraphRevisionV2TopologicalLevels,\n  type LegacyArtifactRequirementV2,\n  type ConflictConstraint,\n  type LegacyGraphRevisionV2,\n  type LegacySeamBindingV2,\n  type LegacyTaskNodeV2\n} from \"@manyhands/task-graph\";\nimport { assertPlanReview, reviewCompiledPlan, type PlanReview } from \"../critics/review.js\";\nimport { WorkBreakdownSchema, type WorkBreakdown, type WorkUnit } from \"../planner/schema.js\";\nimport type { CandidatePlan } from \"../planner/candidate-plan.js\";\nimport { compileContractBundles } from \"./contract-compiler.js\";\nimport { repositorySnapshotIdsMatch } from \"../planner/repository-snapshot-id.js\";\nimport { projectSemanticPlanForLegacyCompiler } from \"../planner/semantic-plan-projection.js\";\nimport { SemanticPlanSchema, type SemanticPlan } from \"../planner/semantic-plan.js\";\n\nexport interface GraphCompilerInput {\n  /** Historical compiler input. New productive planning supplies semanticPlan. */\n  breakdown?: WorkBreakdown;\n  /** The sole canonical planning representation for the productive route. */\n  semanticPlan?: SemanticPlan;\n  repositorySnapshot: RepositorySnapshot;\n  sourceContract?: SourceContract;\n  candidatePlan?: CandidatePlan;\n}\n\nexport interface GraphCompilerDependencies {\n  idFor(kind: string, key: string): string;\n  now(): string;\n}\n\nexport interface CompilationRelationTrace {\n  sourceType: \"candidate_artifact\" | \"candidate_seam\" | \"scope_overlap\";\n  sourceId: string;\n  compiledRelationIds: string[];\n  evidenceIds: string[];\n}\n\nexport interface CompiledGraphRevision {\n  graph: LegacyGraphRevisionV2;\n  contracts: TaskContractBundle[];\n  review: PlanReview;\n  trace: {\n    unitNodeIds: Record<string, string>;\n    relations: CompilationRelationTrace[];\n  };\n}\n\nexport function compileGraphRevision(\n  rawInput: GraphCompilerInput,\n  dependencies: GraphCompilerDependencies\n): CompiledGraphRevision {\n  const hasSemanticPlan = rawInput.semanticPlan !== undefined;\n  if (hasSemanticPlan && rawInput.breakdown !== undefined) throw new Error(\"Graph compilation accepts either semanticPlan or legacy breakdown, not both.\");\n  if (!hasSemanticPlan && rawInput.breakdown === undefined) throw new Error(\"Graph compilation requires a semanticPlan or legacy breakdown.\");\n  const semanticPlan = hasSemanticPlan ? SemanticPlanSchema.parse(rawInput.semanticPlan) : undefined;\n  if (semanticPlan?.schemaVersion !== undefined && semanticPlan.schemaVersion !== 2) {\n    throw new Error(\"SemanticPlan v1 is legacy_unproven and cannot enter the productive graph compiler; replay it through an explicit legacy audit path.\");\n  }\n  const semanticProjection = semanticPlan === undefined ? undefined : projectSemanticPlanForLegacyCompiler(semanticPlan);\n  const breakdown = WorkBreakdownSchema.parse(semanticProjection?.breakdown ?? rawInput.breakdown!);\n  const candidatePlan = semanticProjection?.candidatePlan ?? rawInput.candidatePlan;\n  RepositorySnapshotSchema.parse(rawInput.repositorySnapshot);\n  const repositorySnapshot = rawInput.repositorySnapshot;\n  if (!repositorySnapshotIdsMatch(breakdown.repositorySnapshotId, repositorySnapshot.snapshotId)) {\n    throw new Error(`WorkBreakdown references repository snapshot ${breakdown.repositorySnapshotId}, received ${repositorySnapshot.snapshotId}.`);\n  }\n  if (repositorySnapshot.inspectionDisposition === \"unavailable\" || repositorySnapshot.index === undefined) {\n    throw new Error(\"Cannot compile an executable graph from an unavailable repository snapshot.\");\n  }\n\n  const units = flattenUnits(breakdown.root);\n  const nodeIdByUnitKey = Object.fromEntries(units.map((unit) => [unit.key, dependencies.idFor(\"node\", unit.key)]));\n  const nodes = compileNodes(breakdown.root, nodeIdByUnitKey);\n  const contractResult = compileContractBundles({\n    breakdown,\n    repositorySnapshot,\n    nodeIdByUnitKey,\n    ...(candidatePlan === undefined ? {} : { candidatePlan }),\n    ...(rawInput.sourceContract === undefined ? {} : { sourceContract: rawInput.sourceContract })\n  }, dependencies);\n  const trace: CompilationRelationTrace[] = [];\n\n  const artifactRequirements: LegacyArtifactRequirementV2[] = [];\n  for (const candidate of breakdown.candidateArtifacts) {\n    const contract = contractResult.artifactContracts.find((item) => item.id === dependencies.idFor(\"artifact-contract\", candidate.id));\n    if (contract === undefined) throw new Error(`Artifact contract for ${candidate.id} was not compiled.`);\n    const relationIds: string[] = [];\n    if (candidate.materializationHint !== \"logical\") {\n      for (const consumerKey of candidate.consumerUnitKeys) {\n        const consumerNodeId = requireNodeId(nodeIdByUnitKey, consumerKey);\n        const id = dependencies.idFor(\"artifact-requirement\", `${candidate.id}-${consumerKey}`);\n        artifactRequirements.push({\n          id,\n          artifactContract: { id: contract.id, revision: contract.revision },\n          producerNodeId: contract.producerNodeId,\n          consumerNodeId,\n          requiredFor: \"execution\"\n        });\n        relationIds.push(id);\n      }\n    }\n    trace.push({ sourceType: \"candidate_artifact\", sourceId: candidate.id, compiledRelationIds: relationIds, evidenceIds: [...candidate.evidenceIds] });\n  }\n  propagateMaterializedArtifactRequirements(artifactRequirements, dependencies);\n  for (const contract of contractResult.nodeOutputArtifactContracts) {\n    for (const consumerNodeId of contract.consumerNodeIds) {\n      artifactRequirements.push({\n        id: dependencies.idFor(\"artifact-requirement\", `${contract.id}-${consumerNodeId}`),\n        artifactContract: { id: contract.id, revision: contract.revision },\n        producerNodeId: contract.producerNodeId,\n        consumerNodeId,\n        requiredFor: \"integration\"\n      });\n    }\n  }\n\n  const seamBindings: LegacySeamBindingV2[] = [];\n  for (const candidate of breakdown.candidateSeams) {\n    const contract = contractResult.seamContracts.find((item) => item.id === dependencies.idFor(\"seam-contract\", candidate.id));\n    if (contract === undefined) throw new Error(`Seam contract for ${candidate.id} was not compiled.`);\n    const relationIds: string[] = [];\n    for (const consumerKey of candidate.consumerUnitKeys) {\n      const id = dependencies.idFor(\"seam-binding\", `${candidate.id}-${consumerKey}`);\n      seamBindings.push({\n        id,\n        seamContract: { id: contract.id, revision: contract.revision },\n        producerNodeId: contract.producerNodeId,\n        consumerNodeId: requireNodeId(nodeIdByUnitKey, consumerKey),\n        producerRevision: contract.revision,\n        consumerRevision: contract.revision\n      });\n      relationIds.push(id);\n    }\n    trace.push({ sourceType: \"candidate_seam\", sourceId: candidate.id, compiledRelationIds: relationIds, evidenceIds: [...candidate.evidenceIds] });\n  }\n\n  const conflictConstraints = compileWriteConflicts(contractResult.writePathsByNodeId, nodes, dependencies, trace);\n  const draft = {\n    schemaVersion: 2 as const,\n    graphId: dependencies.idFor(\"graph\", breakdown.breakdownId),\n    revision: 1,\n    rootId: requireNodeId(nodeIdByUnitKey, breakdown.root.key),\n    baseCommit: repositorySnapshot.baseCommit,\n    repositorySnapshotId: repositorySnapshot.snapshotId,\n    nodes,\n    artifactRequirements,\n    seamBindings,\n    conflictConstraints,\n    legacyOrderingConstraints: [],\n    createdAt: dependencies.now()\n  };\n  const graph = LegacyGraphRevisionV2Schema.parse({ ...draft, nodes: withTopologicalLevels(draft) });\n  const review = reviewCompiledPlan({ breakdown, repositorySnapshot, graph, contracts: contractResult.bundles, writePathsByNodeId: contractResult.writePathsByNodeId });\n  assertPlanReview(review);\n  return {\n    graph,\n    contracts: contractResult.bundles,\n    review,\n    trace: { unitNodeIds: nodeIdByUnitKey, relations: trace }\n  };\n}\n\nfunction propagateMaterializedArtifactRequirements(\n  requirements: LegacyArtifactRequirementV2[],\n  dependencies: GraphCompilerDependencies\n): void {\n  const directExecutionRequirements = (): LegacyArtifactRequirementV2[] => requirements.filter((requirement) => requirement.requiredFor === \"execution\");\n  const known = new Set(requirements\n    .filter((requirement) => requirement.requiredFor === \"execution\")\n    .map((requirement) => `${requirement.artifactContract.id}|${requirement.consumerNodeId}`));\n\n  let changed = true;\n  while (changed) {\n    changed = false;\n    const executionRequirements = directExecutionRequirements();\n    for (const downstream of executionRequirements) {\n      for (const upstream of executionRequirements.filter((requirement) => requirement.consumerNodeId === downstream.producerNodeId)) {\n        if (upstream.producerNodeId === downstream.consumerNodeId) continue;\n        const key = `${upstream.artifactContract.id}|${downstream.consumerNodeId}`;\n        if (known.has(key)) continue;\n        requirements.push({\n          id: dependencies.idFor(\"artifact-requirement\", `${upstream.artifactContract.id}-${downstream.consumerNodeId}-transitive`),\n          artifactContract: upstream.artifactContract,\n          producerNodeId: upstream.producerNodeId,\n          consumerNodeId: downstream.consumerNodeId,\n          requiredFor: \"execution\"\n        });\n        known.add(key);\n        changed = true;\n      }\n    }\n  }\n}\n\nfunction compileNodes(root: WorkUnit, nodeIdByUnitKey: Record<string, string>): Record<string, LegacyTaskNodeV2> {\n  const nodes: Record<string, LegacyTaskNodeV2> = {};\n  const visit = (unit: WorkUnit, parentId: string | null): void => {\n    const id = requireNodeId(nodeIdByUnitKey, unit.key);\n    nodes[id] = {\n      id,\n      parentId,\n      kind: parentId === null && unit.kind === \"composite\" ? \"root\" : unit.kind,\n      title: unit.title,\n      goal: unit.objective\n    };\n    if (unit.kind === \"composite\") for (const child of unit.children) visit(child, id);\n  };\n  visit(root, null);\n  return nodes;\n}\n\n/**\n * Only writers conflict.\n *\n * This used to cross the whole scope, so two units that merely READ one file\n * were declared in conflict and the wave selector refused to run them together\n * — provably safe work, serialized (D9). Under tree-wide P2 the write sets of\n * distinct branches are disjoint, so for a plan this planner produced the\n * result is always empty. It is still computed rather than assumed: the\n * compiler does not get to trust its input.\n */\n/**\n * Bands every node by its longest path from the start of the run, for the flow\n * layout to draw. Presentational: nothing in the runtime reads it.\n *\n * A cycle leaves the levels off rather than failing the compile. The plan\n * critics own that diagnosis and produce a far better one (`artifact_cycle`),\n * and they run after this — so throwing here would replace their finding with a\n * worse message about a field that decides nothing.\n */\nfunction withTopologicalLevels(draft: {\n  graphId: string;\n  nodes: Record<string, LegacyTaskNodeV2>;\n  artifactRequirements: LegacyArtifactRequirementV2[];\n}): Record<string, LegacyTaskNodeV2> {\n  let levels: Record<string, number>;\n  try {\n    levels = computeLegacyGraphRevisionV2TopologicalLevels(draft as unknown as LegacyGraphRevisionV2);\n  } catch {\n    return draft.nodes;\n  }\n  return Object.fromEntries(Object.entries(draft.nodes).map(([id, node]) => [id, {\n    ...node,\n    ...(levels[id] === undefined ? {} : { topologicalLevel: levels[id]! })\n  }]));\n}\n\nfunction compileWriteConflicts(\n  scopes: Record<string, string[]>,\n  nodes: Record<string, LegacyTaskNodeV2>,\n  dependencies: GraphCompilerDependencies,\n  trace: CompilationRelationTrace[]\n): ConflictConstraint[] {\n  const entries = Object.entries(scopes).sort(([left], [right]) => left.localeCompare(right));\n  const constraints: ConflictConstraint[] = [];\n  for (let leftIndex = 0; leftIndex < entries.length; leftIndex += 1) {\n    for (let rightIndex = leftIndex + 1; rightIndex < entries.length; rightIndex += 1) {\n      const [leftNodeId, leftPaths] = entries[leftIndex]!;\n      const [rightNodeId, rightPaths] = entries[rightIndex]!;\n      if (isAncestor(nodes, leftNodeId, rightNodeId) || isAncestor(nodes, rightNodeId, leftNodeId)) continue;\n      const overlap = leftPaths.filter((path) => rightPaths.includes(path));\n      if (overlap.length === 0) continue;\n      const id = dependencies.idFor(\"conflict-constraint\", `${leftNodeId}-${rightNodeId}`);\n      constraints.push({ id, leftNodeId, rightNodeId, reason: `Both write ${overlap.join(\", \")}.`, risk: \"high\" });\n      trace.push({ sourceType: \"scope_overlap\", sourceId: `${leftNodeId}:${rightNodeId}`, compiledRelationIds: [id], evidenceIds: overlap });\n    }\n  }\n  return constraints;\n}\n\nfunction isAncestor(nodes: Record<string, LegacyTaskNodeV2>, ancestorId: string, descendantId: string): boolean {\n  let current = nodes[descendantId]?.parentId ?? null;\n  while (current !== null) {\n    if (current === ancestorId) return true;\n    current = nodes[current]?.parentId ?? null;\n  }\n  return false;\n}\n\nfunction flattenUnits(root: WorkUnit): WorkUnit[] {\n  return root.kind === \"leaf\" ? [root] : [root, ...root.children.flatMap(flattenUnits)];\n}\n\nfunction requireNodeId(nodeIdByUnitKey: Record<string, string>, key: string): string {\n  const nodeId = nodeIdByUnitKey[key];\n  if (nodeId === undefined) throw new Error(`Missing compiled node id for semantic unit ${key}.`);\n  return nodeId;\n}\n",
+    "truncated": false,
+    "evidenceRefs": [
+      "evidence:e0bdd93c8e711aa126d09c2f"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:e0bdd93c8e711aa126d09c2f"
+      ]
+    }
+  },
+  {
+    "locator": "path:packages/decomposer/src/planner/planning-module.ts",
+    "text": "import { parseJsonObjectCandidates } from \"../llm/recursive/json.js\";\nimport type { GranularityPlanningBrief } from \"../granularity/planning-brief.js\";\nimport {\n  SemanticPlanDraftSchema,\n  createSemanticPlan,\n  flattenSemanticWorkUnits,\n  buildSemanticPlanPrompt,\n  semanticPlanHash,\n  type GoalCriterion,\n  type RepositoryEvidence,\n  type SemanticPlan\n} from \"./semantic-plan.js\";\n\nexport interface SemanticPlanningProgressUnit {\n  key: string;\n  parentKey: string | null;\n  kind: \"composite\" | \"leaf\";\n  title: string;\n  objective: string;\n  siblingIndex: number;\n  siblingCount: number;\n}\n\nexport interface SemanticPlanningObserver {\n  onAttemptStarted?(event: { attempt: number }): void | Promise<void>;\n  onUnitDiscovered?(event: { attempt: number; unit: SemanticPlanningProgressUnit }): void | Promise<void>;\n  onAttemptFailed?(event: { attempt: number; reason: string }): void | Promise<void>;\n}\n\nexport interface SemanticPlanningModelRequest {\n  system: string;\n  user: string;\n  attempt: number;\n  repairIssues: string[];\n  onProgress(unit: SemanticPlanningProgressUnit): Promise<void>;\n}\n\nexport interface SemanticPlanningModel {\n  generate(request: SemanticPlanningModelRequest): Promise<unknown>;\n}\n\nexport interface PlanningModuleRequest {\n  goal: string;\n  acceptanceCriteria?: readonly string[];\n  constraints?: readonly string[];\n  repositorySnapshot: {\n    snapshotId: string;\n    inspectionDisposition: \"complete\" | \"partial\" | \"unavailable\";\n    evidence: readonly RepositoryEvidence[];\n  };\n  granularityBrief: GranularityPlanningBrief;\n  candidateCount?: number;\n  questionAnswers?: Readonly<Record<string, string>>;\n}\n\nexport interface PlanningContinuation {\n  request: PlanningModuleRequest;\n}\n\nexport interface PlanningModuleError {\n  code: \"repository_unavailable\" | \"model_unavailable\" | \"draft_invalid\" | \"no_safe_candidate\";\n  phase: \"repository\" | \"generation\" | \"compilation\" | \"selection\";\n  retryable: boolean;\n  message: string;\n  evidenceRefs: string[];\n  suggestedAction: string;\n}\n\nexport type PlanningOutcome =\n  | {\n      kind: \"ready\";\n      plan: SemanticPlan;\n      comparison: { kind: \"complete\"; safePlans: number } | { kind: \"degraded\"; safePlans: 1; reason: \"single_safe_plan\" };\n      candidates: readonly SemanticPlan[];\n    }\n  | {\n      kind: \"needs_input\";\n      plan: SemanticPlan;\n      continuation: PlanningContinuation;\n      questions: readonly { id: string; question: string; options: string[]; evidenceIds: string[] }[];\n      candidates: readonly SemanticPlan[];\n    }\n  | {\n      kind: \"rejected\";\n      error: PlanningModuleError;\n    };\n\nexport interface PlanningModuleOptions {\n  model: SemanticPlanningModel;\n  maxAttempts?: number;\n  retryDelayMs?: number;\n}\n\n/**\n * Deep planning module. Callers provide a goal and an inspected repository;\n * this module owns candidate generation, canonicalization, validation and\n * deterministic selection. No caller assembles scopes, artifacts, seams or\n * acceptance ownership from parallel structures.\n */\nexport class PlanningModule {\n  private readonly model: SemanticPlanningModel;\n  private readonly maxAttempts: number;\n  private readonly retryDelayMs: number;\n\n  constructor(options: PlanningModuleOptions) {\n    this.model = options.model;\n    this.maxAttempts = positiveInteger(options.maxAttempts ?? 3, \"maxAttempts\");\n    this.retryDelayMs = nonNegativeInteger(options.retryDelayMs ?? 250, \"retryDelayMs\");\n  }\n\n  async plan(request: PlanningModuleRequest, observer: SemanticPlanningObserver = {}): Promise<PlanningOutcome> {\n    if (request.repositorySnapshot.inspectionDisposition === \"unavailable\") {\n      return rejected(\"repository_unavailable\", \"repository\", \"The repository snapshot is unavailable for semantic planning.\", [], \"Restore repository inspection before requesting a plan.\");\n    }\n    const count = request.candidateCount ?? request.granularityBrief.candidateCount;\n    if (!Number.isSafeInteger(count) || count < 1 || count > 3) {\n      return rejected(\"draft_invalid\", \"selection\", \"candidateCount must be an integer between 1 and 3.\", [], \"Choose a bounded candidate count before planning.\");\n    }\n    const criteria = canonicalCriteria(request.goal, request.acceptanceCriteria ?? []);\n    const candidates = new Map<string, SemanticPlan>();\n    const failures: string[] = [];\n    for (let index = 1; index <= count; index += 1) {\n      const candidate = await this.planCandidate(request, criteria, index, count, [...candidates.keys()], offsetObserver(observer, (index - 1) * this.maxAttempts));\n      if (candidate.kind === \"error\") {\n        failures.push(candidate.message);\n        continue;\n      }\n      candidates.set(semanticPlanHash(candidate.plan), candidate.plan);\n    }\n    const plans = [...candidates.values()];\n    if (plans.length === 0) {\n      return rejected(\n        \"no_safe_candidate\",\n        \"selection\",\n        failures.length === 0 ? \"The planner did not produce a safe semantic plan.\" : failures.join(\"; \"),\n        [],\n        \"Correct the reported draft errors and request a new bounded semantic plan.\"\n      );\n    }\n    const selected = plans.slice().sort(comparePlans)[0]!;\n    const questions = selected.questions.length > 0\n      ? selected.questions.map((question) => ({ id: question.id, question: question.question, options: question.options, evidenceIds: question.evidenceIds }))\n      : selected.uncertainties\n          .filter((uncertainty) => uncertainty.requiresHumanDecision)\n          .map((uncertainty) => ({ id: uncertainty.id, question: uncertainty.description, options: [\"Provide direction\", \"Stop this run\"], evidenceIds: uncertainty.evidenceIds }));\n    if (questions.length > 0) {\n      return { kind: \"needs_input\", plan: selected, continuation: { request }, questions, candidates: plans };\n    }\n    return {\n      kind: \"ready\",\n      plan: selected,\n      comparison: plans.length === 1 ? { kind: \"degraded\", safePlans: 1, reason: \"single_safe_plan\" } : { kind: \"complete\", safePlans: plans.length },\n      candidates: plans\n    };\n  }\n\n  async resume(continuation: PlanningContinuation, answers: Readonly<Record<string, string>>, observer: SemanticPlanningObserver = {}): Promise<PlanningOutcome> {\n    return await this.plan({ ...continuation.request, questionAnswers: answers }, observer);\n  }\n\n  private async planCandidate(\n    request: PlanningModuleRequest,\n    criteria: readonly GoalCriterion[],\n    index: number,\n    total: number,\n    priorPlanHashes: readonly string[],\n    observer: SemanticPlanningObserver\n  ): Promise<{ kind: \"success\"; plan: SemanticPlan } | { kind: \"error\"; message: string }> {\n    const prompt = buildSemanticPlanPrompt({\n      goal: request.goal,\n      criteria,\n      constraints: request.constraints ?? [],\n      repositorySnapshot: request.repositorySnapshot,\n      granularityBrief: request.granularityBrief,\n      candidate: { index, total, priorPlanHashes },\n      ...(request.questionAnswers === undefined ? {} : { questionAnswers: request.questionAnswers })\n    });\n    let repairIssues: string[] = [];\n    for (let attempt = 1; attempt <= this.maxAttempts; attempt += 1) {\n      await observer.onAttemptStarted?.({ attempt });\n      const discovered = new Set<string>();\n      try {\n        const outputs = normalizeModelOutputs(await this.model.generate({\n          ...prompt,\n          attempt,\n          repairIssues,\n          onProgress: async (unit) => {\n            if (discovered.has(unit.key)) return;\n            discovered.add(unit.key);\n            await observer.onUnitDiscovered?.({ attempt, unit });\n          }\n        }));\n        const failures: string[] = [];\n        for (const output of outputs) {\n          const parsed = SemanticPlanDraftSchema.safeParse(restoreCanonicalEvidence(output, request.repositorySnapshot.evidence));\n          if (!parsed.success) {\n            failures.push(...parsed.error.issues.map((issue) => `${issue.path.join(\".\") || \"root\"}: ${issue.message}`));\n            continue;\n          }\n          try {\n            const plan = createSemanticPlan({\n              goal: request.goal,\n              repositorySnapshotId: request.repositorySnapshot.snapshotId,\n              criteria: [...criteria],\n              draft: parsed.data\n            });\n            for (const unit of progressUnits(plan.root)) {\n              if (discovered.has(unit.key)) continue;\n              discovered.add(unit.key);\n              await observer.onUnitDiscovered?.({ attempt, unit });\n            }\n            return { kind: \"success\", plan };\n          } catch (error) {\n            failures.push(error instanceof Error ? error.message : String(error));\n          }\n        }\n        repairIssues = failures.length === 0 ? [\"No complete SemanticPlan draft was found in the response.\"] : failures;\n      } catch (error) {\n        repairIssues = [error instanceof Error ? error.message : String(error)];\n      }\n      await observer.onAttemptFailed?.({ attempt, reason: repairIssues.join(\"; \") });\n      if (attempt < this.maxAttempts && this.retryDelayMs > 0) await delay(this.retryDelayMs);\n    }\n    return { kind: \"error\", message: repairIssues.join(\"; \") || \"Semantic plan generation failed.\" };\n  }\n}\n\nfunction canonicalCriteria(goal: string, criteria: readonly string[]): GoalCriterion[] {\n  const normalized = criteria.map((description) => description.trim()).filter((description) => description.length > 0);\n  const source = normalized.length > 0 ? normalized : [goal];\n  return source.map((description, index) => ({ id: `criterion-${index + 1}`, description, required: true }));\n}\n\nfunction comparePlans(left: SemanticPlan, right: SemanticPlan): number {\n  const score = (plan: SemanticPlan): number => {\n    const units = flattenSemanticWorkUnits(plan.root);\n    const leaves = units.filter((unit) => unit.kind === \"leaf\").length;\n    const materializedSeams = plan.seams.filter((seam) => seam.interface.materialization !== \"logical\").length;\n    const questions = plan.questions.length + plan.uncertainties.filter((uncertainty) => uncertainty.requiresHumanDecision).length;\n    return questions * 100 + materializedSeams * 4 + leaves - units.length * 0.25;\n  };\n  return score(left) - score(right) || left.planId.localeCompare(right.planId);\n}\n\nfunction progressUnits(root: SemanticPlan[\"root\"]): SemanticPlanningProgressUnit[] {\n  const output: SemanticPlanningProgressUnit[] = [];\n  const visit = (unit: SemanticPlan[\"root\"], parentKey: string | null, siblingIndex: number, siblingCount: number): void => {\n    output.push({ key: unit.key, parentKey, kind: unit.kind, title: unit.title, objective: unit.objective, siblingIndex, siblingCount });\n    if (unit.kind === \"composite\") unit.children.forEach((child, index) => visit(child, unit.key, index, unit.children.length));\n  };\n  visit(root, null, 0, 1);\n  return output;\n}\n\nfunction offsetObserver(observer: SemanticPlanningObserver, offset: number): SemanticPlanningObserver {\n  const onAttemptStarted = observer.onAttemptStarted?.bind(observer);\n  const onUnitDiscovered = observer.onUnitDiscovered?.bind(observer);\n  const onAttemptFailed = observer.onAttemptFailed?.bind(observer);\n  return {\n    ...(onAttemptStarted === undefined ? {} : { onAttemptStarted: ({ attempt }) => onAttemptStarted({ attempt: offset + attempt }) }),\n    ...(onUnitDiscovered === undefined ? {} : { onUnitDiscovered: ({ attempt, unit }) => onUnitDiscovered({ attempt: offset + attempt, unit }) }),\n    ...(onAttemptFailed === undefined ? {} : { onAttemptFailed: ({ attempt, reason }) => onAttemptFailed({ attempt: offset + attempt, reason }) })\n  };\n}\n\n/**\n * The productive planning model resolves the CLI response as a string, so a\n * string is the shape that must yield candidates. `parseJsonObjectCandidates`\n * answers with a result envelope, not a list: unwrapping it here is what keeps\n * the attempt loop iterating over parsed drafts. A parse failure is raised so\n * the attempt records the parser's own diagnostic instead of an empty batch.\n */\nfunction normalizeModelOutputs(output: unknown): unknown[] {\n  if (typeof output === \"string\") {\n    const parsed = parseJsonObjectCandidates(output);\n    if (!parsed.ok) throw new Error(parsed.message);\n    return parsed.candidates.map((candidate) => candidate.value);\n  }\n  if (Array.isArray(output)) return output.flatMap(normalizeModelOutputs);\n  return [output];\n}\n\nfunction restoreCanonicalEvidence(output: unknown, evidence: readonly RepositoryEvidence[]): unknown {\n  if (!isRecord(output)) return output;\n  const canonicalById = new Map(evidence.map((item) => [item.id, item]));\n  const declared = Array.isArray(output.repositoryEvidence) ? output.repositoryEvidence : [];\n  const declaredIds = new Set(declared.filter(isRecord).map((item) => item.id).filter((id): id is string => typeof id === \"string\"));\n  const referenced = new Set<string>();\n  collectEvidenceIds(output, referenced);\n  const additions = [...referenced].filter((id) => !declaredIds.has(id)).map((id) => canonicalById.get(id)).filter((item): item is RepositoryEvidence => item !== undefined);\n  return additions.length === 0 ? output : { ...output, repositoryEvidence: [...declared, ...additions] };\n}\n\nfunction collectEvidenceIds(value: unknown, output: Set<string>): void {\n  if (Array.isArray(value)) {\n    for (const item of value) collectEvidenceIds(item, output);\n    return;\n  }\n  if (!isRecord(value)) return;\n  for (const [key, child] of Object.entries(value)) {\n    if (key === \"evidenceIds\" && Array.isArray(child)) {\n      for (const id of child) if (typeof id === \"string\") output.add(id);\n      continue;\n    }\n    collectEvidenceIds(child, output);\n  }\n}\n\nfunction isRecord(value: unknown): value is Record<string, unknown> {\n  return typeof value === \"object\" && value !== null && !Array.isArray(value);\n}\n\nfunction rejected(code: PlanningModuleError[\"code\"], phase: PlanningModuleError[\"phase\"], message: string, evidenceRefs: string[], suggestedAction: string): PlanningOutcome {\n  return { kind: \"rejected\", error: { code, phase, retryable: code === \"model_unavailable\", message, evidenceRefs, suggestedAction } };\n}\n\nfunction positiveInteger(value: number, label: string): number {\n  if (!Number.isSafeInteger(value) || value < 1) throw new RangeError(`${label} must be a positive integer.`);\n  return value;\n}\n\nfunction nonNegativeInteger(value: number, label: string): number {\n  if (!Number.isSafeInteger(value) || value < 0) throw new RangeError(`${label} must be a non-negative integer.`);\n  return value;\n}\n\nfunction delay(milliseconds: number): Promise<void> {\n  return new Promise((resolve) => setTimeout(resolve, milliseconds));\n}\n",
+    "truncated": false,
+    "evidenceRefs": [
+      "evidence:a02a2deaacd09ebd1c5155fe"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:a02a2deaacd09ebd1c5155fe"
+      ]
+    }
+  },
+  {
+    "locator": "path:packages/task-graph/src/canonical-graph.ts",
+    "text": "import {\n  ArtifactRequirementSchema,\n  CanonicalContractRefSchema,\n  RepositoryViewRefSchema,\n  ResourceClaimSchema,\n  RuntimeLeaseClaimSchema,\n  SeamBindingSchema,\n  canonicalJson,\n  computeCanonicalDigest,\n  verifyCanonicalDigest,\n  type ArtifactRequirement,\n  type ResourceClaim,\n  type DigestHasher\n} from \"@manyhands/contracts\";\nimport { EntityIdSchema, NonEmptyStringSchema } from \"@manyhands/shared\";\nimport { z } from \"zod\";\n\nexport const TaskNodeSchema = z.object({\n  id: EntityIdSchema,\n  parentId: EntityIdSchema.nullable(),\n  kind: z.enum([\"root\", \"composite\", \"leaf\", \"integrator\"]),\n  title: NonEmptyStringSchema,\n  goal: NonEmptyStringSchema,\n  contractRef: CanonicalContractRefSchema\n}).strict();\nexport type TaskNode = z.infer<typeof TaskNodeSchema>;\n\nconst SemanticPlanRefSchema = z.object({\n  id: EntityIdSchema,\n  revision: z.number().int().positive(),\n  digest: NonEmptyStringSchema\n}).strict();\n\nexport const GraphRevisionMaterialSchema = z.object({\n  graphId: EntityIdSchema,\n  revision: z.number().int().positive(),\n  semanticPlan: SemanticPlanRefSchema,\n  repositoryView: RepositoryViewRefSchema,\n  rootId: EntityIdSchema,\n  nodes: z.record(TaskNodeSchema),\n  artifactRequirements: z.array(ArtifactRequirementSchema),\n  seamBindings: z.array(SeamBindingSchema),\n  resourceClaims: z.array(ResourceClaimSchema),\n  runtimeLeaseClaims: z.array(RuntimeLeaseClaimSchema),\n  contractRefs: z.array(CanonicalContractRefSchema)\n}).strict();\nexport type GraphRevisionMaterial = z.infer<typeof GraphRevisionMaterialSchema>;\n\nexport const GraphRevisionSchema = GraphRevisionMaterialSchema.extend({ digest: NonEmptyStringSchema }).strict();\nexport type GraphRevision = z.infer<typeof GraphRevisionSchema>;\n\nexport type ResourceOverlap = \"yes\" | \"no\" | \"unknown\";\nexport interface ResourceOverlapQuery {\n  overlap(leftResourceId: string, rightResourceId: string): ResourceOverlap;\n}\n\nexport type GraphRevisionFindingCode =\n  | \"schema_invalid\" | \"digest_mismatch\" | \"missing_root\" | \"invalid_root\"\n  | \"node_key_mismatch\" | \"missing_parent\" | \"hierarchy_cycle\"\n  | \"missing_relation_node\" | \"missing_contract_ref\" | \"duplicate_relation\"\n  | \"artifact_unreachable\" | \"artifact_cycle\" | \"resource_double_writer\"\n  | \"resource_overlap_unknown\" | \"invalid_version_chain\" | \"missing_seam_artifact\"\n  | \"missing_seam_obligation\" | \"nonconsecutive_revision\" | \"content_identity_unchanged\";\n\nexport interface GraphRevisionFinding {\n  code: GraphRevisionFindingCode;\n  severity: \"error\";\n  message: string;\n  nodeId?: string;\n  relationId?: string;\n}\n\nexport interface ArtifactReachabilityQuery {\n  canMaterialize(requirement: ArtifactRequirement): boolean;\n}\n\nexport interface ValidateGraphRevisionOptions {\n  hasher?: DigestHasher;\n  resourceOverlap?: ResourceOverlapQuery;\n  artifactReachability?: ArtifactReachabilityQuery;\n}\n\nexport function buildGraphRevision(input: GraphRevisionMaterial, hasher: DigestHasher): GraphRevision {\n  const material = normalizeGraphRevisionMaterial(GraphRevisionMaterialSchema.parse(input));\n  return { ...material, digest: computeCanonicalDigest(material, hasher) };\n}\n\nfunction normalizeGraphRevisionMaterial(material: GraphRevisionMaterial): GraphRevisionMaterial {\n  const artifactRequirements = normalizeRelations(\n    material.artifactRequirements,\n    \"artifactRequirements\",\n    (requirement) => ({\n      ...requirement,\n      acceptedManifestKinds: sortedUnique(requirement.acceptedManifestKinds)\n    })\n  );\n  const seamBindings = normalizeRelations(\n    material.seamBindings,\n    \"seamBindings\",\n    (binding) => ({\n      ...binding,\n      validationObligationIds: sortedUnique(binding.validationObligationIds)\n    })\n  );\n  const resourceClaims = normalizeRelations(\n    material.resourceClaims,\n    \"resourceClaims\",\n    (claim): ResourceClaim => ({\n      ...claim,\n      evidenceRefs: sortedUnique(claim.evidenceRefs),\n      epistemic: claim.epistemic.state === \"unknown\"\n        ? claim.epistemic\n        : { ...claim.epistemic, evidenceRefs: sortedUnique(claim.epistemic.evidenceRefs) }\n    })\n  );\n  const runtimeLeaseClaims = normalizeRelations(\n    material.runtimeLeaseClaims,\n    \"runtimeLeaseClaims\",\n    (claim) => claim\n  );\n\n  assertRelationIdsAreGloballyUnique([\n    [\"artifactRequirements\", artifactRequirements],\n    [\"seamBindings\", seamBindings],\n    [\"resourceClaims\", resourceClaims],\n    [\"runtimeLeaseClaims\", runtimeLeaseClaims]\n  ]);\n\n  return {\n    ...material,\n    artifactRequirements,\n    seamBindings,\n    resourceClaims,\n    runtimeLeaseClaims,\n    contractRefs: normalizeContractRefs(material.contractRefs)\n  };\n}\n\nfunction normalizeRelations<T extends { id: string }>(\n  relations: readonly T[],\n  collection: string,\n  normalize: (relation: T) => T\n): T[] {\n  const byId = new Map<string, T>();\n  for (const relation of relations) {\n    const normalized = normalize(relation);\n    const existing = byId.get(normalized.id);\n    if (existing && canonicalJson(existing) !== canonicalJson(normalized)) {\n      throw new Error(`Conflicting ${collection} id ${normalized.id}.`);\n    }\n    if (!existing) byId.set(normalized.id, normalized);\n  }\n  return [...byId.values()].sort((left, right) => compareCanonicalString(left.id, right.id));\n}\n\nfunction normalizeContractRefs(refs: GraphRevisionMaterial[\"contractRefs\"]): GraphRevisionMaterial[\"contractRefs\"] {\n  const byIdentity = new Map<string, GraphRevisionMaterial[\"contractRefs\"][number]>();\n  for (const ref of refs) byIdentity.set(refKey(ref), ref);\n  return [...byIdentity.values()].sort((left, right) => compareCanonicalString(refKey(left), refKey(right)));\n}\n\nfunction assertRelationIdsAreGloballyUnique(\n  collections: ReadonlyArray<readonly [string, ReadonlyArray<{ id: string }>]>\n): void {\n  const owners = new Map<string, string>();\n  for (const [collection, relations] of collections) {\n    for (const relation of relations) {\n      const owner = owners.get(relation.id);\n      if (owner) throw new Error(`Conflicting relation id ${relation.id} appears in ${owner} and ${collection}.`);\n      owners.set(relation.id, collection);\n    }\n  }\n}\n\nfunction sortedUnique<T extends string>(values: readonly T[]): T[] {\n  return [...new Set(values)].sort(compareCanonicalString);\n}\n\nfunction compareCanonicalString(left: string, right: string): number {\n  return left < right ? -1 : left > right ? 1 : 0;\n}\n\nexport function validateGraphRevision(input: unknown, options: ValidateGraphRevisionOptions = {}): GraphRevisionFinding[] {\n  const parsed = GraphRevisionSchema.safeParse(input);\n  if (!parsed.success) return parsed.error.issues.map((issue) => finding(\"schema_invalid\", `${issue.path.join(\".\")}: ${issue.message}`));\n  const graph = parsed.data;\n  const findings: GraphRevisionFinding[] = [];\n  if (options.hasher && !verifyCanonicalDigest(graph, \"digest\", options.hasher)) findings.push(finding(\"digest_mismatch\", \"Graph digest does not identify its canonical content.\"));\n  validateHierarchy(graph, findings);\n  validateReferences(graph, findings);\n  validateArtifactFlow(graph, options.artifactReachability, findings);\n  validateOwnership(graph, options.resourceOverlap, findings);\n  validateVersionChains(graph, options.resourceOverlap, findings);\n  validateSeams(graph, findings);\n  return findings;\n}\n\nexport function validateGraphRevisionTransition(previous: GraphRevision, next: GraphRevision): GraphRevisionFinding[] {\n  const findings: GraphRevisionFinding[] = [];\n  if (next.graphId !== previous.graphId || next.revision !== previous.revision + 1) findings.push(finding(\"nonconsecutive_revision\", \"A revision transition must preserve graphId and increment revision by one.\"));\n  if (next.digest === previous.digest) findings.push(finding(\"content_identity_unchanged\", \"A new revision must identify different canonical content.\"));\n  return findings;\n}\n\nfunction validateHierarchy(graph: GraphRevision, out: GraphRevisionFinding[]): void {\n  const root = graph.nodes[graph.rootId];\n  if (!root) out.push(finding(\"missing_root\", `Root ${graph.rootId} does not exist.`, graph.rootId));\n  else if (root.parentId !== null || (root.kind !== \"root\" && root.kind !== \"composite\" && Object.keys(graph.nodes).length > 1)) out.push(finding(\"invalid_root\", \"Root must be parentless and own the graph hierarchy.\", root.id));\n  for (const [key, node] of Object.entries(graph.nodes)) {\n    if (key !== node.id) out.push(finding(\"node_key_mismatch\", `Node key ${key} differs from id ${node.id}.`, node.id));\n    if (node.id !== graph.rootId && (node.parentId === null || !graph.nodes[node.parentId])) out.push(finding(\"missing_parent\", `Node ${node.id} has no valid parent.`, node.id));\n  }\n  detectCycle(Object.keys(graph.nodes), (id) => graph.nodes[id]?.parentId ? [graph.nodes[id]!.parentId!] : [], () => out.push(finding(\"hierarchy_cycle\", \"Hierarchy contains a cycle.\")));\n}\n\nfunction validateReferences(graph: GraphRevision, out: GraphRevisionFinding[]): void {\n  const refs = new Set(graph.contractRefs.map(refKey));\n  for (const node of Object.values(graph.nodes)) if (!refs.has(refKey(node.contractRef))) out.push(finding(\"missing_contract_ref\", `Node ${node.id} references an undeclared contract.`, node.id));\n  for (const requirement of graph.artifactRequirements) if (!refs.has(refKey(requirement.artifactContract))) out.push(finding(\"missing_contract_ref\", `Artifact requirement ${requirement.id} references an undeclared contract.`, undefined, requirement.id));\n  for (const seam of graph.seamBindings) if (!refs.has(refKey(seam.seamContract))) out.push(finding(\"missing_contract_ref\", `Seam ${seam.id} references an undeclared contract.`, undefined, seam.id));\n  for (const claim of graph.resourceClaims) {\n    if (claim.access === \"modify\" && !refs.has(refKey(claim.outputArtifact))) out.push(finding(\"missing_contract_ref\", `Resource claim ${claim.id} references an undeclared output contract.`, claim.nodeId, claim.id));\n    if (claim.inputVersion.kind === \"artifact_contract\" && !refs.has(refKey(claim.inputVersion.ref))) out.push(finding(\"missing_contract_ref\", `Resource claim ${claim.id} references an undeclared input contract.`, claim.nodeId, claim.id));\n  }\n  const ids = new Set<string>();\n  for (const relation of [...graph.artifactRequirements, ...graph.seamBindings, ...graph.resourceClaims, ...graph.runtimeLeaseClaims]) {\n    if (ids.has(relation.id)) out.push(finding(\"duplicate_relation\", `Relation id ${relation.id} is duplicated.`, undefined, relation.id));\n    ids.add(relation.id);\n    const nodeIds = \"producerNodeId\" in relation ? [relation.producerNodeId, relation.consumerNodeId] : [relation.nodeId];\n    for (const id of nodeIds) if (!graph.nodes[id]) out.push(finding(\"missing_relation_node\", `Relation ${relation.id} references missing node ${id}.`, id, relation.id));\n  }\n}\n\nfunction validateArtifactFlow(graph: GraphRevision, reachability: ArtifactReachabilityQuery | undefined, out: GraphRevisionFinding[]): void {\n  const produced = new Map(graph.resourceClaims.filter((claim): claim is Extract<ResourceClaim, { access: \"modify\" }> => claim.access === \"modify\").map((claim) => [refKey(claim.outputArtifact), claim.nodeId]));\n  for (const req of graph.artifactRequirements) {\n    const producer = produced.get(refKey(req.artifactContract));\n    if (producer !== req.producerNodeId || (reachability && !reachability.canMaterialize(req))) out.push(finding(\"artifact_unreachable\", `Artifact ${req.id} is not materializable from its declared producer.`, req.producerNodeId, req.id));\n  }\n  detectCycle(Object.keys(graph.nodes), (id) => graph.artifactRequirements.filter((r) => r.producerNodeId === id).map((r) => r.consumerNodeId), () => out.push(finding(\"artifact_cycle\", \"Artifact dataflow contains a cycle.\")));\n}\n\nfunction validateOwnership(graph: GraphRevision, overlap: ResourceOverlapQuery | undefined, out: GraphRevisionFinding[]): void {\n  const claims = graph.resourceClaims;\n  for (let i = 0; i < claims.length; i++) for (let j = i + 1; j < claims.length; j++) {\n    const left = claims[i]!, right = claims[j]!;\n    if (left.access !== \"modify\" && right.access !== \"modify\") continue;\n    const state = overlap?.overlap(left.resourceId, right.resourceId) ?? (left.resourceId === right.resourceId ? \"yes\" : \"unknown\");\n    if (state === \"no\") continue;\n    if (state === \"unknown\") {\n      out.push(finding(\"resource_overlap_unknown\", `Claims ${left.id} and ${right.id} include a writer and are not proven disjoint.`));\n      continue;\n    }\n    if (left.access === \"modify\" && right.access === \"modify\" && !orderedByArtifact(graph, left, right)) out.push(finding(\"resource_double_writer\", `Writers ${left.nodeId} and ${right.nodeId} are not version-ordered.`));\n  }\n}\n\nfunction validateVersionChains(graph: GraphRevision, overlap: ResourceOverlapQuery | undefined, out: GraphRevisionFinding[]): void {\n  const writes = graph.resourceClaims.filter((claim): claim is Extract<ResourceClaim, { access: \"modify\" }> => claim.access === \"modify\");\n  for (const successor of writes) for (const predecessor of writes) {\n    if (successor.id === predecessor.id) continue;\n    const state = overlap?.overlap(successor.resourceId, predecessor.resourceId) ?? (successor.resourceId === predecessor.resourceId ? \"yes\" : \"no\");\n    if (state !== \"yes\" || successor.inputVersion.kind !== \"artifact_contract\" || refKey(successor.inputVersion.ref) !== refKey(predecessor.outputArtifact)) continue;\n    if (!orderedByArtifact(graph, predecessor, successor)) out.push(finding(\"invalid_version_chain\", `Writer ${successor.nodeId} consumes ${predecessor.outputArtifact.id} without a matching ArtifactRequirement.`, successor.nodeId));\n  }\n}\n\nfunction validateSeams(graph: GraphRevision, out: GraphRevisionFinding[]): void {\n  const requirements = new Map(graph.artifactRequirements.map((r) => [r.id, r]));\n  const refs = new Set(graph.contractRefs.map(refKey));\n  for (const seam of graph.seamBindings) {\n    const req = requirements.get(seam.artifactRequirementId);\n    if (!req || req.producerNodeId !== seam.producerNodeId || req.consumerNodeId !== seam.consumerNodeId) out.push(finding(\"missing_seam_artifact\", `Seam ${seam.id} has no matching artifact requirement.`, undefined, seam.id));\n    for (const id of seam.validationObligationIds) if (![...refs].some((key) => key.startsWith(`${id}:`))) out.push(finding(\"missing_seam_obligation\", `Seam ${seam.id} references undeclared validation obligation ${id}.`, undefined, seam.id));\n  }\n}\n\nfunction orderedByArtifact(graph: GraphRevision, first: Extract<ResourceClaim, { access: \"modify\" }>, second: Extract<ResourceClaim, { access: \"modify\" }>): boolean {\n  return graph.artifactRequirements.some((req) => req.producerNodeId === first.nodeId && req.consumerNodeId === second.nodeId && refKey(req.artifactContract) === refKey(first.outputArtifact) && second.inputVersion.kind === \"artifact_contract\" && refKey(second.inputVersion.ref) === refKey(first.outputArtifact)) || graph.artifactRequirements.some((req) => req.producerNodeId === second.nodeId && req.consumerNodeId === first.nodeId && refKey(req.artifactContract) === refKey(second.outputArtifact) && first.inputVersion.kind === \"artifact_contract\" && refKey(first.inputVersion.ref) === refKey(second.outputArtifact));\n}\n\nfunction detectCycle(ids: string[], next: (id: string) => string[], onCycle: () => void): void {\n  const active = new Set<string>(), done = new Set<string>(); let reported = false;\n  const visit = (id: string): void => { if (active.has(id)) { if (!reported) onCycle(); reported = true; return; } if (done.has(id)) return; active.add(id); for (const target of next(id)) visit(target); active.delete(id); done.add(id); };\n  for (const id of ids) visit(id);\n}\n\nfunction refKey(ref: { id: string; revision: number; digest: string }): string { return `${ref.id}:${ref.revision}:${ref.digest}`; }\nfunction finding(code: GraphRevisionFindingCode, message: string, nodeId?: string, relationId?: string): GraphRevisionFinding { return { code, severity: \"error\", message, ...(nodeId ? { nodeId } : {}), ...(relationId ? { relationId } : {}) }; }\n",
+    "truncated": false,
+    "evidenceRefs": [
+      "evidence:1001b59c63702da6a83ef538"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:1001b59c63702da6a83ef538"
+      ]
+    }
+  }
+]
+
+Current planner canonical evidence array:
+[
+  {
+    "id": "evidence:fcb5757df3a9a22deb2e761b",
+    "kind": "path",
+    "reference": "apps/daemon/src/current-lifecycle-adapters.ts",
+    "observation": "Exact Git blob at path:apps/daemon/src/current-lifecycle-adapters.ts; complete within the registered byte budget.",
+    "confidence": 1
+  },
+  {
+    "id": "evidence:5880d3244ee8a85739d37c25",
+    "kind": "path",
+    "reference": "apps/daemon/src/transitional-unsafe-profile.ts",
+    "observation": "Exact Git blob at path:apps/daemon/src/transitional-unsafe-profile.ts; complete within the registered byte budget.",
+    "confidence": 1
+  },
+  {
+    "id": "evidence:479035e214f31497694608ec",
+    "kind": "path",
+    "reference": "packages/contracts/src/semantic-plan.ts",
+    "observation": "Exact Git blob at path:packages/contracts/src/semantic-plan.ts; complete within the registered byte budget.",
+    "confidence": 1
+  },
+  {
+    "id": "evidence:e0bdd93c8e711aa126d09c2f",
+    "kind": "path",
+    "reference": "packages/decomposer/src/compiler/graph-compiler.ts",
+    "observation": "Exact Git blob at path:packages/decomposer/src/compiler/graph-compiler.ts; complete within the registered byte budget.",
+    "confidence": 1
+  },
+  {
+    "id": "evidence:a02a2deaacd09ebd1c5155fe",
+    "kind": "path",
+    "reference": "packages/decomposer/src/planner/planning-module.ts",
+    "observation": "Exact Git blob at path:packages/decomposer/src/planner/planning-module.ts; complete within the registered byte budget.",
+    "confidence": 1
+  },
+  {
+    "id": "evidence:1001b59c63702da6a83ef538",
+    "kind": "path",
+    "reference": "packages/task-graph/src/canonical-graph.ts",
+    "observation": "Exact Git blob at path:packages/task-graph/src/canonical-graph.ts; complete within the registered byte budget.",
+    "confidence": 1
+  }
+]

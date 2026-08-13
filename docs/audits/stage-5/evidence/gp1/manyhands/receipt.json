@@ -1,0 +1,228 @@
+{
+  "schemaVersion": 1,
+  "caseId": "gp1:manyhands-canonical-planning",
+  "candidate": {
+    "sha": "8ffb6429878540bb8a716affce98f60f4513ee83",
+    "tree": "2f2b3268d21529d6356b8d2e221931c0ff479258"
+  },
+  "preregistration": {
+    "commit": "8ffb6429878540bb8a716affce98f60f4513ee83",
+    "path": "docs/audits/stage-5/preregistration/manyhands.json"
+  },
+  "repository": {
+    "root": "C:\\Users\\franc\\Documents\\Proyectos\\Manyhands",
+    "baseCommit": "963544a7a1b0e46e6faeb285bceff0f322811b86",
+    "treeSha": "d869635b11a2fa49728018883eaf98ed4e988ae8",
+    "snapshot": {
+      "id": "sha256:edcaf3e06b29078c971dfae1e22f8dddb504d112605cebbe25dacd2f82173719",
+      "digest": "sha256:00459afe315bab01fa60b7772be0ee11f58d343b144882f231f573cce3577543"
+    },
+    "modelDigest": "sha256:fb978e52cdc6d447a8aca8569c98cce46c8b5c47a480715541aaddd858b30f86",
+    "viewDigest": "sha256:73814cb0a91939cbb49f62aee02f5aa2a519dd057a6e7ac05bf6d1e1ff6b57a6",
+    "catalogDigest": "sha256:d4263669033d68dc0c10d19d6e8f567900ccfff2a688d7bd5fa2df5bb172c3c5"
+  },
+  "provider": {
+    "cli": "codex-cli",
+    "cliVersion": "codex-cli 0.146.0",
+    "model": "gpt-5.6-sol",
+    "reasoningEffort": "high",
+    "profile": "stage5-gp1-offline-v1",
+    "invocation": [
+      "exec",
+      "-",
+      "--model",
+      "gpt-5.6-sol",
+      "-c",
+      "model_reasoning_effort=\"high\"",
+      "--sandbox",
+      "read-only",
+      "--ephemeral",
+      "--ignore-user-config",
+      "--ignore-rules",
+      "--skip-git-repo-check",
+      "--output-schema",
+      "C:\\Users\\franc\\Documents\\Proyectos\\Manyhands\\scripts\\stage5-gp1-output.schema.json",
+      "--output-last-message",
+      "C:\\Users\\franc\\Documents\\Proyectos\\Manyhands\\docs\\audits\\stage-5\\evidence\\gp1\\manyhands\\provider-output.json",
+      "--json",
+      "--color",
+      "never"
+    ],
+    "exitCode": 0,
+    "promptDigest": "sha256:f5ebb3a96641961bce646802e51cc4eb46ca015338dc9d30a25e256edbcd1f8e",
+    "outputDigest": "sha256:7051f9b472aab24101c43b361fad2d4b8b5c6c191fe93f9cade53ab65a5921a5",
+    "eventLogDigest": "sha256:8ded82a9737a3289717af1ecbcb235e25db11ab5d778713232eaed4fdb12981d"
+  },
+  "query": {
+    "searchDigest": "sha256:a68fc602602b48bf8cd887c9bed3a0fce44a70c1a28568317de42a4a82ce1ece",
+    "excerptDigest": "sha256:3ad2d17fc92396d6d202456a72dfa15e50ca6848441557383bbab0eb66f22ff7",
+    "results": 46,
+    "bytes": 111967,
+    "viewDigest": "sha256:73814cb0a91939cbb49f62aee02f5aa2a519dd057a6e7ac05bf6d1e1ff6b57a6"
+  },
+  "planningResult": {
+    "kind": "rejected",
+    "findings": [
+      {
+        "code": "schema_invalid",
+        "severity": "error",
+        "authority": "deterministic",
+        "message": "[\n  {\n    \"received\": \"product\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"static\",\n      \"unit\",\n      \"integration\",\n      \"e2e\",\n      \"security\",\n      \"accessibility\",\n      \"manual\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:canonical-cutover\",\n      \"validation\",\n      0,\n      \"layer\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'static' | 'unit' | 'integration' | 'e2e' | 'security' | 'accessibility' | 'manual', received 'product'\"\n  },\n  {\n    \"received\": \"command:stage6-productive-planning\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"static_analysis\",\n      \"test_result\",\n      \"runtime_observation\",\n      \"artifact_inspection\",\n      \"manual_attestation\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:canonical-cutover\",\n      \"validation\",\n      0,\n      \"acceptableEvidence\",\n      0\n    ],\n    \"message\": \"Invalid enum value. Expected 'static_analysis' | 'test_result' | 'runtime_observation' | 'artifact_inspection' | 'manual_attestation', received 'command:stage6-productive-planning'\"\n  },\n  {\n    \"received\": \"independent_required\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"required\",\n      \"optional\",\n      \"not_required\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:canonical-cutover\",\n      \"validation\",\n      0,\n      \"baselinePolicy\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'required' | 'optional' | 'not_required', received 'independent_required'\"\n  },\n  {\n    \"received\": \"none\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"required\",\n      \"when_feasible\",\n      \"not_required\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:canonical-cutover\",\n      \"validation\",\n      0,\n      \"negativeControl\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'required' | 'when_feasible' | 'not_required', received 'none'\"\n  },\n  {\n    \"received\": \"fail_closed_no_implicit_retry\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"forbid\",\n      \"allow_with_warning\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:canonical-cutover\",\n      \"validation\",\n      0,\n      \"flakyPolicy\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'forbid' | 'allow_with_warning', received 'fail_closed_no_implicit_retry'\"\n  },\n  {\n    \"received\": \"application\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"static\",\n      \"unit\",\n      \"integration\",\n      \"e2e\",\n      \"security\",\n      \"accessibility\",\n      \"manual\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:daemon-composition\",\n      \"validation\",\n      0,\n      \"layer\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'static' | 'unit' | 'integration' | 'e2e' | 'security' | 'accessibility' | 'manual', received 'application'\"\n  },\n  {\n    \"received\": \"command:daemon-planning-composition\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"static_analysis\",\n      \"test_result\",\n      \"runtime_observation\",\n      \"artifact_inspection\",\n      \"manual_attestation\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:daemon-composition\",\n      \"validation\",\n      0,\n      \"acceptableEvidence\",\n      0\n    ],\n    \"message\": \"Invalid enum value. Expected 'static_analysis' | 'test_result' | 'runtime_observation' | 'artifact_inspection' | 'manual_attestation', received 'command:daemon-planning-composition'\"\n  },\n  {\n    \"received\": \"independent_required\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"required\",\n      \"optional\",\n      \"not_required\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:daemon-composition\",\n      \"validation\",\n      0,\n      \"baselinePolicy\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'required' | 'optional' | 'not_required', received 'independent_required'\"\n  },\n  {\n    \"received\": \"none\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"required\",\n      \"when_feasible\",\n      \"not_required\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:daemon-composition\",\n      \"validation\",\n      0,\n      \"negativeControl\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'required' | 'when_feasible' | 'not_required', received 'none'\"\n  },\n  {\n    \"received\": \"fail_closed_no_implicit_retry\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"forbid\",\n      \"allow_with_warning\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:daemon-composition\",\n      \"validation\",\n      0,\n      \"flakyPolicy\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'forbid' | 'allow_with_warning', received 'fail_closed_no_implicit_retry'\"\n  },\n  {\n    \"received\": \"source-scan:productive-planning\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"static_analysis\",\n      \"test_result\",\n      \"runtime_observation\",\n      \"artifact_inspection\",\n      \"manual_attestation\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:daemon-composition\",\n      \"validation\",\n      1,\n      \"acceptableEvidence\",\n      0\n    ],\n    \"message\": \"Invalid enum value. Expected 'static_analysis' | 'test_result' | 'runtime_observation' | 'artifact_inspection' | 'manual_attestation', received 'source-scan:productive-planning'\"\n  },\n  {\n    \"received\": \"protected_baseline_or_negative_control\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"required\",\n      \"optional\",\n      \"not_required\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:daemon-composition\",\n      \"validation\",\n      1,\n      \"baselinePolicy\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'required' | 'optional' | 'not_required', received 'protected_baseline_or_negative_control'\"\n  },\n  {\n    \"received\": \"source_scan_must_find_no_productive_legacy_references\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"required\",\n      \"when_feasible\",\n      \"not_required\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:daemon-composition\",\n      \"validation\",\n      1,\n      \"negativeControl\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'required' | 'when_feasible' | 'not_required', received 'source_scan_must_find_no_productive_legacy_references'\"\n  },\n  {\n    \"received\": \"not_applicable\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"forbid\",\n      \"allow_with_warning\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:daemon-composition\",\n      \"validation\",\n      1,\n      \"flakyPolicy\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'forbid' | 'allow_with_warning', received 'not_applicable'\"\n  },\n  {\n    \"received\": \"package\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"static\",\n      \"unit\",\n      \"integration\",\n      \"e2e\",\n      \"security\",\n      \"accessibility\",\n      \"manual\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:canonical-planning-engine\",\n      \"validation\",\n      0,\n      \"layer\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'static' | 'unit' | 'integration' | 'e2e' | 'security' | 'accessibility' | 'manual', received 'package'\"\n  },\n  {\n    \"received\": \"command:canonical-planning-engine\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"static_analysis\",\n      \"test_result\",\n      \"runtime_observation\",\n      \"artifact_inspection\",\n      \"manual_attestation\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:canonical-planning-engine\",\n      \"validation\",\n      0,\n      \"acceptableEvidence\",\n      0\n    ],\n    \"message\": \"Invalid enum value. Expected 'static_analysis' | 'test_result' | 'runtime_observation' | 'artifact_inspection' | 'manual_attestation', received 'command:canonical-planning-engine'\"\n  },\n  {\n    \"received\": \"independent_required\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"required\",\n      \"optional\",\n      \"not_required\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:canonical-planning-engine\",\n      \"validation\",\n      0,\n      \"baselinePolicy\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'required' | 'optional' | 'not_required', received 'independent_required'\"\n  },\n  {\n    \"received\": \"none\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"required\",\n      \"when_feasible\",\n      \"not_required\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:canonical-planning-engine\",\n      \"validation\",\n      0,\n      \"negativeControl\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'required' | 'when_feasible' | 'not_required', received 'none'\"\n  },\n  {\n    \"received\": \"fail_closed_no_implicit_retry\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"forbid\",\n      \"allow_with_warning\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:canonical-planning-engine\",\n      \"validation\",\n      0,\n      \"flakyPolicy\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'forbid' | 'allow_with_warning', received 'fail_closed_no_implicit_retry'\"\n  },\n  {\n    \"received\": \"contract\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"static\",\n      \"unit\",\n      \"integration\",\n      \"e2e\",\n      \"security\",\n      \"accessibility\",\n      \"manual\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:deterministic-verifier\",\n      \"validation\",\n      0,\n      \"layer\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'static' | 'unit' | 'integration' | 'e2e' | 'security' | 'accessibility' | 'manual', received 'contract'\"\n  },\n  {\n    \"received\": \"command:deterministic-verifier\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"static_analysis\",\n      \"test_result\",\n      \"runtime_observation\",\n      \"artifact_inspection\",\n      \"manual_attestation\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:deterministic-verifier\",\n      \"validation\",\n      0,\n      \"acceptableEvidence\",\n      0\n    ],\n    \"message\": \"Invalid enum value. Expected 'static_analysis' | 'test_result' | 'runtime_observation' | 'artifact_inspection' | 'manual_attestation', received 'command:deterministic-verifier'\"\n  },\n  {\n    \"received\": \"independent_required\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"required\",\n      \"optional\",\n      \"not_required\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:deterministic-verifier\",\n      \"validation\",\n      0,\n      \"baselinePolicy\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'required' | 'optional' | 'not_required', received 'independent_required'\"\n  },\n  {\n    \"received\": \"none\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"required\",\n      \"when_feasible\",\n      \"not_required\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:deterministic-verifier\",\n      \"validation\",\n      0,\n      \"negativeControl\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'required' | 'when_feasible' | 'not_required', received 'none'\"\n  },\n  {\n    \"received\": \"fail_closed_no_implicit_retry\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"forbid\",\n      \"allow_with_warning\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:deterministic-verifier\",\n      \"validation\",\n      0,\n      \"flakyPolicy\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'forbid' | 'allow_with_warning', received 'fail_closed_no_implicit_retry'\"\n  },\n  {\n    \"received\": \"compiler\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"static\",\n      \"unit\",\n      \"integration\",\n      \"e2e\",\n      \"security\",\n      \"accessibility\",\n      \"manual\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:direct-compiler\",\n      \"validation\",\n      0,\n      \"layer\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'static' | 'unit' | 'integration' | 'e2e' | 'security' | 'accessibility' | 'manual', received 'compiler'\"\n  },\n  {\n    \"received\": \"command:direct-compiler\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"static_analysis\",\n      \"test_result\",\n      \"runtime_observation\",\n      \"artifact_inspection\",\n      \"manual_attestation\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:direct-compiler\",\n      \"validation\",\n      0,\n      \"acceptableEvidence\",\n      0\n    ],\n    \"message\": \"Invalid enum value. Expected 'static_analysis' | 'test_result' | 'runtime_observation' | 'artifact_inspection' | 'manual_attestation', received 'command:direct-compiler'\"\n  },\n  {\n    \"received\": \"independent_required\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"required\",\n      \"optional\",\n      \"not_required\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:direct-compiler\",\n      \"validation\",\n      0,\n      \"baselinePolicy\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'required' | 'optional' | 'not_required', received 'independent_required'\"\n  },\n  {\n    \"received\": \"none\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"required\",\n      \"when_feasible\",\n      \"not_required\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:direct-compiler\",\n      \"validation\",\n      0,\n      \"negativeControl\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'required' | 'when_feasible' | 'not_required', received 'none'\"\n  },\n  {\n    \"received\": \"fail_closed_no_implicit_retry\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"forbid\",\n      \"allow_with_warning\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:direct-compiler\",\n      \"validation\",\n      0,\n      \"flakyPolicy\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'forbid' | 'allow_with_warning', received 'fail_closed_no_implicit_retry'\"\n  },\n  {\n    \"received\": \"regression\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"static\",\n      \"unit\",\n      \"integration\",\n      \"e2e\",\n      \"security\",\n      \"accessibility\",\n      \"manual\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:regression-gates\",\n      \"validation\",\n      0,\n      \"layer\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'static' | 'unit' | 'integration' | 'e2e' | 'security' | 'accessibility' | 'manual', received 'regression'\"\n  },\n  {\n    \"received\": \"command:prior-gates\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"static_analysis\",\n      \"test_result\",\n      \"runtime_observation\",\n      \"artifact_inspection\",\n      \"manual_attestation\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:regression-gates\",\n      \"validation\",\n      0,\n      \"acceptableEvidence\",\n      0\n    ],\n    \"message\": \"Invalid enum value. Expected 'static_analysis' | 'test_result' | 'runtime_observation' | 'artifact_inspection' | 'manual_attestation', received 'command:prior-gates'\"\n  },\n  {\n    \"received\": \"independent_required\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"required\",\n      \"optional\",\n      \"not_required\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:regression-gates\",\n      \"validation\",\n      0,\n      \"baselinePolicy\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'required' | 'optional' | 'not_required', received 'independent_required'\"\n  },\n  {\n    \"received\": \"none\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"required\",\n      \"when_feasible\",\n      \"not_required\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:regression-gates\",\n      \"validation\",\n      0,\n      \"negativeControl\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'required' | 'when_feasible' | 'not_required', received 'none'\"\n  },\n  {\n    \"received\": \"fail_closed_no_implicit_retry\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"forbid\",\n      \"allow_with_warning\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:regression-gates\",\n      \"validation\",\n      0,\n      \"flakyPolicy\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'forbid' | 'allow_with_warning', received 'fail_closed_no_implicit_retry'\"\n  },\n  {\n    \"received\": \"planning_request\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"api\",\n      \"type\",\n      \"event\",\n      \"data\",\n      \"ui\",\n      \"command\"\n    ],\n    \"path\": [\n      \"seams\",\n      \"seam:daemon-to-planner\",\n      \"kind\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'api' | 'type' | 'event' | 'data' | 'ui' | 'command', received 'planning_request'\"\n  },\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"object\",\n    \"received\": \"array\",\n    \"path\": [\n      \"seams\",\n      \"seam:daemon-to-planner\",\n      \"semanticFacts\"\n    ],\n    \"message\": \"Expected object, received array\"\n  },\n  {\n    \"received\": \"canonical_contract\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"api\",\n      \"type\",\n      \"event\",\n      \"data\",\n      \"ui\",\n      \"command\"\n    ],\n    \"path\": [\n      \"seams\",\n      \"seam:semantic-contract\",\n      \"kind\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'api' | 'type' | 'event' | 'data' | 'ui' | 'command', received 'canonical_contract'\"\n  },\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"object\",\n    \"received\": \"array\",\n    \"path\": [\n      \"seams\",\n      \"seam:semantic-contract\",\n      \"semanticFacts\"\n    ],\n    \"message\": \"Expected object, received array\"\n  },\n  {\n    \"received\": \"canonical_digest\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"exact\",\n      \"backward_compatible\"\n    ],\n    \"path\": [\n      \"seams\",\n      \"seam:semantic-contract\",\n      \"compatibility\",\n      \"mode\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'exact' | 'backward_compatible', received 'canonical_digest'\"\n  },\n  {\n    \"received\": \"semantic_plan\",\n    \"code\": \"invalid_enum_value\",\n    \"options\": [\n      \"api\",\n      \"type\",\n      \"event\",\n      \"data\",\n      \"ui\",\n      \"command\"\n    ],\n    \"path\": [\n      \"seams\",\n      \"seam:planner-to-compiler\",\n      \"kind\"\n    ],\n    \"message\": \"Invalid enum value. Expected 'api' | 'type' | 'event' | 'data' | 'ui' | 'command', received 'semantic_plan'\"\n  },\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"object\",\n    \"received\": \"array\",\n    \"path\": [\n      \"seams\",\n      \"seam:planner-to-compiler\",\n      \"semanticFacts\"\n    ],\n    \"message\": \"Expected object, received array\"\n  }\n]",
+        "evidenceRefs": [],
+        "resolution": "none"
+      }
+    ],
+    "trace": {
+      "budget": {
+        "modelCalls": 1,
+        "repositoryQueries": 2,
+        "queryBytes": 120000,
+        "revisions": 1,
+        "repairs": 0,
+        "expansions": 0
+      },
+      "consumed": {
+        "modelCalls": 1,
+        "repositoryQueries": 2,
+        "queryBytes": 111967,
+        "revisions": 1,
+        "repairs": 0,
+        "expansions": 0
+      },
+      "revisions": [
+        {
+          "index": 1,
+          "cause": "initial",
+          "budget": {
+            "modelCalls": 1,
+            "repositoryQueries": 2,
+            "queryBytes": 120000,
+            "revisions": 1,
+            "repairs": 0,
+            "expansions": 0
+          },
+          "consumed": {
+            "modelCalls": 1,
+            "repositoryQueries": 2,
+            "queryBytes": 111967,
+            "revisions": 1,
+            "repairs": 0,
+            "expansions": 0
+          },
+          "queryReceipts": [
+            "sha256:3ad2d17fc92396d6d202456a72dfa15e50ca6848441557383bbab0eb66f22ff7",
+            "sha256:a68fc602602b48bf8cd887c9bed3a0fce44a70c1a28568317de42a4a82ce1ece"
+          ],
+          "evidenceRefs": [
+            "evidence:001f0142298e754afd8c77bc",
+            "evidence:03b6543c806527898b4156bc",
+            "evidence:05dde392b35b49d277343fad",
+            "evidence:0b6ea81a77ccf85f7151f85c",
+            "evidence:1001b59c63702da6a83ef538",
+            "evidence:18065d44dcc8fd4b618491f9",
+            "evidence:2b17584315ba99d904efcf45",
+            "evidence:2c9f7b78684cc2169b8cc1e7",
+            "evidence:323d869024a67aca30a1c8bf",
+            "evidence:3290a79e3ba2b6c0281e0107",
+            "evidence:34dd783adc06bc3f60547bd5",
+            "evidence:398344bc3a4b5514ce0fc1dc",
+            "evidence:3d30c05c1a18012a45823d21",
+            "evidence:3f8603f09933f728e823211e",
+            "evidence:479035e214f31497694608ec",
+            "evidence:4ff7c7a852958f40657f6f9b",
+            "evidence:522f6089fa27646f9d840681",
+            "evidence:5880d3244ee8a85739d37c25",
+            "evidence:5f02ec4686a317fb72ee5190",
+            "evidence:69c6465656288c408cd4f6e4",
+            "evidence:6af41a84ac20de76f4d79cf2",
+            "evidence:6bfcb4f4d8500a30861e6857",
+            "evidence:6f4469ba181397cf85b3b7dd",
+            "evidence:7a52f2473855d774ec4b531c",
+            "evidence:886edb16ad4f03825d11db59",
+            "evidence:8fef658b1150cb159a74b3cd",
+            "evidence:903c6d1c28fd9d65e94d2fec",
+            "evidence:a02a2deaacd09ebd1c5155fe",
+            "evidence:aff6a306ae8b4b88f05f6a65",
+            "evidence:b0db26d9d9c88eb262d93267",
+            "evidence:bc792ea83f0f7150ade900cc",
+            "evidence:c19b04c240a0ee8c71b6a150",
+            "evidence:c6dcbaac9d846ab2d7f0d4a9",
+            "evidence:ca952f6834a856abf95480c1",
+            "evidence:d0f261505b0f67b3185688ac",
+            "evidence:d1e0ed96c109c5ceb99b88d2",
+            "evidence:d3c59062780c248b70033713",
+            "evidence:dc47800a86f3ad5388da48af",
+            "evidence:e0bdd93c8e711aa126d09c2f",
+            "evidence:e62ce8b418196fbc421def77",
+            "evidence:e6a15be44729c438717dfbcc",
+            "evidence:e900643f9984b6ddcc70de5e",
+            "evidence:e951f3a9c1d2c0e150044b28",
+            "evidence:f05d1e3b3d143486238802af",
+            "evidence:fa070c39c96c9ab517a26337",
+            "evidence:fcb5757df3a9a22deb2e761b"
+          ],
+          "changedDecisionIds": [],
+          "changedFindingCodes": [
+            "schema_invalid"
+          ],
+          "proposalDigest": "sha256:6f57354854d63a4509d579504313a6bff80db4d06d2cf27100b1b3fda52a728a",
+          "digest": "sha256:7836c99a108789f4dc565aafe4b6f88d21f3ef9d1cbb1179ce1d44e33d4b9f9d"
+        }
+      ],
+      "advisoryFindings": []
+    }
+  },
+  "compilation": null,
+  "currentComparator": {
+    "kind": "rejected",
+    "error": {
+      "code": "no_safe_candidate",
+      "phase": "selection",
+      "retryable": false,
+      "message": "root: Invalid input; seams.0.interface.kind: Invalid enum value. Expected 'api' | 'type' | 'event' | 'data' | 'ui' | 'command', received 'planning_request'; seams.0.interface.verification: Expected object, received string; seams.1.interface.kind: Invalid enum value. Expected 'api' | 'type' | 'event' | 'data' | 'ui' | 'command', received 'canonical_contract'; seams.1.interface.verification: Expected object, received string; seams.2.interface.kind: Invalid enum value. Expected 'api' | 'type' | 'event' | 'data' | 'ui' | 'command', received 'semantic_plan'; seams.2.interface.verification: Expected object, received string",
+      "evidenceRefs": [],
+      "suggestedAction": "Correct the reported draft errors and request a new bounded semantic plan."
+    }
+  },
+  "topologyEvaluation": {
+    "oracleId": "oracle:manyhands-canonical-planning",
+    "candidates": [
+      {
+        "candidate": "stage5",
+        "passed": false,
+        "issues": [
+          {
+            "code": "candidate_unavailable",
+            "message": "Planning returned rejected."
+          }
+        ],
+        "observations": {
+          "nodes": 0,
+          "leaves": 0,
+          "seams": 0,
+          "resourceClaims": 0
+        }
+      },
+      {
+        "candidate": "current",
+        "passed": false,
+        "issues": [
+          {
+            "code": "candidate_unavailable",
+            "message": "Current planner returned rejected."
+          }
+        ],
+        "observations": {
+          "nodes": 0,
+          "leaves": 0,
+          "seams": 0,
+          "resourceClaims": 0
+        }
+      }
+    ]
+  },
+  "browser": {
+    "status": "not_run",
+    "preview": "preview.html"
+  }
+}
