@@ -1,0 +1,14 @@
+{
+    "runId":  "run:cf435a9db8dd08f1bf1726c5dbffec4ba203c59c0e5d1e41cee92d6734c96716",
+    "journal":  "C:\\mh-stage3-gr-4e495abd\\daemon\\runs\\run_cf435a9db8dd08f1bf1726c5dbffec4ba203c59c0e5d1e41cee92d6734c96716.events.v2.jsonl",
+    "initialDaemonPid":  26348,
+    "initialWeb1Pid":  28588,
+    "initialWeb2Pid":  36600,
+    "initialDaemonEpoch":  "51f881fd-7f2c-4898-8f84-c8d7b226a857",
+    "childPid":  27612,
+    "grandchildPid":  40192,
+    "childAlive":  true,
+    "grandchildAlive":  true,
+    "journalHash":  "89B892D6251A0FB1DAC7D4F5221266DF015C85F5D1F33DA7CC5DCD2F5C07266B",
+    "journalSize":  11692
+}

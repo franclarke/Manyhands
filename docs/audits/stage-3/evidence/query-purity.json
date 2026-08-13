@@ -1,0 +1,13 @@
+{
+    "requests":  40,
+    "lifecycle":  "running",
+    "sequence":  13,
+    "hashBefore":  "89B892D6251A0FB1DAC7D4F5221266DF015C85F5D1F33DA7CC5DCD2F5C07266B",
+    "hashAfter":  "89B892D6251A0FB1DAC7D4F5221266DF015C85F5D1F33DA7CC5DCD2F5C07266B",
+    "sizeBefore":  11692,
+    "sizeAfter":  11692,
+    "modelCallIntentCount":  1,
+    "processSpawnIntentCount":  1,
+    "childAlive":  true,
+    "grandchildAlive":  true
+}

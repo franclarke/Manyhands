@@ -1,0 +1,7 @@
+{
+    "web1Alive":  false,
+    "web2Alive":  false,
+    "daemonAlive":  false,
+    "port3357":  false,
+    "port3358":  false
+}

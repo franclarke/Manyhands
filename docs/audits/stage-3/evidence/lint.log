@@ -1,0 +1,10 @@
+
+C:\Users\franc\Documents\Proyectos\Manyhands\scripts\manyhands-dev.mjs
+  0:0  error  Parsing error: ESLint was configured to run on `<tsconfigRootDir>/scripts\manyhands-dev.mjs` using `parserOptions.project`: <tsconfigRootDir>/tsconfig.json
+However, that TSConfig does not include this file. Either:
+- Change ESLint's list of included files to not include this file
+- Change that TSConfig to include this file
+- Create a new TSConfig that includes this file and include it in your parserOptions.project
+See the typescript-eslint docs for more info: https://typescript-eslint.io/troubleshooting/typed-linting#i-get-errors-telling-me-eslint-was-configured-to-run--however-that-tsconfig-does-not--none-of-those-tsconfigs-include-this-file
+
+✖ 1 problem (1 error, 0 warnings)

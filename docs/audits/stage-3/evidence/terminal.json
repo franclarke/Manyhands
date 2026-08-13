@@ -1,0 +1,13 @@
+{
+    "lifecycle":  "interrupted",
+    "sequence":  29,
+    "childAlive":  false,
+    "grandchildAlive":  false,
+    "cancelRequestedCount":  1,
+    "operationInterruptedCount":  1,
+    "modelCallIntentCount":  1,
+    "processSpawnIntentCount":  2,
+    "effectReceiptCount":  7,
+    "terminalJournalHash":  "55DF679B3BFED0B22DF4A9145A1579F0C6CFB1CE5F10A51D8B5B427A7C477625",
+    "terminalJournalSize":  23117
+}

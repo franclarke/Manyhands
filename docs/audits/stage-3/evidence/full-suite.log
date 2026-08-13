@@ -1,0 +1,431 @@
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mC:/Users/franc/Documents/Proyectos/Manyhands[39m
+
+ [32m✓[39m tests/execution-core-v2-node-executor.test.ts [2m([22m[2m55 tests[22m[2m)[22m[33m 430[2mms[22m[39m
+ [32m✓[39m tests/execution-core-run-executor.test.ts [2m([22m[2m34 tests[22m[2m)[22m[90m 299[2mms[22m[39m
+ [32m✓[39m tests/run-v2-execution-driver.test.ts [2m([22m[2m15 tests[22m[2m)[22m[33m 812[2mms[22m[39m
+ [32m✓[39m tests/execution-core-integration.test.ts [2m([22m[2m26 tests[22m[2m)[22m[90m 126[2mms[22m[39m
+ [32m✓[39m tests/stage3-transitional-adapters.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 6701[2mms[22m[39m
+   [33m[2m✓[22m[39m Stage 3 transitional unsafe adapters[2m > [22mvalidates canonical delivery metadata and recovers an already published fast-forward [33m4951[2mms[22m[39m
+   [33m[2m✓[22m[39m Stage 3 transitional unsafe adapters[2m > [22mpreserves current planning, execution evidence, candidate and delivery outputs [33m1508[2mms[22m[39m
+ [32m✓[39m tests/run-engine-actor.test.ts [2m([22m[2m14 tests[22m[2m)[22m[90m 98[2mms[22m[39m
+ [32m✓[39m tests/run-engine-physical-effect-adapters.test.ts [2m([22m[2m19 tests[22m[2m)[22m[90m 28[2mms[22m[39m
+ [32m✓[39m tests/execution-core-skeleton-scaffolder.test.ts [2m([22m[2m21 tests[22m[2m)[22m[90m 164[2mms[22m[39m
+ [32m✓[39m tests/decomposer-recursive.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 347[2mms[22m[39m
+ [32m✓[39m tests/execution-core-recorder.test.ts [2m([22m[2m28 tests[22m[2m)[22m[90m 135[2mms[22m[39m
+ [32m✓[39m tests/execution-driver-concurrency.test.ts [2m([22m[2m11 tests[22m[2m)[22m[90m 155[2mms[22m[39m
+ [32m✓[39m tests/decomposer-recursive-recovery.test.ts [2m([22m[2m15 tests[22m[2m)[22m[90m 51[2mms[22m[39m
+ [32m✓[39m tests/daemon-local-ipc.test.ts [2m([22m[2m15 tests[22m[2m)[22m[33m 2318[2mms[22m[39m
+   [33m[2m✓[22m[39m authenticated local daemon IPC[2m > [22mserves Windows production IPC through a current-user plus SYSTEM pipe DACL [33m549[2mms[22m[39m
+ [32m✓[39m tests/repository-fast-indexer.test.ts [2m([22m[2m13 tests[22m[2m | [22m[33m2 skipped[39m[2m)[22m[33m 15778[2mms[22m[39m
+   [33m[2m✓[22m[39m FastRepositoryIndexer[2m > [22muses rg --files with hidden and gitignore semantics [33m1068[2mms[22m[39m
+   [33m[2m✓[22m[39m FastRepositoryIndexer[2m > [22mreuses the HEAD-addressed cache without invoking rg again [33m1332[2mms[22m[39m
+   [33m[2m✓[22m[39m FastRepositoryIndexer[2m > [22mbuilds one coherent exact-commit index when the working tree is dirty [33m1425[2mms[22m[39m
+   [33m[2m✓[22m[39m FastRepositoryIndexer[2m > [22muses ignore rules from the exact commit instead of dirty workspace rules [33m1428[2mms[22m[39m
+   [33m[2m✓[22m[39m FastRepositoryIndexer[2m > [22mdiscovers snapshot capabilities from the exact commit instead of the dirty workspace [33m1379[2mms[22m[39m
+   [33m[2m✓[22m[39m FastRepositoryIndexer[2m > [22mextracts multiline and aliased exports with the canonical AST parser [33m1295[2mms[22m[39m
+   [33m[2m✓[22m[39m FastRepositoryIndexer[2m > [22mindexes every parseable source extension, including the module variants [33m1417[2mms[22m[39m
+   [33m[2m✓[22m[39m FastRepositoryIndexer[2m > [22mpublishes one valid cache under concurrent cold writers and removes temporaries [33m1493[2mms[22m[39m
+   [33m[2m✓[22m[39m FastRepositoryIndexer[2m > [22mrebuilds a cache whose checksum is invalid [33m1900[2mms[22m[39m
+   [33m[2m✓[22m[39m FastRepositoryIndexer[2m > [22mrebuilds a cache written under a different indexer profile [33m1750[2mms[22m[39m
+   [33m[2m✓[22m[39m FastRepositoryIndexer[2m > [22mderives baseline commands for a lockfile-less target on the productive snapshot path [33m1286[2mms[22m[39m
+ [32m✓[39m tests/run-engine-effect-dispatcher.test.ts [2m([22m[2m12 tests[22m[2m)[22m[90m 90[2mms[22m[39m
+ [32m✓[39m tests/architecture-baseline.test.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 361[2mms[22m[39m
+ [32m✓[39m tests/daemon-process-effect-adapters.test.ts [2m([22m[2m12 tests[22m[2m)[22m[90m 34[2mms[22m[39m
+node.exe : [90mstderr[2m | tests/workspace-file-lock-commit.test.ts[2m > [22m[2mworkspace file lock commit
+truth[2m > [22m[2mreturns a committed result and lets the next owner acquire after release rename exhaustion
+En línea: 2 Carácter: 1
++ & 'C:\mh-runtime-c781-09\node-v22.22.0-win-x64\node.exe' node_modules ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([90mstderr[2m...name exhaustion:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+[22m[39m[WorkspaceLock] Mutation committed but lock release failed for
+C:\Users\franc\AppData\Local\Temp\mh-workspace-lock-commit-Z4a4G9\workspaces.json.lock; commit wins and the next
+acquirer will adopt token-scoped cleanup: Error: simulated release rename contention
+
+ [32m✓[39m tests/workspace-file-lock-commit.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 2337[2mms[22m[39m
+   [33m[2m✓[22m[39m workspace file lock commit truth[2m > [22mallows only one challenger to claim a dead marker and preserves the fresh owner [33m433[2mms[22m[39m
+   [33m[2m✓[22m[39m workspace file lock commit truth[2m > [22mrejects a stale marker claim before three challengers can move a fresh owner [33m554[2mms[22m[39m
+   [33m[2m✓[22m[39m workspace file lock commit truth[2m > [22mlinearizes release against takeover before either can move the lock path [33m414[2mms[22m[39m
+ [32m✓[39m tests/run-engine-effect-crash-matrix.test.ts [2m([22m[2m54 tests[22m[2m)[22m[33m 348[2mms[22m[39m
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ [32m✓[39m tests/workspace-physical-identity.test.ts [2m([22m[2m14 tests[22m[2m)[22m[33m 29469[2mms[22m[39m
+   [33m[2m✓[22m[39m workspace physical repository identity[2m > [22mrejects an exact duplicate repository on create [33m1415[2mms[22m[39m
+   [33m[2m✓[22m[39m workspace physical repository identity[2m > [22mserializes independent repository instances without losing either successful create [33m2036[2mms[22m[39m
+   [33m[2m✓[22m[39m workspace physical repository identity[2m > [22mfolds Windows path casing before comparison [33m1337[2mms[22m[39m
+   [33m[2m✓[22m[39m workspace physical repository identity[2m > [22mrecognizes a symlink or junction as the same physical repository [33m1367[2mms[22m[39m
+   [33m[2m✓[22m[39m workspace physical repository identity[2m > [22mrefreshes a persisted identity after a move plus junction and still rejects the duplicate [33m2130[2mms[22m[39m
+   [33m[2m✓[22m[39m workspace physical repository identity[2m > [22mkeeps the same filesystem identity after a pure move with no junction [33m1164[2mms[22m[39m
+   [33m[2m✓[22m[39m workspace physical repository identity[2m > [22mrecognizes a repository subdirectory as the same repository [33m1360[2mms[22m[39m
+   [33m[2m✓[22m[39m workspace physical repository identity[2m > [22mrecognizes linked Git worktrees through their shared common directory [33m1575[2mms[22m[39m
+   [33m[2m✓[22m[39m workspace physical repository identity[2m > [22mrejects an update that would collide and preserves the previous target [33m3485[2mms[22m[39m
+   [33m[2m✓[22m[39m workspace physical repository identity[2m > [22mfails closed when a new repoPath has no resolvable physical Git identity [33m1805[2mms[22m[39m
+   [33m[2m✓[22m[39m workspace physical repository identity[2m > [22mmigrates duplicate legacy records to one canonical workspace and durable id aliases [33m2460[2mms[22m[39m
+   [33m[2m✓[22m[39m workspace identity on productive routes[2m > [22mreturns 409 when POST uses a subdirectory alias of an existing workspace [33m2528[2mms[22m[39m
+   [33m[2m✓[22m[39m workspace identity on productive routes[2m > [22mreturns 409 when PATCH points a workspace at another workspace's repository [33m4429[2mms[22m[39m
+   [33m[2m✓[22m[39m RunTargetContext canonical repository path[2m > [22mcaptures the same top-level target and fingerprint through subdirectory and junction aliases [33m2376[2mms[22m[39m
+ [32m✓[39m tests/daemon-kernel.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 4496[2mms[22m[39m
+   [33m[2m✓[22m[39m durable daemon composition root[2m > [22mreconciles journals with pending effects before startup succeeds [33m775[2mms[22m[39m
+   [33m[2m✓[22m[39m durable daemon composition root[2m > [22msurvives client and daemon restarts without inventing lifecycle events [33m831[2mms[22m[39m
+   [33m[2m✓[22m[39m durable daemon composition root[2m > [22mcomposes Windows production IPC with physical capability and named-pipe ACLs [33m852[2mms[22m[39m
+ [32m✓[39m tests/contract-acceptance-allocation.test.ts [2m([22m[2m9 tests[22m[2m)[22m[90m 98[2mms[22m[39m
+ [32m✓[39m tests/execution-core-errors.test.ts [2m([22m[2m35 tests[22m[2m)[22m[90m 15[2mms[22m[39m
+ [32m✓[39m tests/daemon-installation-lease.test.ts [2m([22m[2m11 tests[22m[2m)[22m[33m 2387[2mms[22m[39m
+   [33m[2m✓[22m[39m installation ownership lease[2m > [22melects exactly one owner when contenders start concurrently [33m903[2mms[22m[39m
+   [33m[2m✓[22m[39m installation ownership lease[2m > [22melects one successor when contenders concurrently reclaim the same dead owner [33m342[2mms[22m[39m
+ [32m✓[39m tests/integration-manifest.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 364[2mms[22m[39m
+ [32m✓[39m tests/execution-core-types.test.ts [2m([22m[2m43 tests[22m[2m)[22m[90m 27[2mms[22m[39m
+ [32m✓[39m tests/graph-compiler.test.ts [2m([22m[2m14 tests[22m[2m)[22m[90m 135[2mms[22m[39m
+ [32m✓[39m tests/integration-real-git.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 30543[2mms[22m[39m
+   [33m[2m✓[22m[39m IntegrationAgent with real Git[2m > [22mpreserves the complete tree when a multi-commit composite is integrated by its parent [33m10724[2mms[22m[39m
+   [33m[2m✓[22m[39m IntegrationAgent with real Git[2m > [22mtreats a distinct child commit with an already-satisfied patch as redundant [33m10349[2mms[22m[39m
+   [33m[2m✓[22m[39m IntegrationAgent with real Git[2m > [22mrejects and removes a commit created unexpectedly by the repair executor [33m9469[2mms[22m[39m
+ [32m✓[39m tests/planning-harness.test.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 2979[2mms[22m[39m
+   [33m[2m✓[22m[39m in-process planning harness[2m > [22mplans and compiles a valid draft without a server, worktree or network [33m1464[2mms[22m[39m
+   [33m[2m✓[22m[39m legacy one-shot path — retired in stage 3C[2m > [22mindexer blindness — .mjs sources are visible to the planner [33m1378[2mms[22m[39m
+ [32m✓[39m tests/stage0-evidence-integrity.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 158[2mms[22m[39m
+ [32m✓[39m tests/run-v2-e2e.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 395[2mms[22m[39m
+ [32m✓[39m tests/run-coordinator-effect-events.test.ts [2m([22m[2m9 tests[22m[2m)[22m[90m 28[2mms[22m[39m
+ [32m✓[39m tests/execution-core-validation-runner.test.ts [2m([22m[2m17 tests[22m[2m)[22m[33m 1838[2mms[22m[39m
+   [33m[2m✓[22m[39m ChildProcessValidationRunner — timeout[2m > [22mdoes not return while a validation descendant can still write [33m1634[2mms[22m[39m
+ [32m✓[39m tests/recursive-planner.test.ts [2m([22m[2m14 tests[22m[2m)[22m[90m 33[2mms[22m[39m
+ [32m✓[39m tests/exact-candidate-validation.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 502[2mms[22m[39m
+   [33m[2m✓[22m[39m validateExactCandidate[2m > [22mexecutes the frozen value-aware order oracle and rejects the retry-2 candidate [33m480[2mms[22m[39m
+ [32m✓[39m tests/stage3-cancel-dispatch-window.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 66[2mms[22m[39m
+ [32m✓[39m tests/repository-aware-scheduling.test.ts [2m([22m[2m7 tests[22m[2m)[22m[90m 59[2mms[22m[39m
+ [32m✓[39m tests/execution-core-worktree.test.ts [2m([22m[2m14 tests[22m[2m)[22m[90m 83[2mms[22m[39m
+ [32m✓[39m tests/recursive-planner-lineage.test.ts [2m([22m[2m11 tests[22m[2m)[22m[90m 32[2mms[22m[39m
+ [32m✓[39m tests/run-coordinator-lifecycle.test.ts [2m([22m[2m9 tests[22m[2m)[22m[90m 44[2mms[22m[39m
+ [32m✓[39m tests/derived-relations.test.ts [2m([22m[2m14 tests[22m[2m)[22m[90m 69[2mms[22m[39m
+ [32m✓[39m tests/store-recovery-traces-security.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 603[2mms[22m[39m
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/a.ts', LF will be replaced by CRLF the next time Git touches it
+ [32m✓[39m tests/execution-core-e2e.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 27950[2mms[22m[39m
+   [33m[2m✓[22m[39m RunExecutor E2E (real git + MockCodex)[2m > [22mruns leaves, commits, cherry-picks into the composite, and completes [33m9519[2mms[22m[39m
+   [33m[2m✓[22m[39m RunExecutor E2E (real git + MockCodex)[2m > [22mkeeps a dependent leaf on the immutable base and composes both commits only at integration [33m8678[2mms[22m[39m
+   [33m[2m✓[22m[39m RunExecutor E2E (real git + MockCodex)[2m > [22mruns integrator nodes as executable tasks before parent integration [33m8581[2mms[22m[39m
+   [33m[2m✓[22m[39m RunExecutor E2E (real git + MockCodex)[2m > [22mfails parent integration when a scheduled child never produced a result [33m1169[2mms[22m[39m
+ [32m✓[39m tests/process-supervisor-physical.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 7104[2mms[22m[39m
+   [33m[2m✓[22m[39m ProcessSupervisor physical Windows custody[2m > [22mcloses Job Object ownership and prevents both child and grandchild late writes [33m2497[2mms[22m[39m
+   [33m[2m✓[22m[39m ProcessSupervisor physical Windows custody[2m > [22mrecovers a started-only effect after a custodian crash without repeating or blindly killing it [33m2277[2mms[22m[39m
+ [32m✓[39m tests/cut-properties.test.ts [2m([22m[2m10 tests[22m[2m)[22m[90m 26[2mms[22m[39m
+ [32m✓[39m tests/stage3-daemon-restart-physical.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 10230[2mms[22m[39m
+   [33m[2m✓[22m[39m Stage 3 daemon restart recovery[2m > [22mrecovers a running fake execution from journal/intents/receipts without duplicate work [33m5427[2mms[22m[39m
+ [32m✓[39m tests/evidence-matrix.test.ts [2m([22m[2m10 tests[22m[2m)[22m[90m 22[2mms[22m[39m
+ [32m✓[39m tests/granularity-policy.test.ts [2m([22m[2m12 tests[22m[2m)[22m[90m 85[2mms[22m[39m
+ [32m✓[39m tests/contracts-v2.test.ts [2m([22m[2m10 tests[22m[2m)[22m[90m 19[2mms[22m[39m
+ [32m✓[39m tests/domain.test.ts [2m([22m[2m11 tests[22m[2m)[22m[90m 49[2mms[22m[39m
+ [32m✓[39m tests/run-events-replay.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 192[2mms[22m[39m
+ [32m✓[39m tests/workspace-repository.test.ts [2m([22m[2m14 tests[22m[2m)[22m[33m 3681[2mms[22m[39m
+   [33m[2m✓[22m[39m JsonWorkspaceRepository[2m > [22mserializes parallel writes producing unique slugs [33m480[2mms[22m[39m
+   [33m[2m✓[22m[39m JsonWorkspaceRepository[2m > [22mserializes writes from independent OS processes without a lost update [33m2036[2mms[22m[39m
+ [32m✓[39m tests/task-graph-artifact-cycles.test.ts [2m([22m[2m16 tests[22m[2m)[22m[90m 24[2mms[22m[39m
+ [32m✓[39m tests/stage3-web-productive-boundary.test.ts [2m([22m[2m17 tests[22m[2m)[22m[90m 259[2mms[22m[39m
+ [32m✓[39m tests/execution-core-cli-invocation.test.ts [2m([22m[2m10 tests[22m[2m)[22m[90m 269[2mms[22m[39m
+ [32m✓[39m tests/ephemeral-execution-workspace.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 385[2mms[22m[39m
+ [32m✓[39m tests/execution-core-git-runner.test.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 9183[2mms[22m[39m
+   [33m[2m✓[22m[39m SimpleGitRunner ancestry[2m > [22mreturns false for sibling commits when git merge-base exits 1 without stderr [33m2296[2mms[22m[39m
+   [33m[2m✓[22m[39m SimpleGitRunner ancestry[2m > [22mclassifies an already-satisfied cherry-pick separately from a conflict [33m2796[2mms[22m[39m
+   [33m[2m✓[22m[39m SimpleGitRunner commit identity[2m > [22muses a command-scoped ManyHands identity when the repository has no usable author [33m1593[2mms[22m[39m
+   [33m[2m✓[22m[39m GitRunner bounded file reads[2m > [22mrejects a git blob that exceeds the byte budget [33m807[2mms[22m[39m
+   [33m[2m✓[22m[39m GitRunner bounded file reads[2m > [22mpropagates cancellation instead of treating it as a missing file [33m730[2mms[22m[39m
+   [33m[2m✓[22m[39m GitRunner bounded file reads[2m > [22mreturns null only for a missing Git object or path [33m956[2mms[22m[39m
+ [32m✓[39m tests/repository-snapshot.test.ts [2m([22m[2m7 tests[22m[2m)[22m[90m 189[2mms[22m[39m
+ [32m✓[39m tests/integration-operation-recovery.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 37[2mms[22m[39m
+ [32m✓[39m tests/cockpit-decision-queue.test.ts [2m([22m[2m11 tests[22m[2m)[22m[90m 13[2mms[22m[39m
+ [32m✓[39m tests/stage3-product-daemon.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 2831[2mms[22m[39m
+   [33m[2m✓[22m[39m Stage 3 productive daemon boundary[2m > [22mowns create, idempotent multi-client commands and pure query/event pages [33m2279[2mms[22m[39m
+   [33m[2m✓[22m[39m Stage 3 productive daemon boundary[2m > [22mfails closed when a command id is reused with different content [33m551[2mms[22m[39m
+ [32m✓[39m tests/run-model-v2-reducer.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 24[2mms[22m[39m
+ [32m✓[39m tests/run-store-event-source.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 462[2mms[22m[39m
+ [32m✓[39m tests/contract-boundary-validation.test.ts [2m([22m[2m8 tests[22m[2m)[22m[90m 27[2mms[22m[39m
+ [32m✓[39m tests/scope-critic-calibration.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 21[2mms[22m[39m
+ [32m✓[39m tests/stage3-cancellation-physical.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 4066[2mms[22m[39m
+   [33m[2m✓[22m[39m Stage 3 physical cancellation[2m > [22mpersists intent, kills child and grandchild, and only then publishes interrupted [33m2065[2mms[22m[39m
+ [32m✓[39m tests/canonical-graph-invariants.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 40[2mms[22m[39m
+ [32m✓[39m tests/scope-bounded-creation.test.ts [2m([22m[2m9 tests[22m[2m)[22m[90m 106[2mms[22m[39m
+[90mstderr[2m | tests/decomposer-claude-code-recursive.test.ts[2m > [22m[2mClaudeCodeRecursiveDecomposer[2m >
+[22m[2msurfaces claude process failures as decomposer LLM errors
+[22m[39m[RecursiveDecomposer] Step "root" attempt 1/3 failed (provider_request): Graph generation failed for node
+"root" (attempt 1/3, provider_request): Claude Code recursive planning failed with exit code 7: boom. Retrying with
+stricter JSON instructions.
+
+[90mstderr[2m | tests/decomposer-claude-code-recursive.test.ts[2m > [22m[2mClaudeCodeRecursiveDecomposer[2m >
+[22m[2msurfaces claude process failures as decomposer LLM errors
+[22m[39m[RecursiveDecomposer] Step "root" attempt 2/3 failed (provider_request): Graph generation failed for node
+"root" (attempt 2/3, provider_request): Claude Code recursive planning failed with exit code 7: boom. Retrying with
+stricter JSON instructions.
+
+[90mstderr[2m | tests/decomposer-claude-code-recursive.test.ts[2m > [22m[2mClaudeCodeRecursiveDecomposer[2m >
+[22m[2msurfaces is_error envelopes as decomposer LLM errors
+[22m[39m[RecursiveDecomposer] Step "root" attempt 1/3 failed (provider_request): Graph generation failed for node
+"root" (attempt 1/3, provider_request): Claude Code reported an error result for node "root": model refused. Retrying
+with stricter JSON instructions.
+
+[90mstderr[2m | tests/decomposer-claude-code-recursive.test.ts[2m > [22m[2mClaudeCodeRecursiveDecomposer[2m >
+[22m[2msurfaces is_error envelopes as decomposer LLM errors
+[22m[39m[RecursiveDecomposer] Step "root" attempt 2/3 failed (provider_request): Graph generation failed for node
+"root" (attempt 2/3, provider_request): Claude Code reported an error result for node "root": model refused. Retrying
+with stricter JSON instructions.
+
+ [32m✓[39m tests/decomposer-claude-code-recursive.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 2910[2mms[22m[39m
+   [33m[2m✓[22m[39m ClaudeCodeRecursiveDecomposer[2m > [22muses the claude result envelope as the recursive step JSON [33m314[2mms[22m[39m
+   [33m[2m✓[22m[39m ClaudeCodeRecursiveDecomposer[2m > [22msurfaces claude process failures as decomposer LLM errors [33m1044[2mms[22m[39m
+   [33m[2m✓[22m[39m ClaudeCodeRecursiveDecomposer[2m > [22msurfaces is_error envelopes as decomposer LLM errors [33m1050[2mms[22m[39m
+ [32m✓[39m tests/run-coordinator-derived-recording.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 20[2mms[22m[39m
+ [32m✓[39m tests/integrator-strict-dag.test.ts [2m([22m[2m7 tests[22m[2m)[22m[90m 41[2mms[22m[39m
+ [32m✓[39m tests/execution-driver-produced-artifacts.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 154[2mms[22m[39m
+ [32m✓[39m tests/stage3-cancel-before-started.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 44[2mms[22m[39m
+ [32m✓[39m tests/run-model-presentation.test.ts [2m([22m[2m8 tests[22m[2m)[22m[90m 11[2mms[22m[39m
+ [32m✓[39m tests/run-parallelism-observation.test.ts [2m([22m[2m9 tests[22m[2m)[22m[90m 17[2mms[22m[39m
+ [32m✓[39m tests/local-boundary.test.ts [2m([22m[2m23 tests[22m[2m)[22m[90m 14[2mms[22m[39m
+ [32m✓[39m tests/execution-core-kill-verify.test.ts [2m([22m[2m7 tests[22m[2m | [22m[33m1 skipped[39m[2m)[22m[33m 2567[2mms[22m[39m
+   [33m[2m✓[22m[39m live process registry[2m > [22mkills every process registered for an owner and verifies the kill [33m314[2mms[22m[39m
+   [33m[2m✓[22m[39m live process registry[2m > [22mspawnExecutorProcess registers under processOwnerId and unregisters on close [33m474[2mms[22m[39m
+   [33m[2m✓[22m[39m live process registry[2m > [22mdoes not resolve a timeout while a descendant can still write [33m1432[2mms[22m[39m
+ [32m✓[39m tests/execution-base-builder.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 21[2mms[22m[39m
+ [32m✓[39m tests/graph-critics-v2.test.ts [2m([22m[2m7 tests[22m[2m)[22m[90m 100[2mms[22m[39m
+ [32m✓[39m tests/canonical-artifact-manifests.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 37[2mms[22m[39m
+ [32m✓[39m tests/execution-core-routing.test.ts [2m([22m[2m12 tests[22m[2m)[22m[90m 13[2mms[22m[39m
+ [32m✓[39m tests/decomposer-recursive-nested-interface.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 27[2mms[22m[39m
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ [32m✓[39m tests/run-create-stage-selection.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 8802[2mms[22m[39m
+   [33m[2m✓[22m[39m POST /api/runs canonical StageSelection[2m > [22mpersists independent planning, execution and repair selections [33m1979[2mms[22m[39m
+   [33m[2m✓[22m[39m POST /api/runs canonical StageSelection[2m > [22mdefaults execution and repair to the planning selection [33m1778[2mms[22m[39m
+   [33m[2m✓[22m[39m POST /api/runs canonical StageSelection[2m > [22mrejects effort for a model that does not support it [33m1180[2mms[22m[39m
+   [33m[2m✓[22m[39m POST /api/runs canonical StageSelection[2m > [22maccepts every selectable model for planning [33m1856[2mms[22m[39m
+   [33m[2m✓[22m[39m POST /api/runs canonical StageSelection[2m > [22mrejects unknown models instead of silently remapping them [33m1144[2mms[22m[39m
+   [33m[2m✓[22m[39m POST /api/runs canonical StageSelection[2m > [22mrejects removed V1 create fields [33m863[2mms[22m[39m
+ [32m✓[39m tests/topological-level.test.ts [2m([22m[2m7 tests[22m[2m)[22m[90m 113[2mms[22m[39m
+ [32m✓[39m tests/task-graph-graft.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 22[2mms[22m[39m
+ [32m✓[39m tests/exact-candidate-cache.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 15[2mms[22m[39m
+ [32m✓[39m tests/plan-critic.test.ts [2m([22m[2m9 tests[22m[2m)[22m[90m 19[2mms[22m[39m
+ [32m✓[39m tests/delivery-state-machine.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 25[2mms[22m[39m
+ [32m✓[39m tests/stage3-run-actor-application.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 41[2mms[22m[39m
+ [32m✓[39m tests/validation-recipe.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 13[2mms[22m[39m
+ [32m✓[39m tests/leaf-empty-diff-noop.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 15[2mms[22m[39m
+ [32m✓[39m tests/causal-recovery-scheduling-v2.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 34[2mms[22m[39m
+ [32m✓[39m tests/scheduler-scope-aware-wave.test.ts [2m([22m[2m8 tests[22m[2m)[22m[90m 32[2mms[22m[39m
+ [32m✓[39m tests/granularity-selection-governs.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 47[2mms[22m[39m
+ [32m✓[39m tests/granularity-context-profile.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 16[2mms[22m[39m
+ [32m✓[39m tests/flow-layout.test.ts [2m([22m[2m11 tests[22m[2m)[22m[90m 33[2mms[22m[39m
+[90mstderr[2m | tests/decomposer-codex-recursive.test.ts[2m > [22m[2mCodexRecursiveDecomposer[2m >
+[22m[2msurfaces codex process failures as decomposer LLM errors
+[22m[39m[RecursiveDecomposer] Step "root" attempt 1/3 failed (provider_request): Graph generation failed for node
+"root" (attempt 1/3, provider_request): Codex recursive planning failed with exit code 7: boom. Retrying with stricter
+JSON instructions.
+
+[90mstderr[2m | tests/decomposer-codex-recursive.test.ts[2m > [22m[2mCodexRecursiveDecomposer[2m >
+[22m[2msurfaces codex process failures as decomposer LLM errors
+[22m[39m[RecursiveDecomposer] Step "root" attempt 2/3 failed (provider_request): Graph generation failed for node
+"root" (attempt 2/3, provider_request): Codex recursive planning failed with exit code 7: boom. Retrying with stricter
+JSON instructions.
+
+ [32m✓[39m tests/decomposer-codex-recursive.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 1733[2mms[22m[39m
+   [33m[2m✓[22m[39m CodexRecursiveDecomposer[2m > [22msurfaces codex process failures as decomposer LLM errors [33m972[2mms[22m[39m
+ [32m✓[39m tests/physical-effect-receipt-store.test.ts [2m([22m[2m7 tests[22m[2m)[22m[90m 124[2mms[22m[39m
+ [32m✓[39m tests/effect-input-store.test.ts [2m([22m[2m7 tests[22m[2m)[22m[90m 118[2mms[22m[39m
+ [32m✓[39m tests/scheduler-conflict-constraints.test.ts [2m([22m[2m10 tests[22m[2m)[22m[90m 29[2mms[22m[39m
+ [32m✓[39m tests/test-weakening-detection.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 51[2mms[22m[39m
+ [32m✓[39m tests/execution-core-replan-invalidation.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 25[2mms[22m[39m
+Preparing worktree (new branch 'mh/run-rec/task-a')
+Preparing worktree (new branch 'mh/run-rec/task-c')
+Preparing worktree (new branch 'mh/run-clean/task-a')
+ [32m✓[39m tests/world-reconciler.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 4948[2mms[22m[39m
+   [33m[2m✓[22m[39m reconcileWorld[2m > [22mkeeps valid evidence, invalidates vanished commits, sweeps orphans, removes stale locks [33m2660[2mms[22m[39m
+   [33m[2m✓[22m[39m reconcileWorld[2m > [22mreports the run as not resumable when the base commit vanished [33m707[2mms[22m[39m
+   [33m[2m✓[22m[39m reconcileWorld[2m > [22mis a no-op on a consistent world [33m1578[2mms[22m[39m
+ [32m✓[39m tests/canonical-contract-roundtrip.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 39[2mms[22m[39m
+ [32m✓[39m tests/task-graph-v2.test.ts [2m([22m[2m11 tests[22m[2m)[22m[90m 35[2mms[22m[39m
+ [32m✓[39m tests/run-v2-record-cache-reconciliation.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 1670[2mms[22m[39m
+   [33m[2m✓[22m[39m Stage 3 GET purity[2m > [22mobserves the terminal daemon projection without appending or repairing lifecycle state [33m1668[2mms[22m[39m
+ [32m✓[39m tests/stage3-resume-restart-identity.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 54[2mms[22m[39m
+ [32m✓[39m tests/task-graph-reducer.test.ts [2m([22m[2m11 tests[22m[2m)[22m[90m 17[2mms[22m[39m
+ [32m✓[39m tests/execution-core-claude-code-cli.test.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 3555[2mms[22m[39m
+   [33m[2m✓[22m[39m CliAgentExecutor with the Claude Code profile (injected spawn)[2m > [22mkills the process and marks timeouts [33m3194[2mms[22m[39m
+ [32m✓[39m tests/decomposer-interactive-planning.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 378[2mms[22m[39m
+ [32m✓[39m tests/run-command-envelope.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 38[2mms[22m[39m
+ [32m✓[39m tests/durable-run-engine.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 40[2mms[22m[39m
+ [32m✓[39m tests/decomposer-llm-guards.test.ts [2m([22m[2m10 tests[22m[2m)[22m[90m 16[2mms[22m[39m
+ [32m✓[39m tests/effort-registry.test.ts [2m([22m[2m14 tests[22m[2m)[22m[90m 11[2mms[22m[39m
+ [32m✓[39m tests/effect-protocol.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 34[2mms[22m[39m
+ [32m✓[39m tests/run-v2-migration.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 134[2mms[22m[39m
+ [32m✓[39m tests/agent-env-allowlist.test.ts [2m([22m[2m7 tests[22m[2m)[22m[90m 81[2mms[22m[39m
+ [32m✓[39m tests/decomposer-llm-fallback.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 14[2mms[22m[39m
+ [32m✓[39m tests/canonical-proof-authority.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 30[2mms[22m[39m
+ [32m✓[39m tests/decomposer-llm-normalize.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 11[2mms[22m[39m
+ [32m✓[39m tests/leaf-scope-rejection-reason.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 17[2mms[22m[39m
+ [32m✓[39m tests/execution-core-codex-cli.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 370[2mms[22m[39m
+ [32m✓[39m tests/execution-failure-cause-classification.test.ts [2m([22m[2m9 tests[22m[2m)[22m[90m 232[2mms[22m[39m
+ [32m✓[39m tests/scheduler-readiness-v2.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 97[2mms[22m[39m
+ [32m✓[39m tests/manyhands-dev-renderer.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 98[2mms[22m[39m
+ [32m✓[39m tests/cockpit-layout.test.ts [2m([22m[2m15 tests[22m[2m)[22m[90m 8[2mms[22m[39m
+ [32m✓[39m tests/documentation-current.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 21[2mms[22m[39m
+ [32m✓[39m tests/run-v2-crash-recovery.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 21[2mms[22m[39m
+ [32m✓[39m tests/process-supervisor-contract.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 42[2mms[22m[39m
+ [32m✓[39m tests/execution-core-granularity.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 8[2mms[22m[39m
+ [32m✓[39m tests/stage3-daemon-entrypoint.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 295[2mms[22m[39m
+ [32m✓[39m tests/run-actor-registry.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 8[2mms[22m[39m
+ [32m✓[39m tests/local-decision-readiness.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 28[2mms[22m[39m
+ [32m✓[39m tests/candidate-sandbox-workspace.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 11[2mms[22m[39m
+ [32m✓[39m tests/planning-cut-transcript.test.ts [2m([22m[2m3 tests[22m[2m | [22m[33m1 skipped[39m[2m)[22m[33m 1816[2mms[22m[39m
+   [33m[2m✓[22m[39m the cut contract against a real model[2m > [22mreplays the recorded transcript and reaches a compiled graph [33m1778[2mms[22m[39m
+ [32m✓[39m tests/task-graph-v1-compatibility.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 17[2mms[22m[39m
+ [32m✓[39m tests/run-engine-event-journal.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 195[2mms[22m[39m
+ [32m✓[39m tests/canonical-resource-claims.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 38[2mms[22m[39m
+ [32m✓[39m tests/execution-core-dependency-installer.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 51[2mms[22m[39m
+ [32m✓[39m tests/granularity-regression-bank.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 405[2mms[22m[39m
+ [32m✓[39m tests/execution-core-batch-scheduler.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 105[2mms[22m[39m
+ [32m✓[39m tests/run-coordinator-execution-facts.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 16[2mms[22m[39m
+ [32m✓[39m tests/grounding-agent-dirty-workspace.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 15[2mms[22m[39m
+ [32m✓[39m tests/decomposer-step-schema-safety.test.ts [2m([22m[2m8 tests[22m[2m)[22m[90m 11[2mms[22m[39m
+ [32m✓[39m tests/contracts-v1-compatibility.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 36[2mms[22m[39m
+ [32m✓[39m tests/scope-path-traversal.test.ts [2m([22m[2m12 tests[22m[2m)[22m[90m 12[2mms[22m[39m
+ [32m✓[39m tests/decomposer-recursive-prompt.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 7[2mms[22m[39m
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ [32m✓[39m tests/ensure-runnable-repo.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 5460[2mms[22m[39m
+   [33m[2m✓[22m[39m ensureRunnableRepo[2m > [22minitializes an empty folder on main with an initial commit [33m1106[2mms[22m[39m
+   [33m[2m✓[22m[39m ensureRunnableRepo[2m > [22mcreates the initial commit for a git repo with unborn HEAD [33m1480[2mms[22m[39m
+   [33m[2m✓[22m[39m ensureRunnableRepo[2m > [22mdoes not touch a repo that already has commits [33m1618[2mms[22m[39m
+   [33m[2m✓[22m[39m ensureRunnableRepo[2m > [22mdoes not overwrite existing README.md or .gitignore when committing an unborn repo [33m1255[2mms[22m[39m
+ [32m✓[39m tests/workspace-settings.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 2358[2mms[22m[39m
+   [33m[2m✓[22m[39m repository persistence of hints[2m > [22mpersists hints on create and surfaces them on read [33m1187[2mms[22m[39m
+   [33m[2m✓[22m[39m repository persistence of hints[2m > [22mpreserves hints on update when not overridden [33m1153[2mms[22m[39m
+ [32m✓[39m tests/provider-credentials.test.ts [2m([22m[2m9 tests[22m[2m)[22m[90m 8[2mms[22m[39m
+ [32m✓[39m tests/windows-ipc-acl-physical.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 4114[2mms[22m[39m
+   [33m[2m✓[22m[39m Windows IPC capability ACL protection[2m > [22mreplaces a permissive directory DACL and detects later permission drift [33m1753[2mms[22m[39m
+   [33m[2m✓[22m[39m Windows IPC capability ACL protection[2m > [22mreplaces a permissive file DACL and detects later permission drift [33m1361[2mms[22m[39m
+ [32m✓[39m tests/run-coordinator-planning-candidates.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 22[2mms[22m[39m
+ [32m✓[39m tests/failure-taxonomy-totality.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 12[2mms[22m[39m
+ [32m✓[39m tests/attempt-adoption.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 95[2mms[22m[39m
+ [32m✓[39m tests/decomposer.test.ts [2m([22m[2m7 tests[22m[2m)[22m[90m 87[2mms[22m[39m
+ [32m✓[39m tests/effect-input-contract.test.ts [2m([22m[2m10 tests[22m[2m)[22m[90m 35[2mms[22m[39m
+ [32m✓[39m tests/execution-core-scope.test.ts [2m([22m[2m7 tests[22m[2m)[22m[90m 12[2mms[22m[39m
+ [32m✓[39m tests/canonical-evidence-freshness.test.ts [2m([22m[2m8 tests[22m[2m)[22m[90m 30[2mms[22m[39m
+ [32m✓[39m tests/execution-core-executor-failure.test.ts [2m([22m[2m12 tests[22m[2m)[22m[90m 7[2mms[22m[39m
+ [32m✓[39m tests/execution-core-graph-guards.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 18[2mms[22m[39m
+ [32m✓[39m tests/effort-consumers.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 101[2mms[22m[39m
+ [32m✓[39m tests/run-record-schema.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 14[2mms[22m[39m
+ [32m✓[39m tests/execution-core-syntax-check.test.ts [2m([22m[2m8 tests[22m[2m)[22m[90m 113[2mms[22m[39m
+ [32m✓[39m tests/typography-scale.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 48[2mms[22m[39m
+ [32m✓[39m tests/amendment-fingerprint-invalidation.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 27[2mms[22m[39m
+ [32m✓[39m tests/run-target-context.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 6148[2mms[22m[39m
+   [33m[2m✓[22m[39m immutable V2 RunTargetContext[2m > [22mcaptures real path, physical repository identity, branch, base and fingerprint [33m1390[2mms[22m[39m
+   [33m[2m✓[22m[39m immutable V2 RunTargetContext[2m > [22mresolves only the immutable captured target [33m1632[2mms[22m[39m
+   [33m[2m✓[22m[39m immutable V2 RunTargetContext[2m > [22mrejects a different repository and one recreated at the captured path [33m3122[2mms[22m[39m
+ [32m✓[39m tests/event-schema-upcasting.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 102[2mms[22m[39m
+ [32m✓[39m tests/run-store-lock-ownership-fencing.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 69[2mms[22m[39m
+ [32m✓[39m tests/model-registry.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 12[2mms[22m[39m
+ [32m✓[39m tests/run-store-fencing.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 383[2mms[22m[39m
+ [32m✓[39m tests/planning-module-cli-output.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 34[2mms[22m[39m
+ [32m✓[39m tests/integration-operation-journal.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 125[2mms[22m[39m
+ [32m✓[39m tests/run-model-v2-fixture.test.ts [2m([22m[2m5 tests[22m[2m)[22m[33m 336[2mms[22m[39m
+   [33m[2m✓[22m[39m canonical V2 presentation fixture[2m > [22mfolds every manual playback step without inventing a second state model [33m307[2mms[22m[39m
+ [32m✓[39m tests/decision-expiration.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 14[2mms[22m[39m
+ [32m✓[39m tests/contract-relations.test.ts [2m([22m[2m10 tests[22m[2m)[22m[90m 13[2mms[22m[39m
+ [32m✓[39m tests/attempt-usage-journaled.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 13[2mms[22m[39m
+ [32m✓[39m tests/failure-recovery-policy.test.ts [2m([22m[2m15 tests[22m[2m)[22m[90m 14[2mms[22m[39m
+ [32m✓[39m tests/run-granularity-strategy-selected.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 13[2mms[22m[39m
+ [32m✓[39m tests/execution-core-mock-agent.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 27[2mms[22m[39m
+ [32m✓[39m tests/codex-usage-parsing.test.ts [2m([22m[2m8 tests[22m[2m)[22m[90m 7[2mms[22m[39m
+ [32m✓[39m tests/validation-without-commands.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 10[2mms[22m[39m
+ [32m✓[39m tests/sidebar-reveal.test.ts [2m([22m[2m9 tests[22m[2m)[22m[90m 8[2mms[22m[39m
+ [32m✓[39m tests/run-cockpit-chrome.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 10[2mms[22m[39m
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+ [32m✓[39m tests/local-fs.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 2224[2mms[22m[39m
+   [33m[2m✓[22m[39m local filesystem workspace helpers[2m > [22mdetects and summarizes a local git repository [33m1183[2mms[22m[39m
+   [33m[2m✓[22m[39m local filesystem workspace helpers[2m > [22mdetects git repositories without commits [33m944[2mms[22m[39m
+ [32m✓[39m tests/execution-core-status-channel.test.ts [2m([22m[2m7 tests[22m[2m)[22m[90m 13[2mms[22m[39m
+ [32m✓[39m tests/execution-core-context-packer.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 41[2mms[22m[39m
+ [32m✓[39m tests/manyhands-dev-poller.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 33[2mms[22m[39m
+ [32m✓[39m tests/workspace-run-reference-safety.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 266[2mms[22m[39m
+ [32m✓[39m tests/decomposer-env-sanitization.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 1607[2mms[22m[39m
+   [33m[2m✓[22m[39m B-009 decomposer env sanitization[2m > [22mClaudeCodeRecursiveDecomposer uses agentEnv when provided [33m1423[2mms[22m[39m
+ [32m✓[39m tests/security-env-audit.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 225[2mms[22m[39m
+ [32m✓[39m tests/input-fingerprint.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 26[2mms[22m[39m
+ [32m✓[39m tests/contracts-interface-contract.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 13[2mms[22m[39m
+ [32m✓[39m tests/atomic-write-durability.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 74[2mms[22m[39m
+ [32m✓[39m tests/canonical-dependency-boundaries.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 13[2mms[22m[39m
+ [32m✓[39m tests/runs-list-performance.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 14[2mms[22m[39m
+ [32m✓[39m tests/run-coordinator-execution.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 16[2mms[22m[39m
+ [32m✓[39m tests/integration-repair-policy.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 14[2mms[22m[39m
+ [32m✓[39m tests/capability-service.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 8[2mms[22m[39m
+ [32m✓[39m tests/run-canvas-no-auto-fit.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 45[2mms[22m[39m
+ [32m✓[39m tests/canonical-compatibility-readers.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 35[2mms[22m[39m
+ [32m✓[39m tests/repository-index.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 65[2mms[22m[39m
+ [32m✓[39m tests/cockpit-granularity-explanation.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 7[2mms[22m[39m
+ [32m✓[39m tests/granularity-mapping.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 7[2mms[22m[39m
+ [32m✓[39m tests/run-store-snapshot-rebuild.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 175[2mms[22m[39m
+ [32m✓[39m tests/execution-core-executor-registry.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 446[2mms[22m[39m
+   [33m[2m✓[22m[39m execution-core executor registry[2m > [22mconstructs enabled adapters and rejects disabled executors [33m441[2mms[22m[39m
+ [32m✓[39m tests/workspace-schema.test.ts [2m([22m[2m8 tests[22m[2m)[22m[90m 10[2mms[22m[39m
+ [32m✓[39m tests/token-check.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 188[2mms[22m[39m
+ [32m✓[39m tests/command-detection.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 43[2mms[22m[39m
+ [32m✓[39m tests/failure-retry-budget.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 9[2mms[22m[39m
+ [32m✓[39m tests/final-candidate.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 9[2mms[22m[39m
+ [32m✓[39m tests/run-model-tree-layout.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 7[2mms[22m[39m
+ [32m✓[39m tests/graph-amendment-v2.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 11[2mms[22m[39m
+ [32m✓[39m tests/manyhands-dev-command.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 40[2mms[22m[39m
+ [32m✓[39m tests/dependency-validation.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 9[2mms[22m[39m
+ [32m✓[39m tests/execution-core-pre-merge.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 9[2mms[22m[39m
+ [32m✓[39m tests/integration-contract-validation.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 9[2mms[22m[39m
+ [32m✓[39m tests/delivery-target-cleanliness.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 5[2mms[22m[39m
+ [32m✓[39m tests/git-safe-directory-inventory.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 67[2mms[22m[39m
+ [32m✓[39m tests/execution-core-executor-factory.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 538[2mms[22m[39m
+   [33m[2m✓[22m[39m DefaultAgentExecutorFactory (profile-driven)[2m > [22mcreates executors for every enabled CLI without a hardcoded switch [33m359[2mms[22m[39m
+ [32m✓[39m tests/fixture-playback-navigation.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 6[2mms[22m[39m
+ [32m✓[39m tests/stage-selection-ui.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 5[2mms[22m[39m
+ [32m✓[39m tests/run-coordinator-boundaries.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 18[2mms[22m[39m
+ [32m✓[39m tests/granularity-planning-brief.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 11[2mms[22m[39m
+ [32m✓[39m tests/worktree-dependency-isolation.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 22[2mms[22m[39m
+ [32m✓[39m tests/workspace-migration-ui.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 8[2mms[22m[39m
+ [32m✓[39m tests/status-pill-language.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 6[2mms[22m[39m
+ [32m✓[39m tests/workspace-slug.test.ts [2m([22m[2m8 tests[22m[2m)[22m[90m 7[2mms[22m[39m
+ [32m✓[39m tests/artifact-registry.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 34[2mms[22m[39m
+ [32m✓[39m tests/ui-copy-encoding.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 62[2mms[22m[39m
+ [32m✓[39m tests/stage-selection-resolver.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 8[2mms[22m[39m
+ [32m✓[39m tests/run-loading-skeleton.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 4[2mms[22m[39m
+ [32m✓[39m tests/execution-core-cli-binary.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 4[2mms[22m[39m
+ [32m✓[39m tests/execution-core-leaf-instructions.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 4[2mms[22m[39m
+ [32m✓[39m tests/stage0-native-process.windows.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 1916[2mms[22m[39m
+   [33m[2m✓[22m[39m Stage 0 PowerShell native runner[2m > [22mcaptures a real native exit and fails closed for a missing executable [33m1914[2mms[22m[39m
+ [32m✓[39m tests/run-model-sse-adapter.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 6[2mms[22m[39m
+ [32m✓[39m tests/status-presentation.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 7[2mms[22m[39m
+ [32m✓[39m tests/execution-core-availability.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 4[2mms[22m[39m
+ [32m✓[39m tests/proto-index-page.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 3[2mms[22m[39m
+ [32m✓[39m tests/run-acceptance-criteria.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 6[2mms[22m[39m
+ [32m✓[39m tests/runs-list-workspace-reads.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 10[2mms[22m[39m
+ [32m✓[39m tests/conflict-constraint-evidence.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 5[2mms[22m[39m
+ [32m✓[39m tests/run-v2-cancellation.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 8[2mms[22m[39m
+ [32m✓[39m tests/bounded-output.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 4[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m243 passed[39m[22m[90m (243)[39m
+[2m      Tests [22m [1m[32m1652 passed[39m[22m[2m | [22m[33m4 skipped[39m[90m (1656)[39m
+[2m   Start at [22m 07:22:42
+[2m   Duration [22m 525.29s[2m (transform 4.91s, setup 0ms, collect 167.30s, tests 233.09s, environment 73ms, prepare 56.28s)[22m

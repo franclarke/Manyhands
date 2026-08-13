@@ -63,8 +63,9 @@ match the code.
 |---|---|---|---|
 | Stage 0 / G0 | `pass` | [`../audits/stage-0/`](../audits/stage-0/); accepted candidate `c7819799d22e920359050d4491bbca57e4a3cf8f`, tree `cb68af5cb33bbbae4db295dccc094eb517076b57`, complete 18-receipt qualification and bounded independent GO review | Stage 1 is authorized. |
 | Stage 1 / G1 | `pass` | [`../audits/stage-1/`](../audits/stage-1/); accepted candidate `393603debcc202761c3aae5e4f6d233ac2701e3a`, tree `5acb5ed58028a23a7747f2a4fb03410496fe6bd9`, focused 18-file/122-test suite, full 239-file/1,523-test suite and bounded independent GO review | Stage 2 is authorized. |
-| Stage 2 / GD0+GD1 | `pass` | [`../audits/stage-2/`](../audits/stage-2/); accepted candidate `1c9c742687ec98c54b8d9330a0fe483c6d9d2ed3`, tree `8e21667c03d27b5f588dd4811ff2e0ab159ae2c3`, focused 23-file/228-test suite, full 259-file/1,735-test suite and bounded independent GO review | Stage 3 is eligible but remains `not_started`; resume from the [`Stage 2 -> Stage 3 handoff`](../handoffs/2026-08-12-stage-2-to-stage-3.md). |
-| Stages 3–11 | `not_started` | none | Must execute in normative order. |
+| Stage 2 / GD0+GD1 | `pass` | [`../audits/stage-2/`](../audits/stage-2/); accepted candidate `1c9c742687ec98c54b8d9330a0fe483c6d9d2ed3`, tree `8e21667c03d27b5f588dd4811ff2e0ab159ae2c3`, focused 23-file/228-test suite, full 259-file/1,735-test suite and bounded independent GO review | Stage 3 resumed from the historical [`Stage 2 -> Stage 3 handoff`](../handoffs/2026-08-12-stage-2-to-stage-3.md) and has now passed. |
+| Stage 3 / GR | `pass` | [`../audits/stage-3/`](../audits/stage-3/); accepted code candidate `4e495abd0805c62f7641dc73c19b82ffc7eedc38`, tree `84a59b1d9db2ee978d87b6a079dafee281e38a64`, focused 10-file/38-test suite, GD0+GD1 20-file/198-test matrix, full 243-file/1,652-test suite, exact productive browser/restart/cancellation evidence and bounded independent GO review | Stage 4 is eligible but remains `not_started`; this execution stops at GR. |
+| Stages 4–11 | `not_started` | none | Must execute in normative order; Stage 4 was not initiated by the Stage 3 objective. |
 
 ### 0.2 Required reading and execution protocol
 

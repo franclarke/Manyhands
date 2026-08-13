@@ -1,0 +1,6 @@
+COMMAND: Node22 eslint apps/daemon/src packages/run-engine/src tests/stage3-*.test.ts tests/daemon-*.test.ts tests/run-engine-*.test.ts --max-warnings=0
+RESULT: PASS (exit 0)
+COMMAND: Node22 --check scripts/manyhands-dev.mjs
+RESULT: PASS (exit 0)
+COMMAND: apps/web Node22 eslint src --max-warnings=0
+RESULT: PASS (exit 0)

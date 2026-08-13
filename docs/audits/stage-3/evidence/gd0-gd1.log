@@ -1,0 +1,39 @@
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mC:/Users/franc/Documents/Proyectos/Manyhands[39m
+
+ [32m✓[39m tests/run-engine-actor.test.ts [2m([22m[2m14 tests[22m[2m)[22m[90m 106[2mms[22m[39m
+ [32m✓[39m tests/run-engine-physical-effect-adapters.test.ts [2m([22m[2m19 tests[22m[2m)[22m[90m 25[2mms[22m[39m
+ [32m✓[39m tests/daemon-local-ipc.test.ts [2m([22m[2m15 tests[22m[2m)[22m[33m 2382[2mms[22m[39m
+   [33m[2m✓[22m[39m authenticated local daemon IPC[2m > [22mserves Windows production IPC through a current-user plus SYSTEM pipe DACL [33m545[2mms[22m[39m
+ [32m✓[39m tests/run-engine-effect-dispatcher.test.ts [2m([22m[2m12 tests[22m[2m)[22m[90m 72[2mms[22m[39m
+ [32m✓[39m tests/daemon-process-effect-adapters.test.ts [2m([22m[2m12 tests[22m[2m)[22m[90m 27[2mms[22m[39m
+ [32m✓[39m tests/run-engine-effect-crash-matrix.test.ts [2m([22m[2m54 tests[22m[2m)[22m[33m 331[2mms[22m[39m
+ [32m✓[39m tests/daemon-kernel.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 4574[2mms[22m[39m
+   [33m[2m✓[22m[39m durable daemon composition root[2m > [22mreconciles journals with pending effects before startup succeeds [33m813[2mms[22m[39m
+   [33m[2m✓[22m[39m durable daemon composition root[2m > [22msurvives client and daemon restarts without inventing lifecycle events [33m827[2mms[22m[39m
+   [33m[2m✓[22m[39m durable daemon composition root[2m > [22mcomposes Windows production IPC with physical capability and named-pipe ACLs [33m870[2mms[22m[39m
+ [32m✓[39m tests/daemon-installation-lease.test.ts [2m([22m[2m11 tests[22m[2m)[22m[33m 2524[2mms[22m[39m
+   [33m[2m✓[22m[39m installation ownership lease[2m > [22melects exactly one owner when contenders start concurrently [33m1013[2mms[22m[39m
+   [33m[2m✓[22m[39m installation ownership lease[2m > [22melects one successor when contenders concurrently reclaim the same dead owner [33m420[2mms[22m[39m
+ [32m✓[39m tests/process-supervisor-physical.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 8580[2mms[22m[39m
+   [33m[2m✓[22m[39m ProcessSupervisor physical Windows custody[2m > [22mcloses Job Object ownership and prevents both child and grandchild late writes [33m3201[2mms[22m[39m
+   [33m[2m✓[22m[39m ProcessSupervisor physical Windows custody[2m > [22mfails closed when Job Objects are absent but the durable identities are still live [33m970[2mms[22m[39m
+   [33m[2m✓[22m[39m ProcessSupervisor physical Windows custody[2m > [22mrecovers a started-only effect after a custodian crash without repeating or blindly killing it [33m2272[2mms[22m[39m
+ [32m✓[39m tests/physical-effect-receipt-store.test.ts [2m([22m[2m7 tests[22m[2m)[22m[90m 122[2mms[22m[39m
+ [32m✓[39m tests/effect-input-store.test.ts [2m([22m[2m7 tests[22m[2m)[22m[90m 157[2mms[22m[39m
+ [32m✓[39m tests/run-command-envelope.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 42[2mms[22m[39m
+ [32m✓[39m tests/durable-run-engine.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 38[2mms[22m[39m
+ [32m✓[39m tests/effect-protocol.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 34[2mms[22m[39m
+ [32m✓[39m tests/process-supervisor-contract.test.ts [2m([22m[2m4 tests[22m[2m)[22m[90m 47[2mms[22m[39m
+ [32m✓[39m tests/run-actor-registry.test.ts [2m([22m[2m3 tests[22m[2m)[22m[90m 8[2mms[22m[39m
+ [32m✓[39m tests/run-engine-event-journal.test.ts [2m([22m[2m2 tests[22m[2m)[22m[90m 209[2mms[22m[39m
+ [32m✓[39m tests/windows-ipc-acl-physical.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 3681[2mms[22m[39m
+   [33m[2m✓[22m[39m Windows IPC capability ACL protection[2m > [22mreplaces a permissive directory DACL and detects later permission drift [33m1446[2mms[22m[39m
+   [33m[2m✓[22m[39m Windows IPC capability ACL protection[2m > [22mreplaces a permissive file DACL and detects later permission drift [33m1340[2mms[22m[39m
+ [32m✓[39m tests/effect-input-contract.test.ts [2m([22m[2m10 tests[22m[2m)[22m[90m 36[2mms[22m[39m
+ [32m✓[39m tests/security-env-audit.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 233[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m20 passed[39m[22m[90m (20)[39m
+[2m      Tests [22m [1m[32m198 passed[39m[22m[90m (198)[39m
+[2m   Start at [22m 07:21:50
+[2m   Duration [22m 45.09s[2m (transform 1.88s, setup 0ms, collect 11.41s, tests 23.23s, environment 6ms, prepare 4.75s)[22m

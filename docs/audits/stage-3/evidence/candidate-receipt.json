@@ -1,0 +1,81 @@
+{
+    "candidateSha":  "4e495abd0805c62f7641dc73c19b82ffc7eedc38",
+    "candidateTree":  "84a59b1d9db2ee978d87b6a079dafee281e38a64",
+    "branch":  "codex/correctness-first-full-implementation",
+    "sourceBaseCommitInJournal":  "4e495abd0805c62f7641dc73c19b82ffc7eedc38",
+    "runtime":  {
+                    "node":  "v22.22.0",
+                    "vitest":  "2.1.9",
+                    "typescript":  "5.9.3",
+                    "eslint":  "8.57.1",
+                    "tsup":  "8.5.1",
+                    "next":  "15.5.7",
+                    "pnpm":  "11.21.0 (Node 22.22.0 corepack)",
+                    "cargo":  "cargo 1.93.1 (083ac5135 2025-12-15)",
+                    "rustc":  "rustc 1.93.1 (01f6ddf75 2026-02-11)"
+                },
+    "nativeHelpers":  {
+                          "jobRunnerSha256":  "9A0D8E3D453FC660D8F51F2B21F8D28CCCEBB0A8B5DA9E7A30ACF7150EB8FB6D",
+                          "ipcAclSha256":  "A7610A65B86190880A2A358AB272F9D755D738EF14A0809BE65EE6D7F4A512C5"
+                      },
+    "runId":  "run:cf435a9db8dd08f1bf1726c5dbffec4ba203c59c0e5d1e41cee92d6734c96716",
+    "initialDaemonEpoch":  "51f881fd-7f2c-4898-8f84-c8d7b226a857",
+    "recoveredDaemonEpoch":  "22889db8-e3fb-40de-b793-b3a3547b5a16",
+    "concurrentCreateStatuses":  [
+                                     201,
+                                     201
+                                 ],
+    "browserClosedRunContinued":  true,
+    "nextRestart":  {
+                        "oldPid":  28588,
+                        "newPid":  42196,
+                        "lifecycleAfter":  "running"
+                    },
+    "queryPurity":  {
+                        "requests":  40,
+                        "hashBefore":  "89B892D6251A0FB1DAC7D4F5221266DF015C85F5D1F33DA7CC5DCD2F5C07266B",
+                        "hashAfter":  "89B892D6251A0FB1DAC7D4F5221266DF015C85F5D1F33DA7CC5DCD2F5C07266B",
+                        "sizeBefore":  11692,
+                        "sizeAfter":  11692
+                    },
+    "modelCallIntentCount":  1,
+    "processSpawnIntentCountAfterRecovery":  2,
+    "sseResume":  {
+                      "after":  9,
+                      "first":  "id: 10",
+                      "last":  "id: 17"
+                  },
+    "terminal":  {
+                     "sequence":  29,
+                     "lifecycle":  "interrupted",
+                     "cancelRequestedCount":  1,
+                     "operationInterruptedCount":  1,
+                     "childAlive":  false,
+                     "grandchildAlive":  false,
+                     "journalHash":  "55DF679B3BFED0B22DF4A9145A1579F0C6CFB1CE5F10A51D8B5B427A7C477625",
+                     "effectReceiptCount":  7
+                 },
+    "verification":  {
+                         "stage3":  "10 files / 38 passed",
+                         "gd0gd1":  "20 files / 198 passed",
+                         "fullSuite":  "243 files / 1652 passed / 4 skipped / retry=0"
+                     },
+    "browserEvidence":  [
+                            {
+                                "file":  "browser-approval.png",
+                                "sha256":  "29A0B0134F63BBB1014313704B7F9F89AA5EAEC9CDEE00FA8E1D63E36B9D5907"
+                            },
+                            {
+                                "file":  "browser-running.png",
+                                "sha256":  "E6C2094FCC1975B04206576E0B11D4AA41AFFBE1609E2BB1234F64BEBC73BA3F"
+                            },
+                            {
+                                "file":  "browser-recovered.png",
+                                "sha256":  "722428C982B1EDB7D97956A72168F22327BDB6F4CAF59F782675FE42228683A2"
+                            },
+                            {
+                                "file":  "browser-cancelled.png",
+                                "sha256":  "D7596E1818D21FF2CF5F42C3291196ADC70212E54A7D724B3E6A0CFD5EECB1A8"
+                            }
+                        ]
+}

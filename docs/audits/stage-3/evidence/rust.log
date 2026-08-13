@@ -1,0 +1,50 @@
+cargo 1.93.1 (083ac5135 2025-12-15)
+cargo.exe :     Checking manyhands-windows-job-runner v0.1.0
+(C:\Users\franc\Documents\Proyectos\Manyhands\native\windows-job-runner)
+En línea: 2 Carácter: 209
++ ... arget-job'; & $cargo check --manifest-path native/windows-job-runner/ ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Checking ma...ows-job-runner):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.45s
+cargo.exe :    Compiling manyhands-windows-job-runner v0.1.0
+(C:\Users\franc\Documents\Proyectos\Manyhands\native\windows-job-runner)
+En línea: 2 Carácter: 374
++ ... TEXITCODE}; & $cargo test --manifest-path native/windows-job-runner/C ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (   Compiling ma...ows-job-runner):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.64s
+     Running unittests src\main.rs
+(C:\mh-stage3-gr-4e495abd\cargo-target-job\debug\deps\manyhands_windows_job_runner-d5e10a2f78832614.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+cargo.exe :     Checking manyhands-windows-ipc-acl v0.1.0
+(C:\Users\franc\Documents\Proyectos\Manyhands\native\windows-ipc-acl)
+En línea: 2 Carácter: 605
++ ... arget-acl'; & $cargo check --manifest-path native/windows-ipc-acl/Car ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Checking ma...indows-ipc-acl):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.49s
+cargo.exe :    Compiling manyhands-windows-ipc-acl v0.1.0
+(C:\Users\franc\Documents\Proyectos\Manyhands\native\windows-ipc-acl)
+En línea: 2 Carácter: 767
++ ... TEXITCODE}; & $cargo test --manifest-path native/windows-ipc-acl/Carg ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (   Compiling ma...indows-ipc-acl):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.68s
+     Running unittests src\main.rs
+(C:\mh-stage3-gr-4e495abd\cargo-target-acl\debug\deps\manyhands_windows_ipc_acl-3a889c2aa91038de.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

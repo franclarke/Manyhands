@@ -1,0 +1,5 @@
+Error: Cannot fold a run without run.created.
+    at foldRun (C:\Users\franc\Documents\Proyectos\Manyhands\packages\run-coordinator\dist\index.cjs:1012:37)
+    at DurableRunEngine.query (C:\Users\franc\Documents\Proyectos\Manyhands\packages\run-engine\dist\index.cjs:62:47)
+    at async Object.query (C:\Users\franc\Documents\Proyectos\Manyhands\apps\daemon\dist\cli.cjs:2281:30)
+    at async processFrame (C:\Users\franc\Documents\Proyectos\Manyhands\apps\daemon\dist\cli.cjs:2042:69)

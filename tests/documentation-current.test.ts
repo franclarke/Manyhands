@@ -58,11 +58,12 @@ describe("B-033 current product documentation", () => {
     expect(cells.match(/\| `not_run` \|/gu)).toHaveLength(20);
   });
 
-  it("records the attributable Stage 2 closure and leaves Stage 3 not started", async () => {
-    const [docsReadme, plan, stage2, handoff] = await Promise.all([
+  it("records the attributable Stage 3 closure and leaves Stage 4 not started", async () => {
+    const [docsReadme, plan, stage2, stage3, handoff] = await Promise.all([
       readFile(path.join(root, "docs", "README.md"), "utf8"),
       readFile(path.join(root, "docs", "plans", "2026-08-12-correctness-first-system-redesign.md"), "utf8"),
       readFile(path.join(root, "docs", "audits", "stage-2", "README.md"), "utf8"),
+      readFile(path.join(root, "docs", "audits", "stage-3", "README.md"), "utf8"),
       readFile(path.join(root, "docs", "handoffs", "2026-08-12-stage-2-to-stage-3.md"), "utf8")
     ]);
 
@@ -74,6 +75,12 @@ describe("B-033 current product documentation", () => {
     expect(stage2).toContain("1c9c742687ec98c54b8d9330a0fe483c6d9d2ed3");
     expect(stage2).toContain("8e21667c03d27b5f588dd4811ff2e0ab159ae2c3");
     expect(handoff).toContain("**Stage 3 / GR:** `not_started`");
+    expect(docsReadme).toContain("[`audits/stage-3/`](audits/stage-3/)");
+    expect(plan).toContain("| Stage 3 / GR | `pass` |");
+    expect(plan).toContain("| Stages 4–11 | `not_started` |");
+    expect(stage3).toContain("**Status:** `pass`");
+    expect(stage3).toContain("4e495abd0805c62f7641dc73c19b82ffc7eedc38");
+    expect(stage3).toContain("84a59b1d9db2ee978d87b6a079dafee281e38a64");
   });
 });
 

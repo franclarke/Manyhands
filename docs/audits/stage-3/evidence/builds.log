@@ -1,0 +1,96 @@
+[34mCLI[39m Building entry: src/index.ts
+[34mCLI[39m Using tsconfig: tsconfig.json
+[34mCLI[39m tsup v8.5.1
+[34mCLI[39m Target: es2022
+[34mCLI[39m Cleaning output folder
+[34mESM[39m Build start
+[34mCJS[39m Build start
+[32mCJS[39m [1mdist\index.cjs [22m[32m56.75 KB[39m
+[32mCJS[39m ⚡️ Build success in 185ms
+[32mESM[39m [1mdist\index.js [22m[32m54.85 KB[39m
+[32mESM[39m ⚡️ Build success in 187ms
+[34mDTS[39m Build start
+[32mDTS[39m ⚡️ Build success in 8383ms
+[32mDTS[39m [1mdist\index.d.ts  [22m[32m16.16 KB[39m
+[32mDTS[39m [1mdist\index.d.cts [22m[32m16.16 KB[39m
+[34mCLI[39m Building entry: src/index.ts
+[34mCLI[39m Using tsconfig: tsconfig.json
+[34mCLI[39m tsup v8.5.1
+[34mCLI[39m Target: es2022
+[34mCLI[39m Cleaning output folder
+[34mESM[39m Build start
+[34mCJS[39m Build start
+[32mESM[39m [1mdist\index.js [22m[32m128.46 KB[39m
+[32mESM[39m ⚡️ Build success in 203ms
+[32mCJS[39m [1mdist\index.cjs [22m[32m135.19 KB[39m
+[32mCJS[39m ⚡️ Build success in 204ms
+[34mDTS[39m Build start
+[32mDTS[39m ⚡️ Build success in 20834ms
+[32mDTS[39m [1mdist\index.d.ts  [22m[32m16.80 KB[39m
+[32mDTS[39m [1mdist\index.d.cts [22m[32m16.80 KB[39m
+[34mCLI[39m Building entry: src/cli.ts
+[34mCLI[39m Using tsconfig: tsconfig.json
+[34mCLI[39m tsup v8.5.1
+[34mCLI[39m Target: es2022
+[34mCJS[39m Build start
+[32mCJS[39m [1mdist\cli.cjs [22m[32m135.86 KB[39m
+[32mCJS[39m ⚡️ Build success in 182ms
+[34mCLI[39m Building entry: src/deterministic-fake-worker.ts
+[34mCLI[39m Using tsconfig: tsconfig.json
+[34mCLI[39m tsup v8.5.1
+[34mCLI[39m Target: es2022
+[34mESM[39m Build start
+[32mESM[39m [1mdist\deterministic-fake-worker.js [22m[32m617.00 B[39m
+[32mESM[39m ⚡️ Build success in 186ms
+[34mCLI[39m Building entry: src/transitional-unsafe-worker.ts
+[34mCLI[39m Using tsconfig: tsconfig.json
+[34mCLI[39m tsup v8.5.1
+[34mCLI[39m Target: es2022
+[34mESM[39m Build start
+[32mESM[39m [1mdist\transitional-unsafe-worker.js [22m[32m26.67 KB[39m
+[32mESM[39m ⚡️ Build success in 172ms
+   ▲ Next.js 15.5.7
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 11.7s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/3) ...
+ ✓ Generating static pages (3/3)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                               Size  First Load JS
+┌ ƒ /                                                  14.2 kB         130 kB
+├ ƒ /_not-found                                          171 B         102 kB
+├ ƒ /api/capabilities                                    171 B         102 kB
+├ ƒ /api/health                                          171 B         102 kB
+├ ƒ /api/local-fs/pick-folder                            171 B         102 kB
+├ ƒ /api/providers/readiness                             171 B         102 kB
+├ ƒ /api/runs                                            171 B         102 kB
+├ ƒ /api/runs/[id]                                       171 B         102 kB
+├ ƒ /api/runs/[id]/cancel                                171 B         102 kB
+├ ƒ /api/runs/[id]/decisions/[decisionId]                171 B         102 kB
+├ ƒ /api/runs/[id]/deliver                               171 B         102 kB
+├ ƒ /api/runs/[id]/pause                                 171 B         102 kB
+├ ƒ /api/runs/[id]/restart                               171 B         102 kB
+├ ƒ /api/runs/[id]/resume                                171 B         102 kB
+├ ƒ /api/runs/[id]/run                                   171 B         102 kB
+├ ƒ /api/runs/[id]/run-events                            171 B         102 kB
+├ ƒ /api/workspaces                                      171 B         102 kB
+├ ƒ /api/workspaces/[id]                                 171 B         102 kB
+├ ƒ /api/workspaces/migration-conflicts/[duplicateId]    171 B         102 kB
+├ ○ /icon.svg                                              0 B            0 B
+├ ƒ /runs/[runId]                                        174 B         340 kB
+├ ƒ /runs/proto                                          171 B         102 kB
+└ ƒ /runs/proto/[fixture]                              2.52 kB         347 kB
++ First Load JS shared by all                           102 kB
+  ├ chunks/339-e8d7a94e9db10cfc.js                     45.7 kB
+  ├ chunks/6ffc9581-587212ed3c065a27.js                54.2 kB
+  └ other shared chunks (total)                           2 kB
+
+
+ƒ Middleware                                           34.8 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand

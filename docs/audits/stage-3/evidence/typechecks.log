@@ -1,0 +1,17 @@
+Node: v22.22.0
+Root: C:\Users\franc\Documents\Proyectos\Manyhands
+TYPECHECK conflict-risk
+TYPECHECK contracts
+TYPECHECK decomposer
+TYPECHECK execution-core
+TYPECHECK orchestrator-graph
+TYPECHECK repository-index
+TYPECHECK run-coordinator
+TYPECHECK run-engine
+TYPECHECK run-store
+TYPECHECK scheduler
+TYPECHECK shared
+TYPECHECK task-graph
+TYPECHECK trace-store
+TYPECHECK apps/daemon/tsconfig.json
+TYPECHECK apps/web/tsconfig.json

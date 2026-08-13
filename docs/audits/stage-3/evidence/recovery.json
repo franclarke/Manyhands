@@ -1,0 +1,14 @@
+{
+    "recoveredDaemonPid":  33160,
+    "recoveredDaemonEpoch":  "22889db8-e3fb-40de-b793-b3a3547b5a16",
+    "lifecycle":  "running",
+    "sequence":  17,
+    "originalChildAlive":  false,
+    "originalGrandchildAlive":  false,
+    "child":  38532,
+    "grandchild":  6880,
+    "childAlive":  true,
+    "grandchildAlive":  true,
+    "modelCallIntentCount":  1,
+    "processSpawnIntentCount":  2
+}
