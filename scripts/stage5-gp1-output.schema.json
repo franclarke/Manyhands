@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["canonicalMaterialJson", "currentDraftJson", "criticFindingsJson"],
+  "properties": {
+    "canonicalMaterialJson": { "type": "string" },
+    "currentDraftJson": { "type": "string" },
+    "criticFindingsJson": { "type": "string" }
+  }
+}
