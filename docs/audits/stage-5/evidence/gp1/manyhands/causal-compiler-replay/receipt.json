@@ -1,0 +1,3992 @@
+{
+  "schemaVersion": 1,
+  "caseId": "gp1:manyhands-canonical-planning",
+  "runLabel": "causal-compiler-replay",
+  "causalChange": "Deterministic replay after compileTask was corrected so criteria delegated to child validation are optional only in the composite local TaskContract.",
+  "candidate": {
+    "sha": "3d2419f5220b20dfd70aab0dcdcb82c0fa51e09b",
+    "tree": "eba13be9cd0719a2274462653b3beae9fdb690f1"
+  },
+  "preregistration": {
+    "commit": "8ffb6429878540bb8a716affce98f60f4513ee83",
+    "path": "docs/audits/stage-5/preregistration/manyhands.json"
+  },
+  "repository": {
+    "root": "C:\\Users\\franc\\Documents\\Proyectos\\Manyhands",
+    "baseCommit": "963544a7a1b0e46e6faeb285bceff0f322811b86",
+    "treeSha": "d869635b11a2fa49728018883eaf98ed4e988ae8",
+    "snapshot": {
+      "id": "sha256:edcaf3e06b29078c971dfae1e22f8dddb504d112605cebbe25dacd2f82173719",
+      "digest": "sha256:00459afe315bab01fa60b7772be0ee11f58d343b144882f231f573cce3577543"
+    },
+    "modelDigest": "sha256:fb978e52cdc6d447a8aca8569c98cce46c8b5c47a480715541aaddd858b30f86",
+    "viewDigest": "sha256:73814cb0a91939cbb49f62aee02f5aa2a519dd057a6e7ac05bf6d1e1ff6b57a6",
+    "catalogDigest": "sha256:d4263669033d68dc0c10d19d6e8f567900ccfff2a688d7bd5fa2df5bb172c3c5"
+  },
+  "provider": {
+    "cli": "codex-cli",
+    "cliVersion": "codex-cli 0.146.0",
+    "model": "gpt-5.6-sol",
+    "reasoningEffort": "high",
+    "profile": "stage5-gp1-offline-v1",
+    "invocation": [
+      "exec",
+      "-",
+      "--model",
+      "gpt-5.6-sol",
+      "-c",
+      "model_reasoning_effort=\"high\"",
+      "--sandbox",
+      "read-only",
+      "--ephemeral",
+      "--ignore-user-config",
+      "--ignore-rules",
+      "--skip-git-repo-check",
+      "--output-schema",
+      "C:\\Users\\franc\\Documents\\Proyectos\\Manyhands\\scripts\\stage5-gp1-output.schema.json",
+      "--output-last-message",
+      "C:\\Users\\franc\\Documents\\Proyectos\\Manyhands\\docs\\audits\\stage-5\\evidence\\gp1\\manyhands\\causal-compiler-replay\\provider-output.json",
+      "--json",
+      "--color",
+      "never"
+    ],
+    "exitCode": 0,
+    "mode": "deterministic_replay",
+    "replaySource": "docs/audits/stage-5/evidence/gp1/manyhands/causal-shapes",
+    "promptDigest": "sha256:4ae20a2da107d0dc3abad1dcea5e0c5c0f2b0d62c2cd1114718222a14c7d57bb",
+    "outputDigest": "sha256:95f3b904bef278400c2da962986286128cb7c0d3be7f0a43b9e99cf961f2d686",
+    "eventLogDigest": "sha256:9c4df0fa8627451ddc43df898077af72f5f36dbefb044156e0a9d28c439eed7e"
+  },
+  "query": {
+    "searchDigest": "sha256:a68fc602602b48bf8cd887c9bed3a0fce44a70c1a28568317de42a4a82ce1ece",
+    "excerptDigest": "sha256:3ad2d17fc92396d6d202456a72dfa15e50ca6848441557383bbab0eb66f22ff7",
+    "results": 46,
+    "bytes": 111967,
+    "viewDigest": "sha256:73814cb0a91939cbb49f62aee02f5aa2a519dd057a6e7ac05bf6d1e1ff6b57a6"
+  },
+  "planningResult": {
+    "kind": "ready",
+    "plan": {
+      "id": "semantic-plan-material:manyhands-canonical-planning-cutover",
+      "revision": 1,
+      "goalContract": {
+        "id": "goal:manyhands-canonical-planning-cutover",
+        "revision": 1,
+        "digest": "sha256:cd4522c0c75eb24777b0f6e0c30086fa1cd668367dd712a56179c5e47ef19523"
+      },
+      "repositorySnapshot": {
+        "id": "sha256:edcaf3e06b29078c971dfae1e22f8dddb504d112605cebbe25dacd2f82173719",
+        "digest": "sha256:00459afe315bab01fa60b7772be0ee11f58d343b144882f231f573cce3577543"
+      },
+      "repositoryView": {
+        "digest": "sha256:73814cb0a91939cbb49f62aee02f5aa2a519dd057a6e7ac05bf6d1e1ff6b57a6",
+        "treeSha": "d869635b11a2fa49728018883eaf98ed4e988ae8",
+        "resourceCatalogDigest": "sha256:d4263669033d68dc0c10d19d6e8f567900ccfff2a688d7bd5fa2df5bb172c3c5"
+      },
+      "rootUnitId": "unit:canonical-planning-cutover",
+      "units": {
+        "unit:canonical-planning-cutover": {
+          "id": "unit:canonical-planning-cutover",
+          "role": "composite",
+          "title": "Canonical productive-planning cutover",
+          "objective": "Integrate daemon-owned canonical planning, deterministic verification, direct compilation, legacy retirement and regression-gate preservation without creating a parallel representation.",
+          "boundary": {
+            "kind": "cross_cutting",
+            "evidenceRefs": [
+              "evidence:1001b59c63702da6a83ef538",
+              "evidence:479035e214f31497694608ec",
+              "evidence:5880d3244ee8a85739d37c25",
+              "evidence:a02a2deaacd09ebd1c5155fe",
+              "evidence:e0bdd93c8e711aa126d09c2f",
+              "evidence:fcb5757df3a9a22deb2e761b"
+            ]
+          },
+          "outcomes": [
+            {
+              "id": "outcome:root-canonical-route",
+              "statement": "The integrated proposal defines the daemon as owner of one canonical PlanningEngine, verifier and direct compiler route."
+            },
+            {
+              "id": "outcome:root-legacy-unreachable",
+              "statement": "The integrated proposal removes productive reachability of RecursivePlanner, WorkBreakdown projection and the legacy graph compiler."
+            },
+            {
+              "id": "outcome:root-regression",
+              "statement": "The integrated proposal preserves daemon lifecycle ownership, exact repository grounding and prior regression gates."
+            }
+          ],
+          "criteria": [
+            {
+              "criterionId": "criterion-ref:root-canonical-route",
+              "statement": "The daemon composes the canonical planner, verifier and direct compiler as the only productive planning route.",
+              "sourceCriterionId": "criterion:canonical-route"
+            },
+            {
+              "criterionId": "criterion-ref:root-legacy-unreachable",
+              "statement": "RecursivePlanner, WorkBreakdown projection and the legacy graph compiler are unreachable from productive planning entrypoints.",
+              "sourceCriterionId": "criterion:legacy-unreachable"
+            },
+            {
+              "criterionId": "criterion-ref:root-regression",
+              "statement": "Daemon lifecycle ownership, repository grounding and existing gates remain green after cutover.",
+              "sourceCriterionId": "criterion:regression"
+            }
+          ],
+          "repositorySurface": {
+            "resourceRefs": [
+              "catalog-resource:4d35de4235f3aa5881857757",
+              "catalog-resource:535fd8df5f0334d0d00998ca",
+              "catalog-resource:5a3cbab4bff56f2d1197c979",
+              "catalog-resource:62f79c52f8bd51a50a6c1211",
+              "catalog-resource:b63d0bab5fb18fa8c1b3e20b",
+              "catalog-resource:b7d6aea5ac8ff61b3c39d622"
+            ],
+            "pathHints": [
+              "apps/daemon/src/current-lifecycle-adapters.ts",
+              "apps/daemon/src/transitional-unsafe-profile.ts",
+              "packages/contracts/src/semantic-plan.ts",
+              "packages/decomposer/src/compiler/graph-compiler.ts",
+              "packages/decomposer/src/planner/planning-module.ts",
+              "packages/task-graph/src/canonical-graph.ts"
+            ]
+          },
+          "resourceIntents": [
+            {
+              "resourceId": "catalog-resource:4d35de4235f3aa5881857757",
+              "access": "observe",
+              "inputArtifactId": "artifact:compiled-graph-revision",
+              "evidenceRefs": [
+                "evidence:e0bdd93c8e711aa126d09c2f"
+              ],
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "evidence:e0bdd93c8e711aa126d09c2f"
+                ]
+              }
+            },
+            {
+              "resourceId": "catalog-resource:535fd8df5f0334d0d00998ca",
+              "access": "observe",
+              "inputArtifactId": "artifact:regression-gate-proof",
+              "evidenceRefs": [
+                "evidence:1001b59c63702da6a83ef538"
+              ],
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "evidence:1001b59c63702da6a83ef538"
+                ]
+              }
+            },
+            {
+              "resourceId": "catalog-resource:5a3cbab4bff56f2d1197c979",
+              "access": "observe",
+              "inputArtifactId": "artifact:legacy-retirement",
+              "evidenceRefs": [
+                "evidence:5880d3244ee8a85739d37c25"
+              ],
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "evidence:5880d3244ee8a85739d37c25"
+                ]
+              }
+            },
+            {
+              "resourceId": "catalog-resource:62f79c52f8bd51a50a6c1211",
+              "access": "observe",
+              "evidenceRefs": [
+                "evidence:479035e214f31497694608ec"
+              ],
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "evidence:479035e214f31497694608ec"
+                ]
+              }
+            },
+            {
+              "resourceId": "catalog-resource:b63d0bab5fb18fa8c1b3e20b",
+              "access": "observe",
+              "inputArtifactId": "artifact:compiled-graph-revision",
+              "evidenceRefs": [
+                "evidence:fcb5757df3a9a22deb2e761b"
+              ],
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "evidence:fcb5757df3a9a22deb2e761b"
+                ]
+              }
+            },
+            {
+              "resourceId": "catalog-resource:b7d6aea5ac8ff61b3c39d622",
+              "access": "observe",
+              "evidenceRefs": [
+                "evidence:a02a2deaacd09ebd1c5155fe"
+              ],
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "evidence:a02a2deaacd09ebd1c5155fe"
+                ]
+              }
+            }
+          ],
+          "consumes": [
+            "artifact:compiled-graph-revision",
+            "artifact:legacy-retirement",
+            "artifact:regression-gate-proof"
+          ],
+          "produces": [],
+          "seamRefs": [
+            "seam:compiler-to-integration",
+            "seam:legacy-to-integration",
+            "seam:regression-to-integration"
+          ],
+          "validation": [
+            {
+              "obligationId": "validation:root",
+              "criterionId": "criterion-ref:root-canonical-route",
+              "proofStrategyId": "proof:root",
+              "layer": "integration",
+              "severity": "required",
+              "acceptableEvidence": [
+                "test_result"
+              ],
+              "baselinePolicy": "required",
+              "negativeControl": "when_feasible",
+              "flakyPolicy": "forbid"
+            }
+          ],
+          "uncertainty": [],
+          "granularity": {
+            "disposition": "split",
+            "feasibility": {
+              "coherentResponsibility": true,
+              "boundedContext": "yes",
+              "boundedChangeSurface": "yes",
+              "independentlyValidatable": "yes",
+              "unresolvedArchitectureDecision": false
+            },
+            "splitReasons": [
+              "integration_boundary",
+              "parallelism",
+              "specialization"
+            ],
+            "expectedBenefits": [
+              "Separately validates daemon composition, planning, verification, compilation, retirement and regression responsibilities."
+            ],
+            "expectedCosts": [
+              "Requires explicit artifact and seam integration across the cutover boundary."
+            ],
+            "integrationObligationId": "validation:root",
+            "evidenceRefs": [
+              "evidence:1001b59c63702da6a83ef538",
+              "evidence:479035e214f31497694608ec",
+              "evidence:5880d3244ee8a85739d37c25",
+              "evidence:a02a2deaacd09ebd1c5155fe",
+              "evidence:e0bdd93c8e711aa126d09c2f",
+              "evidence:fcb5757df3a9a22deb2e761b"
+            ],
+            "epistemic": {
+              "state": "known",
+              "confidence": "high",
+              "evidenceRefs": [
+                "evidence:fcb5757df3a9a22deb2e761b",
+                "evidence:5880d3244ee8a85739d37c25",
+                "evidence:479035e214f31497694608ec",
+                "evidence:e0bdd93c8e711aa126d09c2f",
+                "evidence:a02a2deaacd09ebd1c5155fe",
+                "evidence:1001b59c63702da6a83ef538"
+              ]
+            }
+          },
+          "expansion": "expanded",
+          "integration": {
+            "obligationId": "validation:root",
+            "objective": "Integrate the daemon-owned route and prove its canonical artifact flow, legacy exclusion and regression compatibility on the registered repository view.",
+            "criterionIds": [
+              "criterion-ref:root-canonical-route",
+              "criterion-ref:root-legacy-unreachable",
+              "criterion-ref:root-regression"
+            ],
+            "proofStrategyId": "proof:root",
+            "artifactIds": [
+              "artifact:compiled-graph-revision",
+              "artifact:legacy-retirement",
+              "artifact:regression-gate-proof"
+            ],
+            "seamIds": [
+              "seam:compiler-to-integration",
+              "seam:daemon-to-planner",
+              "seam:legacy-to-integration",
+              "seam:planner-to-verifier-and-compiler",
+              "seam:regression-to-integration",
+              "seam:verifier-to-compiler"
+            ]
+          }
+        },
+        "unit:daemon-composition": {
+          "id": "unit:daemon-composition",
+          "parentId": "unit:canonical-planning-cutover",
+          "role": "leaf",
+          "title": "Daemon planning composition",
+          "objective": "Replace the productive daemon planning route with explicit composition of the canonical PlanningEngine, deterministic verifier and direct compiler while retaining daemon lifecycle ownership and exact repository grounding.",
+          "boundary": {
+            "kind": "application",
+            "evidenceRefs": [
+              "evidence:fcb5757df3a9a22deb2e761b"
+            ]
+          },
+          "outcomes": [
+            {
+              "id": "outcome:daemon-composition",
+              "statement": "The daemon adapter supplies the registered repository view to one explicit canonical planning route and emits its typed planning result for lifecycle adoption."
+            }
+          ],
+          "criteria": [
+            {
+              "criterionId": "criterion-ref:daemon-canonical-route",
+              "statement": "The daemon owns and composes the canonical productive planning route.",
+              "sourceCriterionId": "criterion-ref:root-canonical-route"
+            }
+          ],
+          "repositorySurface": {
+            "resourceRefs": [
+              "catalog-resource:b63d0bab5fb18fa8c1b3e20b"
+            ],
+            "pathHints": [
+              "apps/daemon/src/current-lifecycle-adapters.ts"
+            ]
+          },
+          "resourceIntents": [
+            {
+              "resourceId": "catalog-resource:b63d0bab5fb18fa8c1b3e20b",
+              "access": "modify",
+              "ownerPhase": "implementation",
+              "outputArtifactId": "artifact:daemon-planning-composition",
+              "evidenceRefs": [
+                "evidence:fcb5757df3a9a22deb2e761b"
+              ],
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "evidence:fcb5757df3a9a22deb2e761b"
+                ]
+              }
+            }
+          ],
+          "consumes": [],
+          "produces": [
+            "artifact:daemon-planning-composition"
+          ],
+          "seamRefs": [
+            "seam:daemon-to-planner"
+          ],
+          "validation": [
+            {
+              "obligationId": "validation:daemon",
+              "criterionId": "criterion-ref:daemon-canonical-route",
+              "proofStrategyId": "proof:daemon",
+              "layer": "integration",
+              "severity": "required",
+              "acceptableEvidence": [
+                "test_result"
+              ],
+              "baselinePolicy": "required",
+              "negativeControl": "when_feasible",
+              "flakyPolicy": "forbid"
+            }
+          ],
+          "uncertainty": [],
+          "granularity": {
+            "disposition": "leaf",
+            "feasibility": {
+              "coherentResponsibility": true,
+              "boundedContext": "yes",
+              "boundedChangeSurface": "yes",
+              "independentlyValidatable": "yes",
+              "unresolvedArchitectureDecision": false
+            },
+            "splitReasons": [],
+            "expectedBenefits": [],
+            "expectedCosts": [],
+            "evidenceRefs": [
+              "evidence:fcb5757df3a9a22deb2e761b"
+            ],
+            "epistemic": {
+              "state": "known",
+              "confidence": "high",
+              "evidenceRefs": [
+                "evidence:fcb5757df3a9a22deb2e761b"
+              ]
+            }
+          },
+          "expansion": "leaf"
+        },
+        "unit:canonical-planning-engine": {
+          "id": "unit:canonical-planning-engine",
+          "parentId": "unit:canonical-planning-cutover",
+          "role": "leaf",
+          "title": "Canonical PlanningEngine",
+          "objective": "Make the canonical PlanningEngine produce the sole SemanticPlan from the registered goal, proof obligations and repository view with typed attributable planning failures.",
+          "boundary": {
+            "kind": "module",
+            "evidenceRefs": [
+              "evidence:a02a2deaacd09ebd1c5155fe"
+            ]
+          },
+          "outcomes": [
+            {
+              "id": "outcome:canonical-planning-engine",
+              "statement": "Planning generation, canonicalization and deterministic selection yield only the canonical SemanticPlan representation for downstream verification and compilation."
+            }
+          ],
+          "criteria": [
+            {
+              "criterionId": "criterion-ref:planner-canonical-route",
+              "statement": "The canonical PlanningEngine is the sole productive plan producer.",
+              "sourceCriterionId": "criterion-ref:root-canonical-route"
+            }
+          ],
+          "repositorySurface": {
+            "resourceRefs": [
+              "catalog-resource:b7d6aea5ac8ff61b3c39d622"
+            ],
+            "pathHints": [
+              "packages/decomposer/src/planner/planning-module.ts"
+            ]
+          },
+          "resourceIntents": [
+            {
+              "resourceId": "catalog-resource:b7d6aea5ac8ff61b3c39d622",
+              "access": "modify",
+              "ownerPhase": "implementation",
+              "inputArtifactId": "artifact:daemon-planning-composition",
+              "outputArtifactId": "artifact:canonical-semantic-plan",
+              "evidenceRefs": [
+                "evidence:a02a2deaacd09ebd1c5155fe"
+              ],
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "evidence:a02a2deaacd09ebd1c5155fe"
+                ]
+              }
+            }
+          ],
+          "consumes": [
+            "artifact:daemon-planning-composition"
+          ],
+          "produces": [
+            "artifact:canonical-semantic-plan"
+          ],
+          "seamRefs": [
+            "seam:daemon-to-planner",
+            "seam:planner-to-verifier-and-compiler"
+          ],
+          "validation": [
+            {
+              "obligationId": "validation:planner",
+              "criterionId": "criterion-ref:planner-canonical-route",
+              "proofStrategyId": "proof:planner",
+              "layer": "integration",
+              "severity": "required",
+              "acceptableEvidence": [
+                "test_result"
+              ],
+              "baselinePolicy": "required",
+              "negativeControl": "when_feasible",
+              "flakyPolicy": "forbid"
+            }
+          ],
+          "uncertainty": [],
+          "granularity": {
+            "disposition": "leaf",
+            "feasibility": {
+              "coherentResponsibility": true,
+              "boundedContext": "yes",
+              "boundedChangeSurface": "yes",
+              "independentlyValidatable": "yes",
+              "unresolvedArchitectureDecision": false
+            },
+            "splitReasons": [],
+            "expectedBenefits": [],
+            "expectedCosts": [],
+            "evidenceRefs": [
+              "evidence:a02a2deaacd09ebd1c5155fe"
+            ],
+            "epistemic": {
+              "state": "known",
+              "confidence": "high",
+              "evidenceRefs": [
+                "evidence:a02a2deaacd09ebd1c5155fe"
+              ]
+            }
+          },
+          "expansion": "leaf"
+        },
+        "unit:deterministic-verifier": {
+          "id": "unit:deterministic-verifier",
+          "parentId": "unit:canonical-planning-cutover",
+          "role": "leaf",
+          "title": "Deterministic SemanticPlan verifier",
+          "objective": "Enforce deterministic SemanticPlan material, criterion-refinement, artifact-flow, seam and resource-ownership checks before direct compilation.",
+          "boundary": {
+            "kind": "package",
+            "evidenceRefs": [
+              "evidence:479035e214f31497694608ec"
+            ]
+          },
+          "outcomes": [
+            {
+              "id": "outcome:deterministic-verifier",
+              "statement": "A SemanticPlan is either deterministically accepted as compiler input or rejected with typed attributable findings."
+            }
+          ],
+          "criteria": [
+            {
+              "criterionId": "criterion-ref:verifier-canonical-route",
+              "statement": "The productive route applies deterministic verification to the canonical SemanticPlan before compilation.",
+              "sourceCriterionId": "criterion-ref:root-canonical-route"
+            }
+          ],
+          "repositorySurface": {
+            "resourceRefs": [
+              "catalog-resource:62f79c52f8bd51a50a6c1211"
+            ],
+            "pathHints": [
+              "packages/contracts/src/semantic-plan.ts"
+            ]
+          },
+          "resourceIntents": [
+            {
+              "resourceId": "catalog-resource:62f79c52f8bd51a50a6c1211",
+              "access": "modify",
+              "ownerPhase": "implementation",
+              "inputArtifactId": "artifact:canonical-semantic-plan",
+              "outputArtifactId": "artifact:verified-semantic-plan",
+              "evidenceRefs": [
+                "evidence:479035e214f31497694608ec"
+              ],
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "evidence:479035e214f31497694608ec"
+                ]
+              }
+            }
+          ],
+          "consumes": [
+            "artifact:canonical-semantic-plan"
+          ],
+          "produces": [
+            "artifact:verified-semantic-plan"
+          ],
+          "seamRefs": [
+            "seam:planner-to-verifier-and-compiler",
+            "seam:verifier-to-compiler"
+          ],
+          "validation": [
+            {
+              "obligationId": "validation:verifier",
+              "criterionId": "criterion-ref:verifier-canonical-route",
+              "proofStrategyId": "proof:verifier",
+              "layer": "integration",
+              "severity": "required",
+              "acceptableEvidence": [
+                "test_result"
+              ],
+              "baselinePolicy": "required",
+              "negativeControl": "when_feasible",
+              "flakyPolicy": "forbid"
+            }
+          ],
+          "uncertainty": [],
+          "granularity": {
+            "disposition": "leaf",
+            "feasibility": {
+              "coherentResponsibility": true,
+              "boundedContext": "yes",
+              "boundedChangeSurface": "yes",
+              "independentlyValidatable": "yes",
+              "unresolvedArchitectureDecision": false
+            },
+            "splitReasons": [],
+            "expectedBenefits": [],
+            "expectedCosts": [],
+            "evidenceRefs": [
+              "evidence:479035e214f31497694608ec"
+            ],
+            "epistemic": {
+              "state": "known",
+              "confidence": "high",
+              "evidenceRefs": [
+                "evidence:479035e214f31497694608ec"
+              ]
+            }
+          },
+          "expansion": "leaf"
+        },
+        "unit:direct-compiler": {
+          "id": "unit:direct-compiler",
+          "parentId": "unit:canonical-planning-cutover",
+          "role": "leaf",
+          "title": "Direct SemanticPlan compiler",
+          "objective": "Compile the verified SemanticPlan directly into one canonical GraphRevision with typed artifacts, seams and resource claims, without a WorkBreakdown projection.",
+          "boundary": {
+            "kind": "module",
+            "evidenceRefs": [
+              "evidence:e0bdd93c8e711aa126d09c2f"
+            ]
+          },
+          "outcomes": [
+            {
+              "id": "outcome:direct-compiler",
+              "statement": "The compiler consumes the canonical SemanticPlan and deterministic verification result directly and produces a canonical GraphRevision."
+            }
+          ],
+          "criteria": [
+            {
+              "criterionId": "criterion-ref:compiler-canonical-route",
+              "statement": "The productive compiler transforms the canonical SemanticPlan directly into GraphRevision.",
+              "sourceCriterionId": "criterion-ref:root-canonical-route"
+            }
+          ],
+          "repositorySurface": {
+            "resourceRefs": [
+              "catalog-resource:4d35de4235f3aa5881857757"
+            ],
+            "pathHints": [
+              "packages/decomposer/src/compiler/graph-compiler.ts"
+            ]
+          },
+          "resourceIntents": [
+            {
+              "resourceId": "catalog-resource:4d35de4235f3aa5881857757",
+              "access": "modify",
+              "ownerPhase": "implementation",
+              "inputArtifactId": "artifact:verified-semantic-plan",
+              "outputArtifactId": "artifact:compiled-graph-revision",
+              "evidenceRefs": [
+                "evidence:e0bdd93c8e711aa126d09c2f"
+              ],
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "evidence:e0bdd93c8e711aa126d09c2f"
+                ]
+              }
+            }
+          ],
+          "consumes": [
+            "artifact:canonical-semantic-plan",
+            "artifact:verified-semantic-plan"
+          ],
+          "produces": [
+            "artifact:compiled-graph-revision"
+          ],
+          "seamRefs": [
+            "seam:compiler-to-integration",
+            "seam:planner-to-verifier-and-compiler",
+            "seam:verifier-to-compiler"
+          ],
+          "validation": [
+            {
+              "obligationId": "validation:compiler",
+              "criterionId": "criterion-ref:compiler-canonical-route",
+              "proofStrategyId": "proof:compiler",
+              "layer": "integration",
+              "severity": "required",
+              "acceptableEvidence": [
+                "test_result"
+              ],
+              "baselinePolicy": "required",
+              "negativeControl": "when_feasible",
+              "flakyPolicy": "forbid"
+            }
+          ],
+          "uncertainty": [],
+          "granularity": {
+            "disposition": "leaf",
+            "feasibility": {
+              "coherentResponsibility": true,
+              "boundedContext": "yes",
+              "boundedChangeSurface": "yes",
+              "independentlyValidatable": "yes",
+              "unresolvedArchitectureDecision": false
+            },
+            "splitReasons": [],
+            "expectedBenefits": [],
+            "expectedCosts": [],
+            "evidenceRefs": [
+              "evidence:e0bdd93c8e711aa126d09c2f"
+            ],
+            "epistemic": {
+              "state": "known",
+              "confidence": "high",
+              "evidenceRefs": [
+                "evidence:e0bdd93c8e711aa126d09c2f"
+              ]
+            }
+          },
+          "expansion": "leaf"
+        },
+        "unit:legacy-retirement": {
+          "id": "unit:legacy-retirement",
+          "parentId": "unit:canonical-planning-cutover",
+          "role": "leaf",
+          "title": "Legacy planning retirement",
+          "objective": "Make RecursivePlanner, WorkBreakdown projection and the legacy graph compiler unreachable from productive planning while preserving an explicit non-productive audit boundary where required.",
+          "boundary": {
+            "kind": "application",
+            "evidenceRefs": [
+              "evidence:5880d3244ee8a85739d37c25"
+            ]
+          },
+          "outcomes": [
+            {
+              "id": "outcome:legacy-retirement",
+              "statement": "A deterministic productive-entrypoint scan finds no reachable RecursivePlanner, WorkBreakdown projection or legacy graph-compiler route."
+            }
+          ],
+          "criteria": [
+            {
+              "criterionId": "criterion-ref:legacy-unreachable",
+              "statement": "Legacy planning and projection components are unreachable from productive planning entrypoints.",
+              "sourceCriterionId": "criterion-ref:root-legacy-unreachable"
+            }
+          ],
+          "repositorySurface": {
+            "resourceRefs": [
+              "catalog-resource:5a3cbab4bff56f2d1197c979"
+            ],
+            "pathHints": [
+              "apps/daemon/src/transitional-unsafe-profile.ts"
+            ]
+          },
+          "resourceIntents": [
+            {
+              "resourceId": "catalog-resource:5a3cbab4bff56f2d1197c979",
+              "access": "modify",
+              "ownerPhase": "implementation",
+              "outputArtifactId": "artifact:legacy-retirement",
+              "evidenceRefs": [
+                "evidence:5880d3244ee8a85739d37c25"
+              ],
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "evidence:5880d3244ee8a85739d37c25"
+                ]
+              }
+            }
+          ],
+          "consumes": [],
+          "produces": [
+            "artifact:legacy-retirement"
+          ],
+          "seamRefs": [
+            "seam:legacy-to-integration"
+          ],
+          "validation": [
+            {
+              "obligationId": "validation:legacy",
+              "criterionId": "criterion-ref:legacy-unreachable",
+              "proofStrategyId": "proof:legacy",
+              "layer": "static",
+              "severity": "required",
+              "acceptableEvidence": [
+                "static_analysis"
+              ],
+              "baselinePolicy": "required",
+              "negativeControl": "required",
+              "flakyPolicy": "forbid"
+            }
+          ],
+          "uncertainty": [],
+          "granularity": {
+            "disposition": "leaf",
+            "feasibility": {
+              "coherentResponsibility": true,
+              "boundedContext": "yes",
+              "boundedChangeSurface": "yes",
+              "independentlyValidatable": "yes",
+              "unresolvedArchitectureDecision": false
+            },
+            "splitReasons": [],
+            "expectedBenefits": [],
+            "expectedCosts": [],
+            "evidenceRefs": [
+              "evidence:5880d3244ee8a85739d37c25"
+            ],
+            "epistemic": {
+              "state": "known",
+              "confidence": "high",
+              "evidenceRefs": [
+                "evidence:5880d3244ee8a85739d37c25"
+              ]
+            }
+          },
+          "expansion": "leaf"
+        },
+        "unit:regression-gates": {
+          "id": "unit:regression-gates",
+          "parentId": "unit:canonical-planning-cutover",
+          "role": "leaf",
+          "title": "Regression gate preservation",
+          "objective": "Preserve canonical GraphRevision validation invariants and execute the registered prior gates against the cutover candidate without moving lifecycle or planning ownership.",
+          "boundary": {
+            "kind": "package",
+            "evidenceRefs": [
+              "evidence:1001b59c63702da6a83ef538"
+            ]
+          },
+          "outcomes": [
+            {
+              "id": "outcome:regression-gates",
+              "statement": "Prior lifecycle, repository-grounding and canonical-graph gates validate the exact cutover candidate and retain their negative controls."
+            }
+          ],
+          "criteria": [
+            {
+              "criterionId": "criterion-ref:regression-gates",
+              "statement": "Daemon lifecycle ownership, repository grounding and existing gates remain green after cutover.",
+              "sourceCriterionId": "criterion-ref:root-regression"
+            }
+          ],
+          "repositorySurface": {
+            "resourceRefs": [
+              "catalog-resource:535fd8df5f0334d0d00998ca"
+            ],
+            "pathHints": [
+              "packages/task-graph/src/canonical-graph.ts"
+            ]
+          },
+          "resourceIntents": [
+            {
+              "resourceId": "catalog-resource:535fd8df5f0334d0d00998ca",
+              "access": "modify",
+              "ownerPhase": "implementation",
+              "inputArtifactId": "artifact:compiled-graph-revision",
+              "outputArtifactId": "artifact:regression-gate-proof",
+              "evidenceRefs": [
+                "evidence:1001b59c63702da6a83ef538"
+              ],
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "evidence:1001b59c63702da6a83ef538"
+                ]
+              }
+            }
+          ],
+          "consumes": [
+            "artifact:compiled-graph-revision"
+          ],
+          "produces": [
+            "artifact:regression-gate-proof"
+          ],
+          "seamRefs": [
+            "seam:compiler-to-integration",
+            "seam:regression-to-integration"
+          ],
+          "validation": [
+            {
+              "obligationId": "validation:regression",
+              "criterionId": "criterion-ref:regression-gates",
+              "proofStrategyId": "proof:regression",
+              "layer": "integration",
+              "severity": "required",
+              "acceptableEvidence": [
+                "test_result"
+              ],
+              "baselinePolicy": "required",
+              "negativeControl": "when_feasible",
+              "flakyPolicy": "forbid"
+            }
+          ],
+          "uncertainty": [],
+          "granularity": {
+            "disposition": "leaf",
+            "feasibility": {
+              "coherentResponsibility": true,
+              "boundedContext": "yes",
+              "boundedChangeSurface": "yes",
+              "independentlyValidatable": "yes",
+              "unresolvedArchitectureDecision": false
+            },
+            "splitReasons": [],
+            "expectedBenefits": [],
+            "expectedCosts": [],
+            "evidenceRefs": [
+              "evidence:1001b59c63702da6a83ef538"
+            ],
+            "epistemic": {
+              "state": "known",
+              "confidence": "high",
+              "evidenceRefs": [
+                "evidence:1001b59c63702da6a83ef538"
+              ]
+            }
+          },
+          "expansion": "leaf"
+        }
+      },
+      "seams": {
+        "seam:daemon-to-planner": {
+          "id": "seam:daemon-to-planner",
+          "kind": "command",
+          "specification": "The daemon supplies the immutable goal contract and exact registered RepositoryView to the canonical PlanningEngine and retains lifecycle adoption authority.",
+          "producerUnitId": "unit:daemon-composition",
+          "consumerUnitIds": [
+            "unit:canonical-planning-engine"
+          ],
+          "semanticFacts": {
+            "payload": "GoalContract and exact RepositoryView",
+            "authority": "daemon lifecycle owner",
+            "operation": "canonical productive planning"
+          },
+          "compatibility": {
+            "mode": "exact",
+            "rules": [
+              "GoalContract revision and digest must match the registered contract.",
+              "RepositoryView digest and treeSha must match the registered view."
+            ]
+          },
+          "artifactId": "artifact:daemon-planning-composition",
+          "validationObligationIds": [
+            "validation:daemon",
+            "validation:planner"
+          ]
+        },
+        "seam:planner-to-verifier-and-compiler": {
+          "id": "seam:planner-to-verifier-and-compiler",
+          "kind": "data",
+          "specification": "The PlanningEngine emits the sole canonical SemanticPlan for deterministic verification and direct compilation.",
+          "producerUnitId": "unit:canonical-planning-engine",
+          "consumerUnitIds": [
+            "unit:deterministic-verifier",
+            "unit:direct-compiler"
+          ],
+          "semanticFacts": {
+            "payload": "SemanticPlan",
+            "authority": "canonical PlanningEngine",
+            "representation": "sole productive planning output"
+          },
+          "compatibility": {
+            "mode": "exact",
+            "rules": [
+              "No WorkBreakdown projection may mediate productive compilation.",
+              "SemanticPlan must reference the registered GoalContract and RepositoryView."
+            ]
+          },
+          "artifactId": "artifact:canonical-semantic-plan",
+          "validationObligationIds": [
+            "validation:compiler",
+            "validation:planner",
+            "validation:verifier"
+          ]
+        },
+        "seam:verifier-to-compiler": {
+          "id": "seam:verifier-to-compiler",
+          "kind": "data",
+          "specification": "The deterministic verifier provides an attributable verification result that gates direct GraphRevision compilation.",
+          "producerUnitId": "unit:deterministic-verifier",
+          "consumerUnitIds": [
+            "unit:direct-compiler"
+          ],
+          "semanticFacts": {
+            "payload": "verified SemanticPlan result",
+            "authority": "deterministic verifier",
+            "failureMode": "typed attributable finding"
+          },
+          "compatibility": {
+            "mode": "exact",
+            "rules": [
+              "Required validation findings must block compilation.",
+              "The verified material digest must identify the compiler input."
+            ]
+          },
+          "artifactId": "artifact:verified-semantic-plan",
+          "validationObligationIds": [
+            "validation:compiler",
+            "validation:verifier"
+          ]
+        },
+        "seam:compiler-to-integration": {
+          "id": "seam:compiler-to-integration",
+          "kind": "data",
+          "specification": "The direct compiler provides the canonical GraphRevision candidate to regression validation and root integration.",
+          "producerUnitId": "unit:direct-compiler",
+          "consumerUnitIds": [
+            "unit:canonical-planning-cutover",
+            "unit:regression-gates"
+          ],
+          "semanticFacts": {
+            "payload": "GraphRevision",
+            "authority": "direct SemanticPlan compiler",
+            "provenance": "registered SemanticPlan and RepositoryView"
+          },
+          "compatibility": {
+            "mode": "exact",
+            "rules": [
+              "Artifact, seam and resource relations must remain canonical.",
+              "GraphRevision must identify the source SemanticPlan and exact RepositoryView."
+            ]
+          },
+          "artifactId": "artifact:compiled-graph-revision",
+          "validationObligationIds": [
+            "validation:compiler",
+            "validation:regression",
+            "validation:root"
+          ]
+        },
+        "seam:legacy-to-integration": {
+          "id": "seam:legacy-to-integration",
+          "kind": "data",
+          "specification": "Legacy retirement supplies static reachability evidence to root integration.",
+          "producerUnitId": "unit:legacy-retirement",
+          "consumerUnitIds": [
+            "unit:canonical-planning-cutover"
+          ],
+          "semanticFacts": {
+            "payload": "productive-entrypoint reachability report",
+            "authority": "deterministic source scan",
+            "constraint": "legacy planning unreachable"
+          },
+          "compatibility": {
+            "mode": "exact",
+            "rules": [
+              "The protected negative control must detect a reintroduced legacy reference.",
+              "The scan must cover productive daemon planning entrypoints."
+            ]
+          },
+          "artifactId": "artifact:legacy-retirement",
+          "validationObligationIds": [
+            "validation:legacy",
+            "validation:root"
+          ]
+        },
+        "seam:regression-to-integration": {
+          "id": "seam:regression-to-integration",
+          "kind": "data",
+          "specification": "Regression validation supplies prior-gate results for the exact integrated candidate.",
+          "producerUnitId": "unit:regression-gates",
+          "consumerUnitIds": [
+            "unit:canonical-planning-cutover"
+          ],
+          "semanticFacts": {
+            "payload": "prior-gate evidence",
+            "authority": "orchestrator deterministic validation",
+            "candidate": "exact integrated cutover"
+          },
+          "compatibility": {
+            "mode": "exact",
+            "rules": [
+              "Evidence must identify the exact candidate under integration.",
+              "Lifecycle ownership and repository-view checks must remain included."
+            ]
+          },
+          "artifactId": "artifact:regression-gate-proof",
+          "validationObligationIds": [
+            "validation:regression",
+            "validation:root"
+          ]
+        }
+      },
+      "artifacts": {
+        "artifact:daemon-planning-composition": {
+          "id": "artifact:daemon-planning-composition",
+          "producerUnitId": "unit:daemon-composition",
+          "consumerUnitIds": [
+            "unit:canonical-planning-engine"
+          ],
+          "artifactType": "daemon-planning-composition",
+          "mediaType": "text/x-typescript",
+          "materialization": "files",
+          "expectedPaths": [
+            "apps/daemon/src/current-lifecycle-adapters.ts"
+          ]
+        },
+        "artifact:canonical-semantic-plan": {
+          "id": "artifact:canonical-semantic-plan",
+          "producerUnitId": "unit:canonical-planning-engine",
+          "consumerUnitIds": [
+            "unit:deterministic-verifier",
+            "unit:direct-compiler"
+          ],
+          "artifactType": "canonical-planning-engine",
+          "mediaType": "text/x-typescript",
+          "materialization": "files",
+          "expectedPaths": [
+            "packages/decomposer/src/planner/planning-module.ts"
+          ]
+        },
+        "artifact:verified-semantic-plan": {
+          "id": "artifact:verified-semantic-plan",
+          "producerUnitId": "unit:deterministic-verifier",
+          "consumerUnitIds": [
+            "unit:direct-compiler"
+          ],
+          "artifactType": "deterministic-semantic-plan-verifier",
+          "mediaType": "text/x-typescript",
+          "materialization": "files",
+          "expectedPaths": [
+            "packages/contracts/src/semantic-plan.ts"
+          ]
+        },
+        "artifact:compiled-graph-revision": {
+          "id": "artifact:compiled-graph-revision",
+          "producerUnitId": "unit:direct-compiler",
+          "consumerUnitIds": [
+            "unit:canonical-planning-cutover",
+            "unit:regression-gates"
+          ],
+          "artifactType": "direct-graph-revision-compiler",
+          "mediaType": "text/x-typescript",
+          "materialization": "files",
+          "expectedPaths": [
+            "packages/decomposer/src/compiler/graph-compiler.ts"
+          ]
+        },
+        "artifact:legacy-retirement": {
+          "id": "artifact:legacy-retirement",
+          "producerUnitId": "unit:legacy-retirement",
+          "consumerUnitIds": [
+            "unit:canonical-planning-cutover"
+          ],
+          "artifactType": "legacy-reachability-retirement",
+          "mediaType": "text/x-typescript",
+          "materialization": "files",
+          "expectedPaths": [
+            "apps/daemon/src/transitional-unsafe-profile.ts"
+          ]
+        },
+        "artifact:regression-gate-proof": {
+          "id": "artifact:regression-gate-proof",
+          "producerUnitId": "unit:regression-gates",
+          "consumerUnitIds": [
+            "unit:canonical-planning-cutover"
+          ],
+          "artifactType": "canonical-graph-regression-gates",
+          "mediaType": "text/x-typescript",
+          "materialization": "files",
+          "expectedPaths": [
+            "packages/task-graph/src/canonical-graph.ts"
+          ]
+        }
+      },
+      "decisions": [],
+      "evidence": [],
+      "status": "ready",
+      "digest": "sha256:56bba799a377588d7742e7a289e6723432284078499fa302131b04760a1a4ac4"
+    },
+    "trace": {
+      "budget": {
+        "modelCalls": 1,
+        "repositoryQueries": 2,
+        "queryBytes": 120000,
+        "revisions": 1,
+        "repairs": 0,
+        "expansions": 0
+      },
+      "consumed": {
+        "modelCalls": 1,
+        "repositoryQueries": 2,
+        "queryBytes": 111967,
+        "revisions": 1,
+        "repairs": 0,
+        "expansions": 0
+      },
+      "revisions": [
+        {
+          "index": 1,
+          "cause": "initial",
+          "budget": {
+            "modelCalls": 1,
+            "repositoryQueries": 2,
+            "queryBytes": 120000,
+            "revisions": 1,
+            "repairs": 0,
+            "expansions": 0
+          },
+          "consumed": {
+            "modelCalls": 1,
+            "repositoryQueries": 2,
+            "queryBytes": 111967,
+            "revisions": 1,
+            "repairs": 0,
+            "expansions": 0
+          },
+          "queryReceipts": [
+            "sha256:3ad2d17fc92396d6d202456a72dfa15e50ca6848441557383bbab0eb66f22ff7",
+            "sha256:a68fc602602b48bf8cd887c9bed3a0fce44a70c1a28568317de42a4a82ce1ece"
+          ],
+          "evidenceRefs": [
+            "evidence:001f0142298e754afd8c77bc",
+            "evidence:03b6543c806527898b4156bc",
+            "evidence:05dde392b35b49d277343fad",
+            "evidence:0b6ea81a77ccf85f7151f85c",
+            "evidence:1001b59c63702da6a83ef538",
+            "evidence:18065d44dcc8fd4b618491f9",
+            "evidence:2b17584315ba99d904efcf45",
+            "evidence:2c9f7b78684cc2169b8cc1e7",
+            "evidence:323d869024a67aca30a1c8bf",
+            "evidence:3290a79e3ba2b6c0281e0107",
+            "evidence:34dd783adc06bc3f60547bd5",
+            "evidence:398344bc3a4b5514ce0fc1dc",
+            "evidence:3d30c05c1a18012a45823d21",
+            "evidence:3f8603f09933f728e823211e",
+            "evidence:479035e214f31497694608ec",
+            "evidence:4ff7c7a852958f40657f6f9b",
+            "evidence:522f6089fa27646f9d840681",
+            "evidence:5880d3244ee8a85739d37c25",
+            "evidence:5f02ec4686a317fb72ee5190",
+            "evidence:69c6465656288c408cd4f6e4",
+            "evidence:6af41a84ac20de76f4d79cf2",
+            "evidence:6bfcb4f4d8500a30861e6857",
+            "evidence:6f4469ba181397cf85b3b7dd",
+            "evidence:7a52f2473855d774ec4b531c",
+            "evidence:886edb16ad4f03825d11db59",
+            "evidence:8fef658b1150cb159a74b3cd",
+            "evidence:903c6d1c28fd9d65e94d2fec",
+            "evidence:a02a2deaacd09ebd1c5155fe",
+            "evidence:aff6a306ae8b4b88f05f6a65",
+            "evidence:b0db26d9d9c88eb262d93267",
+            "evidence:bc792ea83f0f7150ade900cc",
+            "evidence:c19b04c240a0ee8c71b6a150",
+            "evidence:c6dcbaac9d846ab2d7f0d4a9",
+            "evidence:ca952f6834a856abf95480c1",
+            "evidence:d0f261505b0f67b3185688ac",
+            "evidence:d1e0ed96c109c5ceb99b88d2",
+            "evidence:d3c59062780c248b70033713",
+            "evidence:dc47800a86f3ad5388da48af",
+            "evidence:e0bdd93c8e711aa126d09c2f",
+            "evidence:e62ce8b418196fbc421def77",
+            "evidence:e6a15be44729c438717dfbcc",
+            "evidence:e900643f9984b6ddcc70de5e",
+            "evidence:e951f3a9c1d2c0e150044b28",
+            "evidence:f05d1e3b3d143486238802af",
+            "evidence:fa070c39c96c9ab517a26337",
+            "evidence:fcb5757df3a9a22deb2e761b"
+          ],
+          "changedDecisionIds": [],
+          "changedFindingCodes": [],
+          "proposalDigest": "sha256:56bba799a377588d7742e7a289e6723432284078499fa302131b04760a1a4ac4",
+          "digest": "sha256:8eb88949f64ceb2119ebd2b4e35af43da2a8af390940d1c7636e758af88c83f4"
+        }
+      ],
+      "advisoryFindings": [
+        {
+          "code": "partial_repository_coverage",
+          "severity": "advisory",
+          "authority": "model_advisory",
+          "message": "The registered RepositoryView is partial, so implementation-time validation must resolve each pre-registered command against the exact candidate without treating uninspected repository areas as positive evidence.",
+          "evidenceRefs": [
+            "evidence:a02a2deaacd09ebd1c5155fe",
+            "evidence:e0bdd93c8e711aa126d09c2f",
+            "evidence:fcb5757df3a9a22deb2e761b"
+          ],
+          "resolution": "deterministic_check"
+        }
+      ]
+    }
+  },
+  "compilation": {
+    "ok": true,
+    "graph": {
+      "graphId": "graph:semantic-plan-material:manyhands-canonical-planning-cutover",
+      "revision": 1,
+      "semanticPlan": {
+        "id": "semantic-plan-material:manyhands-canonical-planning-cutover",
+        "revision": 1,
+        "digest": "sha256:56bba799a377588d7742e7a289e6723432284078499fa302131b04760a1a4ac4"
+      },
+      "repositoryView": {
+        "digest": "sha256:73814cb0a91939cbb49f62aee02f5aa2a519dd057a6e7ac05bf6d1e1ff6b57a6",
+        "treeSha": "d869635b11a2fa49728018883eaf98ed4e988ae8",
+        "resourceCatalogDigest": "sha256:d4263669033d68dc0c10d19d6e8f567900ccfff2a688d7bd5fa2df5bb172c3c5"
+      },
+      "rootId": "unit:canonical-planning-cutover",
+      "nodes": {
+        "unit:canonical-planning-cutover": {
+          "id": "unit:canonical-planning-cutover",
+          "parentId": null,
+          "kind": "root",
+          "title": "Canonical productive-planning cutover",
+          "goal": "Integrate daemon-owned canonical planning, deterministic verification, direct compilation, legacy retirement and regression-gate preservation without creating a parallel representation.",
+          "contractRef": {
+            "id": "task:unit:canonical-planning-cutover",
+            "revision": 1,
+            "digest": "sha256:1910c2484f1cb3704290f7317f41f23b31a73757b35f98767a78da36528dacdb"
+          }
+        },
+        "unit:daemon-composition": {
+          "id": "unit:daemon-composition",
+          "parentId": "unit:canonical-planning-cutover",
+          "kind": "leaf",
+          "title": "Daemon planning composition",
+          "goal": "Replace the productive daemon planning route with explicit composition of the canonical PlanningEngine, deterministic verifier and direct compiler while retaining daemon lifecycle ownership and exact repository grounding.",
+          "contractRef": {
+            "id": "task:unit:daemon-composition",
+            "revision": 1,
+            "digest": "sha256:cae4939c28078fe3b8ee8bdb2e0c7b926d0635f11700a91ded534e54f6fa9ba2"
+          }
+        },
+        "unit:canonical-planning-engine": {
+          "id": "unit:canonical-planning-engine",
+          "parentId": "unit:canonical-planning-cutover",
+          "kind": "leaf",
+          "title": "Canonical PlanningEngine",
+          "goal": "Make the canonical PlanningEngine produce the sole SemanticPlan from the registered goal, proof obligations and repository view with typed attributable planning failures.",
+          "contractRef": {
+            "id": "task:unit:canonical-planning-engine",
+            "revision": 1,
+            "digest": "sha256:8b8883dcd91512f053915efb183bd2b6bacc1bea33228cae458e099d00cc00ea"
+          }
+        },
+        "unit:deterministic-verifier": {
+          "id": "unit:deterministic-verifier",
+          "parentId": "unit:canonical-planning-cutover",
+          "kind": "leaf",
+          "title": "Deterministic SemanticPlan verifier",
+          "goal": "Enforce deterministic SemanticPlan material, criterion-refinement, artifact-flow, seam and resource-ownership checks before direct compilation.",
+          "contractRef": {
+            "id": "task:unit:deterministic-verifier",
+            "revision": 1,
+            "digest": "sha256:fb47519af2046409f23a810f015b97e6863b14d92dd072ae9c6d95b31900e5ea"
+          }
+        },
+        "unit:direct-compiler": {
+          "id": "unit:direct-compiler",
+          "parentId": "unit:canonical-planning-cutover",
+          "kind": "leaf",
+          "title": "Direct SemanticPlan compiler",
+          "goal": "Compile the verified SemanticPlan directly into one canonical GraphRevision with typed artifacts, seams and resource claims, without a WorkBreakdown projection.",
+          "contractRef": {
+            "id": "task:unit:direct-compiler",
+            "revision": 1,
+            "digest": "sha256:0dacfb493fea1ebc388c5a510f46ca5ee6e55e0442443971f9960c046606a486"
+          }
+        },
+        "unit:legacy-retirement": {
+          "id": "unit:legacy-retirement",
+          "parentId": "unit:canonical-planning-cutover",
+          "kind": "leaf",
+          "title": "Legacy planning retirement",
+          "goal": "Make RecursivePlanner, WorkBreakdown projection and the legacy graph compiler unreachable from productive planning while preserving an explicit non-productive audit boundary where required.",
+          "contractRef": {
+            "id": "task:unit:legacy-retirement",
+            "revision": 1,
+            "digest": "sha256:16ce494bec92520f8ba72a38ab2c799fa37b647ae5149107fb646b489315fe8e"
+          }
+        },
+        "unit:regression-gates": {
+          "id": "unit:regression-gates",
+          "parentId": "unit:canonical-planning-cutover",
+          "kind": "leaf",
+          "title": "Regression gate preservation",
+          "goal": "Preserve canonical GraphRevision validation invariants and execute the registered prior gates against the cutover candidate without moving lifecycle or planning ownership.",
+          "contractRef": {
+            "id": "task:unit:regression-gates",
+            "revision": 1,
+            "digest": "sha256:24b61162dc19981f53074756b4ad9d704534551eb0df176e5d85b8124ae8c5b2"
+          }
+        }
+      },
+      "artifactRequirements": [
+        {
+          "id": "artifact-requirement:artifact:canonical-semantic-plan:unit:deterministic-verifier",
+          "producerNodeId": "unit:canonical-planning-engine",
+          "consumerNodeId": "unit:deterministic-verifier",
+          "artifactContract": {
+            "id": "artifact:canonical-semantic-plan",
+            "revision": 1,
+            "digest": "sha256:98277d6da3203d800e5c6a0bc5935e0c5944bf429bcdfaf392631e870325ad51"
+          },
+          "consumerInputName": "artifact:canonical-semantic-plan",
+          "acceptedManifestKinds": [
+            "candidate_tree",
+            "change_set"
+          ]
+        },
+        {
+          "id": "artifact-requirement:artifact:canonical-semantic-plan:unit:direct-compiler",
+          "producerNodeId": "unit:canonical-planning-engine",
+          "consumerNodeId": "unit:direct-compiler",
+          "artifactContract": {
+            "id": "artifact:canonical-semantic-plan",
+            "revision": 1,
+            "digest": "sha256:98277d6da3203d800e5c6a0bc5935e0c5944bf429bcdfaf392631e870325ad51"
+          },
+          "consumerInputName": "artifact:canonical-semantic-plan",
+          "acceptedManifestKinds": [
+            "candidate_tree",
+            "change_set"
+          ]
+        },
+        {
+          "id": "artifact-requirement:artifact:compiled-graph-revision:unit:canonical-planning-cutover",
+          "producerNodeId": "unit:direct-compiler",
+          "consumerNodeId": "unit:canonical-planning-cutover",
+          "artifactContract": {
+            "id": "artifact:compiled-graph-revision",
+            "revision": 1,
+            "digest": "sha256:60c25da883834493b5a18612edf659d051df6d0324b34c86417f71bc53d8cd09"
+          },
+          "consumerInputName": "artifact:compiled-graph-revision",
+          "acceptedManifestKinds": [
+            "candidate_tree",
+            "change_set"
+          ]
+        },
+        {
+          "id": "artifact-requirement:artifact:compiled-graph-revision:unit:regression-gates",
+          "producerNodeId": "unit:direct-compiler",
+          "consumerNodeId": "unit:regression-gates",
+          "artifactContract": {
+            "id": "artifact:compiled-graph-revision",
+            "revision": 1,
+            "digest": "sha256:60c25da883834493b5a18612edf659d051df6d0324b34c86417f71bc53d8cd09"
+          },
+          "consumerInputName": "artifact:compiled-graph-revision",
+          "acceptedManifestKinds": [
+            "candidate_tree",
+            "change_set"
+          ]
+        },
+        {
+          "id": "artifact-requirement:artifact:daemon-planning-composition:unit:canonical-planning-engine",
+          "producerNodeId": "unit:daemon-composition",
+          "consumerNodeId": "unit:canonical-planning-engine",
+          "artifactContract": {
+            "id": "artifact:daemon-planning-composition",
+            "revision": 1,
+            "digest": "sha256:295791a045d3ca9453f5e8f162fda48a979fd3f8671879f7e52d6ef519dab630"
+          },
+          "consumerInputName": "artifact:daemon-planning-composition",
+          "acceptedManifestKinds": [
+            "candidate_tree",
+            "change_set"
+          ]
+        },
+        {
+          "id": "artifact-requirement:artifact:legacy-retirement:unit:canonical-planning-cutover",
+          "producerNodeId": "unit:legacy-retirement",
+          "consumerNodeId": "unit:canonical-planning-cutover",
+          "artifactContract": {
+            "id": "artifact:legacy-retirement",
+            "revision": 1,
+            "digest": "sha256:c6d139c4944a68dfb0998f8eff2e5d96c9bcec27be9bba635aab2556819b1b52"
+          },
+          "consumerInputName": "artifact:legacy-retirement",
+          "acceptedManifestKinds": [
+            "candidate_tree",
+            "change_set"
+          ]
+        },
+        {
+          "id": "artifact-requirement:artifact:regression-gate-proof:unit:canonical-planning-cutover",
+          "producerNodeId": "unit:regression-gates",
+          "consumerNodeId": "unit:canonical-planning-cutover",
+          "artifactContract": {
+            "id": "artifact:regression-gate-proof",
+            "revision": 1,
+            "digest": "sha256:b41e6377c8adcac1dcfdd89fdb4d3ea20092b100f22d88550aadff034bd988b7"
+          },
+          "consumerInputName": "artifact:regression-gate-proof",
+          "acceptedManifestKinds": [
+            "candidate_tree",
+            "change_set"
+          ]
+        },
+        {
+          "id": "artifact-requirement:artifact:verified-semantic-plan:unit:direct-compiler",
+          "producerNodeId": "unit:deterministic-verifier",
+          "consumerNodeId": "unit:direct-compiler",
+          "artifactContract": {
+            "id": "artifact:verified-semantic-plan",
+            "revision": 1,
+            "digest": "sha256:4fd6c6a1affa2e47a0e952b4b89b9f89e6d98558b6c11007f5329568c16dcb51"
+          },
+          "consumerInputName": "artifact:verified-semantic-plan",
+          "acceptedManifestKinds": [
+            "candidate_tree",
+            "change_set"
+          ]
+        }
+      ],
+      "seamBindings": [
+        {
+          "id": "seam-binding:seam:compiler-to-integration:unit:canonical-planning-cutover",
+          "producerNodeId": "unit:direct-compiler",
+          "consumerNodeId": "unit:canonical-planning-cutover",
+          "seamContract": {
+            "id": "seam:compiler-to-integration",
+            "revision": 1,
+            "digest": "sha256:938083651bccedbc894b9d85b1d4c35b2d2c1ab6790105464e780b58b914925c"
+          },
+          "artifactRequirementId": "artifact-requirement:artifact:compiled-graph-revision:unit:canonical-planning-cutover",
+          "validationObligationIds": [
+            "validation:compiler",
+            "validation:regression",
+            "validation:root"
+          ]
+        },
+        {
+          "id": "seam-binding:seam:compiler-to-integration:unit:regression-gates",
+          "producerNodeId": "unit:direct-compiler",
+          "consumerNodeId": "unit:regression-gates",
+          "seamContract": {
+            "id": "seam:compiler-to-integration",
+            "revision": 1,
+            "digest": "sha256:938083651bccedbc894b9d85b1d4c35b2d2c1ab6790105464e780b58b914925c"
+          },
+          "artifactRequirementId": "artifact-requirement:artifact:compiled-graph-revision:unit:regression-gates",
+          "validationObligationIds": [
+            "validation:compiler",
+            "validation:regression",
+            "validation:root"
+          ]
+        },
+        {
+          "id": "seam-binding:seam:daemon-to-planner:unit:canonical-planning-engine",
+          "producerNodeId": "unit:daemon-composition",
+          "consumerNodeId": "unit:canonical-planning-engine",
+          "seamContract": {
+            "id": "seam:daemon-to-planner",
+            "revision": 1,
+            "digest": "sha256:5a32cd20c4fbb5a5adf73f4d40d9518ca5043cea4fead375bb9c0df6a9f0defb"
+          },
+          "artifactRequirementId": "artifact-requirement:artifact:daemon-planning-composition:unit:canonical-planning-engine",
+          "validationObligationIds": [
+            "validation:daemon",
+            "validation:planner"
+          ]
+        },
+        {
+          "id": "seam-binding:seam:legacy-to-integration:unit:canonical-planning-cutover",
+          "producerNodeId": "unit:legacy-retirement",
+          "consumerNodeId": "unit:canonical-planning-cutover",
+          "seamContract": {
+            "id": "seam:legacy-to-integration",
+            "revision": 1,
+            "digest": "sha256:f29a33212025ec00b2fb0d88b6b2ef298be38890ac042ba9063bcb3b1dd9f74a"
+          },
+          "artifactRequirementId": "artifact-requirement:artifact:legacy-retirement:unit:canonical-planning-cutover",
+          "validationObligationIds": [
+            "validation:legacy",
+            "validation:root"
+          ]
+        },
+        {
+          "id": "seam-binding:seam:planner-to-verifier-and-compiler:unit:deterministic-verifier",
+          "producerNodeId": "unit:canonical-planning-engine",
+          "consumerNodeId": "unit:deterministic-verifier",
+          "seamContract": {
+            "id": "seam:planner-to-verifier-and-compiler",
+            "revision": 1,
+            "digest": "sha256:363ce4067a77a4f107738df4de0477ac8d65a80b44e60024fa8a3bbd51519a76"
+          },
+          "artifactRequirementId": "artifact-requirement:artifact:canonical-semantic-plan:unit:deterministic-verifier",
+          "validationObligationIds": [
+            "validation:compiler",
+            "validation:planner",
+            "validation:verifier"
+          ]
+        },
+        {
+          "id": "seam-binding:seam:planner-to-verifier-and-compiler:unit:direct-compiler",
+          "producerNodeId": "unit:canonical-planning-engine",
+          "consumerNodeId": "unit:direct-compiler",
+          "seamContract": {
+            "id": "seam:planner-to-verifier-and-compiler",
+            "revision": 1,
+            "digest": "sha256:363ce4067a77a4f107738df4de0477ac8d65a80b44e60024fa8a3bbd51519a76"
+          },
+          "artifactRequirementId": "artifact-requirement:artifact:canonical-semantic-plan:unit:direct-compiler",
+          "validationObligationIds": [
+            "validation:compiler",
+            "validation:planner",
+            "validation:verifier"
+          ]
+        },
+        {
+          "id": "seam-binding:seam:regression-to-integration:unit:canonical-planning-cutover",
+          "producerNodeId": "unit:regression-gates",
+          "consumerNodeId": "unit:canonical-planning-cutover",
+          "seamContract": {
+            "id": "seam:regression-to-integration",
+            "revision": 1,
+            "digest": "sha256:bed28fb7382d3bbcceb296add1bce5e8880cb0ab64e51610a7d2658fabfd3ef3"
+          },
+          "artifactRequirementId": "artifact-requirement:artifact:regression-gate-proof:unit:canonical-planning-cutover",
+          "validationObligationIds": [
+            "validation:regression",
+            "validation:root"
+          ]
+        },
+        {
+          "id": "seam-binding:seam:verifier-to-compiler:unit:direct-compiler",
+          "producerNodeId": "unit:deterministic-verifier",
+          "consumerNodeId": "unit:direct-compiler",
+          "seamContract": {
+            "id": "seam:verifier-to-compiler",
+            "revision": 1,
+            "digest": "sha256:87835812ccba7548f143f033acc24e301a2ab9edd0607c0532a27362fdd7d898"
+          },
+          "artifactRequirementId": "artifact-requirement:artifact:verified-semantic-plan:unit:direct-compiler",
+          "validationObligationIds": [
+            "validation:compiler",
+            "validation:verifier"
+          ]
+        }
+      ],
+      "resourceClaims": [
+        {
+          "id": "resource-claim:unit:canonical-planning-cutover:catalog-resource:4d35de4235f3aa5881857757:observe",
+          "nodeId": "unit:canonical-planning-cutover",
+          "resourceId": "catalog-resource:4d35de4235f3aa5881857757",
+          "source": "planner",
+          "evidenceRefs": [
+            "evidence:e0bdd93c8e711aa126d09c2f"
+          ],
+          "epistemic": {
+            "state": "known",
+            "confidence": "high",
+            "evidenceRefs": [
+              "evidence:e0bdd93c8e711aa126d09c2f"
+            ]
+          },
+          "access": "observe",
+          "inputVersion": {
+            "kind": "artifact_contract",
+            "ref": {
+              "id": "artifact:compiled-graph-revision",
+              "revision": 1,
+              "digest": "sha256:60c25da883834493b5a18612edf659d051df6d0324b34c86417f71bc53d8cd09"
+            }
+          }
+        },
+        {
+          "id": "resource-claim:unit:canonical-planning-cutover:catalog-resource:535fd8df5f0334d0d00998ca:observe",
+          "nodeId": "unit:canonical-planning-cutover",
+          "resourceId": "catalog-resource:535fd8df5f0334d0d00998ca",
+          "source": "planner",
+          "evidenceRefs": [
+            "evidence:1001b59c63702da6a83ef538"
+          ],
+          "epistemic": {
+            "state": "known",
+            "confidence": "high",
+            "evidenceRefs": [
+              "evidence:1001b59c63702da6a83ef538"
+            ]
+          },
+          "access": "observe",
+          "inputVersion": {
+            "kind": "artifact_contract",
+            "ref": {
+              "id": "artifact:regression-gate-proof",
+              "revision": 1,
+              "digest": "sha256:b41e6377c8adcac1dcfdd89fdb4d3ea20092b100f22d88550aadff034bd988b7"
+            }
+          }
+        },
+        {
+          "id": "resource-claim:unit:canonical-planning-cutover:catalog-resource:5a3cbab4bff56f2d1197c979:observe",
+          "nodeId": "unit:canonical-planning-cutover",
+          "resourceId": "catalog-resource:5a3cbab4bff56f2d1197c979",
+          "source": "planner",
+          "evidenceRefs": [
+            "evidence:5880d3244ee8a85739d37c25"
+          ],
+          "epistemic": {
+            "state": "known",
+            "confidence": "high",
+            "evidenceRefs": [
+              "evidence:5880d3244ee8a85739d37c25"
+            ]
+          },
+          "access": "observe",
+          "inputVersion": {
+            "kind": "artifact_contract",
+            "ref": {
+              "id": "artifact:legacy-retirement",
+              "revision": 1,
+              "digest": "sha256:c6d139c4944a68dfb0998f8eff2e5d96c9bcec27be9bba635aab2556819b1b52"
+            }
+          }
+        },
+        {
+          "id": "resource-claim:unit:canonical-planning-cutover:catalog-resource:62f79c52f8bd51a50a6c1211:observe",
+          "nodeId": "unit:canonical-planning-cutover",
+          "resourceId": "catalog-resource:62f79c52f8bd51a50a6c1211",
+          "source": "planner",
+          "evidenceRefs": [
+            "evidence:479035e214f31497694608ec"
+          ],
+          "epistemic": {
+            "state": "known",
+            "confidence": "high",
+            "evidenceRefs": [
+              "evidence:479035e214f31497694608ec"
+            ]
+          },
+          "access": "observe",
+          "inputVersion": {
+            "kind": "repository_view",
+            "digest": "sha256:73814cb0a91939cbb49f62aee02f5aa2a519dd057a6e7ac05bf6d1e1ff6b57a6"
+          }
+        },
+        {
+          "id": "resource-claim:unit:canonical-planning-cutover:catalog-resource:b63d0bab5fb18fa8c1b3e20b:observe",
+          "nodeId": "unit:canonical-planning-cutover",
+          "resourceId": "catalog-resource:b63d0bab5fb18fa8c1b3e20b",
+          "source": "planner",
+          "evidenceRefs": [
+            "evidence:fcb5757df3a9a22deb2e761b"
+          ],
+          "epistemic": {
+            "state": "known",
+            "confidence": "high",
+            "evidenceRefs": [
+              "evidence:fcb5757df3a9a22deb2e761b"
+            ]
+          },
+          "access": "observe",
+          "inputVersion": {
+            "kind": "artifact_contract",
+            "ref": {
+              "id": "artifact:compiled-graph-revision",
+              "revision": 1,
+              "digest": "sha256:60c25da883834493b5a18612edf659d051df6d0324b34c86417f71bc53d8cd09"
+            }
+          }
+        },
+        {
+          "id": "resource-claim:unit:canonical-planning-cutover:catalog-resource:b7d6aea5ac8ff61b3c39d622:observe",
+          "nodeId": "unit:canonical-planning-cutover",
+          "resourceId": "catalog-resource:b7d6aea5ac8ff61b3c39d622",
+          "source": "planner",
+          "evidenceRefs": [
+            "evidence:a02a2deaacd09ebd1c5155fe"
+          ],
+          "epistemic": {
+            "state": "known",
+            "confidence": "high",
+            "evidenceRefs": [
+              "evidence:a02a2deaacd09ebd1c5155fe"
+            ]
+          },
+          "access": "observe",
+          "inputVersion": {
+            "kind": "repository_view",
+            "digest": "sha256:73814cb0a91939cbb49f62aee02f5aa2a519dd057a6e7ac05bf6d1e1ff6b57a6"
+          }
+        },
+        {
+          "id": "resource-claim:unit:canonical-planning-engine:catalog-resource:b7d6aea5ac8ff61b3c39d622:modify",
+          "nodeId": "unit:canonical-planning-engine",
+          "resourceId": "catalog-resource:b7d6aea5ac8ff61b3c39d622",
+          "source": "planner",
+          "evidenceRefs": [
+            "evidence:a02a2deaacd09ebd1c5155fe"
+          ],
+          "epistemic": {
+            "state": "known",
+            "confidence": "high",
+            "evidenceRefs": [
+              "evidence:a02a2deaacd09ebd1c5155fe"
+            ]
+          },
+          "access": "modify",
+          "ownerPhase": "implementation",
+          "inputVersion": {
+            "kind": "artifact_contract",
+            "ref": {
+              "id": "artifact:daemon-planning-composition",
+              "revision": 1,
+              "digest": "sha256:295791a045d3ca9453f5e8f162fda48a979fd3f8671879f7e52d6ef519dab630"
+            }
+          },
+          "outputArtifact": {
+            "id": "artifact:canonical-semantic-plan",
+            "revision": 1,
+            "digest": "sha256:98277d6da3203d800e5c6a0bc5935e0c5944bf429bcdfaf392631e870325ad51"
+          }
+        },
+        {
+          "id": "resource-claim:unit:daemon-composition:catalog-resource:b63d0bab5fb18fa8c1b3e20b:modify",
+          "nodeId": "unit:daemon-composition",
+          "resourceId": "catalog-resource:b63d0bab5fb18fa8c1b3e20b",
+          "source": "planner",
+          "evidenceRefs": [
+            "evidence:fcb5757df3a9a22deb2e761b"
+          ],
+          "epistemic": {
+            "state": "known",
+            "confidence": "high",
+            "evidenceRefs": [
+              "evidence:fcb5757df3a9a22deb2e761b"
+            ]
+          },
+          "access": "modify",
+          "ownerPhase": "implementation",
+          "inputVersion": {
+            "kind": "repository_view",
+            "digest": "sha256:73814cb0a91939cbb49f62aee02f5aa2a519dd057a6e7ac05bf6d1e1ff6b57a6"
+          },
+          "outputArtifact": {
+            "id": "artifact:daemon-planning-composition",
+            "revision": 1,
+            "digest": "sha256:295791a045d3ca9453f5e8f162fda48a979fd3f8671879f7e52d6ef519dab630"
+          }
+        },
+        {
+          "id": "resource-claim:unit:deterministic-verifier:catalog-resource:62f79c52f8bd51a50a6c1211:modify",
+          "nodeId": "unit:deterministic-verifier",
+          "resourceId": "catalog-resource:62f79c52f8bd51a50a6c1211",
+          "source": "planner",
+          "evidenceRefs": [
+            "evidence:479035e214f31497694608ec"
+          ],
+          "epistemic": {
+            "state": "known",
+            "confidence": "high",
+            "evidenceRefs": [
+              "evidence:479035e214f31497694608ec"
+            ]
+          },
+          "access": "modify",
+          "ownerPhase": "implementation",
+          "inputVersion": {
+            "kind": "artifact_contract",
+            "ref": {
+              "id": "artifact:canonical-semantic-plan",
+              "revision": 1,
+              "digest": "sha256:98277d6da3203d800e5c6a0bc5935e0c5944bf429bcdfaf392631e870325ad51"
+            }
+          },
+          "outputArtifact": {
+            "id": "artifact:verified-semantic-plan",
+            "revision": 1,
+            "digest": "sha256:4fd6c6a1affa2e47a0e952b4b89b9f89e6d98558b6c11007f5329568c16dcb51"
+          }
+        },
+        {
+          "id": "resource-claim:unit:direct-compiler:catalog-resource:4d35de4235f3aa5881857757:modify",
+          "nodeId": "unit:direct-compiler",
+          "resourceId": "catalog-resource:4d35de4235f3aa5881857757",
+          "source": "planner",
+          "evidenceRefs": [
+            "evidence:e0bdd93c8e711aa126d09c2f"
+          ],
+          "epistemic": {
+            "state": "known",
+            "confidence": "high",
+            "evidenceRefs": [
+              "evidence:e0bdd93c8e711aa126d09c2f"
+            ]
+          },
+          "access": "modify",
+          "ownerPhase": "implementation",
+          "inputVersion": {
+            "kind": "artifact_contract",
+            "ref": {
+              "id": "artifact:verified-semantic-plan",
+              "revision": 1,
+              "digest": "sha256:4fd6c6a1affa2e47a0e952b4b89b9f89e6d98558b6c11007f5329568c16dcb51"
+            }
+          },
+          "outputArtifact": {
+            "id": "artifact:compiled-graph-revision",
+            "revision": 1,
+            "digest": "sha256:60c25da883834493b5a18612edf659d051df6d0324b34c86417f71bc53d8cd09"
+          }
+        },
+        {
+          "id": "resource-claim:unit:legacy-retirement:catalog-resource:5a3cbab4bff56f2d1197c979:modify",
+          "nodeId": "unit:legacy-retirement",
+          "resourceId": "catalog-resource:5a3cbab4bff56f2d1197c979",
+          "source": "planner",
+          "evidenceRefs": [
+            "evidence:5880d3244ee8a85739d37c25"
+          ],
+          "epistemic": {
+            "state": "known",
+            "confidence": "high",
+            "evidenceRefs": [
+              "evidence:5880d3244ee8a85739d37c25"
+            ]
+          },
+          "access": "modify",
+          "ownerPhase": "implementation",
+          "inputVersion": {
+            "kind": "repository_view",
+            "digest": "sha256:73814cb0a91939cbb49f62aee02f5aa2a519dd057a6e7ac05bf6d1e1ff6b57a6"
+          },
+          "outputArtifact": {
+            "id": "artifact:legacy-retirement",
+            "revision": 1,
+            "digest": "sha256:c6d139c4944a68dfb0998f8eff2e5d96c9bcec27be9bba635aab2556819b1b52"
+          }
+        },
+        {
+          "id": "resource-claim:unit:regression-gates:catalog-resource:535fd8df5f0334d0d00998ca:modify",
+          "nodeId": "unit:regression-gates",
+          "resourceId": "catalog-resource:535fd8df5f0334d0d00998ca",
+          "source": "planner",
+          "evidenceRefs": [
+            "evidence:1001b59c63702da6a83ef538"
+          ],
+          "epistemic": {
+            "state": "known",
+            "confidence": "high",
+            "evidenceRefs": [
+              "evidence:1001b59c63702da6a83ef538"
+            ]
+          },
+          "access": "modify",
+          "ownerPhase": "implementation",
+          "inputVersion": {
+            "kind": "artifact_contract",
+            "ref": {
+              "id": "artifact:compiled-graph-revision",
+              "revision": 1,
+              "digest": "sha256:60c25da883834493b5a18612edf659d051df6d0324b34c86417f71bc53d8cd09"
+            }
+          },
+          "outputArtifact": {
+            "id": "artifact:regression-gate-proof",
+            "revision": 1,
+            "digest": "sha256:b41e6377c8adcac1dcfdd89fdb4d3ea20092b100f22d88550aadff034bd988b7"
+          }
+        }
+      ],
+      "runtimeLeaseClaims": [],
+      "contractRefs": [
+        {
+          "id": "artifact:canonical-semantic-plan",
+          "revision": 1,
+          "digest": "sha256:98277d6da3203d800e5c6a0bc5935e0c5944bf429bcdfaf392631e870325ad51"
+        },
+        {
+          "id": "artifact:compiled-graph-revision",
+          "revision": 1,
+          "digest": "sha256:60c25da883834493b5a18612edf659d051df6d0324b34c86417f71bc53d8cd09"
+        },
+        {
+          "id": "artifact:daemon-planning-composition",
+          "revision": 1,
+          "digest": "sha256:295791a045d3ca9453f5e8f162fda48a979fd3f8671879f7e52d6ef519dab630"
+        },
+        {
+          "id": "artifact:legacy-retirement",
+          "revision": 1,
+          "digest": "sha256:c6d139c4944a68dfb0998f8eff2e5d96c9bcec27be9bba635aab2556819b1b52"
+        },
+        {
+          "id": "artifact:regression-gate-proof",
+          "revision": 1,
+          "digest": "sha256:b41e6377c8adcac1dcfdd89fdb4d3ea20092b100f22d88550aadff034bd988b7"
+        },
+        {
+          "id": "artifact:verified-semantic-plan",
+          "revision": 1,
+          "digest": "sha256:4fd6c6a1affa2e47a0e952b4b89b9f89e6d98558b6c11007f5329568c16dcb51"
+        },
+        {
+          "id": "scope:unit:canonical-planning-cutover",
+          "revision": 1,
+          "digest": "sha256:73f9897f7a6b9902e00f8c75c176b6aa770d737192f822e86d2b2c61b3e6f212"
+        },
+        {
+          "id": "scope:unit:canonical-planning-engine",
+          "revision": 1,
+          "digest": "sha256:9b7e5ff6168e9ad86c44283dab9d1239a50ae477d7f44af04ba97e695baa31d9"
+        },
+        {
+          "id": "scope:unit:daemon-composition",
+          "revision": 1,
+          "digest": "sha256:5a70cc38552b24e3d6b93db4772d2ffd3da26c62e5a4bf20226ac5e37df4b8e6"
+        },
+        {
+          "id": "scope:unit:deterministic-verifier",
+          "revision": 1,
+          "digest": "sha256:ba22836328d33883040c6a0113fb69af49262088ea04e61b806f3f823f7204a6"
+        },
+        {
+          "id": "scope:unit:direct-compiler",
+          "revision": 1,
+          "digest": "sha256:154aef0d0f503c19939d9e9119fcd8c1f7bfd568c286933575c993f2580c7109"
+        },
+        {
+          "id": "scope:unit:legacy-retirement",
+          "revision": 1,
+          "digest": "sha256:2664adc16acc857b5b612345e451410827344ea33ee3bed46623ae514b1d02a1"
+        },
+        {
+          "id": "scope:unit:regression-gates",
+          "revision": 1,
+          "digest": "sha256:cf566489505a6204e859dba1062366c6ede4186a559dcf7828683db014440c08"
+        },
+        {
+          "id": "seam:compiler-to-integration",
+          "revision": 1,
+          "digest": "sha256:938083651bccedbc894b9d85b1d4c35b2d2c1ab6790105464e780b58b914925c"
+        },
+        {
+          "id": "seam:daemon-to-planner",
+          "revision": 1,
+          "digest": "sha256:5a32cd20c4fbb5a5adf73f4d40d9518ca5043cea4fead375bb9c0df6a9f0defb"
+        },
+        {
+          "id": "seam:legacy-to-integration",
+          "revision": 1,
+          "digest": "sha256:f29a33212025ec00b2fb0d88b6b2ef298be38890ac042ba9063bcb3b1dd9f74a"
+        },
+        {
+          "id": "seam:planner-to-verifier-and-compiler",
+          "revision": 1,
+          "digest": "sha256:363ce4067a77a4f107738df4de0477ac8d65a80b44e60024fa8a3bbd51519a76"
+        },
+        {
+          "id": "seam:regression-to-integration",
+          "revision": 1,
+          "digest": "sha256:bed28fb7382d3bbcceb296add1bce5e8880cb0ab64e51610a7d2658fabfd3ef3"
+        },
+        {
+          "id": "seam:verifier-to-compiler",
+          "revision": 1,
+          "digest": "sha256:87835812ccba7548f143f033acc24e301a2ab9edd0607c0532a27362fdd7d898"
+        },
+        {
+          "id": "task:unit:canonical-planning-cutover",
+          "revision": 1,
+          "digest": "sha256:1910c2484f1cb3704290f7317f41f23b31a73757b35f98767a78da36528dacdb"
+        },
+        {
+          "id": "task:unit:canonical-planning-engine",
+          "revision": 1,
+          "digest": "sha256:8b8883dcd91512f053915efb183bd2b6bacc1bea33228cae458e099d00cc00ea"
+        },
+        {
+          "id": "task:unit:daemon-composition",
+          "revision": 1,
+          "digest": "sha256:cae4939c28078fe3b8ee8bdb2e0c7b926d0635f11700a91ded534e54f6fa9ba2"
+        },
+        {
+          "id": "task:unit:deterministic-verifier",
+          "revision": 1,
+          "digest": "sha256:fb47519af2046409f23a810f015b97e6863b14d92dd072ae9c6d95b31900e5ea"
+        },
+        {
+          "id": "task:unit:direct-compiler",
+          "revision": 1,
+          "digest": "sha256:0dacfb493fea1ebc388c5a510f46ca5ee6e55e0442443971f9960c046606a486"
+        },
+        {
+          "id": "task:unit:legacy-retirement",
+          "revision": 1,
+          "digest": "sha256:16ce494bec92520f8ba72a38ab2c799fa37b647ae5149107fb646b489315fe8e"
+        },
+        {
+          "id": "task:unit:regression-gates",
+          "revision": 1,
+          "digest": "sha256:24b61162dc19981f53074756b4ad9d704534551eb0df176e5d85b8124ae8c5b2"
+        },
+        {
+          "id": "validation-contract:unit:canonical-planning-cutover",
+          "revision": 1,
+          "digest": "sha256:acfecef1f97bfa1d18981e84346ada37662a68174cbe5a18165541813a6ce753"
+        },
+        {
+          "id": "validation-contract:unit:canonical-planning-engine",
+          "revision": 1,
+          "digest": "sha256:90baca965e0f1568696dc12a9e4d020009a36c4f11a8a36e6b2245e3cd6244c5"
+        },
+        {
+          "id": "validation-contract:unit:daemon-composition",
+          "revision": 1,
+          "digest": "sha256:26d699db17ea04878cb928cca2d27b26c72498f9fee0c0a3ff8f59353174e32c"
+        },
+        {
+          "id": "validation-contract:unit:deterministic-verifier",
+          "revision": 1,
+          "digest": "sha256:5f56014c8b3cc885b0d984075f2f6dcf3a166b75a1c94178d860dfb206b84f8d"
+        },
+        {
+          "id": "validation-contract:unit:direct-compiler",
+          "revision": 1,
+          "digest": "sha256:ae682bc07e89c4b35cfdb0c5c10600b236631e67ad438aacf79f3141baa50fac"
+        },
+        {
+          "id": "validation-contract:unit:legacy-retirement",
+          "revision": 1,
+          "digest": "sha256:cd1d3e33cd7e83ad78655648b843a00d1c13cefbeebff6ead4c8df49b27e4641"
+        },
+        {
+          "id": "validation-contract:unit:regression-gates",
+          "revision": 1,
+          "digest": "sha256:46952d928688a8c30bf8a2c8c05637cf142a0f0df3f47a323d527d7f605285f4"
+        },
+        {
+          "id": "validation:compiler",
+          "revision": 1,
+          "digest": "sha256:3597cbec34a4b5d83573913442507b40d0e693fc9b92ccb63a256962c071df2d"
+        },
+        {
+          "id": "validation:daemon",
+          "revision": 1,
+          "digest": "sha256:f2f75f5f5bec38f82e9936206f735303eb2ee3d8b4d9bc6c667fb848075bb1bb"
+        },
+        {
+          "id": "validation:legacy",
+          "revision": 1,
+          "digest": "sha256:a65b4e2be17039234d95d0aac4fbf7bf2e4560803a8aa9a200a5b88d0bec59ae"
+        },
+        {
+          "id": "validation:planner",
+          "revision": 1,
+          "digest": "sha256:0925046656fd0ee0866cbc9954ddf525e6a145d7adf0b7b23554435d4c32d5a0"
+        },
+        {
+          "id": "validation:regression",
+          "revision": 1,
+          "digest": "sha256:17ce4e287785faed1b760cc8c4d4a39308cd93031388a63c4112727f7c211e47"
+        },
+        {
+          "id": "validation:root",
+          "revision": 1,
+          "digest": "sha256:e2b33acfca1cb064a36ae04875b97b0a3b6c7a252fc55b214c560cb54bacefac"
+        },
+        {
+          "id": "validation:root",
+          "revision": 1,
+          "digest": "sha256:efcd146de8545173c9a6101a383a0abc63445f724077d0262a873bc456fe63ba"
+        },
+        {
+          "id": "validation:verifier",
+          "revision": 1,
+          "digest": "sha256:d12d49d410bbfcf89f60ed6eb0362223146488585281c7a705e994583b17982f"
+        }
+      ],
+      "digest": "sha256:4ad20866224b57b1ffbaca98b3e3337149fc090a38c2d2ba42ada4d0a4e95a1c"
+    },
+    "contracts": {
+      "taskBundles": {
+        "unit:canonical-planning-cutover": {
+          "schemaVersion": 2,
+          "task": {
+            "schemaVersion": 2,
+            "id": "task:unit:canonical-planning-cutover",
+            "revision": "1",
+            "provenance": "compiled",
+            "nodeId": "unit:canonical-planning-cutover",
+            "goal": "Integrate daemon-owned canonical planning, deterministic verification, direct compilation, legacy retirement and regression-gate preservation without creating a parallel representation.",
+            "acceptanceCriteria": [
+              {
+                "id": "criterion-ref:root-canonical-route",
+                "kind": "integration",
+                "description": "The daemon composes the canonical planner, verifier and direct compiler as the only productive planning route.",
+                "required": true
+              },
+              {
+                "id": "criterion-ref:root-legacy-unreachable",
+                "kind": "integration",
+                "description": "RecursivePlanner, WorkBreakdown projection and the legacy graph compiler are unreachable from productive planning entrypoints.",
+                "required": false
+              },
+              {
+                "id": "criterion-ref:root-regression",
+                "kind": "integration",
+                "description": "Daemon lifecycle ownership, repository grounding and existing gates remain green after cutover.",
+                "required": false
+              }
+            ],
+            "scope": {
+              "id": "scope:unit:canonical-planning-cutover",
+              "revision": "1"
+            },
+            "consumes": [
+              {
+                "id": "artifact:compiled-graph-revision",
+                "revision": "1"
+              },
+              {
+                "id": "artifact:legacy-retirement",
+                "revision": "1"
+              },
+              {
+                "id": "artifact:regression-gate-proof",
+                "revision": "1"
+              }
+            ],
+            "produces": [],
+            "seams": [
+              {
+                "id": "seam:compiler-to-integration",
+                "revision": "1"
+              },
+              {
+                "id": "seam:legacy-to-integration",
+                "revision": "1"
+              },
+              {
+                "id": "seam:regression-to-integration",
+                "revision": "1"
+              }
+            ],
+            "validation": {
+              "id": "validation-contract:unit:canonical-planning-cutover",
+              "revision": "1"
+            },
+            "constraints": [
+              "Do not introduce another plan or graph representation.",
+              "Do not move planning ownership into apps/web.",
+              "Preserve the exact repository view and daemon lifecycle boundary."
+            ]
+          },
+          "scope": {
+            "schemaVersion": 2,
+            "id": "scope:unit:canonical-planning-cutover",
+            "revision": "1",
+            "provenance": "compiled",
+            "nodeId": "unit:canonical-planning-cutover",
+            "allowedPaths": [
+              "apps/daemon/src/current-lifecycle-adapters.ts",
+              "apps/daemon/src/transitional-unsafe-profile.ts",
+              "packages/contracts/src/semantic-plan.ts",
+              "packages/decomposer/src/compiler/graph-compiler.ts",
+              "packages/decomposer/src/planner/planning-module.ts",
+              "packages/task-graph/src/canonical-graph.ts"
+            ],
+            "forbiddenPaths": [],
+            "coordinationPaths": [],
+            "outputRoots": []
+          },
+          "seams": [
+            {
+              "schemaVersion": 2,
+              "id": "seam:compiler-to-integration",
+              "revision": "1",
+              "provenance": "compiled",
+              "kind": "data",
+              "specification": "The direct compiler provides the canonical GraphRevision candidate to regression validation and root integration.",
+              "producerNodeId": "unit:direct-compiler",
+              "consumerNodeIds": [
+                "unit:canonical-planning-cutover",
+                "unit:regression-gates"
+              ],
+              "semanticFacts": {
+                "payload": "GraphRevision",
+                "authority": "direct SemanticPlan compiler",
+                "provenance": "registered SemanticPlan and RepositoryView"
+              },
+              "compatibility": {
+                "mode": "exact",
+                "rules": [
+                  "Artifact, seam and resource relations must remain canonical.",
+                  "GraphRevision must identify the source SemanticPlan and exact RepositoryView."
+                ]
+              },
+              "baselineArtifactContractId": "artifact:compiled-graph-revision"
+            },
+            {
+              "schemaVersion": 2,
+              "id": "seam:legacy-to-integration",
+              "revision": "1",
+              "provenance": "compiled",
+              "kind": "data",
+              "specification": "Legacy retirement supplies static reachability evidence to root integration.",
+              "producerNodeId": "unit:legacy-retirement",
+              "consumerNodeIds": [
+                "unit:canonical-planning-cutover"
+              ],
+              "semanticFacts": {
+                "payload": "productive-entrypoint reachability report",
+                "authority": "deterministic source scan",
+                "constraint": "legacy planning unreachable"
+              },
+              "compatibility": {
+                "mode": "exact",
+                "rules": [
+                  "The protected negative control must detect a reintroduced legacy reference.",
+                  "The scan must cover productive daemon planning entrypoints."
+                ]
+              },
+              "baselineArtifactContractId": "artifact:legacy-retirement"
+            },
+            {
+              "schemaVersion": 2,
+              "id": "seam:regression-to-integration",
+              "revision": "1",
+              "provenance": "compiled",
+              "kind": "data",
+              "specification": "Regression validation supplies prior-gate results for the exact integrated candidate.",
+              "producerNodeId": "unit:regression-gates",
+              "consumerNodeIds": [
+                "unit:canonical-planning-cutover"
+              ],
+              "semanticFacts": {
+                "payload": "prior-gate evidence",
+                "authority": "orchestrator deterministic validation",
+                "candidate": "exact integrated cutover"
+              },
+              "compatibility": {
+                "mode": "exact",
+                "rules": [
+                  "Evidence must identify the exact candidate under integration.",
+                  "Lifecycle ownership and repository-view checks must remain included."
+                ]
+              },
+              "baselineArtifactContractId": "artifact:regression-gate-proof"
+            }
+          ],
+          "artifacts": [
+            {
+              "schemaVersion": 2,
+              "id": "artifact:compiled-graph-revision",
+              "revision": "1",
+              "provenance": "compiled",
+              "producerNodeId": "unit:direct-compiler",
+              "consumerNodeIds": [
+                "unit:canonical-planning-cutover",
+                "unit:regression-gates"
+              ],
+              "artifactType": "direct-graph-revision-compiler",
+              "mediaType": "text/x-typescript",
+              "materialization": "files",
+              "expectedPaths": [
+                "packages/decomposer/src/compiler/graph-compiler.ts"
+              ]
+            },
+            {
+              "schemaVersion": 2,
+              "id": "artifact:legacy-retirement",
+              "revision": "1",
+              "provenance": "compiled",
+              "producerNodeId": "unit:legacy-retirement",
+              "consumerNodeIds": [
+                "unit:canonical-planning-cutover"
+              ],
+              "artifactType": "legacy-reachability-retirement",
+              "mediaType": "text/x-typescript",
+              "materialization": "files",
+              "expectedPaths": [
+                "apps/daemon/src/transitional-unsafe-profile.ts"
+              ]
+            },
+            {
+              "schemaVersion": 2,
+              "id": "artifact:regression-gate-proof",
+              "revision": "1",
+              "provenance": "compiled",
+              "producerNodeId": "unit:regression-gates",
+              "consumerNodeIds": [
+                "unit:canonical-planning-cutover"
+              ],
+              "artifactType": "canonical-graph-regression-gates",
+              "mediaType": "text/x-typescript",
+              "materialization": "files",
+              "expectedPaths": [
+                "packages/task-graph/src/canonical-graph.ts"
+              ]
+            }
+          ],
+          "validation": {
+            "schemaVersion": 2,
+            "id": "validation-contract:unit:canonical-planning-cutover",
+            "revision": "1",
+            "provenance": "compiled",
+            "nodeId": "unit:canonical-planning-cutover",
+            "obligations": [
+              {
+                "id": "validation:root",
+                "criterionId": "criterion-ref:root-canonical-route",
+                "layer": "integration",
+                "severity": "required",
+                "acceptableEvidence": [
+                  "test_result"
+                ],
+                "baselinePolicy": "required",
+                "negativeControl": "when_feasible",
+                "flakyPolicy": "forbid"
+              }
+            ]
+          }
+        },
+        "unit:canonical-planning-engine": {
+          "schemaVersion": 2,
+          "task": {
+            "schemaVersion": 2,
+            "id": "task:unit:canonical-planning-engine",
+            "revision": "1",
+            "provenance": "compiled",
+            "nodeId": "unit:canonical-planning-engine",
+            "goal": "Make the canonical PlanningEngine produce the sole SemanticPlan from the registered goal, proof obligations and repository view with typed attributable planning failures.",
+            "acceptanceCriteria": [
+              {
+                "id": "criterion-ref:planner-canonical-route",
+                "kind": "integration",
+                "description": "The canonical PlanningEngine is the sole productive plan producer.",
+                "required": true
+              }
+            ],
+            "scope": {
+              "id": "scope:unit:canonical-planning-engine",
+              "revision": "1"
+            },
+            "consumes": [
+              {
+                "id": "artifact:daemon-planning-composition",
+                "revision": "1"
+              }
+            ],
+            "produces": [
+              {
+                "id": "artifact:canonical-semantic-plan",
+                "revision": "1"
+              }
+            ],
+            "seams": [
+              {
+                "id": "seam:daemon-to-planner",
+                "revision": "1"
+              },
+              {
+                "id": "seam:planner-to-verifier-and-compiler",
+                "revision": "1"
+              }
+            ],
+            "validation": {
+              "id": "validation-contract:unit:canonical-planning-engine",
+              "revision": "1"
+            },
+            "constraints": [
+              "Do not introduce another plan or graph representation.",
+              "Do not move planning ownership into apps/web.",
+              "Preserve the exact repository view and daemon lifecycle boundary."
+            ]
+          },
+          "scope": {
+            "schemaVersion": 2,
+            "id": "scope:unit:canonical-planning-engine",
+            "revision": "1",
+            "provenance": "compiled",
+            "nodeId": "unit:canonical-planning-engine",
+            "allowedPaths": [
+              "packages/decomposer/src/planner/planning-module.ts"
+            ],
+            "forbiddenPaths": [],
+            "coordinationPaths": [],
+            "outputRoots": []
+          },
+          "seams": [
+            {
+              "schemaVersion": 2,
+              "id": "seam:daemon-to-planner",
+              "revision": "1",
+              "provenance": "compiled",
+              "kind": "command",
+              "specification": "The daemon supplies the immutable goal contract and exact registered RepositoryView to the canonical PlanningEngine and retains lifecycle adoption authority.",
+              "producerNodeId": "unit:daemon-composition",
+              "consumerNodeIds": [
+                "unit:canonical-planning-engine"
+              ],
+              "semanticFacts": {
+                "payload": "GoalContract and exact RepositoryView",
+                "authority": "daemon lifecycle owner",
+                "operation": "canonical productive planning"
+              },
+              "compatibility": {
+                "mode": "exact",
+                "rules": [
+                  "GoalContract revision and digest must match the registered contract.",
+                  "RepositoryView digest and treeSha must match the registered view."
+                ]
+              },
+              "baselineArtifactContractId": "artifact:daemon-planning-composition"
+            },
+            {
+              "schemaVersion": 2,
+              "id": "seam:planner-to-verifier-and-compiler",
+              "revision": "1",
+              "provenance": "compiled",
+              "kind": "data",
+              "specification": "The PlanningEngine emits the sole canonical SemanticPlan for deterministic verification and direct compilation.",
+              "producerNodeId": "unit:canonical-planning-engine",
+              "consumerNodeIds": [
+                "unit:deterministic-verifier",
+                "unit:direct-compiler"
+              ],
+              "semanticFacts": {
+                "payload": "SemanticPlan",
+                "authority": "canonical PlanningEngine",
+                "representation": "sole productive planning output"
+              },
+              "compatibility": {
+                "mode": "exact",
+                "rules": [
+                  "No WorkBreakdown projection may mediate productive compilation.",
+                  "SemanticPlan must reference the registered GoalContract and RepositoryView."
+                ]
+              },
+              "baselineArtifactContractId": "artifact:canonical-semantic-plan"
+            }
+          ],
+          "artifacts": [
+            {
+              "schemaVersion": 2,
+              "id": "artifact:canonical-semantic-plan",
+              "revision": "1",
+              "provenance": "compiled",
+              "producerNodeId": "unit:canonical-planning-engine",
+              "consumerNodeIds": [
+                "unit:deterministic-verifier",
+                "unit:direct-compiler"
+              ],
+              "artifactType": "canonical-planning-engine",
+              "mediaType": "text/x-typescript",
+              "materialization": "files",
+              "expectedPaths": [
+                "packages/decomposer/src/planner/planning-module.ts"
+              ]
+            },
+            {
+              "schemaVersion": 2,
+              "id": "artifact:daemon-planning-composition",
+              "revision": "1",
+              "provenance": "compiled",
+              "producerNodeId": "unit:daemon-composition",
+              "consumerNodeIds": [
+                "unit:canonical-planning-engine"
+              ],
+              "artifactType": "daemon-planning-composition",
+              "mediaType": "text/x-typescript",
+              "materialization": "files",
+              "expectedPaths": [
+                "apps/daemon/src/current-lifecycle-adapters.ts"
+              ]
+            }
+          ],
+          "validation": {
+            "schemaVersion": 2,
+            "id": "validation-contract:unit:canonical-planning-engine",
+            "revision": "1",
+            "provenance": "compiled",
+            "nodeId": "unit:canonical-planning-engine",
+            "obligations": [
+              {
+                "id": "validation:planner",
+                "criterionId": "criterion-ref:planner-canonical-route",
+                "layer": "integration",
+                "severity": "required",
+                "acceptableEvidence": [
+                  "test_result"
+                ],
+                "baselinePolicy": "required",
+                "negativeControl": "when_feasible",
+                "flakyPolicy": "forbid"
+              }
+            ]
+          }
+        },
+        "unit:daemon-composition": {
+          "schemaVersion": 2,
+          "task": {
+            "schemaVersion": 2,
+            "id": "task:unit:daemon-composition",
+            "revision": "1",
+            "provenance": "compiled",
+            "nodeId": "unit:daemon-composition",
+            "goal": "Replace the productive daemon planning route with explicit composition of the canonical PlanningEngine, deterministic verifier and direct compiler while retaining daemon lifecycle ownership and exact repository grounding.",
+            "acceptanceCriteria": [
+              {
+                "id": "criterion-ref:daemon-canonical-route",
+                "kind": "integration",
+                "description": "The daemon owns and composes the canonical productive planning route.",
+                "required": true
+              }
+            ],
+            "scope": {
+              "id": "scope:unit:daemon-composition",
+              "revision": "1"
+            },
+            "consumes": [],
+            "produces": [
+              {
+                "id": "artifact:daemon-planning-composition",
+                "revision": "1"
+              }
+            ],
+            "seams": [
+              {
+                "id": "seam:daemon-to-planner",
+                "revision": "1"
+              }
+            ],
+            "validation": {
+              "id": "validation-contract:unit:daemon-composition",
+              "revision": "1"
+            },
+            "constraints": [
+              "Do not introduce another plan or graph representation.",
+              "Do not move planning ownership into apps/web.",
+              "Preserve the exact repository view and daemon lifecycle boundary."
+            ]
+          },
+          "scope": {
+            "schemaVersion": 2,
+            "id": "scope:unit:daemon-composition",
+            "revision": "1",
+            "provenance": "compiled",
+            "nodeId": "unit:daemon-composition",
+            "allowedPaths": [
+              "apps/daemon/src/current-lifecycle-adapters.ts"
+            ],
+            "forbiddenPaths": [],
+            "coordinationPaths": [],
+            "outputRoots": []
+          },
+          "seams": [
+            {
+              "schemaVersion": 2,
+              "id": "seam:daemon-to-planner",
+              "revision": "1",
+              "provenance": "compiled",
+              "kind": "command",
+              "specification": "The daemon supplies the immutable goal contract and exact registered RepositoryView to the canonical PlanningEngine and retains lifecycle adoption authority.",
+              "producerNodeId": "unit:daemon-composition",
+              "consumerNodeIds": [
+                "unit:canonical-planning-engine"
+              ],
+              "semanticFacts": {
+                "payload": "GoalContract and exact RepositoryView",
+                "authority": "daemon lifecycle owner",
+                "operation": "canonical productive planning"
+              },
+              "compatibility": {
+                "mode": "exact",
+                "rules": [
+                  "GoalContract revision and digest must match the registered contract.",
+                  "RepositoryView digest and treeSha must match the registered view."
+                ]
+              },
+              "baselineArtifactContractId": "artifact:daemon-planning-composition"
+            }
+          ],
+          "artifacts": [
+            {
+              "schemaVersion": 2,
+              "id": "artifact:daemon-planning-composition",
+              "revision": "1",
+              "provenance": "compiled",
+              "producerNodeId": "unit:daemon-composition",
+              "consumerNodeIds": [
+                "unit:canonical-planning-engine"
+              ],
+              "artifactType": "daemon-planning-composition",
+              "mediaType": "text/x-typescript",
+              "materialization": "files",
+              "expectedPaths": [
+                "apps/daemon/src/current-lifecycle-adapters.ts"
+              ]
+            }
+          ],
+          "validation": {
+            "schemaVersion": 2,
+            "id": "validation-contract:unit:daemon-composition",
+            "revision": "1",
+            "provenance": "compiled",
+            "nodeId": "unit:daemon-composition",
+            "obligations": [
+              {
+                "id": "validation:daemon",
+                "criterionId": "criterion-ref:daemon-canonical-route",
+                "layer": "integration",
+                "severity": "required",
+                "acceptableEvidence": [
+                  "test_result"
+                ],
+                "baselinePolicy": "required",
+                "negativeControl": "when_feasible",
+                "flakyPolicy": "forbid"
+              }
+            ]
+          }
+        },
+        "unit:deterministic-verifier": {
+          "schemaVersion": 2,
+          "task": {
+            "schemaVersion": 2,
+            "id": "task:unit:deterministic-verifier",
+            "revision": "1",
+            "provenance": "compiled",
+            "nodeId": "unit:deterministic-verifier",
+            "goal": "Enforce deterministic SemanticPlan material, criterion-refinement, artifact-flow, seam and resource-ownership checks before direct compilation.",
+            "acceptanceCriteria": [
+              {
+                "id": "criterion-ref:verifier-canonical-route",
+                "kind": "integration",
+                "description": "The productive route applies deterministic verification to the canonical SemanticPlan before compilation.",
+                "required": true
+              }
+            ],
+            "scope": {
+              "id": "scope:unit:deterministic-verifier",
+              "revision": "1"
+            },
+            "consumes": [
+              {
+                "id": "artifact:canonical-semantic-plan",
+                "revision": "1"
+              }
+            ],
+            "produces": [
+              {
+                "id": "artifact:verified-semantic-plan",
+                "revision": "1"
+              }
+            ],
+            "seams": [
+              {
+                "id": "seam:planner-to-verifier-and-compiler",
+                "revision": "1"
+              },
+              {
+                "id": "seam:verifier-to-compiler",
+                "revision": "1"
+              }
+            ],
+            "validation": {
+              "id": "validation-contract:unit:deterministic-verifier",
+              "revision": "1"
+            },
+            "constraints": [
+              "Do not introduce another plan or graph representation.",
+              "Do not move planning ownership into apps/web.",
+              "Preserve the exact repository view and daemon lifecycle boundary."
+            ]
+          },
+          "scope": {
+            "schemaVersion": 2,
+            "id": "scope:unit:deterministic-verifier",
+            "revision": "1",
+            "provenance": "compiled",
+            "nodeId": "unit:deterministic-verifier",
+            "allowedPaths": [
+              "packages/contracts/src/semantic-plan.ts"
+            ],
+            "forbiddenPaths": [],
+            "coordinationPaths": [],
+            "outputRoots": []
+          },
+          "seams": [
+            {
+              "schemaVersion": 2,
+              "id": "seam:planner-to-verifier-and-compiler",
+              "revision": "1",
+              "provenance": "compiled",
+              "kind": "data",
+              "specification": "The PlanningEngine emits the sole canonical SemanticPlan for deterministic verification and direct compilation.",
+              "producerNodeId": "unit:canonical-planning-engine",
+              "consumerNodeIds": [
+                "unit:deterministic-verifier",
+                "unit:direct-compiler"
+              ],
+              "semanticFacts": {
+                "payload": "SemanticPlan",
+                "authority": "canonical PlanningEngine",
+                "representation": "sole productive planning output"
+              },
+              "compatibility": {
+                "mode": "exact",
+                "rules": [
+                  "No WorkBreakdown projection may mediate productive compilation.",
+                  "SemanticPlan must reference the registered GoalContract and RepositoryView."
+                ]
+              },
+              "baselineArtifactContractId": "artifact:canonical-semantic-plan"
+            },
+            {
+              "schemaVersion": 2,
+              "id": "seam:verifier-to-compiler",
+              "revision": "1",
+              "provenance": "compiled",
+              "kind": "data",
+              "specification": "The deterministic verifier provides an attributable verification result that gates direct GraphRevision compilation.",
+              "producerNodeId": "unit:deterministic-verifier",
+              "consumerNodeIds": [
+                "unit:direct-compiler"
+              ],
+              "semanticFacts": {
+                "payload": "verified SemanticPlan result",
+                "authority": "deterministic verifier",
+                "failureMode": "typed attributable finding"
+              },
+              "compatibility": {
+                "mode": "exact",
+                "rules": [
+                  "Required validation findings must block compilation.",
+                  "The verified material digest must identify the compiler input."
+                ]
+              },
+              "baselineArtifactContractId": "artifact:verified-semantic-plan"
+            }
+          ],
+          "artifacts": [
+            {
+              "schemaVersion": 2,
+              "id": "artifact:canonical-semantic-plan",
+              "revision": "1",
+              "provenance": "compiled",
+              "producerNodeId": "unit:canonical-planning-engine",
+              "consumerNodeIds": [
+                "unit:deterministic-verifier",
+                "unit:direct-compiler"
+              ],
+              "artifactType": "canonical-planning-engine",
+              "mediaType": "text/x-typescript",
+              "materialization": "files",
+              "expectedPaths": [
+                "packages/decomposer/src/planner/planning-module.ts"
+              ]
+            },
+            {
+              "schemaVersion": 2,
+              "id": "artifact:verified-semantic-plan",
+              "revision": "1",
+              "provenance": "compiled",
+              "producerNodeId": "unit:deterministic-verifier",
+              "consumerNodeIds": [
+                "unit:direct-compiler"
+              ],
+              "artifactType": "deterministic-semantic-plan-verifier",
+              "mediaType": "text/x-typescript",
+              "materialization": "files",
+              "expectedPaths": [
+                "packages/contracts/src/semantic-plan.ts"
+              ]
+            }
+          ],
+          "validation": {
+            "schemaVersion": 2,
+            "id": "validation-contract:unit:deterministic-verifier",
+            "revision": "1",
+            "provenance": "compiled",
+            "nodeId": "unit:deterministic-verifier",
+            "obligations": [
+              {
+                "id": "validation:verifier",
+                "criterionId": "criterion-ref:verifier-canonical-route",
+                "layer": "integration",
+                "severity": "required",
+                "acceptableEvidence": [
+                  "test_result"
+                ],
+                "baselinePolicy": "required",
+                "negativeControl": "when_feasible",
+                "flakyPolicy": "forbid"
+              }
+            ]
+          }
+        },
+        "unit:direct-compiler": {
+          "schemaVersion": 2,
+          "task": {
+            "schemaVersion": 2,
+            "id": "task:unit:direct-compiler",
+            "revision": "1",
+            "provenance": "compiled",
+            "nodeId": "unit:direct-compiler",
+            "goal": "Compile the verified SemanticPlan directly into one canonical GraphRevision with typed artifacts, seams and resource claims, without a WorkBreakdown projection.",
+            "acceptanceCriteria": [
+              {
+                "id": "criterion-ref:compiler-canonical-route",
+                "kind": "integration",
+                "description": "The productive compiler transforms the canonical SemanticPlan directly into GraphRevision.",
+                "required": true
+              }
+            ],
+            "scope": {
+              "id": "scope:unit:direct-compiler",
+              "revision": "1"
+            },
+            "consumes": [
+              {
+                "id": "artifact:canonical-semantic-plan",
+                "revision": "1"
+              },
+              {
+                "id": "artifact:verified-semantic-plan",
+                "revision": "1"
+              }
+            ],
+            "produces": [
+              {
+                "id": "artifact:compiled-graph-revision",
+                "revision": "1"
+              }
+            ],
+            "seams": [
+              {
+                "id": "seam:compiler-to-integration",
+                "revision": "1"
+              },
+              {
+                "id": "seam:planner-to-verifier-and-compiler",
+                "revision": "1"
+              },
+              {
+                "id": "seam:verifier-to-compiler",
+                "revision": "1"
+              }
+            ],
+            "validation": {
+              "id": "validation-contract:unit:direct-compiler",
+              "revision": "1"
+            },
+            "constraints": [
+              "Do not introduce another plan or graph representation.",
+              "Do not move planning ownership into apps/web.",
+              "Preserve the exact repository view and daemon lifecycle boundary."
+            ]
+          },
+          "scope": {
+            "schemaVersion": 2,
+            "id": "scope:unit:direct-compiler",
+            "revision": "1",
+            "provenance": "compiled",
+            "nodeId": "unit:direct-compiler",
+            "allowedPaths": [
+              "packages/decomposer/src/compiler/graph-compiler.ts"
+            ],
+            "forbiddenPaths": [],
+            "coordinationPaths": [],
+            "outputRoots": []
+          },
+          "seams": [
+            {
+              "schemaVersion": 2,
+              "id": "seam:compiler-to-integration",
+              "revision": "1",
+              "provenance": "compiled",
+              "kind": "data",
+              "specification": "The direct compiler provides the canonical GraphRevision candidate to regression validation and root integration.",
+              "producerNodeId": "unit:direct-compiler",
+              "consumerNodeIds": [
+                "unit:canonical-planning-cutover",
+                "unit:regression-gates"
+              ],
+              "semanticFacts": {
+                "payload": "GraphRevision",
+                "authority": "direct SemanticPlan compiler",
+                "provenance": "registered SemanticPlan and RepositoryView"
+              },
+              "compatibility": {
+                "mode": "exact",
+                "rules": [
+                  "Artifact, seam and resource relations must remain canonical.",
+                  "GraphRevision must identify the source SemanticPlan and exact RepositoryView."
+                ]
+              },
+              "baselineArtifactContractId": "artifact:compiled-graph-revision"
+            },
+            {
+              "schemaVersion": 2,
+              "id": "seam:planner-to-verifier-and-compiler",
+              "revision": "1",
+              "provenance": "compiled",
+              "kind": "data",
+              "specification": "The PlanningEngine emits the sole canonical SemanticPlan for deterministic verification and direct compilation.",
+              "producerNodeId": "unit:canonical-planning-engine",
+              "consumerNodeIds": [
+                "unit:deterministic-verifier",
+                "unit:direct-compiler"
+              ],
+              "semanticFacts": {
+                "payload": "SemanticPlan",
+                "authority": "canonical PlanningEngine",
+                "representation": "sole productive planning output"
+              },
+              "compatibility": {
+                "mode": "exact",
+                "rules": [
+                  "No WorkBreakdown projection may mediate productive compilation.",
+                  "SemanticPlan must reference the registered GoalContract and RepositoryView."
+                ]
+              },
+              "baselineArtifactContractId": "artifact:canonical-semantic-plan"
+            },
+            {
+              "schemaVersion": 2,
+              "id": "seam:verifier-to-compiler",
+              "revision": "1",
+              "provenance": "compiled",
+              "kind": "data",
+              "specification": "The deterministic verifier provides an attributable verification result that gates direct GraphRevision compilation.",
+              "producerNodeId": "unit:deterministic-verifier",
+              "consumerNodeIds": [
+                "unit:direct-compiler"
+              ],
+              "semanticFacts": {
+                "payload": "verified SemanticPlan result",
+                "authority": "deterministic verifier",
+                "failureMode": "typed attributable finding"
+              },
+              "compatibility": {
+                "mode": "exact",
+                "rules": [
+                  "Required validation findings must block compilation.",
+                  "The verified material digest must identify the compiler input."
+                ]
+              },
+              "baselineArtifactContractId": "artifact:verified-semantic-plan"
+            }
+          ],
+          "artifacts": [
+            {
+              "schemaVersion": 2,
+              "id": "artifact:canonical-semantic-plan",
+              "revision": "1",
+              "provenance": "compiled",
+              "producerNodeId": "unit:canonical-planning-engine",
+              "consumerNodeIds": [
+                "unit:deterministic-verifier",
+                "unit:direct-compiler"
+              ],
+              "artifactType": "canonical-planning-engine",
+              "mediaType": "text/x-typescript",
+              "materialization": "files",
+              "expectedPaths": [
+                "packages/decomposer/src/planner/planning-module.ts"
+              ]
+            },
+            {
+              "schemaVersion": 2,
+              "id": "artifact:compiled-graph-revision",
+              "revision": "1",
+              "provenance": "compiled",
+              "producerNodeId": "unit:direct-compiler",
+              "consumerNodeIds": [
+                "unit:canonical-planning-cutover",
+                "unit:regression-gates"
+              ],
+              "artifactType": "direct-graph-revision-compiler",
+              "mediaType": "text/x-typescript",
+              "materialization": "files",
+              "expectedPaths": [
+                "packages/decomposer/src/compiler/graph-compiler.ts"
+              ]
+            },
+            {
+              "schemaVersion": 2,
+              "id": "artifact:verified-semantic-plan",
+              "revision": "1",
+              "provenance": "compiled",
+              "producerNodeId": "unit:deterministic-verifier",
+              "consumerNodeIds": [
+                "unit:direct-compiler"
+              ],
+              "artifactType": "deterministic-semantic-plan-verifier",
+              "mediaType": "text/x-typescript",
+              "materialization": "files",
+              "expectedPaths": [
+                "packages/contracts/src/semantic-plan.ts"
+              ]
+            }
+          ],
+          "validation": {
+            "schemaVersion": 2,
+            "id": "validation-contract:unit:direct-compiler",
+            "revision": "1",
+            "provenance": "compiled",
+            "nodeId": "unit:direct-compiler",
+            "obligations": [
+              {
+                "id": "validation:compiler",
+                "criterionId": "criterion-ref:compiler-canonical-route",
+                "layer": "integration",
+                "severity": "required",
+                "acceptableEvidence": [
+                  "test_result"
+                ],
+                "baselinePolicy": "required",
+                "negativeControl": "when_feasible",
+                "flakyPolicy": "forbid"
+              }
+            ]
+          }
+        },
+        "unit:legacy-retirement": {
+          "schemaVersion": 2,
+          "task": {
+            "schemaVersion": 2,
+            "id": "task:unit:legacy-retirement",
+            "revision": "1",
+            "provenance": "compiled",
+            "nodeId": "unit:legacy-retirement",
+            "goal": "Make RecursivePlanner, WorkBreakdown projection and the legacy graph compiler unreachable from productive planning while preserving an explicit non-productive audit boundary where required.",
+            "acceptanceCriteria": [
+              {
+                "id": "criterion-ref:legacy-unreachable",
+                "kind": "static",
+                "description": "Legacy planning and projection components are unreachable from productive planning entrypoints.",
+                "required": true
+              }
+            ],
+            "scope": {
+              "id": "scope:unit:legacy-retirement",
+              "revision": "1"
+            },
+            "consumes": [],
+            "produces": [
+              {
+                "id": "artifact:legacy-retirement",
+                "revision": "1"
+              }
+            ],
+            "seams": [
+              {
+                "id": "seam:legacy-to-integration",
+                "revision": "1"
+              }
+            ],
+            "validation": {
+              "id": "validation-contract:unit:legacy-retirement",
+              "revision": "1"
+            },
+            "constraints": [
+              "Do not introduce another plan or graph representation.",
+              "Do not move planning ownership into apps/web.",
+              "Preserve the exact repository view and daemon lifecycle boundary."
+            ]
+          },
+          "scope": {
+            "schemaVersion": 2,
+            "id": "scope:unit:legacy-retirement",
+            "revision": "1",
+            "provenance": "compiled",
+            "nodeId": "unit:legacy-retirement",
+            "allowedPaths": [
+              "apps/daemon/src/transitional-unsafe-profile.ts"
+            ],
+            "forbiddenPaths": [],
+            "coordinationPaths": [],
+            "outputRoots": []
+          },
+          "seams": [
+            {
+              "schemaVersion": 2,
+              "id": "seam:legacy-to-integration",
+              "revision": "1",
+              "provenance": "compiled",
+              "kind": "data",
+              "specification": "Legacy retirement supplies static reachability evidence to root integration.",
+              "producerNodeId": "unit:legacy-retirement",
+              "consumerNodeIds": [
+                "unit:canonical-planning-cutover"
+              ],
+              "semanticFacts": {
+                "payload": "productive-entrypoint reachability report",
+                "authority": "deterministic source scan",
+                "constraint": "legacy planning unreachable"
+              },
+              "compatibility": {
+                "mode": "exact",
+                "rules": [
+                  "The protected negative control must detect a reintroduced legacy reference.",
+                  "The scan must cover productive daemon planning entrypoints."
+                ]
+              },
+              "baselineArtifactContractId": "artifact:legacy-retirement"
+            }
+          ],
+          "artifacts": [
+            {
+              "schemaVersion": 2,
+              "id": "artifact:legacy-retirement",
+              "revision": "1",
+              "provenance": "compiled",
+              "producerNodeId": "unit:legacy-retirement",
+              "consumerNodeIds": [
+                "unit:canonical-planning-cutover"
+              ],
+              "artifactType": "legacy-reachability-retirement",
+              "mediaType": "text/x-typescript",
+              "materialization": "files",
+              "expectedPaths": [
+                "apps/daemon/src/transitional-unsafe-profile.ts"
+              ]
+            }
+          ],
+          "validation": {
+            "schemaVersion": 2,
+            "id": "validation-contract:unit:legacy-retirement",
+            "revision": "1",
+            "provenance": "compiled",
+            "nodeId": "unit:legacy-retirement",
+            "obligations": [
+              {
+                "id": "validation:legacy",
+                "criterionId": "criterion-ref:legacy-unreachable",
+                "layer": "static",
+                "severity": "required",
+                "acceptableEvidence": [
+                  "static_analysis"
+                ],
+                "baselinePolicy": "required",
+                "negativeControl": "required",
+                "flakyPolicy": "forbid"
+              }
+            ]
+          }
+        },
+        "unit:regression-gates": {
+          "schemaVersion": 2,
+          "task": {
+            "schemaVersion": 2,
+            "id": "task:unit:regression-gates",
+            "revision": "1",
+            "provenance": "compiled",
+            "nodeId": "unit:regression-gates",
+            "goal": "Preserve canonical GraphRevision validation invariants and execute the registered prior gates against the cutover candidate without moving lifecycle or planning ownership.",
+            "acceptanceCriteria": [
+              {
+                "id": "criterion-ref:regression-gates",
+                "kind": "integration",
+                "description": "Daemon lifecycle ownership, repository grounding and existing gates remain green after cutover.",
+                "required": true
+              }
+            ],
+            "scope": {
+              "id": "scope:unit:regression-gates",
+              "revision": "1"
+            },
+            "consumes": [
+              {
+                "id": "artifact:compiled-graph-revision",
+                "revision": "1"
+              }
+            ],
+            "produces": [
+              {
+                "id": "artifact:regression-gate-proof",
+                "revision": "1"
+              }
+            ],
+            "seams": [
+              {
+                "id": "seam:compiler-to-integration",
+                "revision": "1"
+              },
+              {
+                "id": "seam:regression-to-integration",
+                "revision": "1"
+              }
+            ],
+            "validation": {
+              "id": "validation-contract:unit:regression-gates",
+              "revision": "1"
+            },
+            "constraints": [
+              "Do not introduce another plan or graph representation.",
+              "Do not move planning ownership into apps/web.",
+              "Preserve the exact repository view and daemon lifecycle boundary."
+            ]
+          },
+          "scope": {
+            "schemaVersion": 2,
+            "id": "scope:unit:regression-gates",
+            "revision": "1",
+            "provenance": "compiled",
+            "nodeId": "unit:regression-gates",
+            "allowedPaths": [
+              "packages/task-graph/src/canonical-graph.ts"
+            ],
+            "forbiddenPaths": [],
+            "coordinationPaths": [],
+            "outputRoots": []
+          },
+          "seams": [
+            {
+              "schemaVersion": 2,
+              "id": "seam:compiler-to-integration",
+              "revision": "1",
+              "provenance": "compiled",
+              "kind": "data",
+              "specification": "The direct compiler provides the canonical GraphRevision candidate to regression validation and root integration.",
+              "producerNodeId": "unit:direct-compiler",
+              "consumerNodeIds": [
+                "unit:canonical-planning-cutover",
+                "unit:regression-gates"
+              ],
+              "semanticFacts": {
+                "payload": "GraphRevision",
+                "authority": "direct SemanticPlan compiler",
+                "provenance": "registered SemanticPlan and RepositoryView"
+              },
+              "compatibility": {
+                "mode": "exact",
+                "rules": [
+                  "Artifact, seam and resource relations must remain canonical.",
+                  "GraphRevision must identify the source SemanticPlan and exact RepositoryView."
+                ]
+              },
+              "baselineArtifactContractId": "artifact:compiled-graph-revision"
+            },
+            {
+              "schemaVersion": 2,
+              "id": "seam:regression-to-integration",
+              "revision": "1",
+              "provenance": "compiled",
+              "kind": "data",
+              "specification": "Regression validation supplies prior-gate results for the exact integrated candidate.",
+              "producerNodeId": "unit:regression-gates",
+              "consumerNodeIds": [
+                "unit:canonical-planning-cutover"
+              ],
+              "semanticFacts": {
+                "payload": "prior-gate evidence",
+                "authority": "orchestrator deterministic validation",
+                "candidate": "exact integrated cutover"
+              },
+              "compatibility": {
+                "mode": "exact",
+                "rules": [
+                  "Evidence must identify the exact candidate under integration.",
+                  "Lifecycle ownership and repository-view checks must remain included."
+                ]
+              },
+              "baselineArtifactContractId": "artifact:regression-gate-proof"
+            }
+          ],
+          "artifacts": [
+            {
+              "schemaVersion": 2,
+              "id": "artifact:compiled-graph-revision",
+              "revision": "1",
+              "provenance": "compiled",
+              "producerNodeId": "unit:direct-compiler",
+              "consumerNodeIds": [
+                "unit:canonical-planning-cutover",
+                "unit:regression-gates"
+              ],
+              "artifactType": "direct-graph-revision-compiler",
+              "mediaType": "text/x-typescript",
+              "materialization": "files",
+              "expectedPaths": [
+                "packages/decomposer/src/compiler/graph-compiler.ts"
+              ]
+            },
+            {
+              "schemaVersion": 2,
+              "id": "artifact:regression-gate-proof",
+              "revision": "1",
+              "provenance": "compiled",
+              "producerNodeId": "unit:regression-gates",
+              "consumerNodeIds": [
+                "unit:canonical-planning-cutover"
+              ],
+              "artifactType": "canonical-graph-regression-gates",
+              "mediaType": "text/x-typescript",
+              "materialization": "files",
+              "expectedPaths": [
+                "packages/task-graph/src/canonical-graph.ts"
+              ]
+            }
+          ],
+          "validation": {
+            "schemaVersion": 2,
+            "id": "validation-contract:unit:regression-gates",
+            "revision": "1",
+            "provenance": "compiled",
+            "nodeId": "unit:regression-gates",
+            "obligations": [
+              {
+                "id": "validation:regression",
+                "criterionId": "criterion-ref:regression-gates",
+                "layer": "integration",
+                "severity": "required",
+                "acceptableEvidence": [
+                  "test_result"
+                ],
+                "baselinePolicy": "required",
+                "negativeControl": "when_feasible",
+                "flakyPolicy": "forbid"
+              }
+            ]
+          }
+        }
+      },
+      "artifacts": {
+        "artifact:canonical-semantic-plan": {
+          "schemaVersion": 2,
+          "id": "artifact:canonical-semantic-plan",
+          "revision": "1",
+          "provenance": "compiled",
+          "producerNodeId": "unit:canonical-planning-engine",
+          "consumerNodeIds": [
+            "unit:deterministic-verifier",
+            "unit:direct-compiler"
+          ],
+          "artifactType": "canonical-planning-engine",
+          "mediaType": "text/x-typescript",
+          "materialization": "files",
+          "expectedPaths": [
+            "packages/decomposer/src/planner/planning-module.ts"
+          ]
+        },
+        "artifact:compiled-graph-revision": {
+          "schemaVersion": 2,
+          "id": "artifact:compiled-graph-revision",
+          "revision": "1",
+          "provenance": "compiled",
+          "producerNodeId": "unit:direct-compiler",
+          "consumerNodeIds": [
+            "unit:canonical-planning-cutover",
+            "unit:regression-gates"
+          ],
+          "artifactType": "direct-graph-revision-compiler",
+          "mediaType": "text/x-typescript",
+          "materialization": "files",
+          "expectedPaths": [
+            "packages/decomposer/src/compiler/graph-compiler.ts"
+          ]
+        },
+        "artifact:daemon-planning-composition": {
+          "schemaVersion": 2,
+          "id": "artifact:daemon-planning-composition",
+          "revision": "1",
+          "provenance": "compiled",
+          "producerNodeId": "unit:daemon-composition",
+          "consumerNodeIds": [
+            "unit:canonical-planning-engine"
+          ],
+          "artifactType": "daemon-planning-composition",
+          "mediaType": "text/x-typescript",
+          "materialization": "files",
+          "expectedPaths": [
+            "apps/daemon/src/current-lifecycle-adapters.ts"
+          ]
+        },
+        "artifact:legacy-retirement": {
+          "schemaVersion": 2,
+          "id": "artifact:legacy-retirement",
+          "revision": "1",
+          "provenance": "compiled",
+          "producerNodeId": "unit:legacy-retirement",
+          "consumerNodeIds": [
+            "unit:canonical-planning-cutover"
+          ],
+          "artifactType": "legacy-reachability-retirement",
+          "mediaType": "text/x-typescript",
+          "materialization": "files",
+          "expectedPaths": [
+            "apps/daemon/src/transitional-unsafe-profile.ts"
+          ]
+        },
+        "artifact:regression-gate-proof": {
+          "schemaVersion": 2,
+          "id": "artifact:regression-gate-proof",
+          "revision": "1",
+          "provenance": "compiled",
+          "producerNodeId": "unit:regression-gates",
+          "consumerNodeIds": [
+            "unit:canonical-planning-cutover"
+          ],
+          "artifactType": "canonical-graph-regression-gates",
+          "mediaType": "text/x-typescript",
+          "materialization": "files",
+          "expectedPaths": [
+            "packages/task-graph/src/canonical-graph.ts"
+          ]
+        },
+        "artifact:verified-semantic-plan": {
+          "schemaVersion": 2,
+          "id": "artifact:verified-semantic-plan",
+          "revision": "1",
+          "provenance": "compiled",
+          "producerNodeId": "unit:deterministic-verifier",
+          "consumerNodeIds": [
+            "unit:direct-compiler"
+          ],
+          "artifactType": "deterministic-semantic-plan-verifier",
+          "mediaType": "text/x-typescript",
+          "materialization": "files",
+          "expectedPaths": [
+            "packages/contracts/src/semantic-plan.ts"
+          ]
+        }
+      },
+      "seams": {
+        "seam:compiler-to-integration": {
+          "schemaVersion": 2,
+          "id": "seam:compiler-to-integration",
+          "revision": "1",
+          "provenance": "compiled",
+          "kind": "data",
+          "specification": "The direct compiler provides the canonical GraphRevision candidate to regression validation and root integration.",
+          "producerNodeId": "unit:direct-compiler",
+          "consumerNodeIds": [
+            "unit:canonical-planning-cutover",
+            "unit:regression-gates"
+          ],
+          "semanticFacts": {
+            "payload": "GraphRevision",
+            "authority": "direct SemanticPlan compiler",
+            "provenance": "registered SemanticPlan and RepositoryView"
+          },
+          "compatibility": {
+            "mode": "exact",
+            "rules": [
+              "Artifact, seam and resource relations must remain canonical.",
+              "GraphRevision must identify the source SemanticPlan and exact RepositoryView."
+            ]
+          },
+          "baselineArtifactContractId": "artifact:compiled-graph-revision"
+        },
+        "seam:daemon-to-planner": {
+          "schemaVersion": 2,
+          "id": "seam:daemon-to-planner",
+          "revision": "1",
+          "provenance": "compiled",
+          "kind": "command",
+          "specification": "The daemon supplies the immutable goal contract and exact registered RepositoryView to the canonical PlanningEngine and retains lifecycle adoption authority.",
+          "producerNodeId": "unit:daemon-composition",
+          "consumerNodeIds": [
+            "unit:canonical-planning-engine"
+          ],
+          "semanticFacts": {
+            "payload": "GoalContract and exact RepositoryView",
+            "authority": "daemon lifecycle owner",
+            "operation": "canonical productive planning"
+          },
+          "compatibility": {
+            "mode": "exact",
+            "rules": [
+              "GoalContract revision and digest must match the registered contract.",
+              "RepositoryView digest and treeSha must match the registered view."
+            ]
+          },
+          "baselineArtifactContractId": "artifact:daemon-planning-composition"
+        },
+        "seam:legacy-to-integration": {
+          "schemaVersion": 2,
+          "id": "seam:legacy-to-integration",
+          "revision": "1",
+          "provenance": "compiled",
+          "kind": "data",
+          "specification": "Legacy retirement supplies static reachability evidence to root integration.",
+          "producerNodeId": "unit:legacy-retirement",
+          "consumerNodeIds": [
+            "unit:canonical-planning-cutover"
+          ],
+          "semanticFacts": {
+            "payload": "productive-entrypoint reachability report",
+            "authority": "deterministic source scan",
+            "constraint": "legacy planning unreachable"
+          },
+          "compatibility": {
+            "mode": "exact",
+            "rules": [
+              "The protected negative control must detect a reintroduced legacy reference.",
+              "The scan must cover productive daemon planning entrypoints."
+            ]
+          },
+          "baselineArtifactContractId": "artifact:legacy-retirement"
+        },
+        "seam:planner-to-verifier-and-compiler": {
+          "schemaVersion": 2,
+          "id": "seam:planner-to-verifier-and-compiler",
+          "revision": "1",
+          "provenance": "compiled",
+          "kind": "data",
+          "specification": "The PlanningEngine emits the sole canonical SemanticPlan for deterministic verification and direct compilation.",
+          "producerNodeId": "unit:canonical-planning-engine",
+          "consumerNodeIds": [
+            "unit:deterministic-verifier",
+            "unit:direct-compiler"
+          ],
+          "semanticFacts": {
+            "payload": "SemanticPlan",
+            "authority": "canonical PlanningEngine",
+            "representation": "sole productive planning output"
+          },
+          "compatibility": {
+            "mode": "exact",
+            "rules": [
+              "No WorkBreakdown projection may mediate productive compilation.",
+              "SemanticPlan must reference the registered GoalContract and RepositoryView."
+            ]
+          },
+          "baselineArtifactContractId": "artifact:canonical-semantic-plan"
+        },
+        "seam:regression-to-integration": {
+          "schemaVersion": 2,
+          "id": "seam:regression-to-integration",
+          "revision": "1",
+          "provenance": "compiled",
+          "kind": "data",
+          "specification": "Regression validation supplies prior-gate results for the exact integrated candidate.",
+          "producerNodeId": "unit:regression-gates",
+          "consumerNodeIds": [
+            "unit:canonical-planning-cutover"
+          ],
+          "semanticFacts": {
+            "payload": "prior-gate evidence",
+            "authority": "orchestrator deterministic validation",
+            "candidate": "exact integrated cutover"
+          },
+          "compatibility": {
+            "mode": "exact",
+            "rules": [
+              "Evidence must identify the exact candidate under integration.",
+              "Lifecycle ownership and repository-view checks must remain included."
+            ]
+          },
+          "baselineArtifactContractId": "artifact:regression-gate-proof"
+        },
+        "seam:verifier-to-compiler": {
+          "schemaVersion": 2,
+          "id": "seam:verifier-to-compiler",
+          "revision": "1",
+          "provenance": "compiled",
+          "kind": "data",
+          "specification": "The deterministic verifier provides an attributable verification result that gates direct GraphRevision compilation.",
+          "producerNodeId": "unit:deterministic-verifier",
+          "consumerNodeIds": [
+            "unit:direct-compiler"
+          ],
+          "semanticFacts": {
+            "payload": "verified SemanticPlan result",
+            "authority": "deterministic verifier",
+            "failureMode": "typed attributable finding"
+          },
+          "compatibility": {
+            "mode": "exact",
+            "rules": [
+              "Required validation findings must block compilation.",
+              "The verified material digest must identify the compiler input."
+            ]
+          },
+          "baselineArtifactContractId": "artifact:verified-semantic-plan"
+        }
+      },
+      "integrations": {
+        "validation:root": {
+          "id": "validation:root",
+          "revision": 1,
+          "ownerUnitId": "unit:canonical-planning-cutover",
+          "objective": "Integrate the daemon-owned route and prove its canonical artifact flow, legacy exclusion and regression compatibility on the registered repository view.",
+          "criterionIds": [
+            "criterion-ref:root-canonical-route",
+            "criterion-ref:root-legacy-unreachable",
+            "criterion-ref:root-regression"
+          ],
+          "proofStrategyId": "proof:root",
+          "artifactIds": [
+            "artifact:compiled-graph-revision",
+            "artifact:legacy-retirement",
+            "artifact:regression-gate-proof"
+          ],
+          "seamIds": [
+            "seam:compiler-to-integration",
+            "seam:daemon-to-planner",
+            "seam:legacy-to-integration",
+            "seam:planner-to-verifier-and-compiler",
+            "seam:regression-to-integration",
+            "seam:verifier-to-compiler"
+          ]
+        }
+      },
+      "refs": [
+        {
+          "id": "artifact:canonical-semantic-plan",
+          "revision": 1,
+          "digest": "sha256:98277d6da3203d800e5c6a0bc5935e0c5944bf429bcdfaf392631e870325ad51"
+        },
+        {
+          "id": "artifact:compiled-graph-revision",
+          "revision": 1,
+          "digest": "sha256:60c25da883834493b5a18612edf659d051df6d0324b34c86417f71bc53d8cd09"
+        },
+        {
+          "id": "artifact:daemon-planning-composition",
+          "revision": 1,
+          "digest": "sha256:295791a045d3ca9453f5e8f162fda48a979fd3f8671879f7e52d6ef519dab630"
+        },
+        {
+          "id": "artifact:legacy-retirement",
+          "revision": 1,
+          "digest": "sha256:c6d139c4944a68dfb0998f8eff2e5d96c9bcec27be9bba635aab2556819b1b52"
+        },
+        {
+          "id": "artifact:regression-gate-proof",
+          "revision": 1,
+          "digest": "sha256:b41e6377c8adcac1dcfdd89fdb4d3ea20092b100f22d88550aadff034bd988b7"
+        },
+        {
+          "id": "artifact:verified-semantic-plan",
+          "revision": 1,
+          "digest": "sha256:4fd6c6a1affa2e47a0e952b4b89b9f89e6d98558b6c11007f5329568c16dcb51"
+        },
+        {
+          "id": "scope:unit:canonical-planning-cutover",
+          "revision": 1,
+          "digest": "sha256:73f9897f7a6b9902e00f8c75c176b6aa770d737192f822e86d2b2c61b3e6f212"
+        },
+        {
+          "id": "scope:unit:canonical-planning-engine",
+          "revision": 1,
+          "digest": "sha256:9b7e5ff6168e9ad86c44283dab9d1239a50ae477d7f44af04ba97e695baa31d9"
+        },
+        {
+          "id": "scope:unit:daemon-composition",
+          "revision": 1,
+          "digest": "sha256:5a70cc38552b24e3d6b93db4772d2ffd3da26c62e5a4bf20226ac5e37df4b8e6"
+        },
+        {
+          "id": "scope:unit:deterministic-verifier",
+          "revision": 1,
+          "digest": "sha256:ba22836328d33883040c6a0113fb69af49262088ea04e61b806f3f823f7204a6"
+        },
+        {
+          "id": "scope:unit:direct-compiler",
+          "revision": 1,
+          "digest": "sha256:154aef0d0f503c19939d9e9119fcd8c1f7bfd568c286933575c993f2580c7109"
+        },
+        {
+          "id": "scope:unit:legacy-retirement",
+          "revision": 1,
+          "digest": "sha256:2664adc16acc857b5b612345e451410827344ea33ee3bed46623ae514b1d02a1"
+        },
+        {
+          "id": "scope:unit:regression-gates",
+          "revision": 1,
+          "digest": "sha256:cf566489505a6204e859dba1062366c6ede4186a559dcf7828683db014440c08"
+        },
+        {
+          "id": "seam:compiler-to-integration",
+          "revision": 1,
+          "digest": "sha256:938083651bccedbc894b9d85b1d4c35b2d2c1ab6790105464e780b58b914925c"
+        },
+        {
+          "id": "seam:daemon-to-planner",
+          "revision": 1,
+          "digest": "sha256:5a32cd20c4fbb5a5adf73f4d40d9518ca5043cea4fead375bb9c0df6a9f0defb"
+        },
+        {
+          "id": "seam:legacy-to-integration",
+          "revision": 1,
+          "digest": "sha256:f29a33212025ec00b2fb0d88b6b2ef298be38890ac042ba9063bcb3b1dd9f74a"
+        },
+        {
+          "id": "seam:planner-to-verifier-and-compiler",
+          "revision": 1,
+          "digest": "sha256:363ce4067a77a4f107738df4de0477ac8d65a80b44e60024fa8a3bbd51519a76"
+        },
+        {
+          "id": "seam:regression-to-integration",
+          "revision": 1,
+          "digest": "sha256:bed28fb7382d3bbcceb296add1bce5e8880cb0ab64e51610a7d2658fabfd3ef3"
+        },
+        {
+          "id": "seam:verifier-to-compiler",
+          "revision": 1,
+          "digest": "sha256:87835812ccba7548f143f033acc24e301a2ab9edd0607c0532a27362fdd7d898"
+        },
+        {
+          "id": "task:unit:canonical-planning-cutover",
+          "revision": 1,
+          "digest": "sha256:1910c2484f1cb3704290f7317f41f23b31a73757b35f98767a78da36528dacdb"
+        },
+        {
+          "id": "task:unit:canonical-planning-engine",
+          "revision": 1,
+          "digest": "sha256:8b8883dcd91512f053915efb183bd2b6bacc1bea33228cae458e099d00cc00ea"
+        },
+        {
+          "id": "task:unit:daemon-composition",
+          "revision": 1,
+          "digest": "sha256:cae4939c28078fe3b8ee8bdb2e0c7b926d0635f11700a91ded534e54f6fa9ba2"
+        },
+        {
+          "id": "task:unit:deterministic-verifier",
+          "revision": 1,
+          "digest": "sha256:fb47519af2046409f23a810f015b97e6863b14d92dd072ae9c6d95b31900e5ea"
+        },
+        {
+          "id": "task:unit:direct-compiler",
+          "revision": 1,
+          "digest": "sha256:0dacfb493fea1ebc388c5a510f46ca5ee6e55e0442443971f9960c046606a486"
+        },
+        {
+          "id": "task:unit:legacy-retirement",
+          "revision": 1,
+          "digest": "sha256:16ce494bec92520f8ba72a38ab2c799fa37b647ae5149107fb646b489315fe8e"
+        },
+        {
+          "id": "task:unit:regression-gates",
+          "revision": 1,
+          "digest": "sha256:24b61162dc19981f53074756b4ad9d704534551eb0df176e5d85b8124ae8c5b2"
+        },
+        {
+          "id": "validation-contract:unit:canonical-planning-cutover",
+          "revision": 1,
+          "digest": "sha256:acfecef1f97bfa1d18981e84346ada37662a68174cbe5a18165541813a6ce753"
+        },
+        {
+          "id": "validation-contract:unit:canonical-planning-engine",
+          "revision": 1,
+          "digest": "sha256:90baca965e0f1568696dc12a9e4d020009a36c4f11a8a36e6b2245e3cd6244c5"
+        },
+        {
+          "id": "validation-contract:unit:daemon-composition",
+          "revision": 1,
+          "digest": "sha256:26d699db17ea04878cb928cca2d27b26c72498f9fee0c0a3ff8f59353174e32c"
+        },
+        {
+          "id": "validation-contract:unit:deterministic-verifier",
+          "revision": 1,
+          "digest": "sha256:5f56014c8b3cc885b0d984075f2f6dcf3a166b75a1c94178d860dfb206b84f8d"
+        },
+        {
+          "id": "validation-contract:unit:direct-compiler",
+          "revision": 1,
+          "digest": "sha256:ae682bc07e89c4b35cfdb0c5c10600b236631e67ad438aacf79f3141baa50fac"
+        },
+        {
+          "id": "validation-contract:unit:legacy-retirement",
+          "revision": 1,
+          "digest": "sha256:cd1d3e33cd7e83ad78655648b843a00d1c13cefbeebff6ead4c8df49b27e4641"
+        },
+        {
+          "id": "validation-contract:unit:regression-gates",
+          "revision": 1,
+          "digest": "sha256:46952d928688a8c30bf8a2c8c05637cf142a0f0df3f47a323d527d7f605285f4"
+        },
+        {
+          "id": "validation:compiler",
+          "revision": 1,
+          "digest": "sha256:3597cbec34a4b5d83573913442507b40d0e693fc9b92ccb63a256962c071df2d"
+        },
+        {
+          "id": "validation:daemon",
+          "revision": 1,
+          "digest": "sha256:f2f75f5f5bec38f82e9936206f735303eb2ee3d8b4d9bc6c667fb848075bb1bb"
+        },
+        {
+          "id": "validation:legacy",
+          "revision": 1,
+          "digest": "sha256:a65b4e2be17039234d95d0aac4fbf7bf2e4560803a8aa9a200a5b88d0bec59ae"
+        },
+        {
+          "id": "validation:planner",
+          "revision": 1,
+          "digest": "sha256:0925046656fd0ee0866cbc9954ddf525e6a145d7adf0b7b23554435d4c32d5a0"
+        },
+        {
+          "id": "validation:regression",
+          "revision": 1,
+          "digest": "sha256:17ce4e287785faed1b760cc8c4d4a39308cd93031388a63c4112727f7c211e47"
+        },
+        {
+          "id": "validation:root",
+          "revision": 1,
+          "digest": "sha256:e2b33acfca1cb064a36ae04875b97b0a3b6c7a252fc55b214c560cb54bacefac"
+        },
+        {
+          "id": "validation:root",
+          "revision": 1,
+          "digest": "sha256:efcd146de8545173c9a6101a383a0abc63445f724077d0262a873bc456fe63ba"
+        },
+        {
+          "id": "validation:verifier",
+          "revision": 1,
+          "digest": "sha256:d12d49d410bbfcf89f60ed6eb0362223146488585281c7a705e994583b17982f"
+        }
+      ]
+    }
+  },
+  "currentComparator": {
+    "kind": "rejected",
+    "error": {
+      "code": "no_safe_candidate",
+      "phase": "selection",
+      "retryable": false,
+      "message": "root: Invalid input",
+      "evidenceRefs": [],
+      "suggestedAction": "Correct the reported draft errors and request a new bounded semantic plan."
+    }
+  },
+  "topologyEvaluation": {
+    "oracleId": "oracle:manyhands-canonical-planning",
+    "candidates": [
+      {
+        "candidate": "stage5",
+        "passed": false,
+        "issues": [
+          {
+            "code": "missing_proof_criterion",
+            "oracleId": "criterion:canonical-route",
+            "message": "Criterion criterion:canonical-route is not represented."
+          },
+          {
+            "code": "missing_proof_criterion",
+            "oracleId": "criterion:legacy-unreachable",
+            "message": "Criterion criterion:legacy-unreachable is not represented."
+          },
+          {
+            "code": "missing_proof_criterion",
+            "oracleId": "criterion:regression",
+            "message": "Criterion criterion:regression is not represented."
+          }
+        ],
+        "observations": {
+          "nodes": 7,
+          "leaves": 6,
+          "seams": 8,
+          "resourceClaims": 12
+        }
+      },
+      {
+        "candidate": "current",
+        "passed": false,
+        "issues": [
+          {
+            "code": "candidate_unavailable",
+            "message": "Current planner returned rejected."
+          }
+        ],
+        "observations": {
+          "nodes": 0,
+          "leaves": 0,
+          "seams": 0,
+          "resourceClaims": 0
+        }
+      }
+    ]
+  },
+  "browser": {
+    "status": "pending",
+    "preview": "preview.html"
+  }
+}
