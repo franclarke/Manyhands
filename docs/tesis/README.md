@@ -7,6 +7,13 @@
 > as historical material until a new post-`GProd` study replaces them with
 > attributable candidate, oracle and delivery evidence.
 
+El sucesor planificado es el
+[`estudio longitudinal exploratorio`](../plans/2026-08-13-exploratory-longitudinal-study.md):
+dos corridas visuales obligatorias y una tercera opcional condicionada. Tendrá
+análisis descriptivo, no una hipótesis causal o estadística. No se ejecuta ni se
+incorpora a los capítulos de tesis hasta que Stage 11 / GProd declare elegible al
+producto.
+
 Documento de tesis en **LaTeX** para el **Departamento de Ciencias e Ingeniería
 de la Computación (DCIC)** de la **Universidad Nacional del Sur (UNS)**.
 

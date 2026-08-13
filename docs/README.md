@@ -23,6 +23,11 @@ a correctness-first software engineering system.
    restart/cancellation evidence and the bounded review that closes GR.
 9. [`handoffs/2026-08-12-stage-2-to-stage-3.md`](handoffs/2026-08-12-stage-2-to-stage-3.md)
    — historical continuation boundary used to start Stage 3.
+10. [`handoffs/2026-08-13-stage-3-to-stage-4.md`](handoffs/2026-08-13-stage-3-to-stage-4.md)
+    — current continuation boundary for starting Stage 4 / GRepo.
+11. [`plans/2026-08-13-exploratory-longitudinal-study.md`](plans/2026-08-13-exploratory-longitudinal-study.md)
+    — bounded post-GProd study for the thesis demonstration: two required visual
+    runs and one optional conditional run.
 
 The former `docs/design`, `docs/system`, `docs/core-pillars`, `docs/adr`,
 `docs/development` and older plan were removed on 2026-08-12. They contained
@@ -38,4 +43,5 @@ productive path, tests and persisted evidence before reporting status.
 Stages 0, 1, 2 and 3 pass on attributable candidates. The daemon is the
 productive lifecycle owner and apps/web is its server-side command/query BFF.
 Stage 4 and Stages 5–11 remain `not_started`. No large live-model benchmark
-should run until Stage 11 eligibility gates are satisfied.
+should run. The bounded exploratory study runs only after Stage 11 eligibility
+gates are satisfied.

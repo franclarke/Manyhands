@@ -363,4 +363,5 @@ gran parte al retiro físico del owner legado y sus tests exclusivos.
 
 Stage 3 / GR queda cerrado en `pass`. Stage 4 permanece `not_started`. La
 ejecución de este objetivo debe detenerse después del commit documental; no hay
-autorización para continuar con GRepo.
+autorización para continuar con GRepo. La próxima ejecución debe comenzar desde
+el [`handoff Stage 3 -> Stage 4`](../../handoffs/2026-08-13-stage-3-to-stage-4.md).
