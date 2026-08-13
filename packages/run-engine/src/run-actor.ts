@@ -117,6 +117,7 @@ export class RunActor {
   private mailbox: Promise<unknown> = Promise.resolve();
   private readonly effectTasks = new Map<string, Promise<void>>();
   private readonly effectFailures: unknown[] = [];
+  private readonly interruptedEffects = new Set<string>();
 
   constructor(options: RunActorOptions) {
     this.options = options;
@@ -159,6 +160,7 @@ export class RunActor {
 
     await this.options.journal.assertAuthority(this.options.runId, this.options.daemonEpoch);
     const events = await this.options.journal.load(this.options.runId);
+    this.rememberPersistedInterruptions(events);
     const currentRevision = journalRevision(events);
     const existing = commandReceipt(events, envelope.commandId, this.options.hasher);
     if (existing !== undefined) {
@@ -235,6 +237,7 @@ export class RunActor {
     if (appended.length !== journalInputs.length || journalRevision(appended) !== currentRevision + journalInputs.length) {
       throw new Error("Journal returned an impossible revision after durable command acceptance.");
     }
+    this.rememberPersistedInterruptions([...events, ...appended]);
 
     return { receipt, intents };
   }
@@ -296,6 +299,7 @@ export class RunActor {
       }
     }
 
+    this.rememberPersistedInterruptions(events);
     return [...intents.values()].filter((intent) => !terminal.has(intent.effectId));
   }
 
@@ -305,6 +309,11 @@ export class RunActor {
 
     const operation = (async () => {
       await this.options.journal.assertAuthority(this.options.runId, this.options.daemonEpoch);
+      const interrupted = await this.enqueue(async () => this.interruptedEffects.has(intent.effectId));
+      if (interrupted) {
+        await this.enqueue(() => this.recordObservations(intent, [], mode));
+        return;
+      }
       const receipts = mode === "observe"
         ? await this.options.dispatcher.observe(intent)
         : await this.options.dispatcher.reconcile(intent, this.options.daemonEpoch);
@@ -339,6 +348,7 @@ export class RunActor {
 
     await this.options.journal.assertAuthority(this.options.runId, this.options.daemonEpoch);
     const current = await this.options.journal.load(this.options.runId);
+    this.rememberPersistedInterruptions(current);
     const persisted = new Map<string, PhysicalEffectReceipt>();
     for (const event of current) {
       if (event.type !== "effect.observed") continue;
@@ -431,8 +441,20 @@ export class RunActor {
     if (appended.length !== inputs.length || journalRevision(appended) !== revision + inputs.length) {
       throw new Error("Journal returned an impossible revision after recording physical observations and actor outcome.");
     }
+    this.rememberPersistedInterruptions([...current, ...appended]);
     if (reaction !== undefined) {
       for (const request of reaction.effects) this.startEffect(request.intent, "observe");
+    }
+  }
+
+  private rememberPersistedInterruptions(events: readonly RunEvent[]): void {
+    for (const event of events) {
+      if (
+        event.type === "effect.requested"
+        && persistedInterruptionReason(events, event.payload.intent) !== undefined
+      ) {
+        this.interruptedEffects.add(event.payload.intent.effectId);
+      }
     }
   }
 

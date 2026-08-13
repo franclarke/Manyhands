@@ -45,12 +45,24 @@ importers:
 
   apps/daemon:
     dependencies:
+      '@manyhands/conflict-risk':
+        specifier: workspace:*
+        version: link:../../packages/conflict-risk
       '@manyhands/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@manyhands/decomposer':
+        specifier: workspace:*
+        version: link:../../packages/decomposer
       '@manyhands/execution-core':
         specifier: workspace:*
         version: link:../../packages/execution-core
+      '@manyhands/orchestrator-graph':
+        specifier: workspace:*
+        version: link:../../packages/orchestrator-graph
+      '@manyhands/repository-index':
+        specifier: workspace:*
+        version: link:../../packages/repository-index
       '@manyhands/run-coordinator':
         specifier: workspace:*
         version: link:../../packages/run-coordinator
@@ -60,6 +72,15 @@ importers:
       '@manyhands/run-store':
         specifier: workspace:*
         version: link:../../packages/run-store
+      '@manyhands/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      '@manyhands/task-graph':
+        specifier: workspace:*
+        version: link:../../packages/task-graph
+      '@manyhands/trace-store':
+        specifier: workspace:*
+        version: link:../../packages/trace-store
 
   apps/web:
     dependencies:

@@ -30,11 +30,18 @@ describe("target architecture migration baseline", () => {
     const packageResolutions = parsePackageResolutions(lockfile);
     const importerResolutions = parseImporterResolutions(lockfile);
     const declaredTransitionResolutions = [
+      "apps/daemon|dependencies|@manyhands/conflict-risk|link:../../packages/conflict-risk",
       "apps/daemon|dependencies|@manyhands/contracts|link:../../packages/contracts",
+      "apps/daemon|dependencies|@manyhands/decomposer|link:../../packages/decomposer",
       "apps/daemon|dependencies|@manyhands/execution-core|link:../../packages/execution-core",
+      "apps/daemon|dependencies|@manyhands/orchestrator-graph|link:../../packages/orchestrator-graph",
+      "apps/daemon|dependencies|@manyhands/repository-index|link:../../packages/repository-index",
       "apps/daemon|dependencies|@manyhands/run-coordinator|link:../../packages/run-coordinator",
       "apps/daemon|dependencies|@manyhands/run-engine|link:../../packages/run-engine",
       "apps/daemon|dependencies|@manyhands/run-store|link:../../packages/run-store",
+      "apps/daemon|dependencies|@manyhands/shared|link:../../packages/shared",
+      "apps/daemon|dependencies|@manyhands/task-graph|link:../../packages/task-graph",
+      "apps/daemon|dependencies|@manyhands/trace-store|link:../../packages/trace-store",
       "packages/run-coordinator|dependencies|@manyhands/contracts|link:../contracts",
       "packages/run-engine|dependencies|@manyhands/contracts|link:../contracts",
       "packages/run-engine|dependencies|@manyhands/run-coordinator|link:../run-coordinator",
@@ -160,7 +167,7 @@ describe("target architecture migration baseline", () => {
     expect(consumers).toEqual([]);
   });
 
-  it("freezes known legacy reachability until the owning migration stage retires it", async () => {
+  it("tracks remaining non-web compatibility and rejects web lifecycle producers", async () => {
     const productSources = [
       ...(await sourceFiles(path.join(REPO_ROOT, "apps", "web", "src"))),
       ...(await sourceFiles(path.join(REPO_ROOT, "packages")))
@@ -168,11 +175,18 @@ describe("target architecture migration baseline", () => {
     const sourceByPath = new Map(
       await Promise.all(productSources.map(async (file) => [relativePath(file), await readFile(file, "utf8")] as const))
     );
+    const forbiddenWebLifecycleProducer =
+      /startRunBackgroundTask|tryMarkRunnerActive|claimRunOperation|reconcileRunLiveness|runPlanningV2|runExecutionV2|createExecutionCoordinatorHostV2|initializeRunCanonicalEvents|JsonRunRecordStore|killRunProcessesVerified|supervisedSpawnFn|RunFailureReceiptStore|projectV2RunRecordCache/u;
+    const webLifecycleProducers = [...sourceByPath]
+      .filter(([file, source]) => file.startsWith("apps/web/src/") && forbiddenWebLifecycleProducer.test(source))
+      .map(([file]) => file)
+      .sort();
+    expect(webLifecycleProducers).toEqual([]);
+
     const frozenLegacy = [
       {
         pattern: /projectSemanticPlanForLegacyCompiler/u,
         files: [
-          "apps/web/src/lib/server/runs/v2/planning-host.ts",
           "packages/decomposer/src/compiler/graph-compiler.ts",
           "packages/decomposer/src/planner/candidate-plan.ts",
           "packages/decomposer/src/planner/semantic-plan-projection.ts"
@@ -181,7 +195,6 @@ describe("target architecture migration baseline", () => {
       {
         pattern: /@manyhands\/conflict-risk/u,
         files: [
-          "apps/web/src/lib/server/runs/v2/execution-pipeline.ts",
           "packages/execution-core/src/run/executor.ts",
           "packages/orchestrator-graph/src/v2/execution-driver.ts",
           "packages/scheduler/src/index.ts",
@@ -189,14 +202,8 @@ describe("target architecture migration baseline", () => {
         ]
       },
       {
-        pattern: /@manyhands\/orchestrator-graph/u,
-        files: ["apps/web/src/lib/server/runs/v2/execution-pipeline.ts"]
-      },
-      {
         pattern: /\bWorkBreakdown\b/u,
         files: [
-          "apps/web/src/lib/server/runs/v2/planning-host.ts",
-          "apps/web/src/lib/server/runs/v2/run-coordinator-host.ts",
           "packages/decomposer/src/compiler/contract-compiler.ts",
           "packages/decomposer/src/compiler/graph-compiler.ts",
           "packages/decomposer/src/critics/review.ts",
@@ -222,21 +229,6 @@ describe("target architecture migration baseline", () => {
         ]
       },
       {
-        pattern: /startRunBackgroundTask/u,
-        files: [
-          "apps/web/src/lib/server/runs/runner-state.ts",
-          "apps/web/src/lib/server/runs/v2/execution-pipeline.ts"
-        ]
-      },
-      {
-        pattern: /reconcileRunRecordProjectionV2/u,
-        files: ["apps/web/src/lib/server/runs/v2/command-host.ts"]
-      },
-      {
-        pattern: /reconcileRunLiveness/u,
-        files: ["apps/web/src/lib/server/runs/liveness-supervisor.ts"]
-      },
-      {
         pattern: /dangerously-skip-permissions/u,
         files: ["packages/execution-core/src/executor/profiles/claude-code.ts"]
       },
@@ -253,14 +245,8 @@ describe("target architecture migration baseline", () => {
         files: [
           "apps/web/src/app/api/runs/route.ts",
           "apps/web/src/lib/server/runs/schema.ts",
-          "apps/web/src/lib/server/runs/v2/planning-host.ts",
-          "apps/web/src/lib/server/runs/v2/run-coordinator-host.ts",
           "packages/run-coordinator/src/product-lifecycle.ts"
         ]
-      },
-      {
-        pattern: /\bG5\b/u,
-        files: ["apps/web/src/lib/server/runs/v2/planning-host.ts"]
       }
     ];
 

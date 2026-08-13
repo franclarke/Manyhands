@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { mkdir, stat } from "node:fs/promises";
+import path from "node:path";
 import process from "node:process";
 import {
   buildMonitorModel,
@@ -48,15 +50,12 @@ const state = {
 };
 
 let child = null;
+let daemonChild = null;
 let shuttingDown = false;
 let renderTimer = null;
 let pollController = null;
 let streamAbort = null;
 let streamRunId = null;
-
-if (!options.attach) {
-  child = startDevServer(options);
-}
 
 installShutdownHandlers();
 
@@ -68,15 +67,171 @@ if (visual) {
   writePlainLine("[manyhands] dev console running in plain mode");
 }
 
+if (!options.attach) {
+  try {
+    const stack = await startProductiveDevStack(options);
+    daemonChild = stack.daemon;
+    child = stack.web;
+  } catch (error) {
+    state.process.status = "failed";
+    const message = error instanceof Error ? error.message : String(error);
+    addProcessLine(`[manyhands] failed to start productive dev stack: ${message}`);
+    if (!visual) writePlainLine(`[manyhands] failed to start productive dev stack: ${message}`);
+    await stopManagedChild(daemonChild, "SIGTERM");
+    process.exitCode = 1;
+    if (renderTimer !== null) clearInterval(renderTimer);
+    process.exit(1);
+  }
+}
+
 pollController = startSingleFlightPoller({
   poll: refreshRunSelection,
   intervalMs: RUN_POLL_INTERVAL_MS,
   maxIntervalMs: RUN_POLL_MAX_BACKOFF_MS
 });
 
-function startDevServer(parsedOptions) {
+async function startProductiveDevStack(parsedOptions) {
   const usesDefaultCommand = parsedOptions.command === undefined;
-  const requestedArgs = parsedOptions.commandArgs.length > 0 ? parsedOptions.commandArgs : ["web:dev:raw"];
+  if (usesDefaultCommand) {
+    await prepareDefaultProductiveStack();
+  }
+
+  const daemon = startDaemonProcess();
+  daemonChild = daemon;
+  await waitForDaemonReady(daemon);
+  if (shuttingDown) throw new Error("Productive dev startup was interrupted.");
+  const web = startDevServer(parsedOptions, usesDefaultCommand);
+  return { daemon, web };
+}
+
+async function prepareDefaultProductiveStack() {
+  await runSetupCommand(["build:packages"], "workspace packages");
+  await runSetupCommand(["--filter", "@manyhands/daemon", "build"], "daemon");
+  if (
+    process.platform === "win32" &&
+    (process.env.MANYHANDS_WINDOWS_JOB_RUNNER === undefined || process.env.MANYHANDS_WINDOWS_JOB_RUNNER.length === 0)
+  ) {
+    process.env.MANYHANDS_WINDOWS_JOB_RUNNER = await ensureWindowsJobRunner();
+  }
+}
+
+async function runSetupCommand(args, label) {
+  const spec = resolveDefaultDevSpawn(args);
+  addProcessLine(`[manyhands] building ${label}: ${spec.command} ${spec.args.join(" ")}`);
+  if (!visual) writePlainLine(`[manyhands] building ${label}`);
+  await new Promise((resolve, reject) => {
+    const setup = spawn(spec.command, spec.args, {
+      cwd: process.cwd(),
+      env: process.env,
+      shell: false,
+      windowsVerbatimArguments: spec.windowsVerbatimArguments,
+      stdio: ["inherit", "pipe", "pipe"]
+    });
+    pipeProcessOutput(setup.stdout, "stdout");
+    pipeProcessOutput(setup.stderr, "stderr");
+    setup.once("error", reject);
+    setup.once("exit", (code, signal) => {
+      if (code === 0) resolve();
+      else reject(new Error(`${label} build exited code=${code ?? "null"} signal=${signal ?? "null"}`));
+    });
+  });
+}
+
+async function ensureWindowsJobRunner() {
+  const source = path.resolve("native/windows-job-runner/src/main.rs");
+  const directory = path.resolve(".manyhands/bin");
+  const executable = path.join(directory, "manyhands-windows-job-runner.exe");
+  await mkdir(directory, { recursive: true });
+  const [sourceStat, executableStat] = await Promise.all([
+    stat(source),
+    stat(executable).catch(() => undefined)
+  ]);
+  if (executableStat !== undefined && executableStat.mtimeMs >= sourceStat.mtimeMs) return executable;
+  addProcessLine(`[manyhands] building Windows process custodian: ${executable}`);
+  if (!visual) writePlainLine("[manyhands] building Windows process custodian");
+  await new Promise((resolve, reject) => {
+    const compiler = spawn("rustc.exe", ["--edition=2021", source, "-O", "-o", executable], {
+      cwd: process.cwd(),
+      windowsHide: true,
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+    pipeProcessOutput(compiler.stdout, "stdout");
+    pipeProcessOutput(compiler.stderr, "stderr");
+    compiler.once("error", reject);
+    compiler.once("exit", (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`Windows process custodian build exited code=${code ?? "null"}.`));
+    });
+  });
+  return executable;
+}
+
+function startDaemonProcess() {
+  const entrypoint = path.resolve(
+    process.env.MANYHANDS_DEV_DAEMON_ENTRYPOINT ?? "apps/daemon/dist/cli.cjs"
+  );
+  const spawned = spawn(process.execPath, [entrypoint], {
+    cwd: process.cwd(),
+    env: {
+      ...process.env,
+      MANYHANDS_DAEMON_PROFILE: process.env.MANYHANDS_DAEMON_PROFILE ?? "deterministic_fake",
+      FORCE_COLOR: process.env.FORCE_COLOR ?? (visual ? "1" : "0")
+    },
+    shell: false,
+    detached: process.platform !== "win32",
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  state.process.status = "starting";
+  addProcessLine(`[manyhands] spawned daemon: ${process.execPath} ${entrypoint}`);
+  pipeProcessOutput(spawned.stdout, "daemon", observeDaemonLine);
+  pipeProcessOutput(spawned.stderr, "daemon:stderr");
+  spawned.on("error", (error) => {
+    addProcessLine(`[manyhands] failed to start daemon: ${error.message}`);
+  });
+  spawned.on("exit", (code, signal) => {
+    addProcessLine(`[manyhands] daemon exited code=${code ?? "null"} signal=${signal ?? "null"}`);
+    if (!visual) writePlainLine(`[manyhands] daemon exited code=${code ?? "null"} signal=${signal ?? "null"}`);
+    if (!shuttingDown) void exitFromStackChild("daemon", code ?? 1, signal);
+  });
+  return spawned;
+}
+
+function observeDaemonLine(line) {
+  try {
+    const value = JSON.parse(stripAnsi(line));
+    if (value?.event === "manyhands.daemon.ready") {
+      state.process.status = "running";
+      state.daemonReady = true;
+    }
+  } catch {
+    // Non-JSON diagnostics remain visible in the process pane.
+  }
+}
+
+function waitForDaemonReady(spawned) {
+  const configured = Number(process.env.MANYHANDS_DEV_DAEMON_READY_TIMEOUT_MS ?? 30_000);
+  const timeoutMs = Number.isFinite(configured) && configured > 0 ? configured : 30_000;
+  if (state.daemonReady === true) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const deadline = setTimeout(() => reject(new Error(`Daemon did not become ready within ${timeoutMs}ms.`)), timeoutMs);
+    const poll = setInterval(() => {
+      if (state.daemonReady !== true) return;
+      clearInterval(poll);
+      clearTimeout(deadline);
+      resolve();
+    }, 10);
+    spawned.once("exit", (code) => {
+      clearInterval(poll);
+      clearTimeout(deadline);
+      reject(new Error(`Daemon exited before readiness with code ${code ?? "null"}.`));
+    });
+  });
+}
+
+function startDevServer(parsedOptions, usesDefaultCommand = parsedOptions.command === undefined) {
+  const requestedArgs = parsedOptions.commandArgs.length > 0
+    ? parsedOptions.commandArgs
+    : ["--filter", "@manyhands/web", "dev"];
   const spawnSpec = usesDefaultCommand
     ? resolveDefaultDevSpawn(requestedArgs)
     : { command: parsedOptions.command, args: requestedArgs, windowsVerbatimArguments: false };
@@ -89,6 +244,7 @@ function startDevServer(parsedOptions) {
       FORCE_COLOR: process.env.FORCE_COLOR ?? (visual ? "1" : "0")
     },
     shell: false,
+    detached: process.platform !== "win32",
     windowsVerbatimArguments: spawnSpec.windowsVerbatimArguments,
     stdio: ["inherit", "pipe", "pipe"]
   });
@@ -112,24 +268,30 @@ function startDevServer(parsedOptions) {
     if (!shuttingDown) {
       state.server.status = "offline";
       const exitCode = code ?? (signal === null ? 1 : 0);
-      exitFromChild(exitCode);
+      void exitFromStackChild("web", exitCode, signal);
     }
   });
 
   return spawned;
 }
 
-function pipeProcessOutput(stream, streamName) {
+function pipeProcessOutput(stream, streamName, observeLine) {
   let buffer = "";
   stream.setEncoding("utf8");
   stream.on("data", (chunk) => {
     buffer += chunk;
     const parts = buffer.split(/\r?\n/);
     buffer = parts.pop() ?? "";
-    for (const part of parts) handleProcessLine(part, streamName);
+    for (const part of parts) {
+      observeLine?.(part);
+      handleProcessLine(part, streamName);
+    }
   });
   stream.on("end", () => {
-    if (buffer.length > 0) handleProcessLine(buffer, streamName);
+    if (buffer.length > 0) {
+      observeLine?.(buffer);
+      handleProcessLine(buffer, streamName);
+    }
   });
 }
 
@@ -321,7 +483,7 @@ function detectLocalUrl(line) {
 function installShutdownHandlers() {
   for (const signal of ["SIGINT", "SIGTERM"]) {
     process.once(signal, () => {
-      shutdown(signal);
+      void shutdown(signal);
     });
   }
   process.once("exit", () => {
@@ -329,7 +491,7 @@ function installShutdownHandlers() {
   });
 }
 
-function shutdown(signal) {
+async function shutdown(signal) {
   if (shuttingDown) return;
   shuttingDown = true;
   if (renderTimer !== null) clearInterval(renderTimer);
@@ -339,18 +501,15 @@ function shutdown(signal) {
     render();
     process.stdout.write("\x1b[?25h\n");
   }
-  if (child !== null && child.exitCode === null) {
-    child.kill(signal === "SIGTERM" ? "SIGTERM" : "SIGINT");
-    setTimeout(() => {
-      if (child !== null && child.exitCode === null) child.kill("SIGTERM");
-      process.exit(0);
-    }, 1_500).unref();
-  } else {
-    process.exit(0);
-  }
+  await Promise.all([
+    stopManagedChild(child, signal === "SIGTERM" ? "SIGTERM" : "SIGINT"),
+    stopManagedChild(daemonChild, signal === "SIGTERM" ? "SIGTERM" : "SIGINT")
+  ]);
+  process.exit(0);
 }
 
-function exitFromChild(exitCode) {
+async function exitFromStackChild(role, exitCode, signal) {
+  if (shuttingDown) return;
   shuttingDown = true;
   process.exitCode = exitCode;
   pollController?.stop();
@@ -360,7 +519,49 @@ function exitFromChild(exitCode) {
     render();
     process.stdout.write("\x1b[?25h\n");
   }
-  setTimeout(() => process.exit(exitCode), visual ? 750 : 0);
+  const sibling = role === "daemon" ? child : daemonChild;
+  await stopManagedChild(sibling, signal === "SIGINT" ? "SIGINT" : "SIGTERM");
+  if (visual) await new Promise((resolve) => setTimeout(resolve, 750));
+  process.exit(exitCode);
+}
+
+async function stopManagedChild(spawned, signal) {
+  if (spawned === null || spawned.exitCode !== null || spawned.signalCode !== null) return;
+  const exited = new Promise((resolve) => spawned.once("exit", resolve));
+  terminateManagedTree(spawned, signal, false);
+  if (await settlesWithin(exited, 1_500)) return;
+  terminateManagedTree(spawned, "SIGKILL", true);
+  await settlesWithin(exited, 1_500);
+}
+
+function terminateManagedTree(spawned, signal, force) {
+  if (spawned.pid === undefined) return;
+  if (process.platform === "win32") {
+    const args = ["/pid", String(spawned.pid), "/t", ...(force ? ["/f"] : [])];
+    const killer = spawn("taskkill.exe", args, {
+      windowsHide: true,
+      stdio: "ignore"
+    });
+    killer.on("error", () => {
+      if (spawned.exitCode === null) spawned.kill(signal);
+    });
+    return;
+  }
+  try {
+    process.kill(-spawned.pid, signal);
+  } catch {
+    if (spawned.exitCode === null) spawned.kill(signal);
+  }
+}
+
+async function settlesWithin(promise, timeoutMs) {
+  let timeout;
+  return Promise.race([
+    promise.then(() => true),
+    new Promise((resolve) => {
+      timeout = setTimeout(() => resolve(false), timeoutMs);
+    })
+  ]).finally(() => clearTimeout(timeout));
 }
 
 function parseArgs(args) {

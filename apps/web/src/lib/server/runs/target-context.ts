@@ -33,7 +33,6 @@ async function git(cwd: string, ...args: string[]): Promise<string> {
   const { stdout } = await execFileAsync("git", safeGitArgs(cwd, ["-C", cwd, ...args]), { windowsHide: true });
   return stdout.trim();
 }
-
 export function targetFingerprint(
   gitCommonDir: string,
   sourceBaseCommit: string,
@@ -95,6 +94,21 @@ export async function resolveRunTargetPath(run: RunRecord): Promise<string | und
     run.targetContext
   );
   return run.targetContext.sourceRealPath;
+}
+
+/** Resolve a daemon projection target without trusting a path that was replaced. */
+export async function resolveProductRunTargetPath(context: {
+  sourceRealPath?: string;
+  physicalIdentity?: RunTargetPhysicalIdentity;
+}): Promise<string | undefined> {
+  if (context.sourceRealPath === undefined || context.physicalIdentity === undefined) return undefined;
+  const current = await resolveWorkspaceRepositoryIdentity(context.sourceRealPath);
+  if (current?.filesystemObjectId === undefined) return undefined;
+  if (
+    current.filesystemObjectId.device !== context.physicalIdentity.device
+    || current.filesystemObjectId.file !== context.physicalIdentity.file
+  ) return undefined;
+  return current.repoRealPath;
 }
 
 export class RunTargetMismatchError extends Error {

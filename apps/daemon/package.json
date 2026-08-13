@@ -14,14 +14,21 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --clean && tsup src/cli.ts --format cjs --out-dir dist && tsup src/deterministic-fake-worker.ts --format esm --out-dir dist",
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean && tsup src/cli.ts --format cjs --out-dir dist && tsup src/deterministic-fake-worker.ts --format esm --out-dir dist && tsup src/transitional-unsafe-worker.ts --format esm --out-dir dist",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@manyhands/contracts": "workspace:*",
+    "@manyhands/conflict-risk": "workspace:*",
+    "@manyhands/decomposer": "workspace:*",
     "@manyhands/execution-core": "workspace:*",
+    "@manyhands/orchestrator-graph": "workspace:*",
+    "@manyhands/repository-index": "workspace:*",
     "@manyhands/run-coordinator": "workspace:*",
     "@manyhands/run-engine": "workspace:*",
-    "@manyhands/run-store": "workspace:*"
+    "@manyhands/run-store": "workspace:*",
+    "@manyhands/shared": "workspace:*",
+    "@manyhands/task-graph": "workspace:*",
+    "@manyhands/trace-store": "workspace:*"
   }
 }

@@ -57,7 +57,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const parsed = RunCreateRequestSchema.parse(await request.json());
     const commandId = commandIdForRequest(request);
     const runId = runIdForCreateCommand(commandId);
-    const definition = await withWorkspaceReferenceLock(async () => {
+    const { projection } = await withWorkspaceReferenceLock(async () => {
       const workspace = await getWorkspaceRepository().get(parsed.workspaceId);
       if (workspace.repoPath === undefined) {
         throw new TypeError("ManyHands requires a workspace with a local Git repository.");
@@ -86,7 +86,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       const durableTargetContext = Object.fromEntries(
         Object.entries(targetContext).filter(([key]) => key !== "capturedAt")
       );
-      return {
+      const definition = {
         schemaVersion: 1 as const,
         workspaceId: workspace.id,
         userPrompt: parsed.userPrompt,
@@ -101,13 +101,13 @@ export async function POST(request: Request): Promise<NextResponse> {
           : { granularityCondition: parsed.granularityCondition }),
         targetContext: JSON.parse(JSON.stringify(durableTargetContext)) as Record<string, RunCommandJsonValue>
       };
-    });
-    const { projection } = await submitProductRunCommand({
-      request,
-      commandId,
-      runId,
-      command: { type: "create_run", definition },
-      allowMissingRun: true
+      return submitProductRunCommand({
+        request,
+        commandId,
+        runId,
+        command: { type: "create_run", definition },
+        allowMissingRun: true
+      });
     });
     return NextResponse.json(toProductRunResponse(projection), { status: 201 });
   } catch (error) {

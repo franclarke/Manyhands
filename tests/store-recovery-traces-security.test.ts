@@ -253,19 +253,6 @@ describe("durable recovery, traces and bounded grounding", () => {
     ]));
   });
 
-  it("keeps recovery and durable traces on the productive V2 route", async () => {
-    const pipeline = await readFile(path.resolve("apps/web/src/lib/server/runs/v2/execution-pipeline.ts"), "utf8");
-    const commandHost = await readFile(path.resolve("apps/web/src/lib/server/runs/v2/command-host.ts"), "utf8");
-
-    expect(pipeline).toContain("verifyAndRecoverRunStore");
-    expect(pipeline).toContain("new JsonlTraceStore");
-    expect(pipeline).toContain("compactIfNeeded");
-    expect(pipeline).toContain("granularityPolicy");
-    expect(commandHost).toContain("verifyAndRecoverRunStore");
-    expect(commandHost).toContain("compactIfNeeded");
-    const planningHost = await readFile(path.resolve("apps/web/src/lib/server/runs/v2/planning-host.ts"), "utf8");
-    expect(planningHost).toContain("maxLeafPlannedPaths: strategy.config.maxLeafPlannedPaths");
-  });
 });
 
 async function tempRoot(prefix: string): Promise<string> {

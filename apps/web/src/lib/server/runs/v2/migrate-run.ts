@@ -47,6 +47,9 @@ export interface MigrateLegacyRunOptions {
 }
 
 /**
+ * Offline-only compatibility importer, invoked by scripts/migrate-runs-v2.mjs.
+ * It is never imported by the web application or daemon query/command path.
+ *
  * Imports only the durable identity and operator context of a V1 run. Legacy
  * success flags, validation output and final manifests are deliberately not
  * promoted to V2 evidence; the imported run is interrupted and must be

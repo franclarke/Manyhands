@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { Geist, JetBrains_Mono, Newsreader } from "next/font/google";
 import "./globals.css";
 import { AppSidebar } from "@/components/app-sidebar";
+import { listProductRuns } from "@/lib/server/daemon/productive-client";
 import { getWorkspaceRepository } from "@/lib/server/workspaces";
-import { getRunRepository } from "@/lib/server/runs";
-import { toRunPreview } from "@/lib/server/runs/presenter";
+import { toProductRunPreview } from "@/lib/server/runs/product-presenter";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist", display: "swap" });
 const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains-mono", display: "swap" });
@@ -26,18 +26,18 @@ export default async function RootLayout({
   const workspaceRepository = getWorkspaceRepository();
   const [workspaces, runs] = await Promise.all([
     workspaceRepository.list(),
-    getRunRepository().list({ includeArchived: false, limit: 10 })
+    listProductRuns({ includeArchived: false, limit: 10 })
   ]);
-  
+
   const wsById = new Map(workspaces.map((entry) => [entry.id, entry]));
   await Promise.all(
-    [...new Set(runs.map((run) => run.workspaceId))].map(async (workspaceId) => {
+    [...new Set(runs.map((run) => run.definition?.workspaceId).filter((id): id is string => id !== undefined))].map(async (workspaceId) => {
       if (wsById.has(workspaceId)) return;
       const canonical = await workspaceRepository.get(workspaceId).catch(() => undefined);
       if (canonical !== undefined) wsById.set(workspaceId, canonical);
     })
   );
-  const previews = runs.map((run) => toRunPreview(run, wsById));
+  const previews = runs.map((run) => toProductRunPreview(run, wsById));
 
   return (
     <html lang="es" data-theme="dark" data-scroll-behavior="smooth" suppressHydrationWarning>

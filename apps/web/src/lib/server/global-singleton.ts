@@ -1,14 +1,11 @@
 /**
  * Cross-bundle singletons anchored on `globalThis`.
  *
- * Next.js compiles every route handler and server-component entrypoint as its
- * own bundle, so module-level state is instantiated once PER BUNDLE (and again
- * after each dev recompile) — not once per process. Any in-memory state that
- * must be shared across routes (event buses, write locks, runner registries)
- * has to live on `globalThis`; otherwise it silently fragments: e.g. the
- * `/run-events` SSE route subscribed to a different EventEmitter instance than
- * the one the planning/execution pipelines publish to, so the workspace never
- * received live frames (root cause of "el grafo no se actualiza en vivo").
+ * Next.js compiles route handlers and server components into separate bundles.
+ * This helper is limited to disposable process-local caches for web-owned
+ * configuration repositories. Run actors, lifecycle state, process registries,
+ * event streams and background promises belong exclusively to the daemon and
+ * must never be stored here.
  */
 const GLOBAL_KEY_PREFIX = "__manyhands:";
 

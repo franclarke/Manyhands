@@ -10,7 +10,12 @@ import {
   ProcessSupervisor,
   ProcessSupervisorStartedReceiptSchema
 } from "@manyhands/execution-core";
-import type { IpcCapabilityOsProtection, ProductRunDefinition } from "@manyhands/run-coordinator";
+import type {
+  DeliveryReceipt,
+  IpcCapabilityOsProtection,
+  ProductRunDefinition,
+  RunEventInput
+} from "@manyhands/run-coordinator";
 import type { PhysicalEffectAdapter } from "@manyhands/run-engine";
 
 import {
@@ -39,13 +44,19 @@ export interface DeterministicFakeExecutionProfile {
 export interface TransitionalUnsafeExecutionProfile {
   readonly kind: "transitional_unsafe";
   readonly adapters: readonly PhysicalEffectAdapter[];
-  executionProcess(definition: ProductRunDefinition): {
+  executionProcess(definition: ProductRunDefinition, context?: {
+    runId: string;
+    attemptId: string;
+  }): {
     executable: string;
     argv: string[];
     cwd: string;
     env: Record<string, string>;
     timeoutMs?: number;
   };
+  loadPlanningResult?(effectId: string): Promise<readonly RunEventInput[]>;
+  loadExecutionResult?(runId: string, attemptId: string): Promise<readonly RunEventInput[]>;
+  loadDeliveryResult?(effectId: string): Promise<DeliveryReceipt>;
 }
 
 export type ProductiveDaemonProfile =
@@ -83,13 +94,22 @@ export async function startProductiveDaemon(
   const hasher = sha256Digest;
   const adapters = options.profile.kind === "deterministic_fake"
     ? deterministicAdapters(processSupervisor, hasher, clock)
-    : options.profile.adapters;
+    : transitionalAdapters(options.profile.adapters, processSupervisor);
   const executionProcess = executionProcessFor(options.profile);
   const application = createProductRunApplication({
     hasher,
     clock,
     executionProcess,
     recoverInterruptedExecution: options.profile.kind === "deterministic_fake",
+    ...(options.profile.kind !== "transitional_unsafe" || options.profile.loadPlanningResult === undefined
+      ? {}
+      : { loadPlanningResult: options.profile.loadPlanningResult }),
+    ...(options.profile.kind !== "transitional_unsafe" || options.profile.loadExecutionResult === undefined
+      ? {}
+      : { loadExecutionResult: options.profile.loadExecutionResult }),
+    ...(options.profile.kind !== "transitional_unsafe" || options.profile.loadDeliveryResult === undefined
+      ? {}
+      : { loadDeliveryResult: options.profile.loadDeliveryResult }),
     activeProcesses: async (_runId, projection) => {
       const active: ActiveProductProcess[] = [];
       for (const intent of Object.values(projection.effectIntents)) {
@@ -131,6 +151,22 @@ export async function startProductiveDaemon(
     ...(options.ipcNow === undefined ? {} : { ipcNow: options.ipcNow }),
     ...(options.onIpcError === undefined ? {} : { onIpcError: options.onIpcError })
   });
+}
+
+function transitionalAdapters(
+  configured: readonly PhysicalEffectAdapter[],
+  processSupervisor: ProcessSupervisor
+): PhysicalEffectAdapter[] {
+  const kinds = new Set(configured.map((adapter) => adapter.kind));
+  return [
+    ...(kinds.has("process_spawn")
+      ? []
+      : [createProcessSpawnPhysicalEffectAdapter({ supervisor: processSupervisor })]),
+    ...(kinds.has("process_terminate")
+      ? []
+      : [createProcessTerminatePhysicalEffectAdapter({ supervisor: processSupervisor })]),
+    ...configured
+  ];
 }
 
 function executionProcessFor(profile: ProductiveDaemonProfile): TransitionalUnsafeExecutionProfile["executionProcess"] {

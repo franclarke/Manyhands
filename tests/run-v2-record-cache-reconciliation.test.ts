@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -14,27 +14,21 @@ import type { PhysicalEffectAdapter } from "@manyhands/run-engine";
 import { startProductiveDaemon, type DaemonKernel } from "../apps/daemon/src/index.js";
 import { GET as getRun } from "@/app/api/runs/[id]/route";
 import { createLocalIpcClient } from "@/lib/server/daemon/local-ipc-client";
-import { getRunRepository, resetRunRepositoryForTests } from "@/lib/server/runs/store";
-import { makeRunRecordV2 } from "./helpers/run-v2-record";
 
 const at = "2026-08-13T03:00:00.000Z";
 const sha256: DigestHasher = (value) =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`;
 let directory: string;
 let kernel: DaemonKernel;
-let previousRunsDirectory: string | undefined;
 let previousDaemonRoot: string | undefined;
 let previousEndpoint: string | undefined;
 
 beforeEach(async () => {
   directory = await mkdtemp(path.join(os.tmpdir(), "mh-stage3-pure-get-"));
-  previousRunsDirectory = process.env.MANYHANDS_RUNS_DIR;
   previousDaemonRoot = process.env.MANYHANDS_DAEMON_STATE_ROOT;
   previousEndpoint = process.env.MANYHANDS_DAEMON_ENDPOINT;
-  process.env.MANYHANDS_RUNS_DIR = path.join(directory, "legacy");
   process.env.MANYHANDS_DAEMON_STATE_ROOT = path.join(directory, "daemon");
   process.env.MANYHANDS_DAEMON_ENDPOINT = endpoint();
-  resetRunRepositoryForTests();
   kernel = await startProductiveDaemon({
     stateRoot: process.env.MANYHANDS_DAEMON_STATE_ROOT,
     endpoint: process.env.MANYHANDS_DAEMON_ENDPOINT,
@@ -53,15 +47,13 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await kernel.close();
-  resetRunRepositoryForTests();
-  restore("MANYHANDS_RUNS_DIR", previousRunsDirectory);
   restore("MANYHANDS_DAEMON_STATE_ROOT", previousDaemonRoot);
   restore("MANYHANDS_DAEMON_ENDPOINT", previousEndpoint);
   await rm(directory, { recursive: true, force: true });
 });
 
 describe("Stage 3 GET purity", () => {
-  it("observes the terminal daemon projection without repairing the legacy RunRecord", async () => {
+  it("observes the terminal daemon projection without appending or repairing lifecycle state", async () => {
     const runId = "run:terminal:daemon";
     const client = createLocalIpcClient({
       endpoint: kernel.endpoint,
@@ -86,13 +78,8 @@ describe("Stage 3 GET purity", () => {
     }, sha256));
     await kernel.drainEffects();
 
-    await getRunRepository().save(makeRunRecordV2({
-      runId,
-      lifecycle: "running",
-      projection: { eventSequence: 3, lifecycle: "running", updatedAt: at }
-    }));
-    const legacyPath = path.join(process.env.MANYHANDS_RUNS_DIR!, `${runId.replace(/[^A-Za-z0-9._-]/gu, "_")}.json`);
-    const before = await readFile(legacyPath, "utf8");
+    const before = await kernel.engine.query(runId);
+    const beforeEvents = await kernel.engine.eventsReady(runId, 0);
 
     const response = await getRun(new Request(`http://localhost/api/runs/${runId}`), {
       params: Promise.resolve({ id: runId })
@@ -102,7 +89,10 @@ describe("Stage 3 GET purity", () => {
     await expect(response.json()).resolves.toMatchObject({
       run: { runId, lifecycle: "interrupted" }
     });
-    expect(await readFile(legacyPath, "utf8")).toBe(before);
+    const after = await kernel.engine.query(runId);
+    const afterEvents = await kernel.engine.eventsReady(runId, 0);
+    expect(after.sequence).toBe(before.sequence);
+    expect(afterEvents).toEqual(beforeEvents);
   });
 });
 

@@ -7,7 +7,7 @@ import {
   withWorkspaceReferenceLock
 } from "@/lib/server/workspaces";
 import { ensureRunnableRepo } from "@/lib/server/workspaces/ensure-runnable-repo";
-import { RunValidationError, getRunRepository } from "@/lib/server/runs";
+import { listProductRuns } from "@/lib/server/daemon/productive-client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -60,14 +60,10 @@ export async function DELETE(_request: Request, context: RouteContext): Promise<
     await withWorkspaceReferenceLock(async () => {
       const workspaceRepository = getWorkspaceRepository();
       const equivalentIds = await workspaceRepository.equivalentIds(id);
-      const references = await getRunRepository()
-        .listStrict({ workspaceIds: equivalentIds, limit: 1 })
-        .catch((error: unknown) => {
-          if (error instanceof RunValidationError) {
-            throw new WorkspaceConflictError(error.message);
-          }
-          throw error;
-        });
+      const referenceLists = await Promise.all(
+        equivalentIds.map((workspaceId) => listProductRuns({ workspaceId, includeArchived: true, limit: 1 }))
+      );
+      const references = referenceLists.flat();
       if (references.length > 0) {
         throw new WorkspaceConflictError(
           `Workspace ${id} is referenced by run ${references[0]!.runId}. ` +

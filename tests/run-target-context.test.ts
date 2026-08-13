@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   captureRunTargetContext,
+  resolveProductRunTargetPath,
   resolveRunTargetPath,
   verifyProvisionedAgainstTarget
 } from "@/lib/server/runs/target-context";
@@ -16,7 +17,6 @@ let tempDir: string;
 beforeEach(async () => {
   tempDir = await mkdtemp(path.join(os.tmpdir(), "mh-target-"));
 });
-
 afterEach(async () => {
   await rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
 });
@@ -59,6 +59,7 @@ describe("immutable V2 RunTargetContext", () => {
     const run = makeRunRecordV2({ targetContext });
 
     await expect(resolveRunTargetPath(run)).resolves.toBe(targetContext.sourceRealPath);
+    await expect(resolveProductRunTargetPath(targetContext)).resolves.toBe(targetContext.sourceRealPath);
   });
 
   it("rejects a different repository and one recreated at the captured path", async () => {
@@ -71,5 +72,6 @@ describe("immutable V2 RunTargetContext", () => {
     await rename(repoA, path.join(tempDir, "moved-original"));
     const replacement = await makeGitRepo("replaceable");
     await expect(verifyProvisionedAgainstTarget({ sourceRepoRoot: replacement }, context)).rejects.toThrow(/different physical repository|replaced|recreated/i);
+    await expect(resolveProductRunTargetPath(context)).resolves.toBeUndefined();
   });
 });

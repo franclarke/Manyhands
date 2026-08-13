@@ -5,6 +5,7 @@ import {
   createLocalProcessIdentityProbe,
   currentProcessStartIdentity
 } from "./local-process-identity.js";
+import { resolveDaemonProfile } from "./daemon-profile.js";
 import { startProductiveDaemon } from "./productive-daemon.js";
 import {
   createWindowsIpcAclProtector,
@@ -19,18 +20,14 @@ void main().catch((error: unknown) => {
 async function main(): Promise<void> {
   const stateRoot = path.resolve(process.env.MANYHANDS_DAEMON_STATE_ROOT ?? ".manyhands/daemon");
   const endpoint = process.env.MANYHANDS_DAEMON_ENDPOINT ?? defaultEndpoint(stateRoot);
-  const profile = process.env.MANYHANDS_DAEMON_PROFILE ?? "deterministic_fake";
-  if (profile !== "deterministic_fake") {
-    throw new Error(
-      `Unsupported daemon profile ${profile}. The current live executor is available only through the `
-      + "explicit programmatic transitional_unsafe adapter; the CLI never enables a live model implicitly."
-    );
-  }
+  const resolvedProfile = resolveDaemonProfile({
+    stateRoot,
+    daemonDirectory: __dirname,
+    cwd: process.cwd(),
+    nodeExecutable: process.execPath
+  });
 
   const windowsJobRunnerPath = optionalAbsoluteEnv("MANYHANDS_WINDOWS_JOB_RUNNER");
-  const pidEvidencePath = optionalAbsoluteEnv("MANYHANDS_FAKE_PID_EVIDENCE");
-  const workerScriptPath = optionalAbsoluteEnv("MANYHANDS_FAKE_WORKER_SCRIPT")
-    ?? path.join(__dirname, "deterministic-fake-worker.js");
   if (process.platform === "win32" && windowsJobRunnerPath === undefined) {
     throw new Error("MANYHANDS_WINDOWS_JOB_RUNNER is required for supervised productive execution on Windows.");
   }
@@ -51,13 +48,7 @@ async function main(): Promise<void> {
     endpoint,
     processStartIdentity: await currentProcessStartIdentity(),
     processIdentityProbe: createLocalProcessIdentityProbe(),
-    profile: {
-      kind: "deterministic_fake",
-      nodeExecutable: process.execPath,
-      workerScriptPath,
-      cwd: process.cwd(),
-      ...(pidEvidencePath === undefined ? {} : { pidEvidencePath })
-    },
+    profile: resolvedProfile.profile,
     ...(windowsJobRunnerPath === undefined ? {} : { windowsJobRunnerPath }),
     production,
     ...(protect === undefined ? {} : { protectCapabilityPath: protect }),
@@ -72,14 +63,20 @@ async function main(): Promise<void> {
     event: "manyhands.daemon.ready",
     endpoint: kernel.endpoint,
     daemonEpoch: kernel.daemonEpoch,
-    profile
+    profile: resolvedProfile.name
   })}\n`);
 
+  let closing = false;
   for (const signal of ["SIGINT", "SIGTERM"] as const) {
     process.once(signal, () => {
-      // A daemon restart is not a lifecycle mutation. Exiting closes the Job
-      // custodian pipe; the next epoch reconciles its durable intents/receipts.
-      process.exit(0);
+      if (closing) return;
+      closing = true;
+      void kernel.close().catch((error: unknown) => {
+        process.stderr.write(
+          `Daemon shutdown failed: ${error instanceof Error ? error.stack ?? error.message : String(error)}\n`
+        );
+        process.exitCode = 1;
+      });
     });
   }
 }

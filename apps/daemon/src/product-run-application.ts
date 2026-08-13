@@ -8,6 +8,7 @@ import {
 } from "@manyhands/contracts";
 import {
   ProductRunCommandSchema,
+  type DeliveryReceipt,
   type ProductRunCommand,
   type ProductRunDefinition,
   type RunCommandEnvelope,
@@ -32,7 +33,10 @@ export interface ActiveProductProcess {
 export interface ProductRunApplicationOptions {
   readonly hasher: DigestHasher;
   readonly clock: () => string;
-  executionProcess(definition: ProductRunDefinition): {
+  executionProcess(definition: ProductRunDefinition, context?: {
+    runId: string;
+    attemptId: string;
+  }): {
     executable: string;
     argv: string[];
     cwd: string;
@@ -42,6 +46,9 @@ export interface ProductRunApplicationOptions {
   activeProcesses?(runId: string, projection: RunProjection): Promise<readonly ActiveProductProcess[]>;
   /** Deterministic GR profile only: a verified daemon-loss interruption is rescheduled. */
   recoverInterruptedExecution?: boolean;
+  loadPlanningResult?(effectId: string): Promise<readonly RunEventInput[]>;
+  loadExecutionResult?(runId: string, attemptId: string): Promise<readonly RunEventInput[]>;
+  loadDeliveryResult?(effectId: string): Promise<DeliveryReceipt>;
 }
 
 export interface ProductRunApplication {
@@ -149,7 +156,9 @@ async function react(
   if (attempt === "stage3:planning") {
     return {
       domainEvents: succeeded
-        ? planningCompletedEvents(context, options)
+        ? options.loadPlanningResult === undefined
+          ? planningCompletedEvents(context, options)
+          : [...await options.loadPlanningResult(observation.intent.effectId)]
         : [event(options, context.runId, "planning.failed", {
           reason: "The transitional planning adapter did not produce a successful physical receipt."
         }, observation.intent.effectId)],
@@ -160,10 +169,13 @@ async function react(
   if (attempt === "stage3:delivery") {
     const delivery = latestCommand(context, "deliver_run");
     if (delivery === undefined) throw new Error("A delivery effect has no durable deliver_run command.");
+    const receipt = succeeded && options.loadDeliveryResult !== undefined
+      ? await options.loadDeliveryResult(observation.intent.effectId)
+      : undefined;
     return {
       domainEvents: succeeded
         ? [event(options, context.runId, "delivery.published", {
-          receipt: {
+          receipt: receipt ?? {
             receiptId: terminalReceiptId(observation),
             manifestId: delivery.approval.manifestId,
             finalSha: delivery.approval.finalSha,
@@ -223,6 +235,12 @@ async function react(
         reason: "The transitional execution adapter failed.",
         area: "execution"
       }, observation.intent.effectId)],
+      effects: []
+    };
+  }
+  if (attempt?.startsWith("stage3:execution") === true && succeeded && options.loadExecutionResult !== undefined) {
+    return {
+      domainEvents: [...await options.loadExecutionResult(context.runId, attempt)],
       effects: []
     };
   }
@@ -422,7 +440,10 @@ function executionEffect(
   options: ProductRunApplicationOptions,
   attemptId = "stage3:execution"
 ): RunActorEffectRequest {
-  const execution = options.executionProcess(definition);
+  const execution = options.executionProcess(definition, {
+    runId: context.runId,
+    attemptId
+  });
   return effectRequest({
     runId: context.runId,
     daemonEpoch: context.daemonEpoch,

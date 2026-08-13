@@ -1,4 +1,6 @@
 export * from "./daemon-kernel.js";
+export * from "./daemon-profile.js";
+export * from "./current-lifecycle-adapters.js";
 export * from "./installation-capability.js";
 export * from "./installation-lease.js";
 export * from "./local-process-identity.js";
@@ -6,4 +8,5 @@ export * from "./local-ipc-server.js";
 export * from "./process-effect-adapters.js";
 export * from "./product-run-application.js";
 export * from "./productive-daemon.js";
+export * from "./transitional-unsafe-profile.js";
 export * from "./windows-ipc-acl.js";

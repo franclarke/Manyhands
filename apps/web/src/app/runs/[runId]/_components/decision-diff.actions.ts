@@ -4,8 +4,11 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { safeGitArgs } from "@manyhands/execution-core";
 
-import { getRunRepository } from "@/lib/server/runs";
-import { resolveRunTargetPath } from "@/lib/server/runs/target-context";
+import {
+  productRunTargetContext,
+  queryProductRun
+} from "@/lib/server/daemon/productive-client";
+import { resolveProductRunTargetPath } from "@/lib/server/runs/target-context";
 import { readCanonicalRunModelEvents } from "@/lib/server/runs/v2/run-event-reader";
 
 const execFileAsync = promisify(execFile);
@@ -26,8 +29,8 @@ export async function loadCandidateDiffComparison(
   runId: string,
   affectedNodeIds: readonly string[]
 ): Promise<CandidateDiffComparison | null> {
-  const [run, events] = await Promise.all([
-    getRunRepository().get(runId),
+  const [projection, events] = await Promise.all([
+    queryProductRun(runId),
     readCanonicalRunModelEvents(runId)
   ]);
   const candidateEvent = [...events].reverse().find((event) => (
@@ -39,7 +42,7 @@ export async function loadCandidateDiffComparison(
   if (candidateEvent === undefined) return null;
 
   const candidateCommit = candidateEvent.payload.candidateCommit as string;
-  const repoRoot = await resolveRunTargetPath(run);
+  const repoRoot = await resolveProductRunTargetPath(productRunTargetContext(projection));
   if (repoRoot === undefined) return null;
   const baseCommit = await git(repoRoot, "rev-parse", `${candidateCommit}^`);
   const changedFiles = Array.isArray(candidateEvent.payload.changedFiles)

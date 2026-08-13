@@ -76,6 +76,36 @@ export async function readProductRunEvents(
   };
 }
 
+export interface ProductRunTargetContext {
+  sourceRealPath?: string;
+  sourceBaseCommit?: string;
+  fingerprint?: string;
+  physicalIdentity?: { version: 1; device: string; file: string };
+}
+
+/** Read-only metadata required by server-rendered evidence views. */
+export function productRunTargetContext(projection: RunProjection): ProductRunTargetContext {
+  const context = projection.definition?.targetContext;
+  if (!isRecord(context)) return {};
+  return {
+    ...(typeof context.sourceRealPath === "string" ? { sourceRealPath: context.sourceRealPath } : {}),
+    ...(typeof context.sourceBaseCommit === "string" ? { sourceBaseCommit: context.sourceBaseCommit } : {}),
+    ...(typeof context.fingerprint === "string" ? { fingerprint: context.fingerprint } : {}),
+    ...(isRecord(context.physicalIdentity)
+      && context.physicalIdentity.version === 1
+      && typeof context.physicalIdentity.device === "string"
+      && typeof context.physicalIdentity.file === "string"
+      ? {
+          physicalIdentity: {
+            version: 1,
+            device: context.physicalIdentity.device,
+            file: context.physicalIdentity.file
+          } as const
+        }
+      : {})
+  };
+}
+
 export async function submitProductRunCommand(input: {
   request: Request;
   runId: string;
