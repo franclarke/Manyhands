@@ -1,0 +1,445 @@
+{
+  "root": {
+    "key": "root",
+    "kind": "composite",
+    "title": "Canonical productive planning cutover",
+    "objective": "Integrate daemon planning composition, the canonical PlanningEngine, deterministic verification, direct compilation, legacy retirement and regression gates without changing lifecycle ownership or repository identity.",
+    "concerns": [
+      "Keep SemanticPlan as the only planning output.",
+      "Keep planning ownership in the daemon.",
+      "Make the legacy WorkBreakdown route unreachable.",
+      "Preserve prior lifecycle and repository gates."
+    ],
+    "evidenceIds": [
+      "evidence:fcb5757df3a9a22deb2e761b",
+      "evidence:5880d3244ee8a85739d37c25",
+      "evidence:479035e214f31497694608ec",
+      "evidence:e0bdd93c8e711aa126d09c2f",
+      "evidence:a02a2deaacd09ebd1c5155fe",
+      "evidence:1001b59c63702da6a83ef538"
+    ],
+    "plannedPaths": [
+      "apps/daemon/src/current-lifecycle-adapters.ts",
+      "apps/daemon/src/transitional-unsafe-profile.ts",
+      "packages/contracts/src/semantic-plan.ts",
+      "packages/decomposer/src/compiler/graph-compiler.ts",
+      "packages/decomposer/src/planner/planning-module.ts",
+      "packages/task-graph/src/canonical-graph.ts"
+    ],
+    "outcomes": [
+      {
+        "id": "outcome:root-route",
+        "description": "The daemon composes the canonical planner, verifier and direct compiler as the only productive planning route.",
+        "criterionIds": [
+          "criterion-1"
+        ],
+        "verification": {
+          "kind": "existing",
+          "references": [
+            "command:stage6-productive-planning"
+          ]
+        }
+      },
+      {
+        "id": "outcome:root-legacy",
+        "description": "RecursivePlanner, WorkBreakdown projection and legacy graph compilation are unreachable from productive planning entrypoints.",
+        "criterionIds": [
+          "criterion-2"
+        ],
+        "verification": {
+          "kind": "existing",
+          "references": [
+            "source-scan:productive-planning"
+          ]
+        }
+      },
+      {
+        "id": "outcome:root-regression",
+        "description": "Daemon lifecycle ownership, exact repository grounding and existing gates remain protected after cutover.",
+        "criterionIds": [
+          "criterion-3"
+        ],
+        "verification": {
+          "kind": "existing",
+          "references": [
+            "command:prior-gates"
+          ]
+        }
+      }
+    ],
+    "cut": {
+      "criterion": "integration",
+      "rationale": "The goal crosses the daemon application boundary, canonical contracts, planner, verifier and compiler, while each writable path has one cohesive leaf owner and the parent owns final integration."
+    },
+    "children": [
+      {
+        "key": "daemon",
+        "kind": "leaf",
+        "title": "Daemon planning composition",
+        "objective": "Compose canonical productive planning at the daemon-owned entrypoint while preserving repository grounding and lifecycle event ownership.",
+        "concerns": [
+          "Remove the RecursivePlanner and legacy projection route from the productive composition.",
+          "Keep exact RepositoryView identity and daemon-owned event publication."
+        ],
+        "evidenceIds": [
+          "evidence:fcb5757df3a9a22deb2e761b"
+        ],
+        "plannedPaths": [
+          "apps/daemon/src/current-lifecycle-adapters.ts"
+        ],
+        "writePaths": [
+          "apps/daemon/src/current-lifecycle-adapters.ts"
+        ],
+        "outcomes": [
+          {
+            "id": "outcome:daemon",
+            "description": "The daemon invokes canonical planning, deterministic verification and direct compilation through its existing lifecycle boundary.",
+            "criterionIds": [
+              "criterion-1"
+            ],
+            "verification": {
+              "kind": "existing",
+              "references": [
+                "command:daemon-planning-composition"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "key": "planner",
+        "kind": "leaf",
+        "title": "Canonical PlanningEngine route",
+        "objective": "Produce the sole canonical SemanticPlan with typed planning outcomes and no parallel plan representation.",
+        "concerns": [
+          "Preserve bounded repository evidence.",
+          "Keep failures typed and attributable."
+        ],
+        "evidenceIds": [
+          "evidence:a02a2deaacd09ebd1c5155fe"
+        ],
+        "plannedPaths": [
+          "packages/decomposer/src/planner/planning-module.ts"
+        ],
+        "writePaths": [
+          "packages/decomposer/src/planner/planning-module.ts"
+        ],
+        "outcomes": [
+          {
+            "id": "outcome:planner",
+            "description": "The canonical planning engine produces SemanticPlan material for verification and direct compilation.",
+            "criterionIds": [
+              "criterion-1"
+            ],
+            "verification": {
+              "kind": "existing",
+              "references": [
+                "command:canonical-planning-engine"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "key": "verifier",
+        "kind": "leaf",
+        "title": "Deterministic verifier authority",
+        "objective": "Verify exact SemanticPlan material deterministically before compilation and return typed attributable findings.",
+        "concerns": [
+          "Bind findings to the exact candidate identity.",
+          "Do not duplicate planning or graph representations."
+        ],
+        "evidenceIds": [
+          "evidence:479035e214f31497694608ec"
+        ],
+        "plannedPaths": [
+          "packages/contracts/src/semantic-plan.ts"
+        ],
+        "writePaths": [
+          "packages/contracts/src/semantic-plan.ts"
+        ],
+        "outcomes": [
+          {
+            "id": "outcome:verifier",
+            "description": "Deterministic authority validates canonical SemanticPlan material before the compiler accepts it.",
+            "criterionIds": [
+              "criterion-1"
+            ],
+            "verification": {
+              "kind": "existing",
+              "references": [
+                "command:deterministic-verifier"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "key": "compiler",
+        "kind": "leaf",
+        "title": "Direct SemanticPlan compiler",
+        "objective": "Transform verified SemanticPlan material directly into one canonical GraphRevision without legacy projection.",
+        "concerns": [
+          "Eliminate WorkBreakdown projection from the productive path.",
+          "Preserve explicit artifacts, seams and resource ownership."
+        ],
+        "evidenceIds": [
+          "evidence:e0bdd93c8e711aa126d09c2f"
+        ],
+        "plannedPaths": [
+          "packages/decomposer/src/compiler/graph-compiler.ts"
+        ],
+        "writePaths": [
+          "packages/decomposer/src/compiler/graph-compiler.ts"
+        ],
+        "outcomes": [
+          {
+            "id": "outcome:compiler",
+            "description": "The direct compiler consumes SemanticPlan and emits GraphRevision without an intermediate WorkBreakdown.",
+            "criterionIds": [
+              "criterion-1"
+            ],
+            "verification": {
+              "kind": "existing",
+              "references": [
+                "command:direct-compiler"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "key": "legacy",
+        "kind": "leaf",
+        "title": "Legacy WorkBreakdown unreachable",
+        "objective": "Cut productive adapter reachability to RecursivePlanner, WorkBreakdown projection and legacy graph compilation while preserving the daemon effect boundary.",
+        "concerns": [
+          "Retain lifecycle result isolation.",
+          "Prove reachability removal statically with a negative control."
+        ],
+        "evidenceIds": [
+          "evidence:5880d3244ee8a85739d37c25"
+        ],
+        "plannedPaths": [
+          "apps/daemon/src/transitional-unsafe-profile.ts"
+        ],
+        "writePaths": [
+          "apps/daemon/src/transitional-unsafe-profile.ts"
+        ],
+        "outcomes": [
+          {
+            "id": "outcome:legacy",
+            "description": "Productive planning entrypoints cannot reach the legacy planning and graph-projection route.",
+            "criterionIds": [
+              "criterion-2"
+            ],
+            "verification": {
+              "kind": "existing",
+              "references": [
+                "source-scan:productive-planning"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "key": "regression",
+        "kind": "leaf",
+        "title": "Regression gates and canonical graph",
+        "objective": "Preserve daemon lifecycle ownership, exact repository grounding and canonical GraphRevision invariants on the combined candidate.",
+        "concerns": [
+          "Keep resource ownership deterministic.",
+          "Exercise prior gates on the exact integrated candidate."
+        ],
+        "evidenceIds": [
+          "evidence:1001b59c63702da6a83ef538"
+        ],
+        "plannedPaths": [
+          "packages/task-graph/src/canonical-graph.ts"
+        ],
+        "writePaths": [
+          "packages/task-graph/src/canonical-graph.ts"
+        ],
+        "outcomes": [
+          {
+            "id": "outcome:regression",
+            "description": "Lifecycle, repository grounding and canonical graph regression gates remain applicable to the cutover candidate.",
+            "criterionIds": [
+              "criterion-3"
+            ],
+            "verification": {
+              "kind": "existing",
+              "references": [
+                "command:prior-gates"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "seams": [
+    {
+      "id": "seam:daemon-to-planner",
+      "producerUnitKey": "daemon",
+      "consumerUnitKeys": [
+        "planner"
+      ],
+      "purpose": "Carry the exact grounded daemon planning request into the canonical PlanningEngine.",
+      "paths": [
+        "apps/daemon/src/current-lifecycle-adapters.ts",
+        "packages/decomposer/src/planner/planning-module.ts"
+      ],
+      "interface": {
+        "kind": "command",
+        "promise": "The daemon supplies goal, acceptance criteria, constraints and exact repository identity; the planner returns a typed canonical planning outcome.",
+        "compatibility": "exact",
+        "materialization": "files",
+        "verification": {
+          "kind": "existing",
+          "references": [
+            "command:daemon-planning-composition",
+            "command:canonical-planning-engine"
+          ]
+        }
+      },
+      "evidenceIds": [
+        "evidence:fcb5757df3a9a22deb2e761b",
+        "evidence:a02a2deaacd09ebd1c5155fe"
+      ]
+    },
+    {
+      "id": "seam:planner-to-verifier",
+      "producerUnitKey": "planner",
+      "consumerUnitKeys": [
+        "verifier"
+      ],
+      "purpose": "Pass canonical SemanticPlan material to deterministic verification.",
+      "paths": [
+        "packages/decomposer/src/planner/planning-module.ts",
+        "packages/contracts/src/semantic-plan.ts"
+      ],
+      "interface": {
+        "kind": "type",
+        "promise": "The verifier receives the exact canonical SemanticPlan identity produced by the PlanningEngine.",
+        "compatibility": "exact",
+        "materialization": "files",
+        "verification": {
+          "kind": "existing",
+          "references": [
+            "command:canonical-planning-engine",
+            "command:deterministic-verifier"
+          ]
+        }
+      },
+      "evidenceIds": [
+        "evidence:a02a2deaacd09ebd1c5155fe",
+        "evidence:479035e214f31497694608ec"
+      ]
+    },
+    {
+      "id": "seam:planner-to-compiler",
+      "producerUnitKey": "planner",
+      "consumerUnitKeys": [
+        "compiler"
+      ],
+      "purpose": "Expose SemanticPlan as the direct compiler input without WorkBreakdown projection.",
+      "paths": [
+        "packages/decomposer/src/planner/planning-module.ts",
+        "packages/decomposer/src/compiler/graph-compiler.ts"
+      ],
+      "interface": {
+        "kind": "type",
+        "promise": "The compiler consumes canonical SemanticPlan directly and does not accept a productive parallel planning representation.",
+        "compatibility": "exact",
+        "materialization": "files",
+        "verification": {
+          "kind": "existing",
+          "references": [
+            "command:canonical-planning-engine",
+            "command:direct-compiler"
+          ]
+        }
+      },
+      "evidenceIds": [
+        "evidence:a02a2deaacd09ebd1c5155fe",
+        "evidence:e0bdd93c8e711aa126d09c2f"
+      ]
+    },
+    {
+      "id": "seam:verifier-to-compiler",
+      "producerUnitKey": "verifier",
+      "consumerUnitKeys": [
+        "compiler"
+      ],
+      "purpose": "Authorize compilation only for the exact SemanticPlan candidate accepted by deterministic verification.",
+      "paths": [
+        "packages/contracts/src/semantic-plan.ts",
+        "packages/decomposer/src/compiler/graph-compiler.ts"
+      ],
+      "interface": {
+        "kind": "data",
+        "promise": "Verification identity matches the SemanticPlan compiled into GraphRevision and required findings block compilation.",
+        "compatibility": "exact",
+        "materialization": "files",
+        "verification": {
+          "kind": "existing",
+          "references": [
+            "command:deterministic-verifier",
+            "command:direct-compiler"
+          ]
+        }
+      },
+      "evidenceIds": [
+        "evidence:479035e214f31497694608ec",
+        "evidence:e0bdd93c8e711aa126d09c2f"
+      ]
+    }
+  ],
+  "repositoryEvidence": [
+    {
+      "id": "evidence:fcb5757df3a9a22deb2e761b",
+      "kind": "path",
+      "reference": "apps/daemon/src/current-lifecycle-adapters.ts",
+      "observation": "Exact Git blob at path:apps/daemon/src/current-lifecycle-adapters.ts; complete within the registered byte budget.",
+      "confidence": 1
+    },
+    {
+      "id": "evidence:5880d3244ee8a85739d37c25",
+      "kind": "path",
+      "reference": "apps/daemon/src/transitional-unsafe-profile.ts",
+      "observation": "Exact Git blob at path:apps/daemon/src/transitional-unsafe-profile.ts; complete within the registered byte budget.",
+      "confidence": 1
+    },
+    {
+      "id": "evidence:479035e214f31497694608ec",
+      "kind": "path",
+      "reference": "packages/contracts/src/semantic-plan.ts",
+      "observation": "Exact Git blob at path:packages/contracts/src/semantic-plan.ts; complete within the registered byte budget.",
+      "confidence": 1
+    },
+    {
+      "id": "evidence:e0bdd93c8e711aa126d09c2f",
+      "kind": "path",
+      "reference": "packages/decomposer/src/compiler/graph-compiler.ts",
+      "observation": "Exact Git blob at path:packages/decomposer/src/compiler/graph-compiler.ts; complete within the registered byte budget.",
+      "confidence": 1
+    },
+    {
+      "id": "evidence:a02a2deaacd09ebd1c5155fe",
+      "kind": "path",
+      "reference": "packages/decomposer/src/planner/planning-module.ts",
+      "observation": "Exact Git blob at path:packages/decomposer/src/planner/planning-module.ts; complete within the registered byte budget.",
+      "confidence": 1
+    },
+    {
+      "id": "evidence:1001b59c63702da6a83ef538",
+      "kind": "path",
+      "reference": "packages/task-graph/src/canonical-graph.ts",
+      "observation": "Exact Git blob at path:packages/task-graph/src/canonical-graph.ts; complete within the registered byte budget.",
+      "confidence": 1
+    }
+  ],
+  "uncertainties": [],
+  "questions": []
+}
