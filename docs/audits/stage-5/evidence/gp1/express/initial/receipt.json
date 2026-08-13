@@ -1,0 +1,1165 @@
+{
+  "schemaVersion": 1,
+  "caseId": "gp1:express-request-correlation",
+  "runLabel": "initial",
+  "causalChange": null,
+  "candidate": {
+    "sha": "febf7c07538e03edf9696c0590c81eba6440519a",
+    "tree": "3d413a4683d77d579156e169c4dce88295fb4e7e"
+  },
+  "preregistration": {
+    "commit": "8ffb6429878540bb8a716affce98f60f4513ee83",
+    "path": "docs/audits/stage-5/preregistration/express.json"
+  },
+  "repository": {
+    "root": "C:\\mh-stage5-express",
+    "baseCommit": "a3714473feb3d2908add734d340e7755fd85e0a3",
+    "treeSha": "134de344af9d2e7785aae9a991d02fd85b404bcf",
+    "snapshot": {
+      "id": "sha256:50ec60862bd347340b4af549ca47c67be15372179df093bc4a3e38c2afd145d5",
+      "digest": "sha256:d9db1af99ae5b7a051966d4e5c8de737d5176f0db69fa92ab5af4da09f85892c"
+    },
+    "modelDigest": "sha256:50207902b527c06949f724fd9837a9d25052c10142d72e7a4768b87481c8d268",
+    "viewDigest": "sha256:f4bd61283c4f43e52cb247836aa04aaeb662cf2d3ccdd929889f914ca8b70777",
+    "catalogDigest": "sha256:da12e575d3a8166f0d12b042dde0c07120dbef065424b90a450c8274b26eaff9"
+  },
+  "provider": {
+    "cli": "codex-cli",
+    "cliVersion": "codex-cli 0.146.0",
+    "model": "gpt-5.6-sol",
+    "reasoningEffort": "high",
+    "profile": "stage5-gp1-offline-v1",
+    "invocation": [
+      "exec",
+      "-",
+      "--model",
+      "gpt-5.6-sol",
+      "-c",
+      "model_reasoning_effort=\"high\"",
+      "--sandbox",
+      "read-only",
+      "--ephemeral",
+      "--ignore-user-config",
+      "--ignore-rules",
+      "--skip-git-repo-check",
+      "--output-schema",
+      "C:\\Users\\franc\\Documents\\Proyectos\\Manyhands\\scripts\\stage5-gp1-output.schema.json",
+      "--output-last-message",
+      "C:\\Users\\franc\\Documents\\Proyectos\\Manyhands\\docs\\audits\\stage-5\\evidence\\gp1\\express\\initial\\provider-output.json",
+      "--json",
+      "--color",
+      "never"
+    ],
+    "exitCode": 0,
+    "mode": "model_session",
+    "replaySource": null,
+    "promptDigest": "sha256:3df58ccacf23bc5c92cf5d3cdb927ff2f99440c9567875386e51f4b45c91aa73",
+    "outputDigest": "sha256:ffaa9434d1d930399b0e1f7dc8b2c5145e49abc6a8112320d6311d9a6d5580be",
+    "eventLogDigest": "sha256:74f4101170df082afa942bb988609da6fca094e7500b07113a15f560cff16731"
+  },
+  "query": {
+    "searchDigest": "sha256:77ffbb7952197443ad57df0530e0b730e76d05d98be019ae3a057a4a3bd70b41",
+    "excerptDigest": "sha256:9f099163d611f054c1e62f69ef00b67e5b3d5d4ac9ef07348cf341abc44d7852",
+    "results": 47,
+    "bytes": 82690,
+    "viewDigest": "sha256:f4bd61283c4f43e52cb247836aa04aaeb662cf2d3ccdd929889f914ca8b70777"
+  },
+  "planningResult": {
+    "kind": "rejected",
+    "findings": [
+      {
+        "code": "schema_invalid",
+        "severity": "error",
+        "authority": "deterministic",
+        "message": "[\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"object\",\n    \"received\": \"undefined\",\n    \"path\": [\n      \"units\",\n      \"unit:root\",\n      \"granularity\",\n      \"feasibility\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"object\",\n    \"received\": \"undefined\",\n    \"path\": [\n      \"units\",\n      \"unit:root\",\n      \"granularity\",\n      \"epistemic\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"boolean\",\n    \"received\": \"undefined\",\n    \"path\": [\n      \"units\",\n      \"unit:configuration\",\n      \"granularity\",\n      \"feasibility\",\n      \"coherentResponsibility\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"expected\": \"'yes' | 'no' | 'unknown'\",\n    \"received\": \"undefined\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"units\",\n      \"unit:configuration\",\n      \"granularity\",\n      \"feasibility\",\n      \"boundedContext\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"expected\": \"'yes' | 'no' | 'unknown'\",\n    \"received\": \"undefined\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"units\",\n      \"unit:configuration\",\n      \"granularity\",\n      \"feasibility\",\n      \"boundedChangeSurface\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"expected\": \"'yes' | 'no' | 'unknown'\",\n    \"received\": \"undefined\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"units\",\n      \"unit:configuration\",\n      \"granularity\",\n      \"feasibility\",\n      \"independentlyValidatable\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"boolean\",\n    \"received\": \"undefined\",\n    \"path\": [\n      \"units\",\n      \"unit:configuration\",\n      \"granularity\",\n      \"feasibility\",\n      \"unresolvedArchitectureDecision\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"code\": \"unrecognized_keys\",\n    \"keys\": [\n      \"implementation\",\n      \"validation\",\n      \"integration\",\n      \"bounded\",\n      \"independent\",\n      \"requiresSplit\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:configuration\",\n      \"granularity\",\n      \"feasibility\"\n    ],\n    \"message\": \"Unrecognized key(s) in object: 'implementation', 'validation', 'integration', 'bounded', 'independent', 'requiresSplit'\"\n  },\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"object\",\n    \"received\": \"undefined\",\n    \"path\": [\n      \"units\",\n      \"unit:configuration\",\n      \"granularity\",\n      \"epistemic\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"boolean\",\n    \"received\": \"undefined\",\n    \"path\": [\n      \"units\",\n      \"unit:request\",\n      \"granularity\",\n      \"feasibility\",\n      \"coherentResponsibility\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"expected\": \"'yes' | 'no' | 'unknown'\",\n    \"received\": \"undefined\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"units\",\n      \"unit:request\",\n      \"granularity\",\n      \"feasibility\",\n      \"boundedContext\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"expected\": \"'yes' | 'no' | 'unknown'\",\n    \"received\": \"undefined\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"units\",\n      \"unit:request\",\n      \"granularity\",\n      \"feasibility\",\n      \"boundedChangeSurface\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"expected\": \"'yes' | 'no' | 'unknown'\",\n    \"received\": \"undefined\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"units\",\n      \"unit:request\",\n      \"granularity\",\n      \"feasibility\",\n      \"independentlyValidatable\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"boolean\",\n    \"received\": \"undefined\",\n    \"path\": [\n      \"units\",\n      \"unit:request\",\n      \"granularity\",\n      \"feasibility\",\n      \"unresolvedArchitectureDecision\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"code\": \"unrecognized_keys\",\n    \"keys\": [\n      \"implementation\",\n      \"validation\",\n      \"integration\",\n      \"bounded\",\n      \"independent\",\n      \"requiresSplit\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:request\",\n      \"granularity\",\n      \"feasibility\"\n    ],\n    \"message\": \"Unrecognized key(s) in object: 'implementation', 'validation', 'integration', 'bounded', 'independent', 'requiresSplit'\"\n  },\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"object\",\n    \"received\": \"undefined\",\n    \"path\": [\n      \"units\",\n      \"unit:request\",\n      \"granularity\",\n      \"epistemic\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"boolean\",\n    \"received\": \"undefined\",\n    \"path\": [\n      \"units\",\n      \"unit:response\",\n      \"granularity\",\n      \"feasibility\",\n      \"coherentResponsibility\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"expected\": \"'yes' | 'no' | 'unknown'\",\n    \"received\": \"undefined\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"units\",\n      \"unit:response\",\n      \"granularity\",\n      \"feasibility\",\n      \"boundedContext\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"expected\": \"'yes' | 'no' | 'unknown'\",\n    \"received\": \"undefined\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"units\",\n      \"unit:response\",\n      \"granularity\",\n      \"feasibility\",\n      \"boundedChangeSurface\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"expected\": \"'yes' | 'no' | 'unknown'\",\n    \"received\": \"undefined\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"units\",\n      \"unit:response\",\n      \"granularity\",\n      \"feasibility\",\n      \"independentlyValidatable\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"boolean\",\n    \"received\": \"undefined\",\n    \"path\": [\n      \"units\",\n      \"unit:response\",\n      \"granularity\",\n      \"feasibility\",\n      \"unresolvedArchitectureDecision\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"code\": \"unrecognized_keys\",\n    \"keys\": [\n      \"implementation\",\n      \"validation\",\n      \"integration\",\n      \"bounded\",\n      \"independent\",\n      \"requiresSplit\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:response\",\n      \"granularity\",\n      \"feasibility\"\n    ],\n    \"message\": \"Unrecognized key(s) in object: 'implementation', 'validation', 'integration', 'bounded', 'independent', 'requiresSplit'\"\n  },\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"object\",\n    \"received\": \"undefined\",\n    \"path\": [\n      \"units\",\n      \"unit:response\",\n      \"granularity\",\n      \"epistemic\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"boolean\",\n    \"received\": \"undefined\",\n    \"path\": [\n      \"units\",\n      \"unit:tests\",\n      \"granularity\",\n      \"feasibility\",\n      \"coherentResponsibility\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"expected\": \"'yes' | 'no' | 'unknown'\",\n    \"received\": \"undefined\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"units\",\n      \"unit:tests\",\n      \"granularity\",\n      \"feasibility\",\n      \"boundedContext\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"expected\": \"'yes' | 'no' | 'unknown'\",\n    \"received\": \"undefined\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"units\",\n      \"unit:tests\",\n      \"granularity\",\n      \"feasibility\",\n      \"boundedChangeSurface\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"expected\": \"'yes' | 'no' | 'unknown'\",\n    \"received\": \"undefined\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"units\",\n      \"unit:tests\",\n      \"granularity\",\n      \"feasibility\",\n      \"independentlyValidatable\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"boolean\",\n    \"received\": \"undefined\",\n    \"path\": [\n      \"units\",\n      \"unit:tests\",\n      \"granularity\",\n      \"feasibility\",\n      \"unresolvedArchitectureDecision\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"code\": \"unrecognized_keys\",\n    \"keys\": [\n      \"implementation\",\n      \"validation\",\n      \"integration\",\n      \"bounded\",\n      \"independent\",\n      \"requiresSplit\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:tests\",\n      \"granularity\",\n      \"feasibility\"\n    ],\n    \"message\": \"Unrecognized key(s) in object: 'implementation', 'validation', 'integration', 'bounded', 'independent', 'requiresSplit'\"\n  },\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"object\",\n    \"received\": \"undefined\",\n    \"path\": [\n      \"units\",\n      \"unit:tests\",\n      \"granularity\",\n      \"epistemic\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"boolean\",\n    \"received\": \"undefined\",\n    \"path\": [\n      \"units\",\n      \"unit:docs\",\n      \"granularity\",\n      \"feasibility\",\n      \"coherentResponsibility\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"expected\": \"'yes' | 'no' | 'unknown'\",\n    \"received\": \"undefined\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"units\",\n      \"unit:docs\",\n      \"granularity\",\n      \"feasibility\",\n      \"boundedContext\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"expected\": \"'yes' | 'no' | 'unknown'\",\n    \"received\": \"undefined\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"units\",\n      \"unit:docs\",\n      \"granularity\",\n      \"feasibility\",\n      \"boundedChangeSurface\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"expected\": \"'yes' | 'no' | 'unknown'\",\n    \"received\": \"undefined\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"units\",\n      \"unit:docs\",\n      \"granularity\",\n      \"feasibility\",\n      \"independentlyValidatable\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"boolean\",\n    \"received\": \"undefined\",\n    \"path\": [\n      \"units\",\n      \"unit:docs\",\n      \"granularity\",\n      \"feasibility\",\n      \"unresolvedArchitectureDecision\"\n    ],\n    \"message\": \"Required\"\n  },\n  {\n    \"code\": \"unrecognized_keys\",\n    \"keys\": [\n      \"implementation\",\n      \"validation\",\n      \"integration\",\n      \"bounded\",\n      \"independent\",\n      \"requiresSplit\"\n    ],\n    \"path\": [\n      \"units\",\n      \"unit:docs\",\n      \"granularity\",\n      \"feasibility\"\n    ],\n    \"message\": \"Unrecognized key(s) in object: 'implementation', 'validation', 'integration', 'bounded', 'independent', 'requiresSplit'\"\n  },\n  {\n    \"code\": \"invalid_type\",\n    \"expected\": \"object\",\n    \"received\": \"undefined\",\n    \"path\": [\n      \"units\",\n      \"unit:docs\",\n      \"granularity\",\n      \"epistemic\"\n    ],\n    \"message\": \"Required\"\n  }\n]",
+        "evidenceRefs": [],
+        "resolution": "none"
+      }
+    ],
+    "trace": {
+      "budget": {
+        "modelCalls": 1,
+        "repositoryQueries": 2,
+        "queryBytes": 120000,
+        "revisions": 1,
+        "repairs": 0,
+        "expansions": 0
+      },
+      "consumed": {
+        "modelCalls": 1,
+        "repositoryQueries": 2,
+        "queryBytes": 82690,
+        "revisions": 1,
+        "repairs": 0,
+        "expansions": 0
+      },
+      "revisions": [
+        {
+          "index": 1,
+          "cause": "initial",
+          "budget": {
+            "modelCalls": 1,
+            "repositoryQueries": 2,
+            "queryBytes": 120000,
+            "revisions": 1,
+            "repairs": 0,
+            "expansions": 0
+          },
+          "consumed": {
+            "modelCalls": 1,
+            "repositoryQueries": 2,
+            "queryBytes": 82690,
+            "revisions": 1,
+            "repairs": 0,
+            "expansions": 0
+          },
+          "queryReceipts": [
+            "sha256:77ffbb7952197443ad57df0530e0b730e76d05d98be019ae3a057a4a3bd70b41",
+            "sha256:9f099163d611f054c1e62f69ef00b67e5b3d5d4ac9ef07348cf341abc44d7852"
+          ],
+          "evidenceRefs": [
+            "evidence:05f2db61281ab2fbeb6f748e",
+            "evidence:09e54699571ecb9882a5dbc7",
+            "evidence:2006d7089a19d7f7559a6378",
+            "evidence:2599eac21baefa30524e840c",
+            "evidence:302a6b9f304c335d172f96cc",
+            "evidence:50205c78c8af736737b95843",
+            "evidence:5a4022122db51e981bb0d8af",
+            "evidence:5e89383136eb1e23db716365",
+            "evidence:5fda1f585198bb72d82a995d",
+            "evidence:60c560eca064e1e5741065a8",
+            "evidence:688fadf1da0aae4e370dc486",
+            "evidence:6add29297526f5c63db130d2",
+            "evidence:6fd9774f2cefdb816adb4273",
+            "evidence:702d7b5b57a92b767da20386",
+            "evidence:70a828bfb9190f6348ea6dc9",
+            "evidence:7233db248b25b06c926bb6b7",
+            "evidence:72523cace1e1d9a72436f955",
+            "evidence:7bbdcef848702532a222f9f0",
+            "evidence:83115012ed4b263cc35eb388",
+            "evidence:8505f9660905d3b8af801c40",
+            "evidence:87f4805a21d2f1d56d3f8c30",
+            "evidence:8d3c580dba03337c73e11df1",
+            "evidence:8e1e113212380bb8670395ed",
+            "evidence:987fe3f5a9544e23b8cdf4ce",
+            "evidence:98856e73ae507a273e07b191",
+            "evidence:9ca19cf279a3653064d0bef5",
+            "evidence:a12e89151e75290c0acd4247",
+            "evidence:a35af86fc3d80cf79c7cc4fd",
+            "evidence:a86a0ec180fd8a94634e610a",
+            "evidence:aa68bc30a10081c6a008a235",
+            "evidence:b30c5ad77e7af10f9691159b",
+            "evidence:b77303b6555441f4ca8aafe1",
+            "evidence:c21d60170ba8d99d12e42160",
+            "evidence:c46a061d09096e8040e5e5ed",
+            "evidence:cbd607e3de600700441f1971",
+            "evidence:ceeb3d346a42edf680a66433",
+            "evidence:dd457f8d87ec21fb5da652d7",
+            "evidence:e286cb07c58e538c4229686d",
+            "evidence:e4446bfc9d8f24801da665ae",
+            "evidence:e4fb986ba296b13109f2f12a",
+            "evidence:e53c4884a5954d10f7b81cca",
+            "evidence:e78310cbf7c6ca07a4914fbb",
+            "evidence:ed900a40eedba519d460801f",
+            "evidence:f054f2d3dfc685050c1fa9af",
+            "evidence:f5617b7a3c771f9a666aa653",
+            "evidence:f6cabe09830b6a28679394e1",
+            "evidence:f94e85531d6122753da8ecc3"
+          ],
+          "changedDecisionIds": [],
+          "changedFindingCodes": [
+            "schema_invalid"
+          ],
+          "proposalDigest": "sha256:18c9e9d76b35d75dbba9dc2698f15c950fc961d7d1955bf78dcf0a4f27c2ca25",
+          "digest": "sha256:96674f975ec264e80985b51c1671754d5e176dfca031956e437835ece576e742"
+        }
+      ],
+      "advisoryFindings": []
+    }
+  },
+  "compilation": null,
+  "currentComparator": {
+    "kind": "ready",
+    "plan": {
+      "schemaVersion": 2,
+      "planId": "semantic-cd4a99394f4f66ace6c862ed",
+      "goal": "Add opt-in request correlation IDs to Express so an incoming X-Request-Id is preserved or a secure ID is generated, req.id is available to handlers, the response header is emitted, and default behavior remains unchanged.",
+      "repositorySnapshotId": "sha256:50ec60862bd347340b4af549ca47c67be15372179df093bc4a3e38c2afd145d5",
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "description": "When enabled, each request exposes req.id and returns the same X-Request-Id, preserving a valid incoming value or generating one.",
+          "required": true
+        },
+        {
+          "id": "criterion-2",
+          "description": "Existing applications that do not enable correlation IDs retain current request and response behavior.",
+          "required": true
+        },
+        {
+          "id": "criterion-3",
+          "description": "The public configuration and request property are documented with focused tests.",
+          "required": true
+        }
+      ],
+      "root": {
+        "key": "root",
+        "title": "Opt-in request correlation",
+        "objective": "Plan an integrated, compatibility-preserving request-correlation feature without asserting implementation or runtime success.",
+        "concerns": [
+          "The feature must remain opt-in.",
+          "Generated identifiers must use a secure platform primitive.",
+          "No runtime dependency may be added.",
+          "Existing middleware ordering and public compatibility must be preserved."
+        ],
+        "evidenceIds": [
+          "evidence:2599eac21baefa30524e840c",
+          "evidence:6add29297526f5c63db130d2",
+          "evidence:e4446bfc9d8f24801da665ae",
+          "evidence:8d3c580dba03337c73e11df1",
+          "evidence:aa68bc30a10081c6a008a235",
+          "evidence:e53c4884a5954d10f7b81cca",
+          "evidence:b30c5ad77e7af10f9691159b"
+        ],
+        "plannedPaths": [
+          "lib/application.js",
+          "lib/express.js",
+          "lib/request.js",
+          "lib/response.js",
+          "test/app.request.js",
+          "test/app.response.js",
+          "Readme.md"
+        ],
+        "outcomes": [
+          {
+            "id": "outcome-root-request-id",
+            "description": "The proposed integrated candidate will be checked for req.id and matching X-Request-Id behavior when enabled.",
+            "criterionIds": [
+              "criterion-1"
+            ],
+            "verification": {
+              "kind": "existing",
+              "references": [
+                "proof:root",
+                "command:express-request-id"
+              ]
+            }
+          },
+          {
+            "id": "outcome-root-opt-in",
+            "description": "The proposed integrated candidate will be checked against the unchanged disabled baseline.",
+            "criterionIds": [
+              "criterion-2"
+            ],
+            "verification": {
+              "kind": "existing",
+              "references": [
+                "proof:configuration",
+                "command:express-baseline"
+              ]
+            }
+          },
+          {
+            "id": "outcome-root-documented",
+            "description": "The proposal includes focused tests and public documentation responsibilities.",
+            "criterionIds": [
+              "criterion-3"
+            ],
+            "verification": {
+              "kind": "existing",
+              "references": [
+                "proof:docs",
+                "source-scan:express-docs"
+              ]
+            }
+          }
+        ],
+        "kind": "composite",
+        "cut": {
+          "criterion": "integration",
+          "rationale": "Configuration, request identity, response propagation, tests, and documentation have distinct file ownership while requiring explicit end-to-end seams."
+        },
+        "children": [
+          {
+            "key": "configuration",
+            "title": "Opt-in configuration",
+            "objective": "Plan application-owned configuration and dispatch gating that preserve disabled behavior.",
+            "concerns": [
+              "Do not enable correlation by default.",
+              "Do not add a runtime dependency.",
+              "Preserve existing dispatch ordering."
+            ],
+            "evidenceIds": [
+              "evidence:2599eac21baefa30524e840c",
+              "evidence:6add29297526f5c63db130d2"
+            ],
+            "plannedPaths": [
+              "lib/application.js",
+              "lib/express.js"
+            ],
+            "writePaths": [
+              "lib/application.js"
+            ],
+            "outcomes": [
+              {
+                "id": "outcome-configuration-opt-in",
+                "description": "Correlation behavior is explicitly enabled through application configuration while the default path remains unchanged.",
+                "criterionIds": [
+                  "criterion-2"
+                ],
+                "verification": {
+                  "kind": "existing",
+                  "references": [
+                    "proof:configuration",
+                    "command:express-baseline"
+                  ]
+                }
+              }
+            ],
+            "kind": "leaf"
+          },
+          {
+            "key": "request",
+            "title": "Request identity",
+            "objective": "Plan valid incoming identifier preservation or secure platform generation and expose the resolved value as req.id.",
+            "concerns": [
+              "Use a secure Node.js platform primitive.",
+              "Keep request behavior inactive unless enabled.",
+              "Preserve the valid incoming X-Request-Id exactly."
+            ],
+            "evidenceIds": [
+              "evidence:e4446bfc9d8f24801da665ae"
+            ],
+            "plannedPaths": [
+              "lib/request.js"
+            ],
+            "writePaths": [
+              "lib/request.js"
+            ],
+            "outcomes": [
+              {
+                "id": "outcome-request-id",
+                "description": "Enabled requests expose one resolved req.id from valid input or secure generation.",
+                "criterionIds": [
+                  "criterion-1"
+                ],
+                "verification": {
+                  "kind": "existing",
+                  "references": [
+                    "proof:request",
+                    "command:express-request-id"
+                  ]
+                }
+              }
+            ],
+            "kind": "leaf"
+          },
+          {
+            "key": "response",
+            "title": "Response propagation",
+            "objective": "Plan X-Request-Id emission from the request-owned identifier while preserving disabled response behavior.",
+            "concerns": [
+              "The response header must exactly match req.id.",
+              "Disabled responses must not gain the feature header."
+            ],
+            "evidenceIds": [
+              "evidence:8d3c580dba03337c73e11df1"
+            ],
+            "plannedPaths": [
+              "lib/response.js"
+            ],
+            "writePaths": [
+              "lib/response.js"
+            ],
+            "outcomes": [
+              {
+                "id": "outcome-response-header",
+                "description": "Enabled responses emit X-Request-Id equal to the resolved request identifier.",
+                "criterionIds": [
+                  "criterion-1"
+                ],
+                "verification": {
+                  "kind": "existing",
+                  "references": [
+                    "proof:response",
+                    "command:express-response-header"
+                  ]
+                }
+              }
+            ],
+            "kind": "leaf"
+          },
+          {
+            "key": "tests",
+            "title": "Focused correlation tests",
+            "objective": "Plan focused request and response tests for preservation, generation, exposure, propagation, and the disabled baseline.",
+            "concerns": [
+              "Cover positive and negative behavior.",
+              "Assert observable public behavior rather than private implementation details."
+            ],
+            "evidenceIds": [
+              "evidence:aa68bc30a10081c6a008a235",
+              "evidence:e53c4884a5954d10f7b81cca"
+            ],
+            "plannedPaths": [
+              "test/app.request.js",
+              "test/app.response.js"
+            ],
+            "writePaths": [
+              "test/app.request.js",
+              "test/app.response.js"
+            ],
+            "outcomes": [
+              {
+                "id": "outcome-focused-tests",
+                "description": "Focused executable cases cover request identity, response-header equality, and unchanged opt-out behavior.",
+                "criterionIds": [
+                  "criterion-1",
+                  "criterion-3"
+                ],
+                "verification": {
+                  "kind": "author_test",
+                  "references": [
+                    "proof:tests",
+                    "command:express-focused-tests"
+                  ]
+                }
+              }
+            ],
+            "kind": "leaf"
+          },
+          {
+            "key": "docs",
+            "title": "Public documentation",
+            "objective": "Plan concise documentation of the opt-in setting, req.id, X-Request-Id behavior, secure generation, and unchanged defaults.",
+            "concerns": [
+              "Describe only the intended public contract.",
+              "Make the opt-in nature explicit."
+            ],
+            "evidenceIds": [
+              "evidence:b30c5ad77e7af10f9691159b",
+              "evidence:2599eac21baefa30524e840c",
+              "evidence:e4446bfc9d8f24801da665ae"
+            ],
+            "plannedPaths": [
+              "Readme.md",
+              "lib/application.js",
+              "lib/request.js"
+            ],
+            "writePaths": [
+              "Readme.md"
+            ],
+            "outcomes": [
+              {
+                "id": "outcome-public-docs",
+                "description": "Public documentation describes configuration, req.id, response propagation, and disabled behavior.",
+                "criterionIds": [
+                  "criterion-3"
+                ],
+                "verification": {
+                  "kind": "existing",
+                  "references": [
+                    "proof:docs",
+                    "source-scan:express-docs"
+                  ]
+                }
+              }
+            ],
+            "kind": "leaf"
+          }
+        ]
+      },
+      "seams": [
+        {
+          "id": "seam-configuration-to-request",
+          "producerUnitKey": "configuration",
+          "consumerUnitKeys": [
+            "request"
+          ],
+          "purpose": "Carry the application-owned opt-in decision into request identity resolution.",
+          "paths": [
+            "lib/application.js",
+            "lib/request.js"
+          ],
+          "interface": {
+            "kind": "data",
+            "promise": "Request identity resolution runs only when application configuration enables correlation.",
+            "compatibility": "Disabled applications retain existing request and response behavior.",
+            "materialization": "files",
+            "verification": {
+              "kind": "existing",
+              "references": [
+                "proof:configuration",
+                "command:express-baseline"
+              ]
+            }
+          },
+          "evidenceIds": [
+            "evidence:2599eac21baefa30524e840c",
+            "evidence:e4446bfc9d8f24801da665ae"
+          ]
+        },
+        {
+          "id": "seam-request-to-response",
+          "producerUnitKey": "request",
+          "consumerUnitKeys": [
+            "response"
+          ],
+          "purpose": "Propagate the resolved request identifier to the response header boundary.",
+          "paths": [
+            "lib/request.js",
+            "lib/response.js"
+          ],
+          "interface": {
+            "kind": "data",
+            "promise": "X-Request-Id equals the request-owned req.id value when correlation is enabled.",
+            "compatibility": "The seam remains inactive when correlation is disabled.",
+            "materialization": "files",
+            "verification": {
+              "kind": "existing",
+              "references": [
+                "proof:response",
+                "command:express-response-header"
+              ]
+            }
+          },
+          "evidenceIds": [
+            "evidence:e4446bfc9d8f24801da665ae",
+            "evidence:8d3c580dba03337c73e11df1"
+          ]
+        },
+        {
+          "id": "seam-request-to-tests",
+          "producerUnitKey": "request",
+          "consumerUnitKeys": [
+            "tests"
+          ],
+          "purpose": "Expose request identity behavior to focused executable tests.",
+          "paths": [
+            "lib/request.js",
+            "test/app.request.js"
+          ],
+          "interface": {
+            "kind": "api",
+            "promise": "Tests observe valid incoming preservation, secure generation, and req.id availability to handlers.",
+            "compatibility": "Assertions target public behavior and preserve the disabled negative control.",
+            "materialization": "files",
+            "verification": {
+              "kind": "author_test",
+              "references": [
+                "proof:tests",
+                "command:express-focused-tests"
+              ]
+            }
+          },
+          "evidenceIds": [
+            "evidence:e4446bfc9d8f24801da665ae",
+            "evidence:aa68bc30a10081c6a008a235"
+          ]
+        },
+        {
+          "id": "seam-response-to-tests",
+          "producerUnitKey": "response",
+          "consumerUnitKeys": [
+            "tests"
+          ],
+          "purpose": "Expose response-header propagation to focused executable tests.",
+          "paths": [
+            "lib/response.js",
+            "test/app.response.js"
+          ],
+          "interface": {
+            "kind": "api",
+            "promise": "Tests compare X-Request-Id with the resolved request identifier and check the disabled baseline.",
+            "compatibility": "Existing response behavior remains protected when the feature is not enabled.",
+            "materialization": "files",
+            "verification": {
+              "kind": "author_test",
+              "references": [
+                "proof:tests",
+                "command:express-focused-tests"
+              ]
+            }
+          },
+          "evidenceIds": [
+            "evidence:8d3c580dba03337c73e11df1",
+            "evidence:e53c4884a5954d10f7b81cca"
+          ]
+        }
+      ],
+      "repositoryEvidence": [
+        {
+          "id": "evidence:b30c5ad77e7af10f9691159b",
+          "kind": "path",
+          "reference": "Readme.md",
+          "observation": "Exact Git blob at path:Readme.md; complete within the registered byte budget.",
+          "confidence": 1
+        },
+        {
+          "id": "evidence:2599eac21baefa30524e840c",
+          "kind": "path",
+          "reference": "lib/application.js",
+          "observation": "Exact Git blob at path:lib/application.js; complete within the registered byte budget.",
+          "confidence": 1
+        },
+        {
+          "id": "evidence:6add29297526f5c63db130d2",
+          "kind": "path",
+          "reference": "lib/express.js",
+          "observation": "Exact Git blob at path:lib/express.js; complete within the registered byte budget.",
+          "confidence": 1
+        },
+        {
+          "id": "evidence:e4446bfc9d8f24801da665ae",
+          "kind": "path",
+          "reference": "lib/request.js",
+          "observation": "Exact Git blob at path:lib/request.js; complete within the registered byte budget.",
+          "confidence": 1
+        },
+        {
+          "id": "evidence:8d3c580dba03337c73e11df1",
+          "kind": "path",
+          "reference": "lib/response.js",
+          "observation": "Exact Git blob at path:lib/response.js; complete within the registered byte budget.",
+          "confidence": 1
+        },
+        {
+          "id": "evidence:aa68bc30a10081c6a008a235",
+          "kind": "path",
+          "reference": "test/app.request.js",
+          "observation": "Exact Git blob at path:test/app.request.js; complete within the registered byte budget.",
+          "confidence": 1
+        },
+        {
+          "id": "evidence:e53c4884a5954d10f7b81cca",
+          "kind": "path",
+          "reference": "test/app.response.js",
+          "observation": "Exact Git blob at path:test/app.response.js; complete within the registered byte budget.",
+          "confidence": 1
+        }
+      ],
+      "uncertainties": [],
+      "questions": []
+    },
+    "comparison": {
+      "kind": "degraded",
+      "safePlans": 1,
+      "reason": "single_safe_plan"
+    },
+    "candidates": [
+      {
+        "schemaVersion": 2,
+        "planId": "semantic-cd4a99394f4f66ace6c862ed",
+        "goal": "Add opt-in request correlation IDs to Express so an incoming X-Request-Id is preserved or a secure ID is generated, req.id is available to handlers, the response header is emitted, and default behavior remains unchanged.",
+        "repositorySnapshotId": "sha256:50ec60862bd347340b4af549ca47c67be15372179df093bc4a3e38c2afd145d5",
+        "criteria": [
+          {
+            "id": "criterion-1",
+            "description": "When enabled, each request exposes req.id and returns the same X-Request-Id, preserving a valid incoming value or generating one.",
+            "required": true
+          },
+          {
+            "id": "criterion-2",
+            "description": "Existing applications that do not enable correlation IDs retain current request and response behavior.",
+            "required": true
+          },
+          {
+            "id": "criterion-3",
+            "description": "The public configuration and request property are documented with focused tests.",
+            "required": true
+          }
+        ],
+        "root": {
+          "key": "root",
+          "title": "Opt-in request correlation",
+          "objective": "Plan an integrated, compatibility-preserving request-correlation feature without asserting implementation or runtime success.",
+          "concerns": [
+            "The feature must remain opt-in.",
+            "Generated identifiers must use a secure platform primitive.",
+            "No runtime dependency may be added.",
+            "Existing middleware ordering and public compatibility must be preserved."
+          ],
+          "evidenceIds": [
+            "evidence:2599eac21baefa30524e840c",
+            "evidence:6add29297526f5c63db130d2",
+            "evidence:e4446bfc9d8f24801da665ae",
+            "evidence:8d3c580dba03337c73e11df1",
+            "evidence:aa68bc30a10081c6a008a235",
+            "evidence:e53c4884a5954d10f7b81cca",
+            "evidence:b30c5ad77e7af10f9691159b"
+          ],
+          "plannedPaths": [
+            "lib/application.js",
+            "lib/express.js",
+            "lib/request.js",
+            "lib/response.js",
+            "test/app.request.js",
+            "test/app.response.js",
+            "Readme.md"
+          ],
+          "outcomes": [
+            {
+              "id": "outcome-root-request-id",
+              "description": "The proposed integrated candidate will be checked for req.id and matching X-Request-Id behavior when enabled.",
+              "criterionIds": [
+                "criterion-1"
+              ],
+              "verification": {
+                "kind": "existing",
+                "references": [
+                  "proof:root",
+                  "command:express-request-id"
+                ]
+              }
+            },
+            {
+              "id": "outcome-root-opt-in",
+              "description": "The proposed integrated candidate will be checked against the unchanged disabled baseline.",
+              "criterionIds": [
+                "criterion-2"
+              ],
+              "verification": {
+                "kind": "existing",
+                "references": [
+                  "proof:configuration",
+                  "command:express-baseline"
+                ]
+              }
+            },
+            {
+              "id": "outcome-root-documented",
+              "description": "The proposal includes focused tests and public documentation responsibilities.",
+              "criterionIds": [
+                "criterion-3"
+              ],
+              "verification": {
+                "kind": "existing",
+                "references": [
+                  "proof:docs",
+                  "source-scan:express-docs"
+                ]
+              }
+            }
+          ],
+          "kind": "composite",
+          "cut": {
+            "criterion": "integration",
+            "rationale": "Configuration, request identity, response propagation, tests, and documentation have distinct file ownership while requiring explicit end-to-end seams."
+          },
+          "children": [
+            {
+              "key": "configuration",
+              "title": "Opt-in configuration",
+              "objective": "Plan application-owned configuration and dispatch gating that preserve disabled behavior.",
+              "concerns": [
+                "Do not enable correlation by default.",
+                "Do not add a runtime dependency.",
+                "Preserve existing dispatch ordering."
+              ],
+              "evidenceIds": [
+                "evidence:2599eac21baefa30524e840c",
+                "evidence:6add29297526f5c63db130d2"
+              ],
+              "plannedPaths": [
+                "lib/application.js",
+                "lib/express.js"
+              ],
+              "writePaths": [
+                "lib/application.js"
+              ],
+              "outcomes": [
+                {
+                  "id": "outcome-configuration-opt-in",
+                  "description": "Correlation behavior is explicitly enabled through application configuration while the default path remains unchanged.",
+                  "criterionIds": [
+                    "criterion-2"
+                  ],
+                  "verification": {
+                    "kind": "existing",
+                    "references": [
+                      "proof:configuration",
+                      "command:express-baseline"
+                    ]
+                  }
+                }
+              ],
+              "kind": "leaf"
+            },
+            {
+              "key": "request",
+              "title": "Request identity",
+              "objective": "Plan valid incoming identifier preservation or secure platform generation and expose the resolved value as req.id.",
+              "concerns": [
+                "Use a secure Node.js platform primitive.",
+                "Keep request behavior inactive unless enabled.",
+                "Preserve the valid incoming X-Request-Id exactly."
+              ],
+              "evidenceIds": [
+                "evidence:e4446bfc9d8f24801da665ae"
+              ],
+              "plannedPaths": [
+                "lib/request.js"
+              ],
+              "writePaths": [
+                "lib/request.js"
+              ],
+              "outcomes": [
+                {
+                  "id": "outcome-request-id",
+                  "description": "Enabled requests expose one resolved req.id from valid input or secure generation.",
+                  "criterionIds": [
+                    "criterion-1"
+                  ],
+                  "verification": {
+                    "kind": "existing",
+                    "references": [
+                      "proof:request",
+                      "command:express-request-id"
+                    ]
+                  }
+                }
+              ],
+              "kind": "leaf"
+            },
+            {
+              "key": "response",
+              "title": "Response propagation",
+              "objective": "Plan X-Request-Id emission from the request-owned identifier while preserving disabled response behavior.",
+              "concerns": [
+                "The response header must exactly match req.id.",
+                "Disabled responses must not gain the feature header."
+              ],
+              "evidenceIds": [
+                "evidence:8d3c580dba03337c73e11df1"
+              ],
+              "plannedPaths": [
+                "lib/response.js"
+              ],
+              "writePaths": [
+                "lib/response.js"
+              ],
+              "outcomes": [
+                {
+                  "id": "outcome-response-header",
+                  "description": "Enabled responses emit X-Request-Id equal to the resolved request identifier.",
+                  "criterionIds": [
+                    "criterion-1"
+                  ],
+                  "verification": {
+                    "kind": "existing",
+                    "references": [
+                      "proof:response",
+                      "command:express-response-header"
+                    ]
+                  }
+                }
+              ],
+              "kind": "leaf"
+            },
+            {
+              "key": "tests",
+              "title": "Focused correlation tests",
+              "objective": "Plan focused request and response tests for preservation, generation, exposure, propagation, and the disabled baseline.",
+              "concerns": [
+                "Cover positive and negative behavior.",
+                "Assert observable public behavior rather than private implementation details."
+              ],
+              "evidenceIds": [
+                "evidence:aa68bc30a10081c6a008a235",
+                "evidence:e53c4884a5954d10f7b81cca"
+              ],
+              "plannedPaths": [
+                "test/app.request.js",
+                "test/app.response.js"
+              ],
+              "writePaths": [
+                "test/app.request.js",
+                "test/app.response.js"
+              ],
+              "outcomes": [
+                {
+                  "id": "outcome-focused-tests",
+                  "description": "Focused executable cases cover request identity, response-header equality, and unchanged opt-out behavior.",
+                  "criterionIds": [
+                    "criterion-1",
+                    "criterion-3"
+                  ],
+                  "verification": {
+                    "kind": "author_test",
+                    "references": [
+                      "proof:tests",
+                      "command:express-focused-tests"
+                    ]
+                  }
+                }
+              ],
+              "kind": "leaf"
+            },
+            {
+              "key": "docs",
+              "title": "Public documentation",
+              "objective": "Plan concise documentation of the opt-in setting, req.id, X-Request-Id behavior, secure generation, and unchanged defaults.",
+              "concerns": [
+                "Describe only the intended public contract.",
+                "Make the opt-in nature explicit."
+              ],
+              "evidenceIds": [
+                "evidence:b30c5ad77e7af10f9691159b",
+                "evidence:2599eac21baefa30524e840c",
+                "evidence:e4446bfc9d8f24801da665ae"
+              ],
+              "plannedPaths": [
+                "Readme.md",
+                "lib/application.js",
+                "lib/request.js"
+              ],
+              "writePaths": [
+                "Readme.md"
+              ],
+              "outcomes": [
+                {
+                  "id": "outcome-public-docs",
+                  "description": "Public documentation describes configuration, req.id, response propagation, and disabled behavior.",
+                  "criterionIds": [
+                    "criterion-3"
+                  ],
+                  "verification": {
+                    "kind": "existing",
+                    "references": [
+                      "proof:docs",
+                      "source-scan:express-docs"
+                    ]
+                  }
+                }
+              ],
+              "kind": "leaf"
+            }
+          ]
+        },
+        "seams": [
+          {
+            "id": "seam-configuration-to-request",
+            "producerUnitKey": "configuration",
+            "consumerUnitKeys": [
+              "request"
+            ],
+            "purpose": "Carry the application-owned opt-in decision into request identity resolution.",
+            "paths": [
+              "lib/application.js",
+              "lib/request.js"
+            ],
+            "interface": {
+              "kind": "data",
+              "promise": "Request identity resolution runs only when application configuration enables correlation.",
+              "compatibility": "Disabled applications retain existing request and response behavior.",
+              "materialization": "files",
+              "verification": {
+                "kind": "existing",
+                "references": [
+                  "proof:configuration",
+                  "command:express-baseline"
+                ]
+              }
+            },
+            "evidenceIds": [
+              "evidence:2599eac21baefa30524e840c",
+              "evidence:e4446bfc9d8f24801da665ae"
+            ]
+          },
+          {
+            "id": "seam-request-to-response",
+            "producerUnitKey": "request",
+            "consumerUnitKeys": [
+              "response"
+            ],
+            "purpose": "Propagate the resolved request identifier to the response header boundary.",
+            "paths": [
+              "lib/request.js",
+              "lib/response.js"
+            ],
+            "interface": {
+              "kind": "data",
+              "promise": "X-Request-Id equals the request-owned req.id value when correlation is enabled.",
+              "compatibility": "The seam remains inactive when correlation is disabled.",
+              "materialization": "files",
+              "verification": {
+                "kind": "existing",
+                "references": [
+                  "proof:response",
+                  "command:express-response-header"
+                ]
+              }
+            },
+            "evidenceIds": [
+              "evidence:e4446bfc9d8f24801da665ae",
+              "evidence:8d3c580dba03337c73e11df1"
+            ]
+          },
+          {
+            "id": "seam-request-to-tests",
+            "producerUnitKey": "request",
+            "consumerUnitKeys": [
+              "tests"
+            ],
+            "purpose": "Expose request identity behavior to focused executable tests.",
+            "paths": [
+              "lib/request.js",
+              "test/app.request.js"
+            ],
+            "interface": {
+              "kind": "api",
+              "promise": "Tests observe valid incoming preservation, secure generation, and req.id availability to handlers.",
+              "compatibility": "Assertions target public behavior and preserve the disabled negative control.",
+              "materialization": "files",
+              "verification": {
+                "kind": "author_test",
+                "references": [
+                  "proof:tests",
+                  "command:express-focused-tests"
+                ]
+              }
+            },
+            "evidenceIds": [
+              "evidence:e4446bfc9d8f24801da665ae",
+              "evidence:aa68bc30a10081c6a008a235"
+            ]
+          },
+          {
+            "id": "seam-response-to-tests",
+            "producerUnitKey": "response",
+            "consumerUnitKeys": [
+              "tests"
+            ],
+            "purpose": "Expose response-header propagation to focused executable tests.",
+            "paths": [
+              "lib/response.js",
+              "test/app.response.js"
+            ],
+            "interface": {
+              "kind": "api",
+              "promise": "Tests compare X-Request-Id with the resolved request identifier and check the disabled baseline.",
+              "compatibility": "Existing response behavior remains protected when the feature is not enabled.",
+              "materialization": "files",
+              "verification": {
+                "kind": "author_test",
+                "references": [
+                  "proof:tests",
+                  "command:express-focused-tests"
+                ]
+              }
+            },
+            "evidenceIds": [
+              "evidence:8d3c580dba03337c73e11df1",
+              "evidence:e53c4884a5954d10f7b81cca"
+            ]
+          }
+        ],
+        "repositoryEvidence": [
+          {
+            "id": "evidence:b30c5ad77e7af10f9691159b",
+            "kind": "path",
+            "reference": "Readme.md",
+            "observation": "Exact Git blob at path:Readme.md; complete within the registered byte budget.",
+            "confidence": 1
+          },
+          {
+            "id": "evidence:2599eac21baefa30524e840c",
+            "kind": "path",
+            "reference": "lib/application.js",
+            "observation": "Exact Git blob at path:lib/application.js; complete within the registered byte budget.",
+            "confidence": 1
+          },
+          {
+            "id": "evidence:6add29297526f5c63db130d2",
+            "kind": "path",
+            "reference": "lib/express.js",
+            "observation": "Exact Git blob at path:lib/express.js; complete within the registered byte budget.",
+            "confidence": 1
+          },
+          {
+            "id": "evidence:e4446bfc9d8f24801da665ae",
+            "kind": "path",
+            "reference": "lib/request.js",
+            "observation": "Exact Git blob at path:lib/request.js; complete within the registered byte budget.",
+            "confidence": 1
+          },
+          {
+            "id": "evidence:8d3c580dba03337c73e11df1",
+            "kind": "path",
+            "reference": "lib/response.js",
+            "observation": "Exact Git blob at path:lib/response.js; complete within the registered byte budget.",
+            "confidence": 1
+          },
+          {
+            "id": "evidence:aa68bc30a10081c6a008a235",
+            "kind": "path",
+            "reference": "test/app.request.js",
+            "observation": "Exact Git blob at path:test/app.request.js; complete within the registered byte budget.",
+            "confidence": 1
+          },
+          {
+            "id": "evidence:e53c4884a5954d10f7b81cca",
+            "kind": "path",
+            "reference": "test/app.response.js",
+            "observation": "Exact Git blob at path:test/app.response.js; complete within the registered byte budget.",
+            "confidence": 1
+          }
+        ],
+        "uncertainties": [],
+        "questions": []
+      }
+    ]
+  },
+  "topologyEvaluation": {
+    "oracleId": "oracle:express-request-correlation",
+    "candidates": [
+      {
+        "candidate": "stage5",
+        "passed": false,
+        "issues": [
+          {
+            "code": "candidate_unavailable",
+            "message": "Planning returned rejected."
+          }
+        ],
+        "observations": {
+          "nodes": 0,
+          "leaves": 0,
+          "seams": 0,
+          "resourceClaims": 0
+        }
+      },
+      {
+        "candidate": "current",
+        "passed": false,
+        "issues": [
+          {
+            "code": "missing_responsibility",
+            "oracleId": "focused-tests",
+            "message": "No unit expresses responsibility focused-tests."
+          },
+          {
+            "code": "ownership_mismatch",
+            "oracleId": "application-owner",
+            "message": "Expected one matching owner for lib/application.js; observed 2."
+          },
+          {
+            "code": "ownership_mismatch",
+            "oracleId": "request-owner",
+            "message": "Expected one matching owner for lib/request.js; observed 2."
+          }
+        ],
+        "observations": {
+          "nodes": 6,
+          "leaves": 0,
+          "seams": 4,
+          "resourceClaims": 16
+        }
+      }
+    ]
+  },
+  "browser": {
+    "status": "not_run",
+    "preview": "preview.html"
+  }
+}

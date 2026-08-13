@@ -1,0 +1,440 @@
+{
+  "root": {
+    "key": "root",
+    "kind": "composite",
+    "title": "Opt-in request correlation",
+    "objective": "Plan an integrated, compatibility-preserving request-correlation feature without asserting implementation or runtime success.",
+    "concerns": [
+      "The feature must remain opt-in.",
+      "Generated identifiers must use a secure platform primitive.",
+      "No runtime dependency may be added.",
+      "Existing middleware ordering and public compatibility must be preserved."
+    ],
+    "evidenceIds": [
+      "evidence:2599eac21baefa30524e840c",
+      "evidence:6add29297526f5c63db130d2",
+      "evidence:e4446bfc9d8f24801da665ae",
+      "evidence:8d3c580dba03337c73e11df1",
+      "evidence:aa68bc30a10081c6a008a235",
+      "evidence:e53c4884a5954d10f7b81cca",
+      "evidence:b30c5ad77e7af10f9691159b"
+    ],
+    "plannedPaths": [
+      "lib/application.js",
+      "lib/express.js",
+      "lib/request.js",
+      "lib/response.js",
+      "test/app.request.js",
+      "test/app.response.js",
+      "Readme.md"
+    ],
+    "outcomes": [
+      {
+        "id": "outcome-root-request-id",
+        "description": "The proposed integrated candidate will be checked for req.id and matching X-Request-Id behavior when enabled.",
+        "criterionIds": [
+          "criterion-1"
+        ],
+        "verification": {
+          "kind": "existing",
+          "references": [
+            "proof:root",
+            "command:express-request-id"
+          ]
+        }
+      },
+      {
+        "id": "outcome-root-opt-in",
+        "description": "The proposed integrated candidate will be checked against the unchanged disabled baseline.",
+        "criterionIds": [
+          "criterion-2"
+        ],
+        "verification": {
+          "kind": "existing",
+          "references": [
+            "proof:configuration",
+            "command:express-baseline"
+          ]
+        }
+      },
+      {
+        "id": "outcome-root-documented",
+        "description": "The proposal includes focused tests and public documentation responsibilities.",
+        "criterionIds": [
+          "criterion-3"
+        ],
+        "verification": {
+          "kind": "existing",
+          "references": [
+            "proof:docs",
+            "source-scan:express-docs"
+          ]
+        }
+      }
+    ],
+    "cut": {
+      "criterion": "integration",
+      "rationale": "Configuration, request identity, response propagation, tests, and documentation have distinct file ownership while requiring explicit end-to-end seams."
+    },
+    "children": [
+      {
+        "key": "configuration",
+        "kind": "leaf",
+        "title": "Opt-in configuration",
+        "objective": "Plan application-owned configuration and dispatch gating that preserve disabled behavior.",
+        "concerns": [
+          "Do not enable correlation by default.",
+          "Do not add a runtime dependency.",
+          "Preserve existing dispatch ordering."
+        ],
+        "evidenceIds": [
+          "evidence:2599eac21baefa30524e840c",
+          "evidence:6add29297526f5c63db130d2"
+        ],
+        "plannedPaths": [
+          "lib/application.js",
+          "lib/express.js"
+        ],
+        "writePaths": [
+          "lib/application.js"
+        ],
+        "outcomes": [
+          {
+            "id": "outcome-configuration-opt-in",
+            "description": "Correlation behavior is explicitly enabled through application configuration while the default path remains unchanged.",
+            "criterionIds": [
+              "criterion-2"
+            ],
+            "verification": {
+              "kind": "existing",
+              "references": [
+                "proof:configuration",
+                "command:express-baseline"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "key": "request",
+        "kind": "leaf",
+        "title": "Request identity",
+        "objective": "Plan valid incoming identifier preservation or secure platform generation and expose the resolved value as req.id.",
+        "concerns": [
+          "Use a secure Node.js platform primitive.",
+          "Keep request behavior inactive unless enabled.",
+          "Preserve the valid incoming X-Request-Id exactly."
+        ],
+        "evidenceIds": [
+          "evidence:e4446bfc9d8f24801da665ae"
+        ],
+        "plannedPaths": [
+          "lib/request.js"
+        ],
+        "writePaths": [
+          "lib/request.js"
+        ],
+        "outcomes": [
+          {
+            "id": "outcome-request-id",
+            "description": "Enabled requests expose one resolved req.id from valid input or secure generation.",
+            "criterionIds": [
+              "criterion-1"
+            ],
+            "verification": {
+              "kind": "existing",
+              "references": [
+                "proof:request",
+                "command:express-request-id"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "key": "response",
+        "kind": "leaf",
+        "title": "Response propagation",
+        "objective": "Plan X-Request-Id emission from the request-owned identifier while preserving disabled response behavior.",
+        "concerns": [
+          "The response header must exactly match req.id.",
+          "Disabled responses must not gain the feature header."
+        ],
+        "evidenceIds": [
+          "evidence:8d3c580dba03337c73e11df1"
+        ],
+        "plannedPaths": [
+          "lib/response.js"
+        ],
+        "writePaths": [
+          "lib/response.js"
+        ],
+        "outcomes": [
+          {
+            "id": "outcome-response-header",
+            "description": "Enabled responses emit X-Request-Id equal to the resolved request identifier.",
+            "criterionIds": [
+              "criterion-1"
+            ],
+            "verification": {
+              "kind": "existing",
+              "references": [
+                "proof:response",
+                "command:express-response-header"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "key": "tests",
+        "kind": "leaf",
+        "title": "Focused correlation tests",
+        "objective": "Plan focused request and response tests for preservation, generation, exposure, propagation, and the disabled baseline.",
+        "concerns": [
+          "Cover positive and negative behavior.",
+          "Assert observable public behavior rather than private implementation details."
+        ],
+        "evidenceIds": [
+          "evidence:aa68bc30a10081c6a008a235",
+          "evidence:e53c4884a5954d10f7b81cca"
+        ],
+        "plannedPaths": [
+          "test/app.request.js",
+          "test/app.response.js"
+        ],
+        "writePaths": [
+          "test/app.request.js",
+          "test/app.response.js"
+        ],
+        "outcomes": [
+          {
+            "id": "outcome-focused-tests",
+            "description": "Focused executable cases cover request identity, response-header equality, and unchanged opt-out behavior.",
+            "criterionIds": [
+              "criterion-1",
+              "criterion-3"
+            ],
+            "verification": {
+              "kind": "author_test",
+              "references": [
+                "proof:tests",
+                "command:express-focused-tests"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "key": "docs",
+        "kind": "leaf",
+        "title": "Public documentation",
+        "objective": "Plan concise documentation of the opt-in setting, req.id, X-Request-Id behavior, secure generation, and unchanged defaults.",
+        "concerns": [
+          "Describe only the intended public contract.",
+          "Make the opt-in nature explicit."
+        ],
+        "evidenceIds": [
+          "evidence:b30c5ad77e7af10f9691159b",
+          "evidence:2599eac21baefa30524e840c",
+          "evidence:e4446bfc9d8f24801da665ae"
+        ],
+        "plannedPaths": [
+          "Readme.md",
+          "lib/application.js",
+          "lib/request.js"
+        ],
+        "writePaths": [
+          "Readme.md"
+        ],
+        "outcomes": [
+          {
+            "id": "outcome-public-docs",
+            "description": "Public documentation describes configuration, req.id, response propagation, and disabled behavior.",
+            "criterionIds": [
+              "criterion-3"
+            ],
+            "verification": {
+              "kind": "existing",
+              "references": [
+                "proof:docs",
+                "source-scan:express-docs"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "seams": [
+    {
+      "id": "seam-configuration-to-request",
+      "producerUnitKey": "configuration",
+      "consumerUnitKeys": [
+        "request"
+      ],
+      "purpose": "Carry the application-owned opt-in decision into request identity resolution.",
+      "paths": [
+        "lib/application.js",
+        "lib/request.js"
+      ],
+      "interface": {
+        "kind": "data",
+        "promise": "Request identity resolution runs only when application configuration enables correlation.",
+        "compatibility": "Disabled applications retain existing request and response behavior.",
+        "materialization": "files",
+        "verification": {
+          "kind": "existing",
+          "references": [
+            "proof:configuration",
+            "command:express-baseline"
+          ]
+        }
+      },
+      "evidenceIds": [
+        "evidence:2599eac21baefa30524e840c",
+        "evidence:e4446bfc9d8f24801da665ae"
+      ]
+    },
+    {
+      "id": "seam-request-to-response",
+      "producerUnitKey": "request",
+      "consumerUnitKeys": [
+        "response"
+      ],
+      "purpose": "Propagate the resolved request identifier to the response header boundary.",
+      "paths": [
+        "lib/request.js",
+        "lib/response.js"
+      ],
+      "interface": {
+        "kind": "data",
+        "promise": "X-Request-Id equals the request-owned req.id value when correlation is enabled.",
+        "compatibility": "The seam remains inactive when correlation is disabled.",
+        "materialization": "files",
+        "verification": {
+          "kind": "existing",
+          "references": [
+            "proof:response",
+            "command:express-response-header"
+          ]
+        }
+      },
+      "evidenceIds": [
+        "evidence:e4446bfc9d8f24801da665ae",
+        "evidence:8d3c580dba03337c73e11df1"
+      ]
+    },
+    {
+      "id": "seam-request-to-tests",
+      "producerUnitKey": "request",
+      "consumerUnitKeys": [
+        "tests"
+      ],
+      "purpose": "Expose request identity behavior to focused executable tests.",
+      "paths": [
+        "lib/request.js",
+        "test/app.request.js"
+      ],
+      "interface": {
+        "kind": "api",
+        "promise": "Tests observe valid incoming preservation, secure generation, and req.id availability to handlers.",
+        "compatibility": "Assertions target public behavior and preserve the disabled negative control.",
+        "materialization": "files",
+        "verification": {
+          "kind": "author_test",
+          "references": [
+            "proof:tests",
+            "command:express-focused-tests"
+          ]
+        }
+      },
+      "evidenceIds": [
+        "evidence:e4446bfc9d8f24801da665ae",
+        "evidence:aa68bc30a10081c6a008a235"
+      ]
+    },
+    {
+      "id": "seam-response-to-tests",
+      "producerUnitKey": "response",
+      "consumerUnitKeys": [
+        "tests"
+      ],
+      "purpose": "Expose response-header propagation to focused executable tests.",
+      "paths": [
+        "lib/response.js",
+        "test/app.response.js"
+      ],
+      "interface": {
+        "kind": "api",
+        "promise": "Tests compare X-Request-Id with the resolved request identifier and check the disabled baseline.",
+        "compatibility": "Existing response behavior remains protected when the feature is not enabled.",
+        "materialization": "files",
+        "verification": {
+          "kind": "author_test",
+          "references": [
+            "proof:tests",
+            "command:express-focused-tests"
+          ]
+        }
+      },
+      "evidenceIds": [
+        "evidence:8d3c580dba03337c73e11df1",
+        "evidence:e53c4884a5954d10f7b81cca"
+      ]
+    }
+  ],
+  "repositoryEvidence": [
+    {
+      "id": "evidence:b30c5ad77e7af10f9691159b",
+      "kind": "path",
+      "reference": "Readme.md",
+      "observation": "Exact Git blob at path:Readme.md; complete within the registered byte budget.",
+      "confidence": 1
+    },
+    {
+      "id": "evidence:2599eac21baefa30524e840c",
+      "kind": "path",
+      "reference": "lib/application.js",
+      "observation": "Exact Git blob at path:lib/application.js; complete within the registered byte budget.",
+      "confidence": 1
+    },
+    {
+      "id": "evidence:6add29297526f5c63db130d2",
+      "kind": "path",
+      "reference": "lib/express.js",
+      "observation": "Exact Git blob at path:lib/express.js; complete within the registered byte budget.",
+      "confidence": 1
+    },
+    {
+      "id": "evidence:e4446bfc9d8f24801da665ae",
+      "kind": "path",
+      "reference": "lib/request.js",
+      "observation": "Exact Git blob at path:lib/request.js; complete within the registered byte budget.",
+      "confidence": 1
+    },
+    {
+      "id": "evidence:8d3c580dba03337c73e11df1",
+      "kind": "path",
+      "reference": "lib/response.js",
+      "observation": "Exact Git blob at path:lib/response.js; complete within the registered byte budget.",
+      "confidence": 1
+    },
+    {
+      "id": "evidence:aa68bc30a10081c6a008a235",
+      "kind": "path",
+      "reference": "test/app.request.js",
+      "observation": "Exact Git blob at path:test/app.request.js; complete within the registered byte budget.",
+      "confidence": 1
+    },
+    {
+      "id": "evidence:e53c4884a5954d10f7b81cca",
+      "kind": "path",
+      "reference": "test/app.response.js",
+      "observation": "Exact Git blob at path:test/app.response.js; complete within the registered byte budget.",
+      "confidence": 1
+    }
+  ],
+  "uncertainties": [],
+  "questions": []
+}

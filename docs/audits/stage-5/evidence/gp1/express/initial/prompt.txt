@@ -1,0 +1,1573 @@
+You are producing two offline planning proposals for a pre-registered ManyHands Stage 5 evaluation.
+
+Do not call tools. Do not inspect the filesystem. Use only the exact GoalContract, RepositoryView evidence, resource map and oracle below.
+
+Return the three required JSON-string fields through the provided outer response schema. No prose outside those fields.
+
+A proposal is not implementation and must not claim runtime success.
+
+Return canonicalMaterialJson as a JSON string containing exactly one SemanticPlanMaterial:
+{ id, revision:1, goalContract:{id,revision,digest}, repositorySnapshot:{id,digest}, repositoryView:{digest,treeSha,resourceCatalogDigest}, rootUnitId, units:Record, seams:Record, artifacts:Record, decisions:[], evidence:[], status:"ready" }.
+Each unit is {id,parentId?,role:"leaf"|"composite",title,objective,boundary:{kind,evidenceRefs},outcomes:[{id,statement}],criteria:[{criterionId,statement,sourceCriterionId}],repositorySurface:{resourceRefs,pathHints},resourceIntents,consumes,produces,seamRefs,validation,uncertainty:[],granularity,expansion,integration?}.
+Root criteria sourceCriterionId values are exact GoalContract criterion ids. Every child criterion sourceCriterionId must instead equal one criterionId declared by its direct parent (for example the root declares criterionId "criterion-ref:route" sourced from "criterion:route", then a child declares criterionId "criterion-ref:child-route" sourced from "criterion-ref:route").
+An observe intent is {resourceId,access:"observe",inputArtifactId?,evidenceRefs,epistemic}. A modify intent is {resourceId,access:"modify",ownerPhase:"implementation"|"integration",inputArtifactId?,outputArtifactId,evidenceRefs,epistemic}.
+Validation is ALWAYS a JSON array, even when it has one element: [{obligationId,criterionId,proofStrategyId,layer,severity,acceptableEvidence,baselinePolicy,negativeControl,flakyPolicy}]. The validation criterionId should be the unit's local criterionId; its refinement chain must resolve to the exact registered ProofStrategy criterionId. Use every registered ProofStrategy exactly once: proof:root on the root integration and every other strategy on one distinct leaf. Do not attach two validation obligations to one unit.
+Granularity leaf requires disposition:"leaf" and all feasibility yes/true/false as appropriate. Composite requires disposition:"split", at least one splitReason/evidenceRef, integrationObligationId, and integration {obligationId,objective,criterionIds,proofStrategyId,artifactIds,seamIds}.
+Artifact is {id,producerUnitId,consumerUnitIds,artifactType,mediaType?,materialization:"commit"|"patch"|"files"|"manifest"|"logical",expectedPaths}. Every consumed artifact names the consumer and every produced artifact names the producer. Every consumed artifact must be output by a modify resource intent of its producer.
+Seam is {id,kind,specification,producerUnitId,consumerUnitIds,semanticFacts,compatibility:{mode,rules},artifactId,validationObligationIds}. semanticFacts is ALWAYS a JSON object whose keys and values are non-empty strings, for example {"payload":"SemanticPlan","authority":"deterministic verifier"}; never use an array. Producer and consumers must all list seamRefs. Seam artifact must flow producer to every seam consumer.
+Use only listed resourceId values and their exact paths. One path has one modifying leaf owner. Root/composites may describe broad surfaces but should not modify child-owned resources.
+
+Closed enums (copy these exact string values; never invent semantic aliases):
+- boundary.kind: application | package | module | domain | vertical_slice | cross_cutting
+- resourceIntent.access: observe | modify
+- ownerPhase: implementation | integration
+- validation.layer: static | unit | integration | e2e | security | accessibility | manual
+- validation.severity: required | advisory
+- acceptableEvidence: static_analysis | test_result | runtime_observation | artifact_inspection | manual_attestation
+- baselinePolicy: required | optional | not_required
+- negativeControl: required | when_feasible | not_required
+- flakyPolicy: forbid | allow_with_warning
+- seam.kind: api | type | event | data | ui | command
+- compatibility.mode: exact | backward_compatible
+- artifact.materialization: commit | patch | files | manifest | logical
+- granularity.disposition: leaf | split | frontier
+- splitReasons: capacity | independent_delivery | parallelism | risk_isolation | integration_boundary | specialization
+- expansion: leaf | expanded | frontier
+- epistemic known form: {"state":"known","confidence":"high"|"medium"|"low","evidenceRefs":[non-empty ids]}; partial/conflicting have the same confidence/evidence shape; unknown is {"state":"unknown","reason":"...","evidenceRefs":[]}.
+Recommended executable validation defaults are layer:"integration", severity:"required", acceptableEvidence:["test_result"], baselinePolicy:"required", negativeControl:"when_feasible", flakyPolicy:"forbid". Static proof uses layer:"static" and acceptableEvidence:["static_analysis"].
+
+Return currentDraftJson as a JSON string containing the current planner draft {root,seams,repositoryEvidence,uncertainties:[],questions:[]}.
+Current units use {key,kind,title,objective,concerns,evidenceIds,plannedPaths?,writePaths?,outcomes}; composite also has cut:{criterion,rationale},children, where cut.criterion is exactly "cohesion"|"integration"|"risk"|"verifiability". Every outcome is exactly {id,description,criterionIds,verification:{kind:"existing"|"author_test"|"manual",references:[non-empty strings],rationale?}}; never use "statement" in the current draft. Use criterionIds "criterion-1", "criterion-2", ... in the same order as GoalContract acceptanceCriteria. Each leaf must cite an exact supplied evidence id and declare exact writePaths. Seams use {id,producerUnitKey,consumerUnitKeys,purpose,paths,interface:{kind,promise,compatibility,materialization,verification},evidenceIds}. Current seam interface.materialization is exactly "logical"|"files"|"manifest"|"commit" (never "patch"), and interface.verification is the same verification OBJECT used by outcomes, never a string. repositoryEvidence must be the exact supplied current evidence array.
+
+Return criticFindingsJson as a JSON string containing an array of zero or more advisory findings {code,message,evidenceRefs,resolution}. resolution is deterministic_check, repository_query or human_decision. These findings cannot approve or reject.
+
+Pre-registration:
+{
+  "schemaVersion": 1,
+  "caseId": "gp1:express-request-correlation",
+  "repository": {
+    "id": "repo:express",
+    "source": "https://github.com/expressjs/express.git",
+    "baseCommit": "a3714473feb3d2908add734d340e7755fd85e0a3",
+    "treeSha": "134de344af9d2e7785aae9a991d02fd85b404bcf",
+    "snapshot": {
+      "id": "sha256:50ec60862bd347340b4af549ca47c67be15372179df093bc4a3e38c2afd145d5",
+      "digest": "sha256:d9db1af99ae5b7a051966d4e5c8de737d5176f0db69fa92ab5af4da09f85892c"
+    },
+    "modelDigest": "sha256:50207902b527c06949f724fd9837a9d25052c10142d72e7a4768b87481c8d268",
+    "viewDigest": "sha256:f4bd61283c4f43e52cb247836aa04aaeb662cf2d3ccdd929889f914ca8b70777",
+    "catalogDigest": "sha256:da12e575d3a8166f0d12b042dde0c07120dbef065424b90a450c8274b26eaff9",
+    "coverage": "partial"
+  },
+  "goal": {
+    "id": "goal:express-request-correlation",
+    "revision": 1,
+    "goal": "Add opt-in request correlation IDs to Express so an incoming X-Request-Id is preserved or a secure ID is generated, req.id is available to handlers, the response header is emitted, and default behavior remains unchanged.",
+    "acceptanceCriteria": [
+      {
+        "id": "criterion:request-id",
+        "statement": "When enabled, each request exposes req.id and returns the same X-Request-Id, preserving a valid incoming value or generating one.",
+        "required": true,
+        "level": "product",
+        "protectedReferences": [],
+        "verification": {
+          "allowedProofs": [
+            {
+              "mode": "executable",
+              "authority": "orchestrator_deterministic"
+            }
+          ],
+          "independence": "independent_required"
+        }
+      },
+      {
+        "id": "criterion:opt-in",
+        "statement": "Existing applications that do not enable correlation IDs retain current request and response behavior.",
+        "required": true,
+        "level": "constraint",
+        "protectedReferences": [],
+        "verification": {
+          "allowedProofs": [
+            {
+              "mode": "executable",
+              "authority": "orchestrator_deterministic"
+            }
+          ],
+          "independence": "protected_baseline_or_negative_control"
+        }
+      },
+      {
+        "id": "criterion:documented",
+        "statement": "The public configuration and request property are documented with focused tests.",
+        "required": true,
+        "level": "quality",
+        "protectedReferences": [],
+        "verification": {
+          "allowedProofs": [
+            {
+              "mode": "static",
+              "authority": "orchestrator_deterministic"
+            }
+          ],
+          "independence": "independent_required"
+        }
+      }
+    ],
+    "constraints": [
+      "Do not add a runtime dependency.",
+      "Keep the feature opt-in.",
+      "Preserve Express public compatibility."
+    ],
+    "qualityAttributes": [
+      {
+        "kind": "security",
+        "statement": "Generated identifiers use a secure platform primitive."
+      },
+      {
+        "kind": "compatibility",
+        "statement": "Default behavior and existing middleware ordering remain compatible."
+      }
+    ],
+    "target": {
+      "repositoryId": "repo:express",
+      "baseCommit": "a3714473feb3d2908add734d340e7755fd85e0a3",
+      "treeSha": "134de344af9d2e7785aae9a991d02fd85b404bcf"
+    },
+    "digest": "sha256:27d2288af2a7c2dd6cb4dd5d7c564de641ea21bd3d41fd7894d3844381260e21"
+  },
+  "proofStrategies": [
+    {
+      "id": "proof:root",
+      "obligationId": "validation:root",
+      "criterionId": "criterion:request-id",
+      "mode": "executable",
+      "authority": "orchestrator_deterministic",
+      "independence": "independent_required",
+      "procedureRef": "command:express-request-id"
+    },
+    {
+      "id": "proof:configuration",
+      "obligationId": "validation:configuration",
+      "criterionId": "criterion:opt-in",
+      "mode": "executable",
+      "authority": "orchestrator_deterministic",
+      "independence": "protected_baseline_or_negative_control",
+      "procedureRef": "command:express-baseline"
+    },
+    {
+      "id": "proof:request",
+      "obligationId": "validation:request",
+      "criterionId": "criterion:request-id",
+      "mode": "executable",
+      "authority": "orchestrator_deterministic",
+      "independence": "independent_required",
+      "procedureRef": "command:express-request-id"
+    },
+    {
+      "id": "proof:response",
+      "obligationId": "validation:response",
+      "criterionId": "criterion:request-id",
+      "mode": "executable",
+      "authority": "orchestrator_deterministic",
+      "independence": "independent_required",
+      "procedureRef": "command:express-response-header"
+    },
+    {
+      "id": "proof:tests",
+      "obligationId": "validation:tests",
+      "criterionId": "criterion:request-id",
+      "mode": "executable",
+      "authority": "orchestrator_deterministic",
+      "independence": "independent_required",
+      "procedureRef": "command:express-focused-tests"
+    },
+    {
+      "id": "proof:docs",
+      "obligationId": "validation:docs",
+      "criterionId": "criterion:documented",
+      "mode": "static",
+      "authority": "orchestrator_deterministic",
+      "independence": "independent_required",
+      "procedureRef": "source-scan:express-docs"
+    }
+  ],
+  "inspection": {
+    "queryTerms": [
+      "request",
+      "response",
+      "header",
+      "application",
+      "middleware",
+      "test",
+      "documentation"
+    ],
+    "excerptPaths": [
+      "lib/application.js",
+      "lib/express.js",
+      "lib/request.js",
+      "lib/response.js",
+      "test/app.request.js",
+      "test/app.response.js",
+      "Readme.md"
+    ],
+    "budget": {
+      "maxResults": 40,
+      "maxBytes": 120000,
+      "maxDepth": 2
+    }
+  },
+  "planningBudget": {
+    "modelCalls": 1,
+    "repositoryQueries": 2,
+    "queryBytes": 120000,
+    "revisions": 1,
+    "repairs": 0,
+    "expansions": 0
+  },
+  "provider": {
+    "cli": "codex-cli",
+    "cliVersion": "0.146.0",
+    "model": "gpt-5.6-sol",
+    "reasoningEffort": "high",
+    "profile": "stage5-gp1-offline-v1",
+    "sandbox": "read-only",
+    "ephemeral": true,
+    "initialSessions": 1,
+    "repeatPolicy": "forbidden_without_recorded_causal_change"
+  },
+  "topologyOracle": {
+    "id": "oracle:express-request-correlation",
+    "repositoryId": "repo:express",
+    "goalDigest": "sha256:27d2288af2a7c2dd6cb4dd5d7c564de641ea21bd3d41fd7894d3844381260e21",
+    "repositoryViewDigest": "sha256:f4bd61283c4f43e52cb247836aa04aaeb662cf2d3ccdd929889f914ca8b70777",
+    "requiredResponsibilities": [
+      {
+        "id": "opt-in-configuration",
+        "terms": [
+          "configuration",
+          "opt-in"
+        ]
+      },
+      {
+        "id": "request-identity",
+        "terms": [
+          "request",
+          "id"
+        ]
+      },
+      {
+        "id": "response-propagation",
+        "terms": [
+          "response",
+          "header"
+        ]
+      },
+      {
+        "id": "focused-tests",
+        "terms": [
+          "test",
+          "request id"
+        ]
+      },
+      {
+        "id": "public-docs",
+        "terms": [
+          "document"
+        ]
+      }
+    ],
+    "forbiddenResponsibilities": [
+      {
+        "id": "mandatory-default",
+        "terms": [
+          "always enabled"
+        ]
+      },
+      {
+        "id": "external-runtime-dependency",
+        "terms": [
+          "new dependency"
+        ]
+      }
+    ],
+    "requiredSeams": [
+      {
+        "id": "configuration-to-request",
+        "producerTerms": [
+          "configuration"
+        ],
+        "consumerTerms": [
+          "request"
+        ],
+        "semanticTerms": [
+          "opt-in"
+        ]
+      },
+      {
+        "id": "request-to-response",
+        "producerTerms": [
+          "request"
+        ],
+        "consumerTerms": [
+          "response"
+        ],
+        "semanticTerms": [
+          "x-request-id"
+        ]
+      }
+    ],
+    "requiredOwnership": [
+      {
+        "id": "application-owner",
+        "path": "lib/application.js",
+        "ownerTerms": [
+          "configuration"
+        ]
+      },
+      {
+        "id": "request-owner",
+        "path": "lib/request.js",
+        "ownerTerms": [
+          "request"
+        ]
+      },
+      {
+        "id": "response-owner",
+        "path": "lib/response.js",
+        "ownerTerms": [
+          "response"
+        ]
+      },
+      {
+        "id": "test-owner",
+        "path": "test/app.request.js",
+        "ownerTerms": [
+          "test"
+        ]
+      },
+      {
+        "id": "docs-owner",
+        "path": "Readme.md",
+        "ownerTerms": [
+          "document"
+        ]
+      }
+    ],
+    "requiredCriterionIds": [
+      "criterion:request-id",
+      "criterion:opt-in",
+      "criterion:documented"
+    ],
+    "acceptableAlternatives": [
+      "Request identity and response propagation may be one vertical slice if both responsibilities and their seam remain explicit.",
+      "Focused tests may be split between request and application tests with one unambiguous owner per file."
+    ]
+  },
+  "browserOracle": {
+    "requiredSections": [
+      "Responsibility hierarchy",
+      "Explicit seams",
+      "Proof coverage",
+      "Advisory findings"
+    ],
+    "requiredVisibleTerms": [
+      "opt-in",
+      "request",
+      "response",
+      "test",
+      "document"
+    ],
+    "viewports": [
+      {
+        "width": 1440,
+        "height": 1000
+      },
+      {
+        "width": 390,
+        "height": 844
+      }
+    ],
+    "requirements": [
+      "read_only",
+      "no_daemon_endpoint",
+      "no_horizontal_page_overflow",
+      "hierarchy_understandable_to_non_technical_viewer"
+    ]
+  }
+}
+
+Canonical GoalContract:
+{
+  "id": "goal:express-request-correlation",
+  "revision": 1,
+  "goal": "Add opt-in request correlation IDs to Express so an incoming X-Request-Id is preserved or a secure ID is generated, req.id is available to handlers, the response header is emitted, and default behavior remains unchanged.",
+  "acceptanceCriteria": [
+    {
+      "id": "criterion:request-id",
+      "statement": "When enabled, each request exposes req.id and returns the same X-Request-Id, preserving a valid incoming value or generating one.",
+      "required": true,
+      "level": "product",
+      "protectedReferences": [],
+      "verification": {
+        "allowedProofs": [
+          {
+            "mode": "executable",
+            "authority": "orchestrator_deterministic"
+          }
+        ],
+        "independence": "independent_required"
+      }
+    },
+    {
+      "id": "criterion:opt-in",
+      "statement": "Existing applications that do not enable correlation IDs retain current request and response behavior.",
+      "required": true,
+      "level": "constraint",
+      "protectedReferences": [],
+      "verification": {
+        "allowedProofs": [
+          {
+            "mode": "executable",
+            "authority": "orchestrator_deterministic"
+          }
+        ],
+        "independence": "protected_baseline_or_negative_control"
+      }
+    },
+    {
+      "id": "criterion:documented",
+      "statement": "The public configuration and request property are documented with focused tests.",
+      "required": true,
+      "level": "quality",
+      "protectedReferences": [],
+      "verification": {
+        "allowedProofs": [
+          {
+            "mode": "static",
+            "authority": "orchestrator_deterministic"
+          }
+        ],
+        "independence": "independent_required"
+      }
+    }
+  ],
+  "constraints": [
+    "Do not add a runtime dependency.",
+    "Keep the feature opt-in.",
+    "Preserve Express public compatibility."
+  ],
+  "qualityAttributes": [
+    {
+      "kind": "security",
+      "statement": "Generated identifiers use a secure platform primitive."
+    },
+    {
+      "kind": "compatibility",
+      "statement": "Default behavior and existing middleware ordering remain compatible."
+    }
+  ],
+  "target": {
+    "repositoryId": "repo:express",
+    "baseCommit": "a3714473feb3d2908add734d340e7755fd85e0a3",
+    "treeSha": "134de344af9d2e7785aae9a991d02fd85b404bcf"
+  },
+  "digest": "sha256:27d2288af2a7c2dd6cb4dd5d7c564de641ea21bd3d41fd7894d3844381260e21"
+}
+
+Allowed ProofStrategies:
+[
+  {
+    "id": "proof:root",
+    "revision": 1,
+    "goalContractDigest": "sha256:27d2288af2a7c2dd6cb4dd5d7c564de641ea21bd3d41fd7894d3844381260e21",
+    "criterionId": "criterion:request-id",
+    "obligationId": "validation:root",
+    "mode": "executable",
+    "authority": "orchestrator_deterministic",
+    "repositoryViewDigest": "sha256:f4bd61283c4f43e52cb247836aa04aaeb662cf2d3ccdd929889f914ca8b70777",
+    "procedureRef": "command:express-request-id",
+    "selectorDigest": "sha256:9f98c9900fb72b853a054787bc9d62dfa9f400447e93017c2b79d5ed5ae2cc14",
+    "environmentPolicyDigest": "sha256:3c723a3ac12ede388dbcca39cd1bcd0d07b2535703ca6eaf25fac2996b0e6f33",
+    "independence": "independent_required",
+    "digest": "sha256:c26ba81ebb5bc9478bde154359293e39df53754c4e90b89fddc3ab55709103d1"
+  },
+  {
+    "id": "proof:configuration",
+    "revision": 1,
+    "goalContractDigest": "sha256:27d2288af2a7c2dd6cb4dd5d7c564de641ea21bd3d41fd7894d3844381260e21",
+    "criterionId": "criterion:opt-in",
+    "obligationId": "validation:configuration",
+    "mode": "executable",
+    "authority": "orchestrator_deterministic",
+    "repositoryViewDigest": "sha256:f4bd61283c4f43e52cb247836aa04aaeb662cf2d3ccdd929889f914ca8b70777",
+    "procedureRef": "command:express-baseline",
+    "selectorDigest": "sha256:e735aa300f2b16a623d70cfd7576336505de2e71ac020b4ca97f4df20ae697a2",
+    "environmentPolicyDigest": "sha256:3c723a3ac12ede388dbcca39cd1bcd0d07b2535703ca6eaf25fac2996b0e6f33",
+    "independence": "protected_baseline_or_negative_control",
+    "digest": "sha256:a45c209d4ab71571883755763b1507dfdf0f9597daaffe597442ca11516870c3"
+  },
+  {
+    "id": "proof:request",
+    "revision": 1,
+    "goalContractDigest": "sha256:27d2288af2a7c2dd6cb4dd5d7c564de641ea21bd3d41fd7894d3844381260e21",
+    "criterionId": "criterion:request-id",
+    "obligationId": "validation:request",
+    "mode": "executable",
+    "authority": "orchestrator_deterministic",
+    "repositoryViewDigest": "sha256:f4bd61283c4f43e52cb247836aa04aaeb662cf2d3ccdd929889f914ca8b70777",
+    "procedureRef": "command:express-request-id",
+    "selectorDigest": "sha256:9f98c9900fb72b853a054787bc9d62dfa9f400447e93017c2b79d5ed5ae2cc14",
+    "environmentPolicyDigest": "sha256:3c723a3ac12ede388dbcca39cd1bcd0d07b2535703ca6eaf25fac2996b0e6f33",
+    "independence": "independent_required",
+    "digest": "sha256:19d507550e120ceacab49fe3e3caa05603c2b9c3b0c6e5dd0cb8cbef756f3bb5"
+  },
+  {
+    "id": "proof:response",
+    "revision": 1,
+    "goalContractDigest": "sha256:27d2288af2a7c2dd6cb4dd5d7c564de641ea21bd3d41fd7894d3844381260e21",
+    "criterionId": "criterion:request-id",
+    "obligationId": "validation:response",
+    "mode": "executable",
+    "authority": "orchestrator_deterministic",
+    "repositoryViewDigest": "sha256:f4bd61283c4f43e52cb247836aa04aaeb662cf2d3ccdd929889f914ca8b70777",
+    "procedureRef": "command:express-response-header",
+    "selectorDigest": "sha256:3be5660946839470433213d9bf2f6a9f02c27a779d9228b03723310ef04f931a",
+    "environmentPolicyDigest": "sha256:3c723a3ac12ede388dbcca39cd1bcd0d07b2535703ca6eaf25fac2996b0e6f33",
+    "independence": "independent_required",
+    "digest": "sha256:18ea97408b1a06d6f168f84a04e40518771b0006e217448bdc940a288f3072f7"
+  },
+  {
+    "id": "proof:tests",
+    "revision": 1,
+    "goalContractDigest": "sha256:27d2288af2a7c2dd6cb4dd5d7c564de641ea21bd3d41fd7894d3844381260e21",
+    "criterionId": "criterion:request-id",
+    "obligationId": "validation:tests",
+    "mode": "executable",
+    "authority": "orchestrator_deterministic",
+    "repositoryViewDigest": "sha256:f4bd61283c4f43e52cb247836aa04aaeb662cf2d3ccdd929889f914ca8b70777",
+    "procedureRef": "command:express-focused-tests",
+    "selectorDigest": "sha256:e7aa7d6494b1179bc1aac5a78b78b0e1728ac720f0894dd72292cfbb086bf014",
+    "environmentPolicyDigest": "sha256:3c723a3ac12ede388dbcca39cd1bcd0d07b2535703ca6eaf25fac2996b0e6f33",
+    "independence": "independent_required",
+    "digest": "sha256:2741bbb8f923ac03c722ec62da2d6fd2577deecb8b4073326c8e1c4cf48d68f9"
+  },
+  {
+    "id": "proof:docs",
+    "revision": 1,
+    "goalContractDigest": "sha256:27d2288af2a7c2dd6cb4dd5d7c564de641ea21bd3d41fd7894d3844381260e21",
+    "criterionId": "criterion:documented",
+    "obligationId": "validation:docs",
+    "mode": "static",
+    "authority": "orchestrator_deterministic",
+    "repositoryViewDigest": "sha256:f4bd61283c4f43e52cb247836aa04aaeb662cf2d3ccdd929889f914ca8b70777",
+    "procedureRef": "source-scan:express-docs",
+    "selectorDigest": "sha256:05f39d4981c43de59eface4025d2bc1a579c112cd50d5b57128a5b8cb704696f",
+    "environmentPolicyDigest": "sha256:3c723a3ac12ede388dbcca39cd1bcd0d07b2535703ca6eaf25fac2996b0e6f33",
+    "independence": "independent_required",
+    "digest": "sha256:dc91345f574971b574230f835c5bc80173865e5504d0c4bbb1668cb84a81bf14"
+  }
+]
+
+Exact RepositoryView ref:
+{
+  "digest": "sha256:f4bd61283c4f43e52cb247836aa04aaeb662cf2d3ccdd929889f914ca8b70777",
+  "treeSha": "134de344af9d2e7785aae9a991d02fd85b404bcf",
+  "resourceCatalogDigest": "sha256:da12e575d3a8166f0d12b042dde0c07120dbef065424b90a450c8274b26eaff9"
+}
+
+Allowed writable/observable resources:
+[
+  {
+    "path": "Readme.md",
+    "resourceId": "catalog-resource:67cc79a92fb36188d491f981",
+    "evidenceRefs": [
+      "evidence:b30c5ad77e7af10f9691159b"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:b30c5ad77e7af10f9691159b"
+      ]
+    },
+    "generated": {
+      "state": "unknown",
+      "reason": "No explicit generated-output policy classifies this exact Git entry as source or generated.",
+      "evidenceRefs": [
+        "evidence:b30c5ad77e7af10f9691159b"
+      ]
+    }
+  },
+  {
+    "path": "lib/application.js",
+    "resourceId": "catalog-resource:7ab182e3246e24e495e99d6b",
+    "evidenceRefs": [
+      "evidence:2599eac21baefa30524e840c"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:2599eac21baefa30524e840c"
+      ]
+    },
+    "generated": {
+      "state": "unknown",
+      "reason": "No explicit generated-output policy classifies this exact Git entry as source or generated.",
+      "evidenceRefs": [
+        "evidence:2599eac21baefa30524e840c"
+      ]
+    }
+  },
+  {
+    "path": "lib/express.js",
+    "resourceId": "catalog-resource:e810d60f1d07585837870123",
+    "evidenceRefs": [
+      "evidence:6add29297526f5c63db130d2"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:6add29297526f5c63db130d2"
+      ]
+    },
+    "generated": {
+      "state": "unknown",
+      "reason": "No explicit generated-output policy classifies this exact Git entry as source or generated.",
+      "evidenceRefs": [
+        "evidence:6add29297526f5c63db130d2"
+      ]
+    }
+  },
+  {
+    "path": "lib/request.js",
+    "resourceId": "catalog-resource:2137277ffcbb6227d8d9ac64",
+    "evidenceRefs": [
+      "evidence:e4446bfc9d8f24801da665ae"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:e4446bfc9d8f24801da665ae"
+      ]
+    },
+    "generated": {
+      "state": "unknown",
+      "reason": "No explicit generated-output policy classifies this exact Git entry as source or generated.",
+      "evidenceRefs": [
+        "evidence:e4446bfc9d8f24801da665ae"
+      ]
+    }
+  },
+  {
+    "path": "lib/response.js",
+    "resourceId": "catalog-resource:83bad4a0797d612d72c4fdd8",
+    "evidenceRefs": [
+      "evidence:8d3c580dba03337c73e11df1"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:8d3c580dba03337c73e11df1"
+      ]
+    },
+    "generated": {
+      "state": "unknown",
+      "reason": "No explicit generated-output policy classifies this exact Git entry as source or generated.",
+      "evidenceRefs": [
+        "evidence:8d3c580dba03337c73e11df1"
+      ]
+    }
+  },
+  {
+    "path": "test/app.request.js",
+    "resourceId": "catalog-resource:5b5fcaf356c4782349437e72",
+    "evidenceRefs": [
+      "evidence:aa68bc30a10081c6a008a235"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:aa68bc30a10081c6a008a235"
+      ]
+    },
+    "generated": {
+      "state": "unknown",
+      "reason": "No explicit generated-output policy classifies this exact Git entry as source or generated.",
+      "evidenceRefs": [
+        "evidence:aa68bc30a10081c6a008a235"
+      ]
+    }
+  },
+  {
+    "path": "test/app.response.js",
+    "resourceId": "catalog-resource:4d78c54077bedc8d2f76cb32",
+    "evidenceRefs": [
+      "evidence:e53c4884a5954d10f7b81cca"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:e53c4884a5954d10f7b81cca"
+      ]
+    },
+    "generated": {
+      "state": "unknown",
+      "reason": "No explicit generated-output policy classifies this exact Git entry as source or generated.",
+      "evidenceRefs": [
+        "evidence:e53c4884a5954d10f7b81cca"
+      ]
+    }
+  }
+]
+
+Bounded repository search answer:
+[
+  {
+    "id": "symbol:21d144cd8595eb83bcce5bf2",
+    "kind": "symbol",
+    "locator": "symbol:test/app.response.js#request",
+    "name": "request",
+    "summary": "const request in test/app.response.js",
+    "evidenceRefs": [
+      "evidence:c46a061d09096e8040e5e5ed"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:c46a061d09096e8040e5e5ed"
+      ]
+    }
+  },
+  {
+    "id": "symbol:4054b376f89f9c3ebe88d5e2",
+    "kind": "symbol",
+    "locator": "symbol:test/middleware.basic.js#request",
+    "name": "request",
+    "summary": "const request in test/middleware.basic.js",
+    "evidenceRefs": [
+      "evidence:72523cace1e1d9a72436f955"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:72523cace1e1d9a72436f955"
+      ]
+    }
+  },
+  {
+    "id": "symbol:94668e4d3f6896cabdad3e45",
+    "kind": "symbol",
+    "locator": "symbol:test/acceptance/auth.js#request",
+    "name": "request",
+    "summary": "const request in test/acceptance/auth.js",
+    "evidenceRefs": [
+      "evidence:f5617b7a3c771f9a666aa653"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:f5617b7a3c771f9a666aa653"
+      ]
+    }
+  },
+  {
+    "id": "symbol:7998e7fa1c17ba1513cec5d9",
+    "kind": "symbol",
+    "locator": "symbol:test/acceptance/content-negotiation.js#request",
+    "name": "request",
+    "summary": "const request in test/acceptance/content-negotiation.js",
+    "evidenceRefs": [
+      "evidence:f6cabe09830b6a28679394e1"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:f6cabe09830b6a28679394e1"
+      ]
+    }
+  },
+  {
+    "id": "symbol:e66ced6e7c9c1cd90dcf1104",
+    "kind": "symbol",
+    "locator": "symbol:test/acceptance/cookie-sessions.js#request",
+    "name": "request",
+    "summary": "const request in test/acceptance/cookie-sessions.js",
+    "evidenceRefs": [
+      "evidence:70a828bfb9190f6348ea6dc9"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:70a828bfb9190f6348ea6dc9"
+      ]
+    }
+  },
+  {
+    "id": "symbol:9f1c4347d131612c4eddf814",
+    "kind": "symbol",
+    "locator": "symbol:test/acceptance/cookies.js#request",
+    "name": "request",
+    "summary": "const request in test/acceptance/cookies.js",
+    "evidenceRefs": [
+      "evidence:ed900a40eedba519d460801f"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:ed900a40eedba519d460801f"
+      ]
+    }
+  },
+  {
+    "id": "symbol:6ab139e561d60190102088ed",
+    "kind": "symbol",
+    "locator": "symbol:test/acceptance/downloads.js#request",
+    "name": "request",
+    "summary": "const request in test/acceptance/downloads.js",
+    "evidenceRefs": [
+      "evidence:e4fb986ba296b13109f2f12a"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:e4fb986ba296b13109f2f12a"
+      ]
+    }
+  },
+  {
+    "id": "symbol:5ae43f67207f499858e2bc1e",
+    "kind": "symbol",
+    "locator": "symbol:test/acceptance/ejs.js#request",
+    "name": "request",
+    "summary": "const request in test/acceptance/ejs.js",
+    "evidenceRefs": [
+      "evidence:7bbdcef848702532a222f9f0"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:7bbdcef848702532a222f9f0"
+      ]
+    }
+  },
+  {
+    "id": "symbol:afa8af580cd31940e7f29273",
+    "kind": "symbol",
+    "locator": "symbol:test/acceptance/error-pages.js#request",
+    "name": "request",
+    "summary": "const request in test/acceptance/error-pages.js",
+    "evidenceRefs": [
+      "evidence:a35af86fc3d80cf79c7cc4fd"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:a35af86fc3d80cf79c7cc4fd"
+      ]
+    }
+  },
+  {
+    "id": "symbol:9993e5911fdbcae0d4d594d6",
+    "kind": "symbol",
+    "locator": "symbol:test/acceptance/error.js#request",
+    "name": "request",
+    "summary": "const request in test/acceptance/error.js",
+    "evidenceRefs": [
+      "evidence:b77303b6555441f4ca8aafe1"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:b77303b6555441f4ca8aafe1"
+      ]
+    }
+  },
+  {
+    "id": "symbol:db64b36bb1ec15ff4810cc2f",
+    "kind": "symbol",
+    "locator": "symbol:test/acceptance/hello-world.js#request",
+    "name": "request",
+    "summary": "const request in test/acceptance/hello-world.js",
+    "evidenceRefs": [
+      "evidence:c21d60170ba8d99d12e42160"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:c21d60170ba8d99d12e42160"
+      ]
+    }
+  },
+  {
+    "id": "symbol:e1ccb17b0c47ddb765328075",
+    "kind": "symbol",
+    "locator": "symbol:test/acceptance/markdown.js#request",
+    "name": "request",
+    "summary": "const request in test/acceptance/markdown.js",
+    "evidenceRefs": [
+      "evidence:987fe3f5a9544e23b8cdf4ce"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:987fe3f5a9544e23b8cdf4ce"
+      ]
+    }
+  },
+  {
+    "id": "symbol:28e04405d276cb481cf17b5f",
+    "kind": "symbol",
+    "locator": "symbol:test/acceptance/multi-router.js#request",
+    "name": "request",
+    "summary": "const request in test/acceptance/multi-router.js",
+    "evidenceRefs": [
+      "evidence:98856e73ae507a273e07b191"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:98856e73ae507a273e07b191"
+      ]
+    }
+  },
+  {
+    "id": "symbol:0b16e31bc981adac3235fe78",
+    "kind": "symbol",
+    "locator": "symbol:test/acceptance/mvc.js#request",
+    "name": "request",
+    "summary": "const request in test/acceptance/mvc.js",
+    "evidenceRefs": [
+      "evidence:87f4805a21d2f1d56d3f8c30"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:87f4805a21d2f1d56d3f8c30"
+      ]
+    }
+  },
+  {
+    "id": "symbol:80e071b1b3823eb14c9af142",
+    "kind": "symbol",
+    "locator": "symbol:test/acceptance/params.js#request",
+    "name": "request",
+    "summary": "const request in test/acceptance/params.js",
+    "evidenceRefs": [
+      "evidence:5fda1f585198bb72d82a995d"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:5fda1f585198bb72d82a995d"
+      ]
+    }
+  },
+  {
+    "id": "symbol:c47f523e61d4603c3e7c5fca",
+    "kind": "symbol",
+    "locator": "symbol:test/acceptance/resource.js#request",
+    "name": "request",
+    "summary": "const request in test/acceptance/resource.js",
+    "evidenceRefs": [
+      "evidence:e78310cbf7c6ca07a4914fbb"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:e78310cbf7c6ca07a4914fbb"
+      ]
+    }
+  },
+  {
+    "id": "symbol:34bce6cbe3d112aad53bb23b",
+    "kind": "symbol",
+    "locator": "symbol:test/acceptance/route-map.js#request",
+    "name": "request",
+    "summary": "const request in test/acceptance/route-map.js",
+    "evidenceRefs": [
+      "evidence:f054f2d3dfc685050c1fa9af"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:f054f2d3dfc685050c1fa9af"
+      ]
+    }
+  },
+  {
+    "id": "symbol:30ee895e566b7376b76a9b0b",
+    "kind": "symbol",
+    "locator": "symbol:test/acceptance/route-separation.js#request",
+    "name": "request",
+    "summary": "const request in test/acceptance/route-separation.js",
+    "evidenceRefs": [
+      "evidence:50205c78c8af736737b95843"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:50205c78c8af736737b95843"
+      ]
+    }
+  },
+  {
+    "id": "symbol:a333b2f141da3d32d607486f",
+    "kind": "symbol",
+    "locator": "symbol:test/acceptance/vhost.js#request",
+    "name": "request",
+    "summary": "const request in test/acceptance/vhost.js",
+    "evidenceRefs": [
+      "evidence:6fd9774f2cefdb816adb4273"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:6fd9774f2cefdb816adb4273"
+      ]
+    }
+  },
+  {
+    "id": "symbol:8bfd43da82d4fcd0bfc66c76",
+    "kind": "symbol",
+    "locator": "symbol:test/acceptance/web-service.js#request",
+    "name": "request",
+    "summary": "const request in test/acceptance/web-service.js",
+    "evidenceRefs": [
+      "evidence:83115012ed4b263cc35eb388"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:83115012ed4b263cc35eb388"
+      ]
+    }
+  },
+  {
+    "id": "symbol:a0ed833ff16520d308fa075e",
+    "kind": "symbol",
+    "locator": "symbol:test/app.all.js#request",
+    "name": "request",
+    "summary": "const request in test/app.all.js",
+    "evidenceRefs": [
+      "evidence:8e1e113212380bb8670395ed"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:8e1e113212380bb8670395ed"
+      ]
+    }
+  },
+  {
+    "id": "symbol:d6db6629571842d5590a67a3",
+    "kind": "symbol",
+    "locator": "symbol:test/app.head.js#request",
+    "name": "request",
+    "summary": "const request in test/app.head.js",
+    "evidenceRefs": [
+      "evidence:a12e89151e75290c0acd4247"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:a12e89151e75290c0acd4247"
+      ]
+    }
+  },
+  {
+    "id": "symbol:c92a0cb7b02136115bb79b3b",
+    "kind": "symbol",
+    "locator": "symbol:test/app.js#request",
+    "name": "request",
+    "summary": "const request in test/app.js",
+    "evidenceRefs": [
+      "evidence:302a6b9f304c335d172f96cc"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:302a6b9f304c335d172f96cc"
+      ]
+    }
+  },
+  {
+    "id": "symbol:2ad143c2cf1048ca80fac51d",
+    "kind": "symbol",
+    "locator": "symbol:test/app.options.js#request",
+    "name": "request",
+    "summary": "const request in test/app.options.js",
+    "evidenceRefs": [
+      "evidence:ceeb3d346a42edf680a66433"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:ceeb3d346a42edf680a66433"
+      ]
+    }
+  },
+  {
+    "id": "symbol:d9a4463ee590635d72e8c2c5",
+    "kind": "symbol",
+    "locator": "symbol:test/app.param.js#request",
+    "name": "request",
+    "summary": "const request in test/app.param.js",
+    "evidenceRefs": [
+      "evidence:688fadf1da0aae4e370dc486"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:688fadf1da0aae4e370dc486"
+      ]
+    }
+  },
+  {
+    "id": "symbol:8ccf711ed9a791a2a9a58ec5",
+    "kind": "symbol",
+    "locator": "symbol:test/app.request.js#request",
+    "name": "request",
+    "summary": "const request in test/app.request.js",
+    "evidenceRefs": [
+      "evidence:8505f9660905d3b8af801c40"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:8505f9660905d3b8af801c40"
+      ]
+    }
+  },
+  {
+    "id": "symbol:2613ba7aa028e818e7070d8d",
+    "kind": "symbol",
+    "locator": "symbol:test/app.route.js#request",
+    "name": "request",
+    "summary": "const request in test/app.route.js",
+    "evidenceRefs": [
+      "evidence:e286cb07c58e538c4229686d"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:e286cb07c58e538c4229686d"
+      ]
+    }
+  },
+  {
+    "id": "symbol:ecebabc5c64e13004ee760e8",
+    "kind": "symbol",
+    "locator": "symbol:test/app.router.js#request",
+    "name": "request",
+    "summary": "const request in test/app.router.js",
+    "evidenceRefs": [
+      "evidence:f94e85531d6122753da8ecc3"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:f94e85531d6122753da8ecc3"
+      ]
+    }
+  },
+  {
+    "id": "symbol:dd5e349c4a7f7b280368a93d",
+    "kind": "symbol",
+    "locator": "symbol:test/app.routes.error.js#request",
+    "name": "request",
+    "summary": "const request in test/app.routes.error.js",
+    "evidenceRefs": [
+      "evidence:cbd607e3de600700441f1971"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:cbd607e3de600700441f1971"
+      ]
+    }
+  },
+  {
+    "id": "symbol:27ecb4554ef547b1d62f2e15",
+    "kind": "symbol",
+    "locator": "symbol:test/app.use.js#request",
+    "name": "request",
+    "summary": "const request in test/app.use.js",
+    "evidenceRefs": [
+      "evidence:a86a0ec180fd8a94634e610a"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:a86a0ec180fd8a94634e610a"
+      ]
+    }
+  },
+  {
+    "id": "symbol:b934e9941c62ab1334d038d6",
+    "kind": "symbol",
+    "locator": "symbol:test/exports.js#request",
+    "name": "request",
+    "summary": "const request in test/exports.js",
+    "evidenceRefs": [
+      "evidence:702d7b5b57a92b767da20386"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:702d7b5b57a92b767da20386"
+      ]
+    }
+  },
+  {
+    "id": "symbol:5c8a91442c6c6aa7c6716270",
+    "kind": "symbol",
+    "locator": "symbol:test/express.json.js#request",
+    "name": "request",
+    "summary": "const request in test/express.json.js",
+    "evidenceRefs": [
+      "evidence:9ca19cf279a3653064d0bef5"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:9ca19cf279a3653064d0bef5"
+      ]
+    }
+  },
+  {
+    "id": "symbol:96e95eb8090917510de71660",
+    "kind": "symbol",
+    "locator": "symbol:test/express.raw.js#request",
+    "name": "request",
+    "summary": "const request in test/express.raw.js",
+    "evidenceRefs": [
+      "evidence:2006d7089a19d7f7559a6378"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:2006d7089a19d7f7559a6378"
+      ]
+    }
+  },
+  {
+    "id": "symbol:44ebe7d24279a6c6f75fdc82",
+    "kind": "symbol",
+    "locator": "symbol:test/express.static.js#request",
+    "name": "request",
+    "summary": "const request in test/express.static.js",
+    "evidenceRefs": [
+      "evidence:dd457f8d87ec21fb5da652d7"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:dd457f8d87ec21fb5da652d7"
+      ]
+    }
+  },
+  {
+    "id": "symbol:ed2ea74cb125df00b87a1ec1",
+    "kind": "symbol",
+    "locator": "symbol:test/express.text.js#request",
+    "name": "request",
+    "summary": "const request in test/express.text.js",
+    "evidenceRefs": [
+      "evidence:5a4022122db51e981bb0d8af"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:5a4022122db51e981bb0d8af"
+      ]
+    }
+  },
+  {
+    "id": "symbol:11d1e6cd427ed5149ccc9134",
+    "kind": "symbol",
+    "locator": "symbol:test/express.urlencoded.js#request",
+    "name": "request",
+    "summary": "const request in test/express.urlencoded.js",
+    "evidenceRefs": [
+      "evidence:09e54699571ecb9882a5dbc7"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:09e54699571ecb9882a5dbc7"
+      ]
+    }
+  },
+  {
+    "id": "symbol:9896b709236eb5573fe32021",
+    "kind": "symbol",
+    "locator": "symbol:test/regression.js#request",
+    "name": "request",
+    "summary": "const request in test/regression.js",
+    "evidenceRefs": [
+      "evidence:60c560eca064e1e5741065a8"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:60c560eca064e1e5741065a8"
+      ]
+    }
+  },
+  {
+    "id": "symbol:fba3315b4661303efdaa1207",
+    "kind": "symbol",
+    "locator": "symbol:test/req.accepts.js#request",
+    "name": "request",
+    "summary": "const request in test/req.accepts.js",
+    "evidenceRefs": [
+      "evidence:7233db248b25b06c926bb6b7"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:7233db248b25b06c926bb6b7"
+      ]
+    }
+  },
+  {
+    "id": "symbol:e56c21d8b9a604fca5d8ad57",
+    "kind": "symbol",
+    "locator": "symbol:test/req.acceptsCharsets.js#request",
+    "name": "request",
+    "summary": "const request in test/req.acceptsCharsets.js",
+    "evidenceRefs": [
+      "evidence:05f2db61281ab2fbeb6f748e"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:05f2db61281ab2fbeb6f748e"
+      ]
+    }
+  },
+  {
+    "id": "symbol:5fe53f84a081e3b0e5f3f1f9",
+    "kind": "symbol",
+    "locator": "symbol:test/req.acceptsEncodings.js#request",
+    "name": "request",
+    "summary": "const request in test/req.acceptsEncodings.js",
+    "evidenceRefs": [
+      "evidence:5e89383136eb1e23db716365"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:5e89383136eb1e23db716365"
+      ]
+    }
+  }
+]
+
+Exact bounded excerpts:
+[
+  {
+    "locator": "path:Readme.md",
+    "text": "<a href=\"https://expressjs.com/\">\n  <picture>\n    <source media=\"(prefers-color-scheme: dark)\" srcset=\"https://expressjs.com/images/logos/logo-express-white.svg\">\n    <img alt=\"Express Logo\" src=\"https://expressjs.com/images/logos/logo-express-black.svg\" width=\"280\">\n  </picture>\n</a>\n\n**Fast, unopinionated, minimalist web framework for [Node.js](https://nodejs.org).**\n\n## Table of contents\n\n- [Installation](#installation)\n- [Features](#features)\n- [Docs \\& Community](#docs--community)\n- [Quick Start](#quick-start)\n- [Philosophy](#philosophy)\n- [Examples](#examples)\n- [Contributing](#contributing)\n  - [Security Issues](#security-issues)\n  - [Running Tests](#running-tests)\n- [Current project team members](#current-project-team-members)\n  - [TC (Technical Committee)](#tc-technical-committee)\n    - [TC emeriti members](#tc-emeriti-members)\n  - [Triagers](#triagers)\n    - [Emeritus Triagers](#emeritus-triagers)\n- [License](#license)\n\n\n[![NPM Version][npm-version-image]][npm-url]\n[![NPM Downloads][npm-downloads-image]][npm-downloads-url]\n[![Linux Build][github-actions-ci-image]][github-actions-ci-url]\n[![Test Coverage][coveralls-image]][coveralls-url]\n[![OpenSSF Scorecard Badge][ossf-scorecard-badge]][ossf-scorecard-visualizer]\n\n\n```js\nimport express from 'express'\n\nconst app = express()\n\napp.get('/', (req, res) => {\n  res.send('Hello World')\n})\n\napp.listen(3000, () => {\n  console.log('Server is running on http://localhost:3000')\n})\n```\n\n## Installation\n\nThis is a [Node.js](https://nodejs.org/en/) module available through the\n[npm registry](https://www.npmjs.com/).\n\nBefore installing, [download and install Node.js](https://nodejs.org/en/download/).\nNode.js 18 or higher is required.\n\nIf this is a brand new project, make sure to create a `package.json` first with\nthe [`npm init` command](https://docs.npmjs.com/creating-a-package-json-file).\n\nInstallation is done using the\n[`npm install` command](https://docs.npmjs.com/downloading-and-installing-packages-locally):\n\n```bash\nnpm install express\n```\n\nFollow [our installing guide](https://expressjs.com/en/starter/installing.html)\nfor more information.\n\n## Features\n\n  * Robust routing\n  * Focus on high performance\n  * Super-high test coverage\n  * HTTP helpers (redirection, caching, etc)\n  * View system supporting 14+ template engines\n  * Content negotiation\n  * Executable for generating applications quickly\n\n## Docs & Community\n\n  * [Website and Documentation](https://expressjs.com/) - [[website repo](https://github.com/expressjs/expressjs.com)]\n  * [GitHub Organization](https://github.com/expressjs) for Official Middleware & Modules\n  * [Github Discussions](https://github.com/expressjs/discussions) for discussion on the development and usage of Express\n\n**PROTIP** Be sure to read the [migration guide to v5](https://expressjs.com/en/guide/migrating-5)\n\n## Quick Start\n\n  The quickest way to get started with express is to utilize the executable [`express(1)`](https://github.com/expressjs/generator) to generate an application as shown below:\n\n  Install the executable. The executable's major version will match Express's:\n\n```bash\nnpm install -g express-generator@4\n```\n\n  Create the app:\n\n```bash\nexpress /tmp/foo && cd /tmp/foo\n```\n\n  Install dependencies:\n\n```bash\nnpm install\n```\n\n  Start the server:\n\n```bash\nnpm start\n```\n\n  View the website at: http://localhost:3000\n\n## Philosophy\n\n  The Express philosophy is to provide small, robust tooling for HTTP servers, making\n  it a great solution for single page applications, websites, hybrids, or public\n  HTTP APIs.\n\n  Express does not force you to use any specific ORM or template engine. With support for over\n  14 template engines via [@ladjs/consolidate](https://github.com/ladjs/consolidate),\n  you can quickly craft your perfect framework.\n\n## Examples\n\n  To view the examples, clone the Express repository:\n\n```bash\ngit clone https://github.com/expressjs/express.git --depth 1 && cd express\n```\n\n  Then install the dependencies:\n\n```bash\nnpm install\n```\n\n  Then run whichever example you want:\n\n```bash\nnode examples/content-negotiation\n```\n\n## Contributing\n\nThe Express.js project welcomes all constructive contributions. Contributions take many forms,\nfrom code for bug fixes and enhancements, to additions and fixes to documentation, additional\ntests, triaging incoming pull requests and issues, and more!\n\nSee the [Contributing Guide] for more technical details on contributing.\n\nThis project has a [Code of Conduct]. By participating, you are expected to uphold this code.\n\n### Security Issues\n\nIf you discover a security vulnerability in Express, please see [Security Policies and Procedures](https://github.com/expressjs/express/security/policy).\n\n### Running Tests\n\nTo run the test suite, first install the dependencies:\n\n```bash\nnpm install\n```\n\nThen run `npm test`:\n\n```bash\nnpm test\n```\n\n## Current project team members\n\nFor information about the governance of the express.js project, see [GOVERNANCE.md](https://github.com/expressjs/discussions/blob/HEAD/docs/GOVERNANCE.md).\n\nThe original author of Express is [TJ Holowaychuk](https://github.com/tj)\n\n[List of all contributors](https://github.com/expressjs/express/graphs/contributors)\n\n### TC (Technical Committee)\n\n* [UlisesGascon](https://github.com/UlisesGascon) - **Ulises Gascón** (he/him)\n* [jonchurch](https://github.com/jonchurch) - **Jon Church**\n* [wesleytodd](https://github.com/wesleytodd) - **Wes Todd**\n* [LinusU](https://github.com/LinusU) - **Linus Unnebäck**\n* [blakeembrey](https://github.com/blakeembrey) - **Blake Embrey**\n* [sheplu](https://github.com/sheplu) - **Jean Burellier**\n* [crandmck](https://github.com/crandmck) - **Rand McKinney**\n* [ctcpip](https://github.com/ctcpip) - **Chris de Almeida**\n\n<details>\n<summary>TC emeriti members</summary>\n\n#### TC emeriti members\n\n  * [dougwilson](https://github.com/dougwilson) - **Douglas Wilson**\n  * [hacksparrow](https://github.com/hacksparrow) - **Hage Yaapa**\n  * [jonathanong](https://github.com/jonathanong) - **jongleberry**\n  * [niftylettuce](https://github.com/niftylettuce) - **niftylettuce**\n  * [troygoode](https://github.com/troygoode) - **Troy Goode**\n</details>\n\n\n### Triagers\n\n* [aravindvnair99](https://github.com/aravindvnair99) - **Aravind Nair**\n* [bjohansebas](https://github.com/bjohansebas) - **Sebastian Beltran**\n* [carpasse](https://github.com/carpasse) - **Carlos Serrano**\n* [CBID2](https://github.com/CBID2) - **Christine Belzie**\n* [UlisesGascon](https://github.com/UlisesGascon) - **Ulises Gascón** (he/him)\n* [IamLizu](https://github.com/IamLizu) - **S M Mahmudul Hasan** (he/him)\n* [Phillip9587](https://github.com/Phillip9587) - **Phillip Barta**\n* [efekrskl](https://github.com/efekrskl) - **Efe Karasakal**\n* [rxmarbles](https://github.com/rxmarbles) - **Rick Markins** (he/him)\n* [krzysdz](https://github.com/krzysdz)\n* [GroophyLifefor](https://github.com/GroophyLifefor) - **Murat Kirazkaya**\n\n<details>\n<summary>Triagers emeriti members</summary>\n\n#### Emeritus Triagers\n\n  * [AuggieH](https://github.com/AuggieH) - **Auggie Hudak**\n  * [G-Rath](https://github.com/G-Rath) - **Gareth Jones**\n  * [MohammadXroid](https://github.com/MohammadXroid) - **Mohammad Ayashi**\n  * [NawafSwe](https://github.com/NawafSwe) - **Nawaf Alsharqi**\n  * [NotMoni](https://github.com/NotMoni) - **Moni**\n  * [VigneshMurugan](https://github.com/VigneshMurugan) - **Vignesh Murugan**\n  * [davidmashe](https://github.com/davidmashe) - **David Ashe**\n  * [digitaIfabric](https://github.com/digitaIfabric) - **David**\n  * [e-l-i-s-e](https://github.com/e-l-i-s-e) - **Elise Bonner**\n  * [fed135](https://github.com/fed135) - **Frederic Charette**\n  * [firmanJS](https://github.com/firmanJS) - **Firman Abdul Hakim**\n  * [getspooky](https://github.com/getspooky) - **Yasser Ameur**\n  * [ghinks](https://github.com/ghinks) - **Glenn**\n  * [ghousemohamed](https://github.com/ghousemohamed) - **Ghouse Mohamed**\n  * [gireeshpunathil](https://github.com/gireeshpunathil) - **Gireesh Punathil**\n  * [jake32321](https://github.com/jake32321) - **Jake Reed**\n  * [jonchurch](https://github.com/jonchurch) - **Jon Church**\n  * [lekanikotun](https://github.com/lekanikotun) - **Troy Goode**\n  * [marsonya](https://github.com/marsonya) - **Lekan Ikotun**\n  * [mastermatt](https://github.com/mastermatt) - **Matt R. Wilson**\n  * [maxakuru](https://github.com/maxakuru) - **Max Edell**\n  * [mlrawlings](https://github.com/mlrawlings) - **Michael Rawlings**\n  * [rodion-arr](https://github.com/rodion-arr) - **Rodion Abdurakhimov**\n  * [sheplu](https://github.com/sheplu) - **Jean Burellier**\n  * [tarunyadav1](https://github.com/tarunyadav1) - **Tarun yadav**\n  * [tunniclm](https://github.com/tunniclm) - **Mike Tunnicliffe**\n  * [enyoghasim](https://github.com/enyoghasim) - **David Enyoghasim**\n  * [0ss](https://github.com/0ss) - **Salah**\n  * [ejcheng](https://github.com/ejcheng)- **Eric Cheng** (he/him)\n  * [dakshkhetan](https://github.com/dakshkhetan) - **Daksh Khetan** (he/him)\n  * [lucasraziel](https://github.com/lucasraziel) - **Lucas Soares Do Rego**\n  * [mertcanaltin](https://github.com/mertcanaltin) - **Mert Can Altin**\n  * [dpopp07](https://github.com/dpopp07) - **Dustin Popp**\n  * [Sushmeet](https://github.com/Sushmeet) - **Sushmeet Sunger**\n  * [3imed-jaberi](https://github.com/3imed-jaberi) - **Imed Jaberi**\n\n</details>\n\n\n## License\n\n  [MIT](LICENSE)\n\n[coveralls-image]: https://img.shields.io/coverallsCoverage/github/expressjs/express?branch=master\n[coveralls-url]: https://coveralls.io/r/expressjs/express?branch=master\n[github-actions-ci-image]: https://img.shields.io/github/actions/workflow/status/expressjs/express/ci.yml?branch=master&label=ci\n[github-actions-ci-url]: https://github.com/expressjs/express/actions/workflows/ci.yml\n[npm-downloads-image]: https://img.shields.io/npm/dm/express\n[npm-downloads-url]: https://npmcharts.com/compare/express?minimal=true\n[npm-url]: https://npmjs.org/package/express\n[npm-version-image]: https://img.shields.io/npm/v/express\n[ossf-scorecard-badge]: https://api.scorecard.dev/projects/github.com/expressjs/express/badge\n[ossf-scorecard-visualizer]: https://ossf.github.io/scorecard-visualizer/#/projects/github.com/expressjs/express\n[Code of Conduct]: https://github.com/expressjs/.github/blob/HEAD/CODE_OF_CONDUCT.md\n[Contributing Guide]: https://github.com/expressjs/.github/blob/HEAD/CONTRIBUTING.md\n",
+    "truncated": false,
+    "evidenceRefs": [
+      "evidence:b30c5ad77e7af10f9691159b"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:b30c5ad77e7af10f9691159b"
+      ]
+    }
+  },
+  {
+    "locator": "path:lib/application.js",
+    "text": "/*!\n * express\n * Copyright(c) 2009-2013 TJ Holowaychuk\n * Copyright(c) 2013 Roman Shtylman\n * Copyright(c) 2014-2015 Douglas Christopher Wilson\n * MIT Licensed\n */\n\n'use strict';\n\n/**\n * Module dependencies.\n * @private\n */\n\nvar finalhandler = require('finalhandler');\nvar debug = require('debug')('express:application');\nvar View = require('./view');\nvar http = require('node:http');\nvar methods = require('./utils').methods;\nvar compileETag = require('./utils').compileETag;\nvar compileQueryParser = require('./utils').compileQueryParser;\nvar compileTrust = require('./utils').compileTrust;\nvar resolve = require('node:path').resolve;\nvar once = require('once')\nvar Router = require('router');\n\n/**\n * Module variables.\n * @private\n */\n\nvar slice = Array.prototype.slice;\nvar flatten = Array.prototype.flat;\n\n/**\n * Application prototype.\n */\n\nvar app = exports = module.exports = {};\n\n/**\n * Variable for trust proxy inheritance back-compat\n * @private\n */\n\nvar trustProxyDefaultSymbol = '@@symbol:trust_proxy_default';\n\n/**\n * Initialize the server.\n *\n *   - setup default configuration\n *   - setup default middleware\n *   - setup route reflection methods\n *\n * @private\n */\n\napp.init = function init() {\n  var router = null;\n\n  this.cache = Object.create(null);\n  this.engines = Object.create(null);\n  this.settings = Object.create(null);\n\n  this.defaultConfiguration();\n\n  // Setup getting to lazily add base router\n  Object.defineProperty(this, 'router', {\n    configurable: true,\n    enumerable: true,\n    get: function getrouter() {\n      if (router === null) {\n        router = new Router({\n          caseSensitive: this.enabled('case sensitive routing'),\n          strict: this.enabled('strict routing')\n        });\n      }\n\n      return router;\n    }\n  });\n};\n\n/**\n * Initialize application configuration.\n * @private\n */\n\napp.defaultConfiguration = function defaultConfiguration() {\n  var env = process.env.NODE_ENV || 'development';\n\n  // default settings\n  this.enable('x-powered-by');\n  this.set('etag', 'weak');\n  this.set('env', env);\n  this.set('query parser', 'simple')\n  this.set('subdomain offset', 2);\n  this.set('trust proxy', false);\n\n  // trust proxy inherit back-compat\n  Object.defineProperty(this.settings, trustProxyDefaultSymbol, {\n    configurable: true,\n    value: true\n  });\n\n  debug('booting in %s mode', env);\n\n  this.on('mount', function onmount(parent) {\n    // inherit trust proxy\n    if (this.settings[trustProxyDefaultSymbol] === true\n      && typeof parent.settings['trust proxy fn'] === 'function') {\n      delete this.settings['trust proxy'];\n      delete this.settings['trust proxy fn'];\n    }\n\n    // inherit protos\n    Object.setPrototypeOf(this.request, parent.request)\n    Object.setPrototypeOf(this.response, parent.response)\n    Object.setPrototypeOf(this.engines, parent.engines)\n    Object.setPrototypeOf(this.settings, parent.settings)\n  });\n\n  // setup locals\n  this.locals = Object.create(null);\n\n  // top-most app is mounted at /\n  this.mountpath = '/';\n\n  // default locals\n  this.locals.settings = this.settings;\n\n  // default configuration\n  this.set('view', View);\n  this.set('views', resolve('views'));\n  this.set('jsonp callback name', 'callback');\n\n  if (env === 'production') {\n    this.enable('view cache');\n  }\n};\n\n/**\n * Dispatch a req, res pair into the application. Starts pipeline processing.\n *\n * If no callback is provided, then default error handlers will respond\n * in the event of an error bubbling through the stack.\n *\n * @private\n */\n\napp.handle = function handle(req, res, callback) {\n  // final handler\n  var done = callback || finalhandler(req, res, {\n    env: this.get('env'),\n    onerror: logerror.bind(this)\n  });\n\n  // set powered by header\n  if (this.enabled('x-powered-by')) {\n    res.setHeader('X-Powered-By', 'Express');\n  }\n\n  // set circular references\n  req.res = res;\n  res.req = req;\n\n  // alter the prototypes\n  Object.setPrototypeOf(req, this.request)\n  Object.setPrototypeOf(res, this.response)\n\n  // setup locals\n  if (!res.locals) {\n    res.locals = Object.create(null);\n  }\n\n  this.router.handle(req, res, done);\n};\n\n/**\n * Proxy `Router#use()` to add middleware to the app router.\n * See Router#use() documentation for details.\n *\n * If the _fn_ parameter is an express app, then it will be\n * mounted at the _route_ specified.\n *\n * @public\n */\n\napp.use = function use(fn) {\n  var offset = 0;\n  var path = '/';\n\n  // default path to '/'\n  // disambiguate app.use([fn])\n  if (typeof fn !== 'function') {\n    var arg = fn;\n\n    while (Array.isArray(arg) && arg.length !== 0) {\n      arg = arg[0];\n    }\n\n    // first arg is the path\n    if (typeof arg !== 'function') {\n      offset = 1;\n      path = fn;\n    }\n  }\n\n  var fns = flatten.call(slice.call(arguments, offset), Infinity);\n\n  if (fns.length === 0) {\n    throw new TypeError('app.use() requires a middleware function')\n  }\n\n  // get router\n  var router = this.router;\n\n  fns.forEach(function (fn) {\n    // non-express app\n    if (!fn || !fn.handle || !fn.set) {\n      return router.use(path, fn);\n    }\n\n    debug('.use app under %s', path);\n    fn.mountpath = path;\n    fn.parent = this;\n\n    // restore .app property on req and res\n    router.use(path, function mounted_app(req, res, next) {\n      var orig = req.app;\n      fn.handle(req, res, function (err) {\n        Object.setPrototypeOf(req, orig.request)\n        Object.setPrototypeOf(res, orig.response)\n        next(err);\n      });\n    });\n\n    // mounted an app\n    fn.emit('mount', this);\n  }, this);\n\n  return this;\n};\n\n/**\n * Proxy to the app `Router#route()`\n * Returns a new `Route` instance for the _path_.\n *\n * Routes are isolated middleware stacks for specific paths.\n * See the Route api docs for details.\n *\n * @public\n */\n\napp.route = function route(path) {\n  return this.router.route(path);\n};\n\n/**\n * Register the given template engine callback `fn`\n * as `ext`.\n *\n * By default will `require()` the engine based on the\n * file extension. For example if you try to render\n * a \"foo.ejs\" file Express will invoke the following internally:\n *\n *     app.engine('ejs', require('ejs').__express);\n *\n * For engines that do not provide `.__express` out of the box,\n * or if you wish to \"map\" a different extension to the template engine\n * you may use this method. For example mapping the EJS template engine to\n * \".html\" files:\n *\n *     app.engine('html', require('ejs').renderFile);\n *\n * In this case EJS provides a `.renderFile()` method with\n * the same signature that Express expects: `(path, options, callback)`,\n * though note that it aliases this method as `ejs.__express` internally\n * so if you're using \".ejs\" extensions you don't need to do anything.\n *\n * Some template engines do not follow this convention, the\n * [Consolidate.js](https://github.com/tj/consolidate.js)\n * library was created to map all of node's popular template\n * engines to follow this convention, thus allowing them to\n * work seamlessly within Express.\n *\n * @param {String} ext\n * @param {Function} fn\n * @return {app} for chaining\n * @public\n */\n\napp.engine = function engine(ext, fn) {\n  if (typeof fn !== 'function') {\n    throw new Error('callback function required');\n  }\n\n  // get file extension\n  var extension = ext[0] !== '.'\n    ? '.' + ext\n    : ext;\n\n  // store engine\n  this.engines[extension] = fn;\n\n  return this;\n};\n\n/**\n * Proxy to `Router#param()` with one added api feature. The _name_ parameter\n * can be an array of names.\n *\n * See the Router#param() docs for more details.\n *\n * @param {String|Array} name\n * @param {Function} fn\n * @return {app} for chaining\n * @public\n */\n\napp.param = function param(name, fn) {\n  if (Array.isArray(name)) {\n    for (var i = 0; i < name.length; i++) {\n      this.param(name[i], fn);\n    }\n\n    return this;\n  }\n\n  this.router.param(name, fn);\n\n  return this;\n};\n\n/**\n * Assign `setting` to `val`, or return `setting`'s value.\n *\n *    app.set('foo', 'bar');\n *    app.set('foo');\n *    // => \"bar\"\n *\n * Mounted servers inherit their parent server's settings.\n *\n * @param {String} setting\n * @param {*} [val]\n * @return {Server} for chaining\n * @public\n */\n\napp.set = function set(setting, val) {\n  if (arguments.length === 1) {\n    // app.get(setting)\n    return this.settings[setting];\n  }\n\n  debug('set \"%s\" to %o', setting, val);\n\n  // set value\n  this.settings[setting] = val;\n\n  // trigger matched settings\n  switch (setting) {\n    case 'etag':\n      this.set('etag fn', compileETag(val));\n      break;\n    case 'query parser':\n      this.set('query parser fn', compileQueryParser(val));\n      break;\n    case 'trust proxy':\n      this.set('trust proxy fn', compileTrust(val));\n\n      // trust proxy inherit back-compat\n      Object.defineProperty(this.settings, trustProxyDefaultSymbol, {\n        configurable: true,\n        value: false\n      });\n\n      break;\n  }\n\n  return this;\n};\n\n/**\n * Return the app's absolute pathname\n * based on the parent(s) that have\n * mounted it.\n *\n * For example if the application was\n * mounted as \"/admin\", which itself\n * was mounted as \"/blog\" then the\n * return value would be \"/blog/admin\".\n *\n * @return {String}\n * @private\n */\n\napp.path = function path() {\n  return this.parent\n    ? this.parent.path() + this.mountpath\n    : '';\n};\n\n/**\n * Check if `setting` is enabled (truthy).\n *\n *    app.enabled('foo')\n *    // => false\n *\n *    app.enable('foo')\n *    app.enabled('foo')\n *    // => true\n *\n * @param {String} setting\n * @return {Boolean}\n * @public\n */\n\napp.enabled = function enabled(setting) {\n  return Boolean(this.set(setting));\n};\n\n/**\n * Check if `setting` is disabled.\n *\n *    app.disabled('foo')\n *    // => true\n *\n *    app.enable('foo')\n *    app.disabled('foo')\n *    // => false\n *\n * @param {String} setting\n * @return {Boolean}\n * @public\n */\n\napp.disabled = function disabled(setting) {\n  return !this.set(setting);\n};\n\n/**\n * Enable `setting`.\n *\n * @param {String} setting\n * @return {app} for chaining\n * @public\n */\n\napp.enable = function enable(setting) {\n  return this.set(setting, true);\n};\n\n/**\n * Disable `setting`.\n *\n * @param {String} setting\n * @return {app} for chaining\n * @public\n */\n\napp.disable = function disable(setting) {\n  return this.set(setting, false);\n};\n\n/**\n * Delegate `.VERB(...)` calls to `router.VERB(...)`.\n */\n\nmethods.forEach(function (method) {\n  app[method] = function (path) {\n    if (method === 'get' && arguments.length === 1) {\n      // app.get(setting)\n      return this.set(path);\n    }\n\n    var route = this.route(path);\n    route[method].apply(route, slice.call(arguments, 1));\n    return this;\n  };\n});\n\n/**\n * Special-cased \"all\" method, applying the given route `path`,\n * middleware, and callback to _every_ HTTP method.\n *\n * @param {String} path\n * @param {Function} ...\n * @return {app} for chaining\n * @public\n */\n\napp.all = function all(path) {\n  var route = this.route(path);\n  var args = slice.call(arguments, 1);\n\n  for (var i = 0; i < methods.length; i++) {\n    route[methods[i]].apply(route, args);\n  }\n\n  return this;\n};\n\n/**\n * Render the given view `name` name with `options`\n * and a callback accepting an error and the\n * rendered template string.\n *\n * Example:\n *\n *    app.render('email', { name: 'Tobi' }, function(err, html){\n *      // ...\n *    })\n *\n * @param {String} name\n * @param {Object|Function} options or fn\n * @param {Function} callback\n * @public\n */\n\napp.render = function render(name, options, callback) {\n  var cache = this.cache;\n  var done = callback;\n  var engines = this.engines;\n  var opts = options || {};\n  var view;\n\n  // support callback function as second arg\n  if (typeof options === 'function') {\n    done = options;\n    opts = {};\n  }\n\n  // merge options\n  var renderOptions = { ...this.locals, ...opts._locals, ...opts };\n\n  // set .cache unless explicitly provided\n  if (renderOptions.cache == null) {\n    renderOptions.cache = this.enabled('view cache');\n  }\n\n  // primed cache\n  if (renderOptions.cache) {\n    view = cache[name];\n  }\n\n  // view\n  if (!view) {\n    var View = this.get('view');\n\n    view = new View(name, {\n      defaultEngine: this.get('view engine'),\n      root: this.get('views'),\n      engines: engines\n    });\n\n    if (!view.path) {\n      var dirs = Array.isArray(view.root) && view.root.length > 1\n        ? 'directories \"' + view.root.slice(0, -1).join('\", \"') + '\" or \"' + view.root[view.root.length - 1] + '\"'\n        : 'directory \"' + view.root + '\"'\n      var err = new Error('Failed to lookup view \"' + name + '\" in views ' + dirs);\n      err.view = view;\n      return done(err);\n    }\n\n    // prime the cache\n    if (renderOptions.cache) {\n      cache[name] = view;\n    }\n  }\n\n  // render\n  tryRender(view, renderOptions, done);\n};\n\n/**\n * Listen for connections.\n *\n * A node `http.Server` is returned, with this\n * application (which is a `Function`) as its\n * callback. If you wish to create both an HTTP\n * and HTTPS server you may do so with the \"http\"\n * and \"https\" modules as shown here:\n *\n *    var http = require('node:http')\n *      , https = require('node:https')\n *      , express = require('express')\n *      , app = express();\n *\n *    http.createServer(app).listen(80);\n *    https.createServer({ ... }, app).listen(443);\n *\n * @return {http.Server}\n * @public\n */\n\napp.listen = function listen() {\n  var server = http.createServer(this)\n  var args = slice.call(arguments)\n  if (typeof args[args.length - 1] === 'function') {\n    var done = args[args.length - 1] = once(args[args.length - 1])\n    server.once('error', done)\n  }\n  return server.listen.apply(server, args)\n}\n\n/**\n * Log error using console.error.\n *\n * @param {Error} err\n * @private\n */\n\nfunction logerror(err) {\n  /* istanbul ignore next */\n  if (this.get('env') !== 'test') console.error(err);\n}\n\n/**\n * Try rendering a view.\n * @private\n */\n\nfunction tryRender(view, options, callback) {\n  try {\n    view.render(options, callback);\n  } catch (err) {\n    callback(err);\n  }\n}\n",
+    "truncated": false,
+    "evidenceRefs": [
+      "evidence:2599eac21baefa30524e840c"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:2599eac21baefa30524e840c"
+      ]
+    }
+  },
+  {
+    "locator": "path:lib/express.js",
+    "text": "/*!\n * express\n * Copyright(c) 2009-2013 TJ Holowaychuk\n * Copyright(c) 2013 Roman Shtylman\n * Copyright(c) 2014-2015 Douglas Christopher Wilson\n * MIT Licensed\n */\n\n'use strict';\n\n/**\n * Module dependencies.\n */\n\nvar bodyParser = require('body-parser')\nvar EventEmitter = require('node:events').EventEmitter;\nvar mixin = require('merge-descriptors');\nvar proto = require('./application');\nvar Router = require('router');\nvar req = require('./request');\nvar res = require('./response');\n\n/**\n * Expose `createApplication()`.\n */\n\nexports = module.exports = createApplication;\n\n/**\n * Create an express application.\n *\n * @return {Function}\n * @api public\n */\n\nfunction createApplication() {\n  var app = function(req, res, next) {\n    app.handle(req, res, next);\n  };\n\n  mixin(app, EventEmitter.prototype, false);\n  mixin(app, proto, false);\n\n  // expose the prototype that will get set on requests\n  app.request = Object.create(req, {\n    app: { configurable: true, enumerable: true, writable: true, value: app }\n  })\n\n  // expose the prototype that will get set on responses\n  app.response = Object.create(res, {\n    app: { configurable: true, enumerable: true, writable: true, value: app }\n  })\n\n  app.init();\n  return app;\n}\n\n/**\n * Expose the prototypes.\n */\n\nexports.application = proto;\nexports.request = req;\nexports.response = res;\n\n/**\n * Expose constructors.\n */\n\nexports.Route = Router.Route;\nexports.Router = Router;\n\n/**\n * Expose middleware\n */\n\nexports.json = bodyParser.json\nexports.raw = bodyParser.raw\nexports.static = require('serve-static');\nexports.text = bodyParser.text\nexports.urlencoded = bodyParser.urlencoded\n",
+    "truncated": false,
+    "evidenceRefs": [
+      "evidence:6add29297526f5c63db130d2"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:6add29297526f5c63db130d2"
+      ]
+    }
+  },
+  {
+    "locator": "path:lib/request.js",
+    "text": "/*!\n * express\n * Copyright(c) 2009-2013 TJ Holowaychuk\n * Copyright(c) 2013 Roman Shtylman\n * Copyright(c) 2014-2015 Douglas Christopher Wilson\n * MIT Licensed\n */\n\n'use strict';\n\n/**\n * Module dependencies.\n * @private\n */\n\nvar accepts = require('accepts');\nvar isIP = require('node:net').isIP;\nvar typeis = require('type-is');\nvar http = require('node:http');\nvar fresh = require('fresh');\nvar parseRange = require('range-parser');\nvar parse = require('parseurl');\nvar proxyaddr = require('proxy-addr');\n\n/**\n * Request prototype.\n * @public\n */\n\nvar req = Object.create(http.IncomingMessage.prototype)\n\n/**\n * Module exports.\n * @public\n */\n\nmodule.exports = req\n\n/**\n * Return request header.\n *\n * The `Referrer` header field is special-cased,\n * both `Referrer` and `Referer` are interchangeable.\n *\n * Examples:\n *\n *     req.get('Content-Type');\n *     // => \"text/plain\"\n *\n *     req.get('content-type');\n *     // => \"text/plain\"\n *\n *     req.get('Something');\n *     // => undefined\n *\n * Aliased as `req.header()`.\n *\n * @param {String} name\n * @return {String}\n * @public\n */\n\nreq.get =\nreq.header = function header(name) {\n  if (!name) {\n    throw new TypeError('name argument is required to req.get');\n  }\n\n  if (typeof name !== 'string') {\n    throw new TypeError('name must be a string to req.get');\n  }\n\n  var lc = name.toLowerCase();\n\n  switch (lc) {\n    case 'referer':\n    case 'referrer':\n      return this.headers.referrer\n        || this.headers.referer;\n    default:\n      return this.headers[lc];\n  }\n};\n\n/**\n * Check if the given `type(s)` is acceptable, returning\n * the best match when true, otherwise `false`, in which\n * case you should respond with 406 \"Not Acceptable\".\n *\n * The `type` value may be a single MIME type string\n * such as \"application/json\", an extension name\n * such as \"json\", an argument list such as `\"json\", \"html\", \"text/plain\"`,\n * or an array `[\"json\", \"html\", \"text/plain\"]`. When a list\n * or array is given, the _best_ match, if any is returned.\n *\n * Examples:\n *\n *     // Accept: text/html\n *     req.accepts('html');\n *     // => \"html\"\n *\n *     // Accept: text/*, application/json\n *     req.accepts('html');\n *     // => \"html\"\n *     req.accepts('text/html');\n *     // => \"text/html\"\n *     req.accepts('json', 'text');\n *     // => \"json\"\n *     req.accepts('application/json');\n *     // => \"application/json\"\n *\n *     // Accept: text/*, application/json\n *     req.accepts('image/png');\n *     req.accepts('png');\n *     // => false\n *\n *     // Accept: text/*;q=.5, application/json\n *     req.accepts(['html', 'json']);\n *     req.accepts('html', 'json');\n *     // => \"json\"\n *\n * @param {String|Array} type(s)\n * @return {String|Array|Boolean}\n * @public\n */\n\nreq.accepts = function(){\n  var accept = accepts(this);\n  return accept.types.apply(accept, arguments);\n};\n\n/**\n * Check if the given `encoding`s are accepted.\n *\n * @param {String} ...encoding\n * @return {String|Array}\n * @public\n */\n\nreq.acceptsEncodings = function(){\n  var accept = accepts(this);\n  return accept.encodings.apply(accept, arguments);\n};\n\n/**\n * Checks if the specified `charset`s are acceptable based on the request's `Accept-Charset` header.\n * Returns the best matching charset or an array of acceptable charsets.\n *\n * The `charset` argument(s) can be:\n * - A single charset string (e.g., \"utf-8\")\n * - Multiple charset strings as arguments (e.g., `\"utf-8\", \"iso-8859-1\"`)\n * - A comma-delimited list of charsets (e.g., `\"utf-8, iso-8859-1\"`)\n *\n * Examples:\n *\n *     // Accept-Charset: utf-8, iso-8859-1\n *     req.acceptsCharsets('utf-8');\n *     // => \"utf-8\"\n *\n *     req.acceptsCharsets('utf-8', 'iso-8859-1');\n *     // => \"utf-8\"\n *\n *     req.acceptsCharsets('utf-8, utf-16');\n *     // => \"utf-8\"\n *\n * @param {...String} charsets - The charset(s) to check against the `Accept-Charset` header.\n * @return {String|Array} - The best matching charset, or an array of acceptable charsets.\n * @public\n */\n\nreq.acceptsCharsets = function(...charsets) {\n  const accept = accepts(this);\n  return accept.charsets(...charsets);\n};\n\n/**\n * Check if the given `lang`s are acceptable,\n * otherwise you should respond with 406 \"Not Acceptable\".\n *\n * @param {String} ...lang\n * @return {String|Array}\n * @public\n */\n\nreq.acceptsLanguages = function(...languages) {\n  return accepts(this).languages(...languages);\n};\n\n/**\n * Parse Range header field, capping to the given `size`.\n *\n * Unspecified ranges such as \"0-\" require knowledge of your resource length. In\n * the case of a byte range this is of course the total number of bytes. If the\n * Range header field is not given `undefined` is returned, `-1` when unsatisfiable,\n * and `-2` when syntactically invalid.\n *\n * When ranges are returned, the array has a \"type\" property which is the type of\n * range that is required (most commonly, \"bytes\"). Each array element is an object\n * with a \"start\" and \"end\" property for the portion of the range.\n *\n * The \"combine\" option can be set to `true` and overlapping & adjacent ranges\n * will be combined into a single range.\n *\n * NOTE: remember that ranges are inclusive, so for example \"Range: users=0-3\"\n * should respond with 4 users when available, not 3.\n *\n * @param {number} size\n * @param {object} [options]\n * @param {boolean} [options.combine=false]\n * @return {number|array}\n * @public\n */\n\nreq.range = function range(size, options) {\n  var range = this.get('Range');\n  if (!range) return;\n  return parseRange(size, range, options);\n};\n\n/**\n * Parse the query string of `req.url`.\n *\n * This uses the \"query parser\" setting to parse the raw\n * string into an object.\n *\n * @return {String}\n * @api public\n */\n\ndefineGetter(req, 'query', function query(){\n  var queryparse = this.app.get('query parser fn');\n\n  if (!queryparse) {\n    // parsing is disabled\n    return Object.create(null);\n  }\n\n  var querystring = parse(this).query;\n\n  return queryparse(querystring);\n});\n\n/**\n * Check if the incoming request contains the \"Content-Type\"\n * header field, and it contains the given mime `type`.\n *\n * Examples:\n *\n *      // With Content-Type: text/html; charset=utf-8\n *      req.is('html');\n *      req.is('text/html');\n *      req.is('text/*');\n *      // => true\n *\n *      // When Content-Type is application/json\n *      req.is('json');\n *      req.is('application/json');\n *      req.is('application/*');\n *      // => true\n *\n *      req.is('html');\n *      // => false\n *\n * @param {String|Array} types...\n * @return {String|false|null}\n * @public\n */\n\nreq.is = function is(types) {\n  var arr = types;\n\n  // support flattened arguments\n  if (!Array.isArray(types)) {\n    arr = new Array(arguments.length);\n    for (var i = 0; i < arr.length; i++) {\n      arr[i] = arguments[i];\n    }\n  }\n\n  return typeis(this, arr);\n};\n\n/**\n * Return the protocol string \"http\" or \"https\"\n * when requested with TLS. When the \"trust proxy\"\n * setting trusts the socket address, the\n * \"X-Forwarded-Proto\" header field will be trusted\n * and used if present.\n *\n * If you're running behind a reverse proxy that\n * supplies https for you this may be enabled.\n *\n * @return {String}\n * @public\n */\n\ndefineGetter(req, 'protocol', function protocol(){\n  var proto = this.socket.encrypted\n    ? 'https'\n    : 'http';\n  var trust = this.app.get('trust proxy fn');\n\n  if (!trust(this.socket.remoteAddress, 0)) {\n    return proto;\n  }\n\n  // Note: X-Forwarded-Proto is normally only ever a\n  //       single value, but this is to be safe.\n  var header = this.get('X-Forwarded-Proto') || proto\n  var index = header.indexOf(',')\n\n  return index !== -1\n    ? header.substring(0, index).trim()\n    : header.trim()\n});\n\n/**\n * Short-hand for:\n *\n *    req.protocol === 'https'\n *\n * @return {Boolean}\n * @public\n */\n\ndefineGetter(req, 'secure', function secure(){\n  return this.protocol === 'https';\n});\n\n/**\n * Return the remote address from the trusted proxy.\n *\n * The is the remote address on the socket unless\n * \"trust proxy\" is set.\n *\n * @return {String}\n * @public\n */\n\ndefineGetter(req, 'ip', function ip(){\n  var trust = this.app.get('trust proxy fn');\n  return proxyaddr(this, trust);\n});\n\n/**\n * When \"trust proxy\" is set, trusted proxy addresses + client.\n *\n * For example if the value were \"client, proxy1, proxy2\"\n * you would receive the array `[\"client\", \"proxy1\", \"proxy2\"]`\n * where \"proxy2\" is the furthest down-stream and \"proxy1\" and\n * \"proxy2\" were trusted.\n *\n * @return {Array}\n * @public\n */\n\ndefineGetter(req, 'ips', function ips() {\n  var trust = this.app.get('trust proxy fn');\n  var addrs = proxyaddr.all(this, trust);\n\n  // reverse the order (to farthest -> closest)\n  // and remove socket address\n  addrs.reverse().pop()\n\n  return addrs\n});\n\n/**\n * Return subdomains as an array.\n *\n * Subdomains are the dot-separated parts of the host before the main domain of\n * the app. By default, the domain of the app is assumed to be the last two\n * parts of the host. This can be changed by setting \"subdomain offset\".\n *\n * For example, if the domain is \"tobi.ferrets.example.com\":\n * If \"subdomain offset\" is not set, req.subdomains is `[\"ferrets\", \"tobi\"]`.\n * If \"subdomain offset\" is 3, req.subdomains is `[\"tobi\"]`.\n *\n * @return {Array}\n * @public\n */\n\ndefineGetter(req, 'subdomains', function subdomains() {\n  var hostname = this.hostname;\n\n  if (!hostname) return [];\n\n  var offset = this.app.get('subdomain offset');\n  var subdomains = !isIP(hostname)\n    ? hostname.split('.').reverse()\n    : [hostname];\n\n  return subdomains.slice(offset);\n});\n\n/**\n * Short-hand for `url.parse(req.url).pathname`.\n *\n * @return {String}\n * @public\n */\n\ndefineGetter(req, 'path', function path() {\n  return parse(this).pathname;\n});\n\n/**\n * Parse the \"Host\" header field to a host.\n *\n * When the \"trust proxy\" setting trusts the socket\n * address, the \"X-Forwarded-Host\" header field will\n * be trusted.\n *\n * @return {String}\n * @public\n */\n\ndefineGetter(req, 'host', function host(){\n  var trust = this.app.get('trust proxy fn');\n  var val = this.get('X-Forwarded-Host');\n\n  if (!val || !trust(this.socket.remoteAddress, 0)) {\n    val = this.get('Host');\n  } else if (val.indexOf(',') !== -1) {\n    // Note: X-Forwarded-Host is normally only ever a\n    //       single value, but this is to be safe.\n    val = val.substring(0, val.indexOf(',')).trimEnd()\n  }\n\n  return val || undefined;\n});\n\n/**\n * Parse the \"Host\" header field to a hostname.\n *\n * When the \"trust proxy\" setting trusts the socket\n * address, the \"X-Forwarded-Host\" header field will\n * be trusted.\n *\n * @return {String}\n * @api public\n */\n\ndefineGetter(req, 'hostname', function hostname(){\n  var host = this.host;\n\n  if (!host) return;\n\n  // IPv6 literal support\n  var offset = host[0] === '['\n    ? host.indexOf(']') + 1\n    : 0;\n  var index = host.indexOf(':', offset);\n\n  return index !== -1\n    ? host.substring(0, index)\n    : host;\n});\n\n/**\n * Check if the request is fresh, aka\n * Last-Modified or the ETag\n * still match.\n *\n * @return {Boolean}\n * @public\n */\n\ndefineGetter(req, 'fresh', function(){\n  var method = this.method;\n  var res = this.res\n  var status = res.statusCode\n\n  // GET, HEAD, or QUERY for weak freshness validation only\n  if ('GET' !== method && 'HEAD' !== method && 'QUERY' !== method) return false;\n\n  // 2xx or 304 as per rfc2616 14.26\n  if ((status >= 200 && status < 300) || 304 === status) {\n    return fresh(this.headers, {\n      'etag': res.get('ETag'),\n      'last-modified': res.get('Last-Modified')\n    })\n  }\n\n  return false;\n});\n\n/**\n * Check if the request is stale, aka\n * \"Last-Modified\" and / or the \"ETag\" for the\n * resource has changed.\n *\n * @return {Boolean}\n * @public\n */\n\ndefineGetter(req, 'stale', function stale(){\n  return !this.fresh;\n});\n\n/**\n * Check if the request was an _XMLHttpRequest_.\n *\n * @return {Boolean}\n * @public\n */\n\ndefineGetter(req, 'xhr', function xhr(){\n  var val = this.get('X-Requested-With') || '';\n  return val.toLowerCase() === 'xmlhttprequest';\n});\n\n/**\n * Helper function for creating a getter on an object.\n *\n * @param {Object} obj\n * @param {String} name\n * @param {Function} getter\n * @private\n */\nfunction defineGetter(obj, name, getter) {\n  Object.defineProperty(obj, name, {\n    configurable: true,\n    enumerable: true,\n    get: getter\n  });\n}\n",
+    "truncated": false,
+    "evidenceRefs": [
+      "evidence:e4446bfc9d8f24801da665ae"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:e4446bfc9d8f24801da665ae"
+      ]
+    }
+  },
+  {
+    "locator": "path:lib/response.js",
+    "text": "/*!\n * express\n * Copyright(c) 2009-2013 TJ Holowaychuk\n * Copyright(c) 2014-2015 Douglas Christopher Wilson\n * MIT Licensed\n */\n\n'use strict';\n\n/**\n * Module dependencies.\n * @private\n */\n\nvar contentDisposition = require('content-disposition');\nvar createError = require('http-errors')\nvar deprecate = require('depd')('express');\nvar encodeUrl = require('encodeurl');\nvar escapeHtml = require('escape-html');\nvar http = require('node:http');\nvar onFinished = require('on-finished');\nvar mime = require('mime-types')\nvar path = require('node:path');\nvar pathIsAbsolute = require('node:path').isAbsolute;\nvar statuses = require('statuses')\nvar sign = require('cookie-signature').sign;\nvar normalizeType = require('./utils').normalizeType;\nvar normalizeTypes = require('./utils').normalizeTypes;\nvar setCharset = require('./utils').setCharset;\nvar cookie = require('cookie');\nvar send = require('send');\nvar extname = path.extname;\nvar resolve = path.resolve;\nvar basename = path.basename;\nvar vary = require('vary');\nconst { Buffer } = require('node:buffer');\n\n/**\n * Response prototype.\n * @public\n */\n\nvar res = Object.create(http.ServerResponse.prototype)\n\n/**\n * Module exports.\n * @public\n */\n\nmodule.exports = res\n\n/**\n * Set the HTTP status code for the response.\n *\n * Expects an integer value between 100 and 999 inclusive.\n * Throws an error if the provided status code is not an integer or if it's outside the allowable range.\n *\n * @param {number} code - The HTTP status code to set.\n * @return {ServerResponse} - Returns itself for chaining methods.\n * @throws {TypeError} If `code` is not an integer.\n * @throws {RangeError} If `code` is outside the range 100 to 999.\n * @public\n */\n\nres.status = function status(code) {\n  // Check if the status code is not an integer\n  if (!Number.isInteger(code)) {\n    throw new TypeError(`Invalid status code: ${JSON.stringify(code)}. Status code must be an integer.`);\n  }\n  // Check if the status code is outside of Node's valid range\n  if (code < 100 || code > 999) {\n    throw new RangeError(`Invalid status code: ${JSON.stringify(code)}. Status code must be greater than 99 and less than 1000.`);\n  }\n\n  this.statusCode = code;\n  return this;\n};\n\n/**\n * Set Link header field with the given `links`.\n *\n * Examples:\n *\n *    res.links({\n *      next: 'http://api.example.com/users?page=2',\n *      last: 'http://api.example.com/users?page=5',\n *      pages: [\n *        'http://api.example.com/users?page=1',\n *        'http://api.example.com/users?page=2'\n *      ]\n *    });\n *\n * @param {Object} links\n * @return {ServerResponse}\n * @public\n */\n\nres.links = function(links) {\n  var link = this.get('Link') || '';\n  if (link) link += ', ';\n  return this.set('Link', link + Object.keys(links).map(function(rel) {\n    // Allow multiple links if links[rel] is an array\n    if (Array.isArray(links[rel])) {\n      return links[rel].map(function (singleLink) {\n        return `<${singleLink}>; rel=\"${rel}\"`;\n      }).join(', ');\n    } else {\n      return `<${links[rel]}>; rel=\"${rel}\"`;\n    }\n  }).join(', '));\n};\n\n/**\n * Send a response.\n *\n * Examples:\n *\n *     res.send(Buffer.from('wahoo'));\n *     res.send({ some: 'json' });\n *     res.send('<p>some html</p>');\n *\n * @param {string|number|boolean|object|Buffer} body\n * @public\n */\n\nres.send = function send(body) {\n  var chunk = body;\n  var encoding;\n  var req = this.req;\n\n  // settings\n  var app = this.app;\n\n  switch (typeof chunk) {\n    // string defaulting to html\n    case 'string':\n      encoding = 'utf8';\n      const type = this.get('Content-Type');\n\n      if (typeof type === 'string') {\n        this.set('Content-Type', setCharset(type, 'utf-8'));\n      } else {\n        this.type('html');\n      }\n      break;\n    case 'boolean':\n    case 'number':\n    case 'object':\n      if (chunk === null) {\n        chunk = '';\n      } else if (ArrayBuffer.isView(chunk)) {\n        if (!this.get('Content-Type')) {\n          this.type('bin');\n        }\n      } else {\n        return this.json(chunk);\n      }\n      break;\n  }\n\n  // determine if ETag should be generated\n  var etagFn = app.get('etag fn')\n  var generateETag = !this.get('ETag') && typeof etagFn === 'function'\n\n  // Because Content-Length and Transfer-Encoding can't be present in the response headers together,\n  // Content-Length should be added only if there is no Transfer-Encoding header\n  var len;\n  if (chunk !== undefined && !this.get('Transfer-Encoding')) {\n    if (Buffer.isBuffer(chunk)) {\n      // get length of Buffer\n      len = chunk.length\n    } else if (!generateETag && chunk.length < 1000) {\n      // just calculate length when no ETag + small chunk\n      len = Buffer.byteLength(chunk, encoding)\n    } else {\n      // convert chunk to Buffer and calculate\n      chunk = Buffer.from(chunk, encoding)\n      encoding = undefined;\n      len = chunk.length\n    }\n\n    this.set('Content-Length', len);\n  }\n\n  // populate ETag\n  var etag;\n  if (generateETag && len !== undefined) {\n    if ((etag = etagFn(chunk, encoding))) {\n      this.set('ETag', etag);\n    }\n  }\n\n  // freshness\n  if (req.fresh) this.status(304);\n\n  // strip irrelevant headers\n  if (204 === this.statusCode || 304 === this.statusCode) {\n    this.removeHeader('Content-Type');\n    this.removeHeader('Content-Length');\n    this.removeHeader('Transfer-Encoding');\n    chunk = '';\n  }\n\n  // alter headers for 205\n  if (this.statusCode === 205) {\n    this.set('Content-Length', '0')\n    this.removeHeader('Transfer-Encoding')\n    chunk = ''\n  }\n\n  if (req.method === 'HEAD') {\n    // skip body for HEAD\n    this.end();\n  } else {\n    // respond\n    this.end(chunk, encoding);\n  }\n\n  return this;\n};\n\n/**\n * Send JSON response.\n *\n * Examples:\n *\n *     res.json(null);\n *     res.json({ user: 'tj' });\n *\n * @param {string|number|boolean|object} obj\n * @public\n */\n\nres.json = function json(obj) {\n  // settings\n  var app = this.app;\n  var escape = app.get('json escape')\n  var replacer = app.get('json replacer');\n  var spaces = app.get('json spaces');\n  var body = stringify(obj, replacer, spaces, escape)\n\n  // content-type\n  if (!this.get('Content-Type')) {\n    this.set('Content-Type', 'application/json');\n  }\n\n  return this.send(body);\n};\n\n/**\n * Send JSON response with JSONP callback support.\n *\n * Examples:\n *\n *     res.jsonp(null);\n *     res.jsonp({ user: 'tj' });\n *\n * @param {string|number|boolean|object} obj\n * @public\n */\n\nres.jsonp = function jsonp(obj) {\n  // settings\n  var app = this.app;\n  var escape = app.get('json escape')\n  var replacer = app.get('json replacer');\n  var spaces = app.get('json spaces');\n  var body = stringify(obj, replacer, spaces, escape)\n  var callback = this.req.query[app.get('jsonp callback name')];\n\n  // content-type\n  if (!this.get('Content-Type')) {\n    this.set('X-Content-Type-Options', 'nosniff');\n    this.set('Content-Type', 'application/json');\n  }\n\n  // fixup callback\n  if (Array.isArray(callback)) {\n    callback = callback[0];\n  }\n\n  // jsonp\n  if (typeof callback === 'string' && callback.length !== 0) {\n    this.set('X-Content-Type-Options', 'nosniff');\n    this.set('Content-Type', 'text/javascript');\n\n    // restrict callback charset\n    callback = callback.replace(/[^\\[\\]\\w$.]/g, '');\n\n    if (body === undefined) {\n      // empty argument\n      body = ''\n    } else if (typeof body === 'string') {\n      // replace chars not allowed in JavaScript that are in JSON\n      body = body\n        .replace(/\\u2028/g, '\\\\u2028')\n        .replace(/\\u2029/g, '\\\\u2029')\n    }\n\n    // the /**/ is a specific security mitigation for \"Rosetta Flash JSONP abuse\"\n    // the typeof check is just to reduce client error noise\n    body = '/**/ typeof ' + callback + ' === \\'function\\' && ' + callback + '(' + body + ');';\n  }\n\n  return this.send(body);\n};\n\n/**\n * Send given HTTP status code.\n *\n * Sets the response status to `statusCode` and the body of the\n * response to the standard description from node's http.STATUS_CODES\n * or the statusCode number if no description.\n *\n * Examples:\n *\n *     res.sendStatus(200);\n *\n * @param {number} statusCode\n * @public\n */\n\nres.sendStatus = function sendStatus(statusCode) {\n  var body = statuses.message[statusCode] || String(statusCode)\n\n  this.status(statusCode);\n  this.type('txt');\n\n  return this.send(body);\n};\n\n/**\n * Transfer the file at the given `path`.\n *\n * Automatically sets the _Content-Type_ response header field.\n * The callback `callback(err)` is invoked when the transfer is complete\n * or when an error occurs. Be sure to check `res.headersSent`\n * if you wish to attempt responding, as the header and some data\n * may have already been transferred.\n *\n * Options:\n *\n *   - `maxAge`   defaulting to 0 (can be string converted by `ms`)\n *   - `root`     root directory for relative filenames\n *   - `headers`  object of headers to serve with file\n *   - `dotfiles` serve dotfiles, defaulting to false; can be `\"allow\"` to send them\n *\n * Other options are passed along to `send`.\n *\n * Examples:\n *\n *  The following example illustrates how `res.sendFile()` may\n *  be used as an alternative for the `static()` middleware for\n *  dynamic situations. The code backing `res.sendFile()` is actually\n *  the same code, so HTTP cache support etc is identical.\n *\n *     app.get('/user/:uid/photos/:file', function(req, res){\n *       var uid = req.params.uid\n *         , file = req.params.file;\n *\n *       req.user.mayViewFilesFrom(uid, function(yes){\n *         if (yes) {\n *           res.sendFile('/uploads/' + uid + '/' + file);\n *         } else {\n *           res.send(403, 'Sorry! you cant see that.');\n *         }\n *       });\n *     });\n *\n * @public\n */\n\nres.sendFile = function sendFile(path, options, callback) {\n  var done = callback;\n  var req = this.req;\n  var res = this;\n  var next = req.next;\n  var opts = options || {};\n\n  if (!path) {\n    throw new TypeError('path argument is required to res.sendFile');\n  }\n\n  if (typeof path !== 'string') {\n    throw new TypeError('path must be a string to res.sendFile')\n  }\n\n  // support function as second arg\n  if (typeof options === 'function') {\n    done = options;\n    opts = {};\n  }\n\n  if (!opts.root && !pathIsAbsolute(path)) {\n    throw new TypeError('path must be absolute or specify root to res.sendFile');\n  }\n\n  // create file stream\n  var pathname = encodeURI(path);\n\n  // wire application etag option to send\n  opts.etag = this.app.enabled('etag');\n  var file = send(req, pathname, opts);\n\n  // transfer\n  sendfile(res, file, opts, function (err) {\n    if (done) return done(err);\n    if (err && err.code === 'EISDIR') return next();\n\n    // next() all but write errors\n    if (err && err.code !== 'ECONNABORTED' && err.syscall !== 'write') {\n      next(err);\n    }\n  });\n};\n\n/**\n * Transfer the file at the given `path` as an attachment.\n *\n * Optionally providing an alternate attachment `filename`,\n * and optional callback `callback(err)`. The callback is invoked\n * when the data transfer is complete, or when an error has\n * occurred. Be sure to check `res.headersSent` if you plan to respond.\n *\n * Optionally providing an `options` object to use with `res.sendFile()`.\n * This function will set the `Content-Disposition` header, overriding\n * any `Content-Disposition` header passed as header options in order\n * to set the attachment and filename.\n *\n * This method uses `res.sendFile()`.\n *\n * @public\n */\n\nres.download = function download (path, filename, options, callback) {\n  var done = callback;\n  var name = filename;\n  var opts = options || null\n\n  // support function as second or third arg\n  if (typeof filename === 'function') {\n    done = filename;\n    name = null;\n    opts = null\n  } else if (typeof options === 'function') {\n    done = options\n    opts = null\n  }\n\n  // support optional filename, where options may be in it's place\n  if (typeof filename === 'object' &&\n    (typeof options === 'function' || options === undefined)) {\n    name = null\n    opts = filename\n  }\n\n  // set Content-Disposition when file is sent\n  var headers = {\n    'Content-Disposition': contentDisposition.create(basename(name || path))\n  };\n\n  // merge user-provided headers\n  if (opts && opts.headers) {\n    var keys = Object.keys(opts.headers)\n    for (var i = 0; i < keys.length; i++) {\n      var key = keys[i]\n      if (key.toLowerCase() !== 'content-disposition') {\n        headers[key] = opts.headers[key]\n      }\n    }\n  }\n\n  // merge user-provided options\n  opts = Object.create(opts)\n  opts.headers = headers\n\n  // Resolve the full path for sendFile\n  var fullPath = !opts.root\n    ? resolve(path)\n    : path\n\n  // send file\n  return this.sendFile(fullPath, opts, done)\n};\n\n/**\n * Set _Content-Type_ response header with `type` through `mime.contentType()`\n * when it does not contain \"/\", or set the Content-Type to `type` otherwise.\n * When no mapping is found though `mime.contentType()`, the type is set to\n * \"application/octet-stream\".\n *\n * Examples:\n *\n *     res.type('.html');\n *     res.type('html');\n *     res.type('json');\n *     res.type('application/json');\n *     res.type('png');\n *\n * @param {String} type\n * @return {ServerResponse} for chaining\n * @public\n */\n\nres.contentType =\nres.type = function contentType(type) {\n  var ct = type.indexOf('/') === -1\n    ? (mime.contentType(type) || 'application/octet-stream')\n    : type;\n\n  return this.set('Content-Type', ct);\n};\n\n/**\n * Respond to the Acceptable formats using an `obj`\n * of mime-type callbacks.\n *\n * This method uses `req.accepted`, an array of\n * acceptable types ordered by their quality values.\n * When \"Accept\" is not present the _first_ callback\n * is invoked, otherwise the first match is used. When\n * no match is performed the server responds with\n * 406 \"Not Acceptable\".\n *\n * Content-Type is set for you, however if you choose\n * you may alter this within the callback using `res.type()`\n * or `res.set('Content-Type', ...)`.\n *\n *    res.format({\n *      'text/plain': function(){\n *        res.send('hey');\n *      },\n *\n *      'text/html': function(){\n *        res.send('<p>hey</p>');\n *      },\n *\n *      'application/json': function () {\n *        res.send({ message: 'hey' });\n *      }\n *    });\n *\n * In addition to canonicalized MIME types you may\n * also use extnames mapped to these types:\n *\n *    res.format({\n *      text: function(){\n *        res.send('hey');\n *      },\n *\n *      html: function(){\n *        res.send('<p>hey</p>');\n *      },\n *\n *      json: function(){\n *        res.send({ message: 'hey' });\n *      }\n *    });\n *\n * By default Express passes an `Error`\n * with a `.status` of 406 to `next(err)`\n * if a match is not made. If you provide\n * a `.default` callback it will be invoked\n * instead.\n *\n * @param {Object} obj\n * @return {ServerResponse} for chaining\n * @public\n */\n\nres.format = function(obj){\n  var req = this.req;\n  var next = req.next;\n\n  var keys = Object.keys(obj)\n    .filter(function (v) { return v !== 'default' })\n\n  var key = keys.length > 0\n    ? req.accepts(keys)\n    : false;\n\n  this.vary(\"Accept\");\n\n  if (key) {\n    this.set('Content-Type', normalizeType(key).value);\n    obj[key](req, this, next);\n  } else if (obj.default) {\n    obj.default(req, this, next)\n  } else {\n    next(createError(406, {\n      types: normalizeTypes(keys).map(function (o) { return o.value })\n    }))\n  }\n\n  return this;\n};\n\n/**\n * Set _Content-Disposition_ header to _attachment_ with optional `filename`.\n *\n * @param {String} filename\n * @return {ServerResponse}\n * @public\n */\n\nres.attachment = function attachment(filename) {\n  const name = filename !== undefined ? basename(filename) : undefined;\n  if (name) {\n    this.type(extname(name));\n  }\n\n  this.set('Content-Disposition', contentDisposition.create(name));\n\n  return this;\n};\n\n/**\n * Append additional header `field` with value `val`.\n *\n * Example:\n *\n *    res.append('Link', ['<http://localhost/>', '<http://localhost:3000/>']);\n *    res.append('Set-Cookie', 'foo=bar; Path=/; HttpOnly');\n *    res.append('Warning', '199 Miscellaneous warning');\n *\n * @param {String} field\n * @param {String|Array} val\n * @return {ServerResponse} for chaining\n * @public\n */\n\nres.append = function append(field, val) {\n  var prev = this.get(field);\n  var value = val;\n\n  if (prev) {\n    // concat the new and prev vals\n    value = Array.isArray(prev) ? prev.concat(val)\n      : Array.isArray(val) ? [prev].concat(val)\n        : [prev, val]\n  }\n\n  return this.set(field, value);\n};\n\n/**\n * Set header `field` to `val`, or pass\n * an object of header fields.\n *\n * Examples:\n *\n *    res.set('Foo', ['bar', 'baz']);\n *    res.set('Accept', 'application/json');\n *    res.set({ Accept: 'text/plain', 'X-API-Key': 'tobi' });\n *\n * Aliased as `res.header()`.\n *\n * When the set header is \"Content-Type\", the type is expanded to include\n * the charset if not present using `mime.contentType()`.\n *\n * @param {String|Object} field\n * @param {String|Array} val\n * @return {ServerResponse} for chaining\n * @public\n */\n\nres.set =\nres.header = function header(field, val) {\n  if (arguments.length === 2) {\n    var value = Array.isArray(val)\n      ? val.map(String)\n      : String(val);\n\n    // add charset to content-type\n    if (field.toLowerCase() === 'content-type') {\n      if (Array.isArray(value)) {\n        throw new TypeError('Content-Type cannot be set to an Array');\n      }\n      value = mime.contentType(value)\n    }\n\n    this.setHeader(field, value);\n  } else {\n    for (var key in field) {\n      this.set(key, field[key]);\n    }\n  }\n  return this;\n};\n\n/**\n * Get value for header `field`.\n *\n * @param {String} field\n * @return {String}\n * @public\n */\n\nres.get = function(field){\n  return this.getHeader(field);\n};\n\n/**\n * Clear cookie `name`.\n *\n * @param {String} name\n * @param {Object} [options]\n * @return {ServerResponse} for chaining\n * @public\n */\n\nres.clearCookie = function clearCookie(name, options) {\n  // Force cookie expiration by setting expires to the past\n  const opts = { path: '/', ...options, expires: new Date(1)};\n  // ensure maxAge is not passed\n  delete opts.maxAge\n\n  return this.cookie(name, '', opts);\n};\n\n/**\n * Set cookie `name` to `value`, with the given `options`.\n *\n * Options:\n *\n *    - `maxAge`   max-age in milliseconds, converted to `expires`\n *    - `signed`   sign the cookie\n *    - `path`     defaults to \"/\"\n *\n * Examples:\n *\n *    // \"Remember Me\" for 15 minutes\n *    res.cookie('rememberme', '1', { expires: new Date(Date.now() + 900000), httpOnly: true });\n *\n *    // same as above\n *    res.cookie('rememberme', '1', { maxAge: 900000, httpOnly: true })\n *\n * @param {String} name\n * @param {String|Object} value\n * @param {Object} [options]\n * @return {ServerResponse} for chaining\n * @public\n */\n\nres.cookie = function (name, value, options) {\n  var opts = { ...options };\n  var secret = this.req.secret;\n  var signed = opts.signed;\n\n  if (signed && !secret) {\n    throw new Error('cookieParser(\"secret\") required for signed cookies');\n  }\n\n  var val = typeof value === 'object'\n    ? 'j:' + JSON.stringify(value)\n    : String(value);\n\n  if (signed) {\n    val = 's:' + sign(val, secret);\n  }\n\n  if (opts.maxAge != null) {\n    var maxAge = opts.maxAge - 0\n\n    if (!isNaN(maxAge)) {\n      opts.expires = new Date(Date.now() + maxAge)\n      opts.maxAge = Math.floor(maxAge / 1000)\n    }\n  }\n\n  if (opts.path == null) {\n    opts.path = '/';\n  }\n\n  this.append('Set-Cookie', cookie.serialize(name, String(val), opts));\n\n  return this;\n};\n\n/**\n * Set the location header to `url`.\n *\n * The given `url` can also be \"back\", which redirects\n * to the _Referrer_ or _Referer_ headers or \"/\".\n *\n * Examples:\n *\n *    res.location('/foo/bar').;\n *    res.location('http://example.com');\n *    res.location('../login');\n *\n * @param {String} url\n * @return {ServerResponse} for chaining\n * @public\n */\n\nres.location = function location(url) {\n  return this.set('Location', encodeUrl(url));\n};\n\n/**\n * Redirect to the given `url` with optional response `status`\n * defaulting to 302.\n *\n * Examples:\n *\n *    res.redirect('/foo/bar');\n *    res.redirect('http://example.com');\n *    res.redirect(301, 'http://example.com');\n *    res.redirect('../login'); // /blog/post/1 -> /blog/login\n *\n * @public\n */\n\nres.redirect = function redirect(url) {\n  var address = url;\n  var body;\n  var status = 302;\n\n  // allow status / url\n  if (arguments.length === 2) {\n    status = arguments[0]\n    address = arguments[1]\n  }\n\n  if (!address) {\n    deprecate('Provide a url argument');\n  }\n\n  if (typeof address !== 'string') {\n    deprecate('Url must be a string');\n  }\n\n  if (typeof status !== 'number') {\n    deprecate('Status must be a number');\n  }\n\n  // Set location header\n  address = this.location(address).get('Location');\n\n  // Support text/{plain,html} by default\n  this.format({\n    text: function(){\n      body = statuses.message[status] + '. Redirecting to ' + address\n    },\n\n    html: function(){\n      var u = escapeHtml(address);\n      body = '<!DOCTYPE html><head><title>' + statuses.message[status] + '</title></head>'\n       + '<body><p>' + statuses.message[status] + '. Redirecting to ' + u + '</p></body>'\n    },\n\n    default: function(){\n      body = '';\n    }\n  });\n\n  // Respond\n  this.status(status);\n  this.set('Content-Length', Buffer.byteLength(body));\n\n  if (this.req.method === 'HEAD') {\n    this.end();\n  } else {\n    this.end(body);\n  }\n};\n\n/**\n * Add `field` to Vary. If already present in the Vary set, then\n * this call is simply ignored.\n *\n * @param {Array|String} field\n * @return {ServerResponse} for chaining\n * @public\n */\n\nres.vary = function(field){\n  vary(this, field);\n\n  return this;\n};\n\n/**\n * Render `view` with the given `options` and optional callback `fn`.\n * When a callback function is given a response will _not_ be made\n * automatically, otherwise a response of _200_ and _text/html_ is given.\n *\n * Options:\n *\n *  - `cache`     boolean hinting to the engine it should cache\n *  - `filename`  filename of the view being rendered\n *\n * @public\n */\n\nres.render = function render(view, options, callback) {\n  var app = this.req.app;\n  var done = callback;\n  var opts = options || {};\n  var req = this.req;\n  var self = this;\n\n  // support callback function as second arg\n  if (typeof options === 'function') {\n    done = options;\n    opts = {};\n  }\n\n  // merge res.locals\n  opts._locals = self.locals;\n\n  // default callback to respond\n  done = done || function (err, str) {\n    if (err) return req.next(err);\n    self.send(str);\n  };\n\n  // render\n  app.render(view, opts, done);\n};\n\n// pipe the send file stream\nfunction sendfile(res, file, options, callback) {\n  var done = false;\n  var streaming;\n\n  // request aborted\n  function onaborted() {\n    if (done) return;\n    done = true;\n\n    var err = new Error('Request aborted');\n    err.code = 'ECONNABORTED';\n    callback(err);\n  }\n\n  // directory\n  function ondirectory() {\n    if (done) return;\n    done = true;\n\n    var err = new Error('EISDIR, read');\n    err.code = 'EISDIR';\n    callback(err);\n  }\n\n  // errors\n  function onerror(err) {\n    if (done) return;\n    done = true;\n    callback(err);\n  }\n\n  // ended\n  function onend() {\n    if (done) return;\n    done = true;\n    callback();\n  }\n\n  // file\n  function onfile() {\n    streaming = false;\n  }\n\n  // finished\n  function onfinish(err) {\n    if (err && err.code === 'ECONNRESET') return onaborted();\n    if (err) return onerror(err);\n    if (done) return;\n\n    setImmediate(function () {\n      if (streaming !== false && !done) {\n        onaborted();\n        return;\n      }\n\n      if (done) return;\n      done = true;\n      callback();\n    });\n  }\n\n  // streaming\n  function onstream() {\n    streaming = true;\n  }\n\n  file.on('directory', ondirectory);\n  file.on('end', onend);\n  file.on('error', onerror);\n  file.on('file', onfile);\n  file.on('stream', onstream);\n  onFinished(res, onfinish);\n\n  if (options.headers) {\n    // set headers on successful transfer\n    file.on('headers', function headers(res) {\n      var obj = options.headers;\n      var keys = Object.keys(obj);\n\n      for (var i = 0; i < keys.length; i++) {\n        var k = keys[i];\n        res.setHeader(k, obj[k]);\n      }\n    });\n  }\n\n  // pipe\n  file.pipe(res);\n}\n\n/**\n * Stringify JSON, like JSON.stringify, but v8 optimized, with the\n * ability to escape characters that can trigger HTML sniffing.\n *\n * @param {*} value\n * @param {function} replacer\n * @param {number} spaces\n * @param {boolean} escape\n * @returns {string}\n * @private\n */\n\nfunction stringify (value, replacer, spaces, escape) {\n  // v8 checks arguments.length for optimizing simple call\n  // https://bugs.chromium.org/p/v8/issues/detail?id=4730\n  var json = replacer || spaces\n    ? JSON.stringify(value, replacer, spaces)\n    : JSON.stringify(value);\n\n  if (escape && typeof json === 'string') {\n    json = json.replace(/[<>&]/g, function (c) {\n      switch (c.charCodeAt(0)) {\n        case 0x3c:\n          return '\\\\u003c'\n        case 0x3e:\n          return '\\\\u003e'\n        case 0x26:\n          return '\\\\u0026'\n        /* istanbul ignore next: unreachable default */\n        default:\n          return c\n      }\n    })\n  }\n\n  return json\n}\n",
+    "truncated": false,
+    "evidenceRefs": [
+      "evidence:8d3c580dba03337c73e11df1"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:8d3c580dba03337c73e11df1"
+      ]
+    }
+  },
+  {
+    "locator": "path:test/app.request.js",
+    "text": "'use strict'\n\nvar after = require('after')\nvar express = require('../')\n  , request = require('supertest');\n\ndescribe('app', function(){\n  describe('.request', function(){\n    it('should extend the request prototype', function(done){\n      var app = express();\n\n      app.request.querystring = function(){\n        return require('node:url').parse(this.url).query;\n      };\n\n      app.use(function(req, res){\n        res.end(req.querystring());\n      });\n\n      request(app)\n      .get('/foo?name=tobi')\n      .expect('name=tobi', done);\n    })\n\n    it('should only extend for the referenced app', function (done) {\n      var app1 = express()\n      var app2 = express()\n      var cb = after(2, done)\n\n      app1.request.foobar = function () {\n        return 'tobi'\n      }\n\n      app1.get('/', function (req, res) {\n        res.send(req.foobar())\n      })\n\n      app2.get('/', function (req, res) {\n        res.send(req.foobar())\n      })\n\n      request(app1)\n        .get('/')\n        .expect(200, 'tobi', cb)\n\n      request(app2)\n        .get('/')\n        .expect(500, /(?:not a function|has no method)/, cb)\n    })\n\n    it('should inherit to sub apps', function (done) {\n      var app1 = express()\n      var app2 = express()\n      var cb = after(2, done)\n\n      app1.request.foobar = function () {\n        return 'tobi'\n      }\n\n      app1.use('/sub', app2)\n\n      app1.get('/', function (req, res) {\n        res.send(req.foobar())\n      })\n\n      app2.get('/', function (req, res) {\n        res.send(req.foobar())\n      })\n\n      request(app1)\n        .get('/')\n        .expect(200, 'tobi', cb)\n\n      request(app1)\n        .get('/sub')\n        .expect(200, 'tobi', cb)\n    })\n\n    it('should allow sub app to override', function (done) {\n      var app1 = express()\n      var app2 = express()\n      var cb = after(2, done)\n\n      app1.request.foobar = function () {\n        return 'tobi'\n      }\n\n      app2.request.foobar = function () {\n        return 'loki'\n      }\n\n      app1.use('/sub', app2)\n\n      app1.get('/', function (req, res) {\n        res.send(req.foobar())\n      })\n\n      app2.get('/', function (req, res) {\n        res.send(req.foobar())\n      })\n\n      request(app1)\n        .get('/')\n        .expect(200, 'tobi', cb)\n\n      request(app1)\n        .get('/sub')\n        .expect(200, 'loki', cb)\n    })\n\n    it('should not pollute parent app', function (done) {\n      var app1 = express()\n      var app2 = express()\n      var cb = after(2, done)\n\n      app1.request.foobar = function () {\n        return 'tobi'\n      }\n\n      app2.request.foobar = function () {\n        return 'loki'\n      }\n\n      app1.use('/sub', app2)\n\n      app1.get('/sub/foo', function (req, res) {\n        res.send(req.foobar())\n      })\n\n      app2.get('/', function (req, res) {\n        res.send(req.foobar())\n      })\n\n      request(app1)\n        .get('/sub')\n        .expect(200, 'loki', cb)\n\n      request(app1)\n        .get('/sub/foo')\n        .expect(200, 'tobi', cb)\n    })\n  })\n})\n",
+    "truncated": false,
+    "evidenceRefs": [
+      "evidence:aa68bc30a10081c6a008a235"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:aa68bc30a10081c6a008a235"
+      ]
+    }
+  },
+  {
+    "locator": "path:test/app.response.js",
+    "text": "'use strict'\n\nvar after = require('after')\nvar express = require('../')\n  , request = require('supertest');\n\ndescribe('app', function(){\n  describe('.response', function(){\n    it('should extend the response prototype', function(done){\n      var app = express();\n\n      app.response.shout = function(str){\n        this.send(str.toUpperCase());\n      };\n\n      app.use(function(req, res){\n        res.shout('hey');\n      });\n\n      request(app)\n      .get('/')\n      .expect('HEY', done);\n    })\n\n    it('should only extend for the referenced app', function (done) {\n      var app1 = express()\n      var app2 = express()\n      var cb = after(2, done)\n\n      app1.response.shout = function (str) {\n        this.send(str.toUpperCase())\n      }\n\n      app1.get('/', function (req, res) {\n        res.shout('foo')\n      })\n\n      app2.get('/', function (req, res) {\n        res.shout('foo')\n      })\n\n      request(app1)\n        .get('/')\n        .expect(200, 'FOO', cb)\n\n      request(app2)\n        .get('/')\n        .expect(500, /(?:not a function|has no method)/, cb)\n    })\n\n    it('should inherit to sub apps', function (done) {\n      var app1 = express()\n      var app2 = express()\n      var cb = after(2, done)\n\n      app1.response.shout = function (str) {\n        this.send(str.toUpperCase())\n      }\n\n      app1.use('/sub', app2)\n\n      app1.get('/', function (req, res) {\n        res.shout('foo')\n      })\n\n      app2.get('/', function (req, res) {\n        res.shout('foo')\n      })\n\n      request(app1)\n        .get('/')\n        .expect(200, 'FOO', cb)\n\n      request(app1)\n        .get('/sub')\n        .expect(200, 'FOO', cb)\n    })\n\n    it('should allow sub app to override', function (done) {\n      var app1 = express()\n      var app2 = express()\n      var cb = after(2, done)\n\n      app1.response.shout = function (str) {\n        this.send(str.toUpperCase())\n      }\n\n      app2.response.shout = function (str) {\n        this.send(str + '!')\n      }\n\n      app1.use('/sub', app2)\n\n      app1.get('/', function (req, res) {\n        res.shout('foo')\n      })\n\n      app2.get('/', function (req, res) {\n        res.shout('foo')\n      })\n\n      request(app1)\n        .get('/')\n        .expect(200, 'FOO', cb)\n\n      request(app1)\n        .get('/sub')\n        .expect(200, 'foo!', cb)\n    })\n\n    it('should not pollute parent app', function (done) {\n      var app1 = express()\n      var app2 = express()\n      var cb = after(2, done)\n\n      app1.response.shout = function (str) {\n        this.send(str.toUpperCase())\n      }\n\n      app2.response.shout = function (str) {\n        this.send(str + '!')\n      }\n\n      app1.use('/sub', app2)\n\n      app1.get('/sub/foo', function (req, res) {\n        res.shout('foo')\n      })\n\n      app2.get('/', function (req, res) {\n        res.shout('foo')\n      })\n\n      request(app1)\n        .get('/sub')\n        .expect(200, 'foo!', cb)\n\n      request(app1)\n        .get('/sub/foo')\n        .expect(200, 'FOO', cb)\n    })\n  })\n})\n",
+    "truncated": false,
+    "evidenceRefs": [
+      "evidence:e53c4884a5954d10f7b81cca"
+    ],
+    "epistemic": {
+      "state": "known",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:e53c4884a5954d10f7b81cca"
+      ]
+    }
+  }
+]
+
+Current planner canonical evidence array:
+[
+  {
+    "id": "evidence:b30c5ad77e7af10f9691159b",
+    "kind": "path",
+    "reference": "Readme.md",
+    "observation": "Exact Git blob at path:Readme.md; complete within the registered byte budget.",
+    "confidence": 1
+  },
+  {
+    "id": "evidence:2599eac21baefa30524e840c",
+    "kind": "path",
+    "reference": "lib/application.js",
+    "observation": "Exact Git blob at path:lib/application.js; complete within the registered byte budget.",
+    "confidence": 1
+  },
+  {
+    "id": "evidence:6add29297526f5c63db130d2",
+    "kind": "path",
+    "reference": "lib/express.js",
+    "observation": "Exact Git blob at path:lib/express.js; complete within the registered byte budget.",
+    "confidence": 1
+  },
+  {
+    "id": "evidence:e4446bfc9d8f24801da665ae",
+    "kind": "path",
+    "reference": "lib/request.js",
+    "observation": "Exact Git blob at path:lib/request.js; complete within the registered byte budget.",
+    "confidence": 1
+  },
+  {
+    "id": "evidence:8d3c580dba03337c73e11df1",
+    "kind": "path",
+    "reference": "lib/response.js",
+    "observation": "Exact Git blob at path:lib/response.js; complete within the registered byte budget.",
+    "confidence": 1
+  },
+  {
+    "id": "evidence:aa68bc30a10081c6a008a235",
+    "kind": "path",
+    "reference": "test/app.request.js",
+    "observation": "Exact Git blob at path:test/app.request.js; complete within the registered byte budget.",
+    "confidence": 1
+  },
+  {
+    "id": "evidence:e53c4884a5954d10f7b81cca",
+    "kind": "path",
+    "reference": "test/app.response.js",
+    "observation": "Exact Git blob at path:test/app.response.js; complete within the registered byte budget.",
+    "confidence": 1
+  }
+]
