@@ -22,34 +22,19 @@ import {
   type CommandReceipt,
   type RunCommandEnvelope,
   type RunEvent,
-  type RunEventInput
+  type RunEventInput,
+  type RunProjection
 } from "@manyhands/run-coordinator";
+import { foldRun } from "@manyhands/run-coordinator";
 import type { EffectInputStorePort } from "./effect-dispatcher.js";
 
-export type RunActorJournalEvent = Extract<
-  RunEvent,
-  {
-    type:
-      | "command.accepted"
-      | "effect.requested"
-      | "effect.observed"
-      | "effect.completed"
-      | "effect.failed"
-      | "effect.interrupted"
-  }
->;
-export type RunActorJournalInput = Extract<
-  RunEventInput,
-  {
-    type:
-      | "command.accepted"
-      | "effect.requested"
-      | "effect.observed"
-      | "effect.completed"
-      | "effect.failed"
-      | "effect.interrupted"
-  }
->;
+/**
+ * Stage 2 limited the actor adapter to protocol facts while the web process
+ * still wrote lifecycle events. Stage 3 removes that second writer: the
+ * actor's fenced journal accepts the complete canonical domain vocabulary.
+ */
+export type RunActorJournalEvent = RunEvent;
+export type RunActorJournalInput = RunEventInput;
 
 export interface RunActorJournalPort {
   load(runId: string): Promise<RunEvent[]>;
@@ -70,12 +55,41 @@ export interface RunActorDispatcherPort {
 export interface RunActorDecisionContext {
   runId: string;
   daemonEpoch: string;
+  currentRevision: number;
   acceptedRevision: number;
+  events: readonly RunEvent[];
+  projection?: RunProjection;
 }
 
 export interface RunActorEffectRequest {
   readonly intent: EffectIntent;
   readonly inputSpec: EffectInputSpec;
+}
+
+export interface RunActorDecision {
+  /** Only `create_run` may place one `run.created` fact before its receipt. */
+  readonly eventsBeforeAcceptance?: readonly RunEventInput[];
+  readonly eventsAfterAcceptance?: readonly RunEventInput[];
+  readonly effects: readonly RunActorEffectRequest[];
+}
+
+export interface RunActorTerminalObservation {
+  readonly intent: Readonly<EffectIntent>;
+  readonly receipts: readonly Readonly<PhysicalEffectReceipt>[];
+  readonly terminal: Readonly<RunEventInput>;
+}
+
+export interface RunActorReactionContext {
+  readonly runId: string;
+  readonly daemonEpoch: string;
+  readonly currentRevision: number;
+  readonly events: readonly RunEvent[];
+  readonly projection: RunProjection;
+}
+
+export interface RunActorReaction {
+  readonly domainEvents: readonly RunEventInput[];
+  readonly effects: readonly RunActorEffectRequest[];
 }
 
 export interface RunActorOptions {
@@ -87,7 +101,13 @@ export interface RunActorOptions {
   decide(
     command: RunCommandEnvelope,
     context: RunActorDecisionContext
-  ): Promise<readonly RunActorEffectRequest[]> | readonly RunActorEffectRequest[];
+  ): Promise<readonly RunActorEffectRequest[] | RunActorDecision>
+    | readonly RunActorEffectRequest[]
+    | RunActorDecision;
+  react?(
+    observation: RunActorTerminalObservation,
+    context: RunActorReactionContext
+  ): Promise<RunActorReaction> | RunActorReaction;
   hasher: DigestHasher;
   clock(): string;
 }
@@ -153,8 +173,26 @@ export class RunActor {
       );
     }
 
-    const acceptedRevision = currentRevision + 1;
+    const currentProjection = events.length === 0 ? undefined : foldRun(events);
     const acceptedAt = this.options.clock();
+    const anticipatedAcceptedRevision = currentRevision
+      + (events.length === 0 && envelope.command.type === "create_run" ? 2 : 1);
+    const rawDecision = await this.options.decide(envelope, {
+      runId: this.options.runId,
+      daemonEpoch: this.options.daemonEpoch,
+      currentRevision,
+      acceptedRevision: anticipatedAcceptedRevision,
+      events: structuredClone(events),
+      ...(currentProjection === undefined ? {} : { projection: currentProjection })
+    });
+    const decision = normalizeDecision(rawDecision);
+    const before = [...(decision.eventsBeforeAcceptance ?? [])];
+    assertBootstrapEvents(events, envelope, before);
+    assertDomainEvents(decision.eventsAfterAcceptance ?? [], "command decision");
+    const acceptedRevision = currentRevision + before.length + 1;
+    if (acceptedRevision !== anticipatedAcceptedRevision) {
+      throw new Error("Command decision produced an impossible acceptance revision.");
+    }
     const receipt = buildCommandReceipt({
       schemaVersion: 1,
       commandId: envelope.commandId,
@@ -164,12 +202,7 @@ export class RunActor {
       daemonEpoch: this.options.daemonEpoch,
       acceptedAt
     }, this.options.hasher);
-    const requests = await this.options.decide(envelope, {
-      runId: this.options.runId,
-      daemonEpoch: this.options.daemonEpoch,
-      acceptedRevision
-    });
-    const prepared = requests.map((request) => this.prepareEffectRequest(request));
+    const prepared = decision.effects.map((request) => this.prepareEffectRequest(request));
     for (const request of prepared) {
       const published = await this.options.inputStore.put(structuredClone(request.effectInput.spec));
       this.assertPublishedEffectInput(published, request.effectInput, request.intent);
@@ -177,12 +210,14 @@ export class RunActor {
     const intents = prepared.map((request) => request.intent);
 
     const journalInputs: RunActorJournalInput[] = [
+      ...before,
       {
         eventId: computeCanonicalDigest({ type: "command.accepted", receiptId: receipt.receiptId }, this.options.hasher),
         occurredAt: acceptedAt,
         type: "command.accepted",
-        payload: { receipt }
+        payload: { receipt, command: envelope }
       },
+      ...(decision.eventsAfterAcceptance ?? []),
       ...intents.map((intent): RunActorJournalInput => ({
         eventId: computeCanonicalDigest({ type: "effect.requested", effectId: intent.effectId }, this.options.hasher),
         occurredAt: intent.requestedAt,
@@ -190,6 +225,7 @@ export class RunActor {
         payload: { intent }
       }))
     ];
+    assertApplicationBatch(events, journalInputs, this.options.runId);
     const appended = await this.options.journal.appendAndFlush({
       runId: this.options.runId,
       expectedRevision: currentRevision,
@@ -362,7 +398,30 @@ export class RunActor {
       payload: { receipt }
     }));
     if (terminalInput !== undefined) inputs.push(terminalInput);
+    const reaction = terminalInput === undefined || this.options.react === undefined
+      ? undefined
+      : await this.options.react({
+        intent: structuredClone(intent),
+        receipts: [...boundReceipts.values()].map((receipt) => structuredClone(receipt)),
+        terminal: structuredClone(terminalInput)
+      }, reactionContext(current, inputs, this.options.runId, this.options.daemonEpoch));
+    if (reaction !== undefined) {
+      assertDomainEvents(reaction.domainEvents, "effect reaction");
+      const prepared = reaction.effects.map((request) => this.prepareEffectRequest(request));
+      for (const request of prepared) {
+        const published = await this.options.inputStore.put(structuredClone(request.effectInput.spec));
+        this.assertPublishedEffectInput(published, request.effectInput, request.intent);
+      }
+      inputs.push(...reaction.domainEvents);
+      inputs.push(...prepared.map(({ intent: nextIntent }): RunActorJournalInput => ({
+        eventId: computeCanonicalDigest({ type: "effect.requested", effectId: nextIntent.effectId }, this.options.hasher),
+        occurredAt: nextIntent.requestedAt,
+        type: "effect.requested",
+        payload: { intent: nextIntent }
+      })));
+    }
     if (inputs.length === 0) return;
+    assertApplicationBatch(current, inputs, this.options.runId);
     const appended = await this.options.journal.appendAndFlush({
       runId: this.options.runId,
       expectedRevision: revision,
@@ -371,6 +430,9 @@ export class RunActor {
     });
     if (appended.length !== inputs.length || journalRevision(appended) !== revision + inputs.length) {
       throw new Error("Journal returned an impossible revision after recording physical observations and actor outcome.");
+    }
+    if (reaction !== undefined) {
+      for (const request of reaction.effects) this.startEffect(request.intent, "observe");
     }
   }
 
@@ -431,6 +493,81 @@ function parseEnvelope(input: unknown, hasher: DigestHasher): RunCommandEnvelope
   const validation = validateRunCommandEnvelopeIdentity(envelope, hasher);
   if (!validation.ok) throw new Error(`Command ${envelope.commandId} has invalid canonical identity.`);
   return envelope;
+}
+
+function normalizeDecision(
+  input: readonly RunActorEffectRequest[] | RunActorDecision
+): RunActorDecision {
+  return Array.isArray(input)
+    ? { effects: input }
+    : input as RunActorDecision;
+}
+
+function assertBootstrapEvents(
+  current: readonly RunEvent[],
+  envelope: RunCommandEnvelope,
+  before: readonly RunEventInput[]
+): void {
+  if (current.length > 0) {
+    if (before.length > 0) throw new Error("Only an empty run journal may contain events before command acceptance.");
+    return;
+  }
+  if (envelope.command.type !== "create_run") {
+    throw new Error(`The first command for run ${envelope.runId} must be create_run.`);
+  }
+  if (before.length !== 1 || before[0]?.type !== "run.created") {
+    throw new Error("create_run must bootstrap exactly one run.created event before command acceptance.");
+  }
+}
+
+function assertDomainEvents(events: readonly RunEventInput[], label: string): void {
+  for (const event of events) {
+    if (
+      event.type === "run.created"
+      || event.type === "command.accepted"
+      || event.type === "effect.requested"
+      || event.type === "effect.observed"
+      || event.type === "effect.completed"
+      || event.type === "effect.failed"
+      || event.type === "effect.interrupted"
+    ) {
+      throw new Error(`${label} cannot forge actor protocol event ${event.type}.`);
+    }
+  }
+}
+
+function assertApplicationBatch(
+  current: readonly RunEvent[],
+  inputs: readonly RunEventInput[],
+  runId: string
+): RunProjection {
+  const provisional = inputs.map((input, index): RunEvent => ({
+    ...structuredClone(input),
+    runId,
+    sequence: current.length + index + 1
+  }) as RunEvent);
+  return foldRun([...current, ...provisional]);
+}
+
+function reactionContext(
+  current: readonly RunEvent[],
+  terminalInputs: readonly RunEventInput[],
+  runId: string,
+  daemonEpoch: string
+): RunActorReactionContext {
+  const projection = assertApplicationBatch(current, terminalInputs, runId);
+  const events = terminalInputs.map((input, index): RunEvent => ({
+    ...structuredClone(input),
+    runId,
+    sequence: current.length + index + 1
+  }) as RunEvent);
+  return {
+    runId,
+    daemonEpoch,
+    currentRevision: projection.sequence,
+    events: [...structuredClone(current), ...events],
+    projection
+  };
 }
 
 function commandReceipt(

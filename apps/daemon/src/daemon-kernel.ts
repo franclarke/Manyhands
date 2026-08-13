@@ -41,6 +41,7 @@ export interface StartDaemonKernelOptions {
   hasher: DigestHasher;
   adapters: readonly PhysicalEffectAdapter[];
   decide: RunActorOptions["decide"];
+  react?: RunActorOptions["react"];
   clock(): string;
   startupRecoveryRunLimit?: number;
   production?: boolean;
@@ -60,6 +61,7 @@ export interface DaemonKernel {
   readonly transportSecurity: LocalIpcTransportSecurity;
   readonly eventStore: JsonlRunEventStore;
   readonly engine: DurableRunEngine;
+  drainEffects(): Promise<void>;
   close(): Promise<void>;
 }
 
@@ -125,6 +127,7 @@ export async function startDaemonKernel(
           dispatcher,
           inputStore,
           decide: options.decide,
+          ...(options.react === undefined ? {} : { react: options.react }),
           hasher: options.hasher,
           clock: options.clock
         });
@@ -156,10 +159,16 @@ export async function startDaemonKernel(
           return asIpcJson(await engine.submit(command));
         },
         async query(input) {
-          if (input.query !== "projection" || input.arguments !== undefined) {
-            throw new Error(`Unsupported daemon query ${input.query}.`);
+          if (input.query === "projection" && input.arguments === undefined) {
+            return asIpcJson(await engine.query(input.runId));
           }
-          return asIpcJson(await engine.query(input.runId));
+          if (input.query === "list") {
+            if (input.runId !== "installation:runs") {
+              throw new Error("The list query must use the installation:runs scope.");
+            }
+            return asIpcJson(await listRunProjections(eventStore, engine, input.arguments));
+          }
+          throw new Error(`Unsupported daemon query ${input.query}.`);
         },
         async eventsReady(input) {
           return asIpcJson(await engine.eventsReady(input.runId, input.afterSequence));
@@ -206,6 +215,16 @@ function createKernelHandle(input: {
     transportSecurity: input.server.transportSecurity,
     eventStore: input.eventStore,
     engine: input.engine,
+    async drainEffects(): Promise<void> {
+      const drained = await Promise.allSettled(
+        [...input.actors].map((actor) => actor.drainEffects())
+      );
+      const failures = drained
+        .filter((result): result is PromiseRejectedResult => result.status === "rejected")
+        .map((result) => result.reason);
+      if (failures.length === 1) throw failures[0];
+      if (failures.length > 1) throw new AggregateError(failures, "Daemon effects failed.");
+    },
     async close(): Promise<void> {
       if (closed) return;
       closed = true;
@@ -230,6 +249,70 @@ function createKernelHandle(input: {
       if (failures.length > 1) throw new AggregateError(failures, "Daemon shutdown failed.");
     }
   });
+}
+
+async function listRunProjections(
+  eventStore: JsonlRunEventStore,
+  engine: DurableRunEngine,
+  argumentsValue: IpcJsonValue | undefined
+): Promise<IpcJsonValue> {
+  const argumentsRecord = argumentsValue === undefined
+    ? {}
+    : IpcJsonValueSchema.parse(argumentsValue) as Record<string, IpcJsonValue>;
+  if (Array.isArray(argumentsRecord) || argumentsRecord === null) {
+    throw new TypeError("Run list arguments must be an object.");
+  }
+  const allowed = new Set(["workspaceId", "includeArchived", "statuses", "limit"]);
+  if (Object.keys(argumentsRecord).some((key) => !allowed.has(key))) {
+    throw new TypeError("Run list arguments contain an unsupported field.");
+  }
+  const workspaceId = optionalString(argumentsRecord.workspaceId, "workspaceId");
+  const includeArchived = optionalBoolean(argumentsRecord.includeArchived, "includeArchived") ?? false;
+  const statuses = optionalStringArray(argumentsRecord.statuses, "statuses");
+  const limit = optionalPositiveInteger(argumentsRecord.limit, "limit") ?? 50;
+  const runIds = await eventStore.listRunIds({ limit: 100_000 });
+  const projections = await Promise.all(runIds.map((runId) => engine.query(runId)));
+  return projections
+    .filter((projection) => projection.definition !== undefined)
+    .filter((projection) => workspaceId === undefined || projection.definition?.workspaceId === workspaceId)
+    .filter((projection) => includeArchived || projection.archivedAt === undefined)
+    .filter((projection) => statuses === undefined || statuses.includes(projection.lifecycle))
+    .sort((left, right) => {
+      const leftAt = left.createdAt;
+      const rightAt = right.createdAt;
+      return rightAt.localeCompare(leftAt) || left.runId.localeCompare(right.runId);
+    })
+    .slice(0, limit) as unknown as IpcJsonValue;
+}
+
+function optionalString(value: IpcJsonValue | undefined, field: string): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new TypeError(`${field} must be a non-empty string.`);
+  }
+  return value;
+}
+
+function optionalBoolean(value: IpcJsonValue | undefined, field: string): boolean | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "boolean") throw new TypeError(`${field} must be a boolean.`);
+  return value;
+}
+
+function optionalPositiveInteger(value: IpcJsonValue | undefined, field: string): number | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 1) {
+    throw new TypeError(`${field} must be a positive integer.`);
+  }
+  return value;
+}
+
+function optionalStringArray(value: IpcJsonValue | undefined, field: string): string[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string" || item.length === 0)) {
+    throw new TypeError(`${field} must be an array of non-empty strings.`);
+  }
+  return value as string[];
 }
 
 function asIpcJson(value: unknown): IpcJsonValue {

@@ -35,6 +35,8 @@ export function middleware(request: NextRequest): NextResponse {
     pathname: request.nextUrl.pathname,
     host: request.headers.get("host"),
     origin: request.headers.get("origin"),
+    secFetchSite: request.headers.get("sec-fetch-site"),
+    contentType: request.headers.get("content-type"),
     presentedToken: presented,
     expectedToken: token,
     extraAllowedHosts: extraAllowedHostsFromEnv()

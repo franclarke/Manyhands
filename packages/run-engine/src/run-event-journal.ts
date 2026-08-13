@@ -1,9 +1,6 @@
 import type { FencedRunEventStore, FencingAuthority } from "@manyhands/run-store";
 import type { RunEvent } from "@manyhands/run-coordinator";
-import type {
-  RunActorJournalEvent,
-  RunActorJournalPort
-} from "./run-actor.js";
+import type { RunActorJournalEvent, RunActorJournalPort } from "./run-actor.js";
 
 export interface FencedRunActorJournalOptions {
   runId: string;
@@ -54,9 +51,6 @@ export class FencedRunActorJournal implements RunActorJournalPort {
     );
     await this.options.assertInstallationAuthority?.();
     await this.options.store.assertAuthority(input.runId, this.options.authority);
-    if (!appended.every(isActorJournalEvent)) {
-      throw new Error("Run actor journal append returned a non-actor event.");
-    }
     return appended;
   }
 
@@ -65,13 +59,4 @@ export class FencedRunActorJournal implements RunActorJournalPort {
       throw new Error(`Journal for ${this.options.runId} cannot access run ${runId}.`);
     }
   }
-}
-
-function isActorJournalEvent(event: RunEvent): event is RunActorJournalEvent {
-  return event.type === "command.accepted"
-    || event.type === "effect.requested"
-    || event.type === "effect.observed"
-    || event.type === "effect.completed"
-    || event.type === "effect.failed"
-    || event.type === "effect.interrupted";
 }

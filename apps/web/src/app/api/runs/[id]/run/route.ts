@@ -1,25 +1,23 @@
 import { NextResponse } from "next/server";
-import {
-  getRunRepository
-} from "@/lib/server/runs";
-import { toCanonicalRunResponse } from "@/lib/server/runs/presenter";
-import { runErrorResponse } from "@/lib/server/runs/route-errors";
-import { startExecutionV2Pipeline } from "@/lib/server/runs/v2/execution-pipeline";
+
+import { submitProductRunCommand } from "@/lib/server/daemon/productive-client";
+import { daemonMutationErrorResponse } from "@/lib/server/daemon/route-errors";
+import { toProductRunResponse } from "@/lib/server/runs/product-presenter";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-interface RouteContext {
-  params: Promise<{ id: string }>;
-}
+interface RouteContext { params: Promise<{ id: string }>; }
 
-export async function POST(_request: Request, context: RouteContext): Promise<NextResponse> {
-  const { id } = await context.params;
+export async function POST(request: Request, context: RouteContext): Promise<NextResponse> {
   try {
-    const run = await getRunRepository().get(id);
-    const started = await startExecutionV2Pipeline(run.runId, "route:run:execution-v2");
-    return NextResponse.json(await toCanonicalRunResponse(started));
+    const { projection } = await submitProductRunCommand({
+      request,
+      runId: (await context.params).id,
+      command: { type: "start_run" }
+    });
+    return NextResponse.json(toProductRunResponse(projection));
   } catch (error) {
-    return runErrorResponse(error);
+    return daemonMutationErrorResponse(error);
   }
 }

@@ -4,38 +4,26 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { PATCH as PATCH_WORKSPACE } from "@/app/api/workspaces/[id]/route";
-import { GET as GET_WORKSPACES, POST as POST_WORKSPACES } from "@/app/api/workspaces/route";
-import { PATCH as PATCH_MIGRATION_CONFLICT } from "@/app/api/workspaces/migration-conflicts/[duplicateId]/route";
-import { GET as GET_RUNS } from "@/app/api/runs/route";
-import { GET as GET_RUN } from "@/app/api/runs/[id]/route";
+import { POST as POST_WORKSPACES } from "@/app/api/workspaces/route";
 import { captureRunTargetContext } from "@/lib/server/runs/target-context";
-import { getRunRepository, resetRunRepositoryForTests } from "@/lib/server/runs/store";
 import { WorkspaceConflictError, WorkspaceValidationError } from "@/lib/server/workspaces/errors";
 import { JsonWorkspaceRepository } from "@/lib/server/workspaces/repository";
 import { resetWorkspaceRepositoryForTests } from "@/lib/server/workspaces/store";
-import { makeRunRecordV2 } from "./helpers/run-v2-record";
 
 let tempDir: string;
 let previousWorkspacesFile: string | undefined;
-let previousRunsDir: string | undefined;
 
 beforeEach(async () => {
   tempDir = await mkdtemp(path.join(os.tmpdir(), "mh-workspace-identity-"));
   previousWorkspacesFile = process.env.MANYHANDS_WORKSPACES_FILE;
-  previousRunsDir = process.env.MANYHANDS_RUNS_DIR;
   process.env.MANYHANDS_WORKSPACES_FILE = path.join(tempDir, "route-workspaces.json");
-  process.env.MANYHANDS_RUNS_DIR = path.join(tempDir, "runs");
   resetWorkspaceRepositoryForTests();
-  resetRunRepositoryForTests();
 });
 
 afterEach(async () => {
   if (previousWorkspacesFile === undefined) delete process.env.MANYHANDS_WORKSPACES_FILE;
   else process.env.MANYHANDS_WORKSPACES_FILE = previousWorkspacesFile;
-  if (previousRunsDir === undefined) delete process.env.MANYHANDS_RUNS_DIR;
-  else process.env.MANYHANDS_RUNS_DIR = previousRunsDir;
   resetWorkspaceRepositoryForTests();
-  resetRunRepositoryForTests();
   await rm(tempDir, { recursive: true, force: true });
 });
 
@@ -297,77 +285,6 @@ describe("workspace identity on productive routes", () => {
     expect(response.status).toBe(409);
   });
 
-  it("lists run history persisted under a migrated legacy workspace id", async () => {
-    const repoRoot = await makeGitRepo("route-history");
-    const alias = path.join(tempDir, "route-history-alias");
-    await symlink(repoRoot, alias, process.platform === "win32" ? "junction" : "dir");
-    await writeFile(
-      process.env.MANYHANDS_WORKSPACES_FILE!,
-      JSON.stringify({
-        version: 1,
-        workspaces: [
-          legacyWorkspace("workspace-canonical", "Canonical", repoRoot, "2026-01-01T00:00:00.000Z"),
-          legacyWorkspace("workspace-legacy", "Legacy", alias, "2026-02-01T00:00:00.000Z")
-        ]
-      }),
-      "utf8"
-    );
-    resetWorkspaceRepositoryForTests();
-    await getRunRepository().save(runRecord("run-canonical", "workspace-canonical"));
-    await getRunRepository().save(runRecord("run-legacy", "workspace-legacy"));
-
-    const response = await GET_RUNS(
-      new Request("http://localhost/api/runs?workspaceId=workspace-canonical")
-    );
-    expect(response.status).toBe(200);
-    const body = (await response.json()) as {
-      runs: Array<{ id: string; workspaceId: string; workspaceName?: string }>;
-    };
-    expect(body.runs.map((run) => run.id).sort()).toEqual(["run-canonical", "run-legacy"]);
-    expect(body.runs.every((run) => run.workspaceName === "Canonical")).toBe(true);
-    expect(body.runs.every((run) => run.workspaceId === "workspace-canonical")).toBe(true);
-
-    const legacyQuery = await GET_RUNS(
-      new Request("http://localhost/api/runs?workspaceId=workspace-legacy")
-    );
-    const legacyBody = (await legacyQuery.json()) as typeof body;
-    expect(legacyBody.runs.map((run) => run.id).sort()).toEqual(["run-canonical", "run-legacy"]);
-    expect(legacyBody.runs.every((run) => run.workspaceId === "workspace-canonical")).toBe(true);
-
-    const singleResponse = await GET_RUN(
-      new Request("http://localhost/api/runs/run-legacy"),
-      { params: Promise.resolve({ id: "run-legacy" }) }
-    );
-    const singleBody = (await singleResponse.json()) as { run: { workspaceId: string } };
-    expect(singleBody.run.workspaceId).toBe("workspace-canonical");
-
-    const workspacesResponse = await GET_WORKSPACES();
-    const workspacesBody = (await workspacesResponse.json()) as {
-      migrationConflicts: Array<{
-        duplicateWorkspaceId: string;
-        resolution?: { choice: string };
-      }>;
-    };
-    expect(workspacesBody.migrationConflicts).toEqual([
-      expect.objectContaining({ duplicateWorkspaceId: "workspace-legacy" })
-    ]);
-
-    const resolutionResponse = await PATCH_MIGRATION_CONFLICT(
-      new Request("http://localhost/api/workspaces/migration-conflicts/workspace-legacy", {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ choice: "canonical" })
-      }),
-      { params: Promise.resolve({ duplicateId: "workspace-legacy" }) }
-    );
-    expect(resolutionResponse.status).toBe(200);
-    const resolutionBody = (await resolutionResponse.json()) as {
-      workspace: { id: string; name: string };
-      migrationConflict: { resolution?: { choice: string } };
-    };
-    expect(resolutionBody.workspace).toMatchObject({ id: "workspace-canonical", name: "Canonical" });
-    expect(resolutionBody.migrationConflict.resolution).toMatchObject({ choice: "canonical" });
-  });
 });
 
 describe("RunTargetContext canonical repository path", () => {
@@ -422,8 +339,4 @@ function legacyWorkspace(id: string, name: string, repoPath: string, createdAt: 
     createdAt,
     updatedAt: createdAt
   };
-}
-
-function runRecord(runId: string, workspaceId: string) {
-  return makeRunRecordV2({ runId, workspaceId, title: runId, lifecycle: "failed" });
 }

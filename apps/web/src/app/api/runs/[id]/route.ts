@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 
-import { RunLifecycleError, RunValidationError, getRunRepository } from "@/lib/server/runs";
-import { reconcileRunLiveness } from "@/lib/server/runs/liveness-supervisor";
-import { reconcileRunRecordProjectionV2 } from "@/lib/server/runs/v2/command-host";
-import { toCanonicalRunResponse } from "@/lib/server/runs/presenter";
-import { runErrorResponse } from "@/lib/server/runs/route-errors";
+import {
+  queryProductRun,
+  submitProductRunCommand
+} from "@/lib/server/daemon/productive-client";
+import {
+  daemonMutationErrorResponse,
+  daemonQueryErrorResponse
+} from "@/lib/server/daemon/route-errors";
+import { toProductRunResponse } from "@/lib/server/runs/product-presenter";
+import { getWorkspaceRepository } from "@/lib/server/workspaces";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,42 +18,44 @@ interface RouteContext { params: Promise<{ id: string }>; }
 
 export async function GET(_request: Request, context: RouteContext): Promise<NextResponse> {
   try {
-    const stored = await getRunRepository().get((await context.params).id);
-    const run = await reconcileRunRecordProjectionV2(stored);
-    // Opening a run is when a stalled one has to stop pretending it is working.
-    return NextResponse.json(await toCanonicalRunResponse(await reconcileRunLiveness(run)));
+    const projection = await queryProductRun((await context.params).id);
+    return NextResponse.json(await present(projection));
   } catch (error) {
-    return runErrorResponse(error);
+    return daemonQueryErrorResponse(error);
   }
 }
 
 export async function PATCH(request: Request, context: RouteContext): Promise<NextResponse> {
   try {
     const { id } = await context.params;
-    const payload = await request.json() as { title?: unknown };
-    if (typeof payload.title !== "string" || payload.title.trim().length === 0) {
-      throw new RunValidationError("A non-empty title is required.");
+    const body = await request.json() as { title?: unknown };
+    if (typeof body.title !== "string" || body.title.trim().length === 0) {
+      throw new TypeError("A non-empty title is required.");
     }
-    const title = payload.title.trim().slice(0, 120);
-    const run = await getRunRepository().update(id, (current) => ({ ...current, title }));
-    return NextResponse.json(await toCanonicalRunResponse(run));
+    const { projection } = await submitProductRunCommand({
+      request,
+      runId: id,
+      command: { type: "rename_run", title: body.title.trim().slice(0, 120) }
+    });
+    return NextResponse.json(await present(projection));
   } catch (error) {
-    return runErrorResponse(error);
+    return daemonMutationErrorResponse(error);
   }
 }
 
-export async function DELETE(_request: Request, context: RouteContext): Promise<NextResponse> {
+export async function DELETE(request: Request, context: RouteContext): Promise<NextResponse> {
   try {
     const { id } = await context.params;
-    await getRunRepository().update(id, (current) => {
-      if (["planning", "running", "waiting_for_input", "cancelling", "delivering"].includes(current.projection.lifecycle)) {
-        throw new RunLifecycleError(`Run ${id} must be paused, interrupted, or terminal before it can be archived.`);
-      }
-      const now = new Date().toISOString();
-      return { ...current, archivedAt: now, updatedAt: now };
-    });
+    await submitProductRunCommand({ request, runId: id, command: { type: "archive_run" } });
     return new NextResponse(null, { status: 204 });
   } catch (error) {
-    return runErrorResponse(error);
+    return daemonMutationErrorResponse(error);
   }
+}
+
+async function present(projection: Awaited<ReturnType<typeof queryProductRun>>) {
+  const workspaceId = projection.definition?.workspaceId;
+  if (workspaceId === undefined) return toProductRunResponse(projection);
+  const canonical = await getWorkspaceRepository().get(workspaceId).catch(() => undefined);
+  return toProductRunResponse(projection, canonical?.id ?? workspaceId);
 }

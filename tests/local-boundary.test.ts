@@ -17,22 +17,30 @@ import {
 
 const TOKEN = "test-session-token";
 
-function evaluate(overrides: Partial<Parameters<typeof evaluateRequestBoundary>[0]>) {
-  return evaluateRequestBoundary({
+type Stage3BoundaryRequest = Parameters<typeof evaluateRequestBoundary>[0] & {
+  secFetchSite: string | null;
+  contentType: string | null;
+};
+
+function evaluate(overrides: Partial<Stage3BoundaryRequest>) {
+  const input: Stage3BoundaryRequest = {
     method: "GET",
     pathname: "/api/runs",
     host: "localhost:3000",
-    origin: null,
+    origin: "http://localhost:3000",
+    secFetchSite: "same-origin",
+    contentType: "application/json",
     presentedToken: null,
     expectedToken: TOKEN,
     ...overrides
-  });
+  };
+  return evaluateRequestBoundary(input);
 }
 
 describe("B-006 boundary: Host validation (DNS rebinding)", () => {
   it("allows loopback hosts with and without port", () => {
     for (const host of ["localhost:3000", "127.0.0.1:3000", "[::1]:3000", "localhost", "127.0.0.1"]) {
-      expect(evaluate({ host }).allowed, host).toBe(true);
+      expect(evaluate({ host, origin: null }).allowed, host).toBe(true);
     }
   });
 
@@ -48,7 +56,7 @@ describe("B-006 boundary: Host validation (DNS rebinding)", () => {
 
   it("accepts explicitly-allowed extra hosts", () => {
     expect(
-      evaluate({ host: "devbox.local:3000", extraAllowedHosts: ["devbox.local"] }).allowed
+      evaluate({ host: "devbox.local:3000", origin: null, extraAllowedHosts: ["devbox.local"] }).allowed
     ).toBe(true);
   });
 });
@@ -64,15 +72,86 @@ describe("B-006 boundary: Origin validation (CSRF)", () => {
     expect(evaluate({ origin: "null" }).allowed).toBe(false);
   });
 
-  it("allows loopback origins", () => {
-    for (const origin of ["http://localhost:3000", "http://127.0.0.1:3000"]) {
-      expect(evaluate({ origin, presentedToken: TOKEN, method: "POST" }).allowed, origin).toBe(true);
+  it("allows exact same-origin loopback requests", () => {
+    for (const [host, origin] of [
+      ["localhost:3000", "http://localhost:3000"],
+      ["127.0.0.1:3000", "http://127.0.0.1:3000"],
+      ["[::1]:3000", "http://[::1]:3000"]
+    ] as const) {
+      expect(evaluate({ host, origin, presentedToken: TOKEN, method: "POST" }).allowed, origin).toBe(true);
     }
+  });
+
+  it("rejects a loopback Origin from a different port", () => {
+    const decision = evaluate({
+      method: "POST",
+      origin: "http://localhost:4173",
+      presentedToken: TOKEN
+    });
+
+    expect(decision.allowed).toBe(false);
+    if (!decision.allowed) expect(decision.status).toBe(403);
   });
 
   it("allows API requests without an Origin (CLI/scripts) when the rest passes", () => {
     expect(evaluate({ origin: null }).allowed).toBe(true);
   });
+});
+
+describe("Stage 3 browser boundary: Fetch Metadata", () => {
+  it.each(["cross-site", "same-site"])("rejects %s mutation intent even with a valid token", (secFetchSite) => {
+    const decision = evaluate({
+      method: "POST",
+      pathname: "/api/runs",
+      secFetchSite,
+      presentedToken: TOKEN
+    });
+
+    expect(decision.allowed).toBe(false);
+    if (!decision.allowed) expect(decision.status).toBe(403);
+  });
+});
+
+describe("Stage 3 browser boundary: non-simple JSON mutations", () => {
+  it.each([
+    "text/plain",
+    "application/x-www-form-urlencoded",
+    "multipart/form-data; boundary=stage3"
+  ])("rejects mutation content type %s", (contentType) => {
+    expect(
+      evaluate({
+        method: "POST",
+        pathname: "/api/runs",
+        contentType,
+        presentedToken: TOKEN
+      }).allowed
+    ).toBe(false);
+  });
+
+  it("rejects a mutation with no Content-Type", () => {
+    expect(
+      evaluate({
+        method: "POST",
+        pathname: "/api/runs/r1/cancel",
+        contentType: null,
+        presentedToken: TOKEN
+      }).allowed
+    ).toBe(false);
+  });
+
+  it.each(["application/json", "application/json; charset=utf-8"])(
+    "accepts same-origin %s mutations with a valid anti-CSRF token",
+    (contentType) => {
+      expect(
+        evaluate({
+          method: "POST",
+          pathname: "/api/runs",
+          contentType,
+          presentedToken: TOKEN
+        }).allowed
+      ).toBe(true);
+    }
+  );
 });
 
 describe("B-006 boundary: session capability", () => {

@@ -1,67 +1,48 @@
-import { mkdtemp, rm, stat } from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { ProductRunDefinition, RunProjection } from "@manyhands/run-coordinator";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const daemon = vi.hoisted(() => ({ list: vi.fn() }));
+vi.mock("@/lib/server/daemon/productive-client", () => ({ listProductRuns: daemon.list }));
+vi.mock("@/lib/server/workspaces", () => ({
+  getWorkspaceRepository: () => ({ indexById: async () => new Map() })
+}));
+
 import { GET as GET_RUNS } from "@/app/api/runs/route";
-import { getRunRepository, resetRunRepositoryForTests } from "@/lib/server/runs/store";
-import type { RunRecord } from "@/lib/server/runs/schema";
-import { makeRunRecordV2 } from "./helpers/run-v2-record";
 
-let tempDir: string;
-let previousRunsDir: string | undefined;
+beforeEach(() => daemon.list.mockReset());
 
-function makeRun(runId: string): RunRecord {
-  return makeRunRecordV2({ runId, workspaceId: "missing-workspace", title: runId, lifecycle: "completed" });
-}
-
-beforeEach(async () => {
-  tempDir = await mkdtemp(path.join(os.tmpdir(), "mh-runs-list-"));
-  previousRunsDir = process.env.MANYHANDS_RUNS_DIR;
-  process.env.MANYHANDS_RUNS_DIR = path.join(tempDir, "runs");
-  resetRunRepositoryForTests();
-  for (let index = 0; index < 12; index += 1) {
-    await getRunRepository().save(makeRun(`run-${index}`));
-  }
-});
-
-afterEach(async () => {
-  if (previousRunsDir === undefined) delete process.env.MANYHANDS_RUNS_DIR;
-  else process.env.MANYHANDS_RUNS_DIR = previousRunsDir;
-  resetRunRepositoryForTests();
-  await rm(tempDir, { recursive: true, force: true });
-});
-
-describe("GET /api/runs hot path", () => {
-  it("does not start a corruption crawl for the dev console poll", async () => {
+describe("GET /api/runs daemon projection path", () => {
+  it("requests the bounded recent-run slice without touching the legacy cache", async () => {
+    daemon.list.mockResolvedValueOnce(Array.from({ length: 5 }, (_, index) => projection(index)));
     const response = await GET_RUNS(new Request("http://localhost/api/runs?limit=5"));
     expect(response.status).toBe(200);
     expect((await response.json()).runs).toHaveLength(5);
-    await expect(
-      stat(path.join(process.env.MANYHANDS_RUNS_DIR!, ".diagnostics", "run-record-index.json"))
-    ).rejects.toMatchObject({ code: "ENOENT" });
+    expect(daemon.list).toHaveBeenCalledWith({ includeArchived: false, limit: 5 });
   });
 
-  it("fills the requested recent-runs slice after excluding archived records", async () => {
-    await getRunRepository().update("run-11", (current) => ({
-      ...current,
-      archivedAt: "2026-07-18T21:00:00.000Z"
-    }));
-
-    const response = await GET_RUNS(new Request("http://localhost/api/runs?limit=5"));
-    expect(response.status).toBe(200);
-    const payload = await response.json() as { runs: Array<{ id: string }> };
-
-    expect(payload.runs).toHaveLength(5);
-    expect(payload.runs.map((run) => run.id)).not.toContain("run-11");
-  });
-
-  it("ignores retired diagnostics query flags without starting a crawl", async () => {
-    const response = await GET_RUNS(
-      new Request("http://localhost/api/runs?limit=5&diagnostics=refresh")
-    );
-    expect(response.status).toBe(200);
-    await expect(
-      stat(path.join(process.env.MANYHANDS_RUNS_DIR!, ".diagnostics", "run-record-index.json"))
-    ).rejects.toMatchObject({ code: "ENOENT" });
+  it("ignores retired diagnostics flags while querying only the daemon", async () => {
+    daemon.list.mockResolvedValueOnce([]);
+    expect((await GET_RUNS(new Request("http://localhost/api/runs?diagnostics=refresh"))).status).toBe(200);
+    expect(daemon.list).toHaveBeenCalledTimes(1);
   });
 });
+
+function projection(index: number): RunProjection {
+  const definition: ProductRunDefinition = {
+    schemaVersion: 1, workspaceId: "missing-workspace", userPrompt: `run-${index}`,
+    acceptanceCriteria: [], title: `run-${index}`,
+    planningSelection: { executorId: "fake", model: "fake" },
+    executionSelection: { executorId: "fake", model: "fake" },
+    repairSelection: { executorId: "fake", model: "fake" }, executionConfig: {}, targetContext: {}
+  };
+  return {
+    runId: `run-${index}`, goal: definition.userPrompt, definition, lifecycle: "completed", sequence: 1,
+    createdAt: "2026-08-13T00:00:00.000Z", updatedAt: "2026-08-13T00:00:00.000Z",
+    appliedEventIds: [], commandReceipts: {}, commandEnvelopes: {}, effectIntents: {},
+    physicalEffectReceipts: {}, effectTerminals: {}, decisions: {},
+    readiness: { readyNodeIds: [], pendingDecisionIds: [] }, selectedWaves: [], attempts: {},
+    adoptedArtifacts: {}, nodeEvidenceMatrixIds: {}, integrations: {}, recoveryHistory: [],
+    evidenceMatrices: [], evidenceMatrixSummaries: {},
+    outcomes: { execution: "succeeded", artifact: "verified", delivery: "not_started" }
+  };
+}

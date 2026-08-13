@@ -16,7 +16,7 @@ export type RunCommandJsonValue =
   | RunCommandJsonValue[]
   | { [key: string]: RunCommandJsonValue };
 
-const RunCommandJsonValueSchema: z.ZodType<RunCommandJsonValue> = z.lazy(() => z.union([
+export const RunCommandJsonValueSchema: z.ZodType<RunCommandJsonValue> = z.lazy(() => z.union([
   z.string(),
   z.number().finite(),
   z.boolean(),

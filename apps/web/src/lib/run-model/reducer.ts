@@ -22,6 +22,8 @@ export function buildRunModel(seed: RunSeed, inputEvents: readonly RunEvent[]): 
   return {
     run: {
       ...seed,
+      title: projection?.title ?? projection?.definition?.title ?? seed.title,
+      goal: projection?.goal ?? seed.goal,
       lifecycle: projection?.lifecycle ?? seed.lifecycle,
       eventSequence: projection?.sequence ?? seed.eventSequence
     },

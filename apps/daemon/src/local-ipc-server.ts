@@ -110,7 +110,8 @@ export async function startLocalIpcServer(
       now,
       maxFrameBytes,
       maxClockSkewMs,
-      socketTimeoutMs
+      socketTimeoutMs,
+      ...(options.onError === undefined ? {} : { onError: options.onError })
     });
   });
 
@@ -177,6 +178,7 @@ interface ConnectionContext {
   maxFrameBytes: number;
   maxClockSkewMs: number;
   socketTimeoutMs: number;
+  onError?: (error: Error) => void;
 }
 
 function acceptOneFrame(socket: Socket, context: ConnectionContext): void {
@@ -239,7 +241,8 @@ async function processFrame(frame: string, context: ConnectionContext): Promise<
   try {
     const result = IpcJsonValueSchema.parse(await dispatch(request, context.handlers));
     body = { ok: true, result };
-  } catch {
+  } catch (error) {
+    context.onError?.(error instanceof Error ? error : new Error(String(error)));
     body = {
       ok: false,
       error: { code: "request_failed", message: "Daemon request failed." }

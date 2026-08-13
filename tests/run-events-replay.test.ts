@@ -9,17 +9,22 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { compileGraphRevision } from "@manyhands/decomposer";
 import type { RunEventInput } from "@manyhands/run-coordinator";
-import { JsonlRunEventStore } from "@manyhands/run-store";
 import { GET as GET_RUN_EVENTS } from "@/app/api/runs/[id]/run-events/route";
-import { getRunRepository, resetRunRepositoryForTests } from "@/lib/server/runs/store";
 import { buildRunModel } from "@/lib/run-model/reducer";
 import type { RunEvent, RunSeed } from "@/lib/run-model/types";
-import type { RunRecord } from "@/lib/server/runs/schema";
 import { bookingBreakdown, bookingSnapshot, compilerDependencies } from "./helpers/target-planning-fixtures";
-import { makeRunRecordV2 } from "./helpers/run-v2-record";
+
+const daemon = vi.hoisted(() => ({ events: new Map<string, unknown[]>() }));
+vi.mock("@/lib/server/daemon/productive-client", () => ({
+  readProductRunEvents: async (runId: string, afterSequence: number) => {
+    const events = (daemon.events.get(runId) ?? []) as Array<{ sequence: number }>;
+    const page = events.filter((event) => event.sequence > afterSequence);
+    return { events: page, nextSequence: page.at(-1)?.sequence ?? afterSequence };
+  }
+}));
 
 let tempDir: string;
 let previousRunsDir: string | undefined;
@@ -28,19 +33,14 @@ beforeEach(async () => {
   tempDir = await mkdtemp(path.join(os.tmpdir(), "mh-sse-"));
   previousRunsDir = process.env.MANYHANDS_RUNS_DIR;
   process.env.MANYHANDS_RUNS_DIR = path.join(tempDir, "runs");
-  resetRunRepositoryForTests();
+  daemon.events.clear();
 });
 
 afterEach(async () => {
   if (previousRunsDir === undefined) delete process.env.MANYHANDS_RUNS_DIR;
   else process.env.MANYHANDS_RUNS_DIR = previousRunsDir;
-  resetRunRepositoryForTests();
   await rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
 });
-
-function makeRun(runId: string): RunRecord {
-  return makeRunRecordV2({ runId });
-}
 
 function seedFor(runId: string): RunSeed {
   return {
@@ -53,7 +53,6 @@ function seedFor(runId: string): RunSeed {
 }
 
 async function seedEvents(runId: string, count: number): Promise<void> {
-  await getRunRepository().save(makeRun(runId));
   const snapshot = bookingSnapshot();
   const breakdown = bookingBreakdown();
   const compiled = compileGraphRevision({ breakdown, repositorySnapshot: snapshot }, compilerDependencies);
@@ -69,10 +68,11 @@ async function seedEvents(runId: string, count: number): Promise<void> {
     { eventId: decisionId, occurredAt: at, type: "decision.raised", payload: { decision: { id: decisionId, kind: "approve_plan", question: "Approve?", options: [{ id: "approve", label: "Approve" }, { id: "request_changes", label: "Request changes" }], affectedNodeIds: [compiled.graph.rootId], evidenceRefs: ["graph-compiled"], impact: "acceptance" } } },
     { eventId: `${decisionId}:resolved`, occurredAt: at, type: "decision.resolved", payload: { decisionId, optionId: "approve" } }
   ];
-  const store = new JsonlRunEventStore({ ...(process.env.MANYHANDS_RUNS_DIR ? { directory: process.env.MANYHANDS_RUNS_DIR } : {}) });
-  const authority = { operationId: "11111111-1111-4111-8111-111111111111", fencingToken: 1 };
-  await store.advanceFence(runId, authority);
-  await store.appendFenced(runId, 0, authority, inputs.slice(0, count));
+  daemon.events.set(runId, inputs.slice(0, count).map((input, index) => ({
+    ...input,
+    runId,
+    sequence: index + 1
+  })));
 }
 
 /** Read SSE frames from the handler until `expected` data events arrive. */

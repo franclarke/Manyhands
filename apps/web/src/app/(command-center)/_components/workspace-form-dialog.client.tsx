@@ -55,7 +55,11 @@ export function WorkspaceFormDialog({
     setPickingFolder(true);
     setPickerError(null);
     try {
-      const response = await fetch("/api/local-fs/pick-folder", { method: "POST" });
+      const response = await fetch("/api/local-fs/pick-folder", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}"
+      });
       const payload = (await response.json()) as { path?: string | null; error?: string };
       if (!response.ok) {
         throw new Error(payload.error ?? `Folder picker failed with ${response.status}`);

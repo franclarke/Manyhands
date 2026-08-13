@@ -390,7 +390,11 @@ export function CommandCenterShell({
     setErrorMessage(null);
     setWorkspaceBusy(true);
     try {
-      const response = await fetch(`/api/workspaces/${selectedWorkspace.id}`, { method: "DELETE" });
+      const response = await fetch(`/api/workspaces/${selectedWorkspace.id}`, {
+        method: "DELETE",
+        headers: { "content-type": "application/json" },
+        body: "{}"
+      });
       if (!response.ok) {
         throw new Error(await readError(response));
       }

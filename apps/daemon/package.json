@@ -14,7 +14,7 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --clean",
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean && tsup src/cli.ts --format cjs --out-dir dist && tsup src/deterministic-fake-worker.ts --format esm --out-dir dist",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

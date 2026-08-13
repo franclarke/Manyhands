@@ -1,30 +1,25 @@
-import { NextResponse } from "next/server";
-import { JsonlRunEventStore } from "@manyhands/run-store";
+import type { RunEvent } from "@manyhands/run-coordinator";
+
 import { adaptCoordinatorEvent } from "@/lib/run-model/sse-adapter";
-import { RunNotFoundError, getRunRepository } from "@/lib/server/runs";
-import { resolveRunsDirectory } from "@/lib/server/runs/runs-directory";
+import { readProductRunEvents } from "@/lib/server/daemon/productive-client";
+import { daemonQueryErrorResponse } from "@/lib/server/daemon/route-errors";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-interface RouteContext {
-  params: Promise<{ id: string }>;
-}
+interface RouteContext { params: Promise<{ id: string }>; }
 
 const HEARTBEAT_MS = 15_000;
 const POLL_MS = 250;
 
-/** Streams the canonical fenced V2 journal. No RunRecord backfill or ephemeral event bus participates. */
+/** Pure BFF stream over durable daemon event pages. It never opens the journal. */
 export async function GET(request: Request, context: RouteContext): Promise<Response> {
   const { id } = await context.params;
   const after = Math.max(readAfter(request.url), readLastEventId(request));
-  const store = new JsonlRunEventStore({ directory: resolveRunsDirectory() });
   try {
-    await getRunRepository().get(id);
-    await store.load(id);
+    await readProductRunEvents(id, after);
   } catch (error) {
-    if (error instanceof RunNotFoundError) return NextResponse.json({ error: error.message }, { status: 404 });
-    return NextResponse.json({ error: error instanceof Error ? error.message : String(error) }, { status: 500 });
+    return daemonQueryErrorResponse(error);
   }
 
   const encoder = new TextEncoder();
@@ -36,9 +31,8 @@ export async function GET(request: Request, context: RouteContext): Promise<Resp
       const pump = async (): Promise<void> => {
         while (!cancelled) {
           try {
-            const events = await store.load(id);
-            for (const event of events) {
-              if (event.sequence <= lastSentSequence) continue;
+            const page = await readProductRunEvents(id, lastSentSequence);
+            for (const event of page.events) {
               lastSentSequence = event.sequence;
               await waitForCapacity(controller);
               controller.enqueue(encoder.encode(serialize(event)));
@@ -72,7 +66,7 @@ export async function GET(request: Request, context: RouteContext): Promise<Resp
   });
 }
 
-function serialize(event: Awaited<ReturnType<JsonlRunEventStore["load"]>>[number]): string {
+function serialize(event: RunEvent): string {
   const adapted = adaptCoordinatorEvent({
     eventId: event.eventId,
     runId: event.runId,
@@ -85,17 +79,14 @@ function serialize(event: Awaited<ReturnType<JsonlRunEventStore["load"]>>[number
 }
 
 function readAfter(url: string): number {
-  const params = new URL(url).searchParams;
-  const raw = params.get("afterSeq") ?? params.get("after");
-  if (raw === null) return 0;
-  const value = Number(raw);
+  const raw = new URL(url).searchParams.get("afterSeq") ?? new URL(url).searchParams.get("after");
+  const value = raw === null ? 0 : Number(raw);
   return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
 }
 
 function readLastEventId(request: Request): number {
   const raw = request.headers.get("last-event-id");
-  if (raw === null) return 0;
-  const value = Number(raw);
+  const value = raw === null ? 0 : Number(raw);
   return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
 }
 

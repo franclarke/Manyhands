@@ -30,6 +30,10 @@ export interface BoundaryRequestInput {
   host: string | null;
   /** Raw Origin header; null when absent. */
   origin: string | null;
+  /** Fetch Metadata site classification; null for non-browser clients. */
+  secFetchSite?: string | null;
+  /** Raw Content-Type header. Mutations must use non-simple JSON. */
+  contentType?: string | null;
   /** Token presented via cookie or header; null when absent. */
   presentedToken: string | null;
   expectedToken: string;
@@ -39,7 +43,7 @@ export interface BoundaryRequestInput {
 
 export type BoundaryDecision =
   | { allowed: true; issueSessionCookie: boolean }
-  | { allowed: false; status: 401 | 403; reason: string };
+  | { allowed: false; status: 401 | 403 | 415; reason: string };
 
 function hostnameOf(hostHeader: string): string {
   // "[::1]:3000" | "127.0.0.1:3000" | "localhost" → hostname without port.
@@ -59,7 +63,11 @@ export function isAllowedHost(hostHeader: string | null, extraAllowedHosts: read
   return extraAllowedHosts.some((allowed) => allowed.trim().toLowerCase() === hostname);
 }
 
-export function isAllowedOrigin(origin: string | null, extraAllowedHosts: readonly string[] = []): boolean {
+export function isAllowedOrigin(
+  origin: string | null,
+  hostHeader: string | null,
+  extraAllowedHosts: readonly string[] = []
+): boolean {
   if (origin === null) return true; // CLI/scripts and same-origin non-CORS requests.
   if (origin === "null") return false; // Opaque origins (file://, sandboxed iframes).
   let parsed: URL;
@@ -68,10 +76,24 @@ export function isAllowedOrigin(origin: string | null, extraAllowedHosts: readon
   } catch {
     return false;
   }
-  const hostname = parsed.hostname.toLowerCase();
-  const bracketless = hostname.startsWith("[") ? hostname : hostname;
-  if (LOOPBACK_HOSTNAMES.has(bracketless) || LOOPBACK_HOSTNAMES.has(`[${bracketless}]`)) return true;
-  return extraAllowedHosts.some((allowed) => allowed.trim().toLowerCase() === hostname);
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
+  if (hostHeader === null) return false;
+  const requestHost = hostHeader.trim().toLowerCase();
+  const originHost = parsed.host.toLowerCase();
+  if (originHost === requestHost) return true;
+  // Extra names widen which exact origin may host the app; they never widen
+  // one allowed host to every port on that machine.
+  return extraAllowedHosts.some((allowed) => originHost === allowed.trim().toLowerCase());
+}
+
+function isMutation(method: string): boolean {
+  const upper = method.toUpperCase();
+  return upper !== "GET" && upper !== "HEAD" && upper !== "OPTIONS";
+}
+
+function isJsonContentType(contentType: string | null | undefined): boolean {
+  if (contentType === null || contentType === undefined) return false;
+  return contentType.split(";", 1)[0]?.trim().toLowerCase() === "application/json";
 }
 
 /**
@@ -99,11 +121,26 @@ export function evaluateRequestBoundary(input: BoundaryRequestInput): BoundaryDe
       reason: `Host "${input.host ?? "(missing)"}" is not allowed on this local-only server.`
     };
   }
-  if (!isAllowedOrigin(input.origin, extra)) {
+  if (!isAllowedOrigin(input.origin, input.host, extra)) {
     return {
       allowed: false,
       status: 403,
       reason: `Origin "${input.origin ?? ""}" is not allowed on this local-only server.`
+    };
+  }
+  const fetchSite = input.secFetchSite?.trim().toLowerCase();
+  if (fetchSite !== undefined && fetchSite.length > 0 && fetchSite !== "same-origin" && fetchSite !== "none") {
+    return {
+      allowed: false,
+      status: 403,
+      reason: `Fetch Metadata site "${input.secFetchSite}" is not allowed on this local-only server.`
+    };
+  }
+  if (isMutation(input.method) && !isJsonContentType(input.contentType)) {
+    return {
+      allowed: false,
+      status: 415,
+      reason: "State-changing requests must use Content-Type application/json."
     };
   }
   if (requiresSessionCapability(input.method, input.pathname)) {

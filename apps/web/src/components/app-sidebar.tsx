@@ -117,7 +117,11 @@ export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.R
     setDeleteError(null);
     const id = deleteTarget.id;
     try {
-      const response = await fetch(`/api/runs/${encodeURIComponent(id)}`, { method: "DELETE" });
+      const response = await fetch(`/api/runs/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers: { "content-type": "application/json" },
+        body: "{}"
+      });
       if (!response.ok && response.status !== 204) {
         const payload = await response.json().catch(() => ({})) as { error?: string };
         throw new Error(payload.error ?? `No se pudo archivar el run (${response.status}).`);

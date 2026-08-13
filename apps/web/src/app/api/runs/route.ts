@@ -1,21 +1,23 @@
-import { randomUUID } from "node:crypto";
 import { ExecutionConfigSchema } from "@manyhands/execution-core";
+import type { RunCommandJsonValue } from "@manyhands/run-coordinator";
 import { NextResponse } from "next/server";
 
-import { assertDeclaredStageSelection } from "@/lib/server/providers/capability-service";
-import { RunLifecycleError, RunNotFoundError, RunValidationError } from "@/lib/server/runs/errors";
-import { defaultStageSelection } from "@/lib/server/runs/executor-selection";
-import { toCanonicalRunResponse, toRunPreview } from "@/lib/server/runs/presenter";
-import { RUN_STATUS_VALUES, RunCreateRequestSchema, type RunRecord, type RunStatus } from "@/lib/server/runs/schema";
-import { getRunRepository } from "@/lib/server/runs/store";
-import { captureRunTargetContext } from "@/lib/server/runs/target-context";
-import { startRunBackgroundTask } from "@/lib/server/runs/runner-state";
-import { runPlanningV2Pipeline } from "@/lib/server/runs/v2/run-coordinator-host";
-import { initializeRunCanonicalEvents } from "@/lib/server/runs/v2/initialize-run";
-import { resolveRunsDirectory } from "@/lib/server/runs/runs-directory";
 import {
-  WorkspaceConflictError,
-  WorkspaceNotFoundError,
+  commandIdForRequest,
+  listProductRuns,
+  runIdForCreateCommand,
+  submitProductRunCommand
+} from "@/lib/server/daemon/productive-client";
+import {
+  daemonMutationErrorResponse,
+  daemonQueryErrorResponse
+} from "@/lib/server/daemon/route-errors";
+import { assertDeclaredStageSelection } from "@/lib/server/providers/capability-service";
+import { defaultStageSelection } from "@/lib/server/runs/executor-selection";
+import { toProductRunPreview, toProductRunResponse } from "@/lib/server/runs/product-presenter";
+import { RUN_STATUS_VALUES, RunCreateRequestSchema } from "@/lib/server/runs/schema";
+import { captureRunTargetContext } from "@/lib/server/runs/target-context";
+import {
   getWorkspaceRepository,
   withWorkspaceReferenceLock
 } from "@/lib/server/workspaces";
@@ -26,97 +28,97 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request): Promise<NextResponse> {
   try {
     const url = new URL(request.url);
-    const workspaceId = url.searchParams.get("workspaceId");
-    const statusParam = url.searchParams.get("status");
-    const limitRaw = url.searchParams.get("limit");
-    const limit = limitRaw === null ? undefined : Math.max(1, Math.min(50, Number(limitRaw) || 0));
-    const workspaceRepository = getWorkspaceRepository();
-    const equivalentWorkspaceIds = workspaceId !== null && workspaceId.length > 0
-      ? await workspaceRepository.equivalentIds(workspaceId)
-      : undefined;
-    const filter: { workspaceIds?: string[]; includeArchived?: boolean; limit?: number } = {
-      includeArchived: url.searchParams.get("include") === "archived"
-    };
-    if (equivalentWorkspaceIds !== undefined) filter.workspaceIds = equivalentWorkspaceIds;
-    if (limit !== undefined) filter.limit = limit;
-    let runs = await getRunRepository().list(filter);
-    const statuses = statusParam === null ? [] : parseStatusFilter(statusParam);
-    if (statuses.length > 0) runs = runs.filter((run) => statuses.includes(run.projection.lifecycle));
-    // One locked read. Resolving aliases with an `equivalentIds` call per
-    // workspace took the workspace file lock once per workspace, and each
-    // acquisition costs ~1.3s on a Windows volume: the listing spent ~17s of
-    // its ~17.3s here while its own run data read in 6ms.
-    const byId = await workspaceRepository.indexById();
-    return NextResponse.json({ runs: runs.map((run) => toRunPreview(run, byId)) });
+    const requestedWorkspaceId = url.searchParams.get("workspaceId") ?? undefined;
+    const canonicalWorkspaceId = requestedWorkspaceId === undefined
+      ? undefined
+      : (await getWorkspaceRepository().get(requestedWorkspaceId)).id;
+    const rawLimit = url.searchParams.get("limit");
+    const limit = rawLimit === null ? 50 : Math.max(1, Math.min(50, Number(rawLimit) || 1));
+    const allowedStatuses = new Set<string>(RUN_STATUS_VALUES);
+    const statuses = (url.searchParams.get("status") ?? "")
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter((entry) => allowedStatuses.has(entry));
+    const runs = await listProductRuns({
+      ...(canonicalWorkspaceId === undefined ? {} : { workspaceId: canonicalWorkspaceId }),
+      includeArchived: url.searchParams.get("include") === "archived",
+      ...(statuses.length === 0 ? {} : { statuses }),
+      limit
+    });
+    const workspaces = await getWorkspaceRepository().indexById();
+    return NextResponse.json({ runs: runs.map((run) => toProductRunPreview(run, workspaces)) });
   } catch (error) {
-    return errorResponse(error);
+    return daemonQueryErrorResponse(error);
   }
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
-  let payload: unknown;
   try {
-    payload = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Body must be valid JSON" }, { status: 400 });
-  }
-  try {
-    const parsed = RunCreateRequestSchema.safeParse(payload);
-    if (!parsed.success) throw new RunValidationError(parsed.error.issues[0]?.message ?? "Invalid run create request");
-    const saved = await withWorkspaceReferenceLock(async () => {
-      const workspace = await getWorkspaceRepository().get(parsed.data.workspaceId);
-      if (workspace.repoPath === undefined) throw new RunValidationError("ManyHands requires a workspace with a local Git repository.");
-      const planningSelection = assertDeclaredStageSelection("Planning", parsed.data.planningSelection ?? defaultStageSelection(), "planning");
-      const executionSelection = assertDeclaredStageSelection("Execution", parsed.data.executionSelection ?? planningSelection, "execution");
-      const repairSelection = assertDeclaredStageSelection("Repair", parsed.data.repairSelection ?? executionSelection, "repair");
-      const executionConfig = ExecutionConfigSchema.parse(parsed.data.executionConfig ?? {});
-      const now = new Date().toISOString();
-      const targetContext = await captureRunTargetContext(workspace.repoPath, now);
-      if (targetContext?.physicalIdentity === undefined) {
-        throw new RunValidationError(`Cannot capture the physical identity of Git repository ${workspace.repoPath}.`);
+    const parsed = RunCreateRequestSchema.parse(await request.json());
+    const commandId = commandIdForRequest(request);
+    const runId = runIdForCreateCommand(commandId);
+    const definition = await withWorkspaceReferenceLock(async () => {
+      const workspace = await getWorkspaceRepository().get(parsed.workspaceId);
+      if (workspace.repoPath === undefined) {
+        throw new TypeError("ManyHands requires a workspace with a local Git repository.");
       }
-      const record: RunRecord = {
-        runId: randomUUID(),
+      const planningSelection = assertDeclaredStageSelection(
+        "Planning",
+        parsed.planningSelection ?? defaultStageSelection(),
+        "planning"
+      );
+      const executionSelection = assertDeclaredStageSelection(
+        "Execution",
+        parsed.executionSelection ?? planningSelection,
+        "execution"
+      );
+      const repairSelection = assertDeclaredStageSelection(
+        "Repair",
+        parsed.repairSelection ?? executionSelection,
+        "repair"
+      );
+      const executionConfig = ExecutionConfigSchema.parse(parsed.executionConfig ?? {});
+      const createdAt = new Date().toISOString();
+      const targetContext = await captureRunTargetContext(workspace.repoPath, createdAt);
+      if (targetContext?.physicalIdentity === undefined) {
+        throw new TypeError(`Cannot capture the physical identity of Git repository ${workspace.repoPath}.`);
+      }
+      const durableTargetContext = Object.fromEntries(
+        Object.entries(targetContext).filter(([key]) => key !== "capturedAt")
+      );
+      return {
+        schemaVersion: 1 as const,
         workspaceId: workspace.id,
-        userPrompt: parsed.data.userPrompt,
-        acceptanceCriteria: parsed.data.acceptanceCriteria ?? [],
-        title: parsed.data.userPrompt.slice(0, 120),
-        planningSelection,
-        executionSelection,
-        repairSelection,
-        executionConfig,
-        ...(parsed.data.granularityCondition !== undefined
-          ? { granularityCondition: parsed.data.granularityCondition }
-          : {}),
-        targetContext,
-        projection: { eventSequence: 0, lifecycle: "planning", updatedAt: now },
-        version: 0,
-        createdAt: now,
-        updatedAt: now
+        userPrompt: parsed.userPrompt,
+        acceptanceCriteria: parsed.acceptanceCriteria ?? [],
+        title: parsed.userPrompt.slice(0, 120),
+        planningSelection: jsonStage(planningSelection),
+        executionSelection: jsonStage(executionSelection),
+        repairSelection: jsonStage(repairSelection),
+        executionConfig: JSON.parse(JSON.stringify(executionConfig)) as Record<string, RunCommandJsonValue>,
+        ...(parsed.granularityCondition === undefined
+          ? {}
+          : { granularityCondition: parsed.granularityCondition }),
+        targetContext: JSON.parse(JSON.stringify(durableTargetContext)) as Record<string, RunCommandJsonValue>
       };
-      return getRunRepository().save(record);
     });
-    await initializeRunCanonicalEvents({
-      directory: resolveRunsDirectory(),
-      runId: saved.runId,
-      goal: saved.userPrompt,
-      occurredAt: saved.createdAt
+    const { projection } = await submitProductRunCommand({
+      request,
+      commandId,
+      runId,
+      command: { type: "create_run", definition },
+      allowMissingRun: true
     });
-    startRunBackgroundTask(saved.runId, "route:create:planning-v2", () => runPlanningV2Pipeline(saved.runId));
-    return NextResponse.json(await toCanonicalRunResponse(saved), { status: 201 });
+    return NextResponse.json(toProductRunResponse(projection), { status: 201 });
   } catch (error) {
-    return errorResponse(error);
+    return daemonMutationErrorResponse(error);
   }
 }
 
-function parseStatusFilter(raw: string): RunStatus[] {
-  const allowed = new Set<string>(RUN_STATUS_VALUES);
-  return raw.split(",").map((entry) => entry.trim()).filter((entry) => allowed.has(entry)) as RunStatus[];
-}
-
-function errorResponse(error: unknown): NextResponse {
-  if (error instanceof WorkspaceNotFoundError || error instanceof RunNotFoundError) return NextResponse.json({ error: error.message }, { status: 404 });
-  if (error instanceof WorkspaceConflictError || error instanceof RunLifecycleError) return NextResponse.json({ error: error.message }, { status: 409 });
-  if (error instanceof RunValidationError) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json({ error: error instanceof Error ? error.message : String(error) }, { status: 500 });
+function jsonStage(selection: { executorId: string; model: string; effort?: string }) {
+  return {
+    executorId: selection.executorId,
+    model: selection.model,
+    ...(selection.effort === undefined ? {} : { effort: selection.effort })
+  };
 }

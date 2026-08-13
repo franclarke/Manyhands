@@ -1,12 +1,13 @@
 import { EffectIntentSchema, PhysicalEffectReceiptSchema } from "@manyhands/contracts";
 import { EntityIdSchema, FinalArtifactManifestSchema, IsoTimestampSchema, NonEmptyStringSchema } from "@manyhands/shared";
 import { z } from "zod";
-import { CommandReceiptSchema } from "../command-envelope.js";
+import { CommandReceiptSchema, RunCommandEnvelopeSchema } from "../command-envelope.js";
 import { DecisionInputSchema, DecisionResolutionShape, requireDecisionResolution } from "./decisions.js";
 import { DeliveryApprovalSchema, DeliveryReceiptSchema } from "./outcomes.js";
 import { AdoptedArtifactSchema } from "./artifacts.js";
 import { FailureClassSchema, FailureObservationSchema } from "./failures.js";
 import { EvidenceMatrixRecordSchema } from "./evidence.js";
+import { ProductRunDefinitionSchema } from "../product-lifecycle.js";
 
 /**
  * What one attempt cost. Optional on the event: a provider that reports nothing
@@ -117,8 +118,16 @@ function event<T extends string, S extends z.ZodTypeAny>(type: T, payload: S) {
 }
 
 export const RunEventSchema = z.discriminatedUnion("type", [
-  event("run.created", z.object({ goal: NonEmptyStringSchema }).strict()),
-  event("command.accepted", z.object({ receipt: CommandReceiptSchema }).strict()),
+  event("run.created", z.object({
+    goal: NonEmptyStringSchema,
+    definition: ProductRunDefinitionSchema.optional()
+  }).strict()),
+  event("run.renamed", z.object({ title: NonEmptyStringSchema }).strict()),
+  event("run.archived", z.object({ archivedAt: IsoTimestampSchema }).strict()),
+  event("command.accepted", z.object({
+    receipt: CommandReceiptSchema,
+    command: RunCommandEnvelopeSchema.optional()
+  }).strict()),
   event("effect.requested", z.object({ intent: EffectIntentSchema }).strict()),
   event("effect.observed", z.object({ receipt: PhysicalEffectReceiptSchema }).strict()),
   event("effect.completed", z.object({

@@ -224,25 +224,17 @@ describe("target architecture migration baseline", () => {
       {
         pattern: /startRunBackgroundTask/u,
         files: [
-          "apps/web/src/app/api/runs/[id]/decisions/[decisionId]/route.ts",
-          "apps/web/src/app/api/runs/route.ts",
           "apps/web/src/lib/server/runs/runner-state.ts",
           "apps/web/src/lib/server/runs/v2/execution-pipeline.ts"
         ]
       },
       {
         pattern: /reconcileRunRecordProjectionV2/u,
-        files: [
-          "apps/web/src/app/api/runs/[id]/route.ts",
-          "apps/web/src/lib/server/runs/v2/command-host.ts"
-        ]
+        files: ["apps/web/src/lib/server/runs/v2/command-host.ts"]
       },
       {
         pattern: /reconcileRunLiveness/u,
-        files: [
-          "apps/web/src/app/api/runs/[id]/route.ts",
-          "apps/web/src/lib/server/runs/liveness-supervisor.ts"
-        ]
+        files: ["apps/web/src/lib/server/runs/liveness-supervisor.ts"]
       },
       {
         pattern: /dangerously-skip-permissions/u,
@@ -262,7 +254,8 @@ describe("target architecture migration baseline", () => {
           "apps/web/src/app/api/runs/route.ts",
           "apps/web/src/lib/server/runs/schema.ts",
           "apps/web/src/lib/server/runs/v2/planning-host.ts",
-          "apps/web/src/lib/server/runs/v2/run-coordinator-host.ts"
+          "apps/web/src/lib/server/runs/v2/run-coordinator-host.ts",
+          "packages/run-coordinator/src/product-lifecycle.ts"
         ]
       },
       {

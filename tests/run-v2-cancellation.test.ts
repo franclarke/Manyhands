@@ -1,103 +1,14 @@
-import { execFile, spawn } from "node:child_process";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
-import os from "node:os";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { promisify } from "node:util";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import { isProcessAlive, registerLiveProcess } from "@manyhands/execution-core";
-import { JsonlRunEventStore } from "@manyhands/run-store";
-import { POST as POST_CANCEL } from "@/app/api/runs/[id]/cancel/route";
-import { RunMutationConflictError } from "@/lib/server/runs/errors";
-import { updateRunForOperation } from "@/lib/server/runs/run-operation-lease";
-import { resetRunRepositoryForTests, getRunRepository } from "@/lib/server/runs/store";
-import { captureRunTargetContext } from "@/lib/server/runs/target-context";
-import { makeRunRecordV2 } from "./helpers/run-v2-record";
-
-const execFileAsync = promisify(execFile);
-
-let tempDir: string;
-let previousRunsDir: string | undefined;
-
-beforeEach(async () => {
-  tempDir = await mkdtemp(path.join(os.tmpdir(), "mh-cancel-v2-"));
-  previousRunsDir = process.env.MANYHANDS_RUNS_DIR;
-  process.env.MANYHANDS_RUNS_DIR = path.join(tempDir, "runs");
-  resetRunRepositoryForTests();
-});
-
-afterEach(async () => {
-  if (previousRunsDir === undefined) delete process.env.MANYHANDS_RUNS_DIR;
-  else process.env.MANYHANDS_RUNS_DIR = previousRunsDir;
-  resetRunRepositoryForTests();
-  await rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
-});
-
-describe("V2 cancellation", () => {
-  it("invalidates the runner, kills its live process and rejects a late result", async () => {
-    const runId = `run-cancel-${Date.now()}`;
-    const repoRoot = path.join(tempDir, "target");
-    await mkdir(repoRoot);
-    await execFileAsync("git", ["init"], { cwd: repoRoot, windowsHide: true });
-    await execFileAsync("git", ["config", "user.name", "ManyHands Test"], { cwd: repoRoot, windowsHide: true });
-    await execFileAsync("git", ["config", "user.email", "manyhands-test@local"], { cwd: repoRoot, windowsHide: true });
-    await execFileAsync("git", ["commit", "--allow-empty", "-m", "base"], { cwd: repoRoot, windowsHide: true });
-    const targetContext = await captureRunTargetContext(repoRoot);
-    expect(targetContext).toBeDefined();
-    const oldLease = {
-      operationId: "11111111-1111-4111-8111-111111111111",
-      kind: "execution" as const,
-      fencingToken: 1,
-      acquiredAt: "2026-07-17T12:00:00.000Z",
-      heartbeatAt: "2026-07-17T12:00:00.000Z"
-    };
-    await getRunRepository().save(makeRunRecordV2({
-      runId,
-      lifecycle: "running",
-      targetContext: targetContext!,
-      mutationFence: 1,
-      activeOperation: oldLease,
-      projection: { eventSequence: 3, lifecycle: "running", graphId: "graph-1", graphRevision: 1, approvedGraphRevision: 1, updatedAt: "2026-07-17T12:00:00.000Z" }
-    }));
-    const store = new JsonlRunEventStore({ ...(process.env.MANYHANDS_RUNS_DIR ? { directory: process.env.MANYHANDS_RUNS_DIR } : {}) });
-    const authority = { operationId: oldLease.operationId, fencingToken: oldLease.fencingToken };
-    await store.advanceFence(runId, authority);
-    await store.appendFenced(runId, 0, authority, [
-      { eventId: "created", occurredAt: "2026-07-17T12:00:00.000Z", type: "run.created", payload: { goal: "Build it" } },
-      { eventId: "proposed", occurredAt: "2026-07-17T12:00:01.000Z", type: "graph.revision.proposed", payload: { graphId: "graph-1", revision: 1 } },
-      { eventId: "approved", occurredAt: "2026-07-17T12:00:02.000Z", type: "graph.revision.approved", payload: { graphId: "graph-1", revision: 1 } }
-    ]);
-
-    const child = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000);"], {
-      stdio: "ignore",
-      detached: process.platform !== "win32"
-    });
-    await new Promise<void>((resolve, reject) => {
-      child.once("spawn", () => resolve());
-      child.once("error", reject);
-    });
-    registerLiveProcess(runId, child);
-    const pid = child.pid!;
-
-    const response = await POST_CANCEL(new Request("http://mh.test", { method: "POST" }), {
-      params: Promise.resolve({ id: runId })
-    });
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({
-      run: { lifecycle: "interrupted" },
-      cancellation: { allProcessesDead: true, terminal: true }
-    });
-    expect(isProcessAlive(pid)).toBe(false);
-    expect((await store.load(runId)).slice(-2).map((event) => event.type)).toEqual([
-      "operation.cancel_requested",
-      "operation.interrupted"
-    ]);
-    await expect(updateRunForOperation(runId, oldLease, (current) => ({
-      ...current,
-      projection: { ...current.projection, lifecycle: "result_ready" }
-    }))).rejects.toBeInstanceOf(RunMutationConflictError);
-  // This test uses real git and process-tree verification. Under the full
-  // repository suite, worker contention can delay those OS operations beyond
-  // the old 30-second harness limit without changing the cancellation result.
-  }, 60_000);
+describe("Stage 3 cancellation retirement", () => {
+  it("keeps the productive cancel route unreachable from the V2 web owner", async () => {
+    const source = await readFile(
+      path.resolve("apps/web/src/app/api/runs/[id]/cancel/route.ts"),
+      "utf8"
+    );
+    expect(source).toContain("submitProductRunCommand");
+    expect(source).not.toMatch(/registerLiveProcess|run-operation-lease|runner-state|JsonlRunEventStore/);
+  });
 });

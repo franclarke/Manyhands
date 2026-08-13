@@ -1,11 +1,10 @@
 import { notFound } from "next/navigation";
+import { adaptCoordinatorEvent } from "@/lib/run-model/sse-adapter";
 import {
-  RunNotFoundError,
-  getRunRepository
-} from "@/lib/server/runs";
-import { buildRunModelSeed } from "@/lib/server/runs/run-model-projection";
-import { readCanonicalRunModelEvents } from "@/lib/server/runs/v2/run-event-reader";
-import { getWorkspaceRepository } from "@/lib/server/workspaces";
+  isDaemonRequestFailure,
+  queryProductRun,
+  readProductRunEvents
+} from "@/lib/server/daemon/productive-client";
 import { RunModelView } from "./_components/run-model-view.client";
 
 export const runtime = "nodejs";
@@ -21,28 +20,34 @@ interface RunPageProps {
  * through the SSE adapter into the same reducer (single source of truth).
  */
 export default async function RunPage({ params }: RunPageProps): Promise<React.ReactElement> {
-  const { runId } = await params;
+  const { runId: encodedRunId } = await params;
+  const runId = decodeURIComponent(encodedRunId);
   let run;
   try {
-    run = await getRunRepository().get(runId);
+    run = await queryProductRun(runId);
   } catch (error) {
-    if (error instanceof RunNotFoundError) {
-      notFound();
-    }
+    if (isDaemonRequestFailure(error)) notFound();
     throw error;
   }
-
-  const [initialEvents, workspace] = await Promise.all([
-    readCanonicalRunModelEvents(run.runId),
-    getWorkspaceRepository().get(run.workspaceId).catch(() => null)
-  ]);
-
+  const initialEvents = (await readProductRunEvents(runId, 0)).events.map((event) => adaptCoordinatorEvent({
+    eventId: event.eventId,
+    runId: event.runId,
+    sequence: event.sequence,
+    occurredAt: event.occurredAt,
+    type: event.type,
+    payload: event.payload as Record<string, unknown>
+  }));
   return (
     <div className="mh-workspace-frame">
       <RunModelView
-        seed={buildRunModelSeed(run)}
+        seed={{
+          id: runId,
+          title: run.title ?? run.definition?.title ?? run.goal,
+          goal: run.goal,
+          lifecycle: run.lifecycle,
+          eventSequence: run.sequence
+        }}
         initialEvents={initialEvents}
-        workspaceName={workspace?.name ?? undefined}
       />
     </div>
   );

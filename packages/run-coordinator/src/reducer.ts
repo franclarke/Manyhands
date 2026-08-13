@@ -7,6 +7,8 @@ import { INITIAL_RUN_OUTCOMES, type DeliveryApproval, type DeliveryReceipt, type
 import type { AdoptedArtifact } from "./domain/artifacts.js";
 import type { AttemptUsage, PlanningCandidateEvaluation, PlanningCandidateSelection } from "./domain/events.js";
 import type { FailureClass } from "./domain/failures.js";
+import type { ProductRunDefinition } from "./product-lifecycle.js";
+import type { RunCommandEnvelope } from "./command-envelope.js";
 
 export interface AttemptProjection {
   attemptId: string;
@@ -86,8 +88,13 @@ export type EffectTerminalProjection =
 export interface RunProjection {
   runId: string;
   goal: string;
+  definition?: ProductRunDefinition;
+  title?: string;
+  archivedAt?: string;
   lifecycle: RunLifecycle;
   sequence: number;
+  createdAt: string;
+  updatedAt: string;
   appliedEventIds: string[];
   graphId?: string;
   graphRevision?: number;
@@ -96,6 +103,7 @@ export interface RunProjection {
   planningEnvelope?: PlanningEnvelopeProjection;
   planningCandidates?: PlanningCandidatesProjection;
   commandReceipts: Record<string, CommandReceipt>;
+  commandEnvelopes: Record<string, RunCommandEnvelope>;
   effectIntents: Record<string, EffectIntent>;
   physicalEffectReceipts: Record<string, PhysicalEffectReceipt>;
   effectTerminals: Record<string, EffectTerminalProjection>;
@@ -131,10 +139,16 @@ export function foldRun(rawEvents: readonly RunEvent[]): RunProjection {
       state = {
         runId: event.runId,
         goal: event.payload.goal,
+        ...(event.payload.definition === undefined
+          ? {}
+          : { definition: structuredClone(event.payload.definition), title: event.payload.definition.title }),
         lifecycle: "planning",
         sequence: 1,
+        createdAt: event.occurredAt,
+        updatedAt: event.occurredAt,
         appliedEventIds: [event.eventId],
         commandReceipts: {},
+        commandEnvelopes: {},
         effectIntents: {},
         physicalEffectReceipts: {},
         effectTerminals: {},
@@ -162,9 +176,19 @@ export function foldRun(rawEvents: readonly RunEvent[]): RunProjection {
 
 export function reduceRun(state: RunProjection, event: RunEvent): RunProjection {
   const next = structuredClone(state);
+  next.updatedAt = event.occurredAt;
   switch (event.type) {
     case "run.created":
       throw new Error("run.created can only be the first event.");
+    case "run.renamed":
+      next.title = event.payload.title;
+      break;
+    case "run.archived":
+      if (["planning", "running", "waiting_for_input", "cancelling", "delivering"].includes(next.lifecycle)) {
+        throw new Error(`Cannot archive a run while ${next.lifecycle}.`);
+      }
+      next.archivedAt = event.payload.archivedAt;
+      break;
     case "command.accepted": {
       const receipt = event.payload.receipt;
       if (receipt.runId !== next.runId) throw new Error(`Command ${receipt.commandId} belongs to another run.`);
@@ -176,6 +200,17 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
         throw new Error(`Command receipt ${receipt.receiptId} already exists.`);
       }
       next.commandReceipts[receipt.commandId] = structuredClone(receipt);
+      if (event.payload.command !== undefined) {
+        const command = event.payload.command;
+        if (
+          command.commandId !== receipt.commandId
+          || command.runId !== receipt.runId
+          || command.commandDigest !== receipt.commandDigest
+        ) {
+          throw new Error(`Command envelope ${command.commandId} does not bind to its acceptance receipt.`);
+        }
+        next.commandEnvelopes[command.commandId] = structuredClone(command);
+      }
       break;
     }
     case "effect.requested": {
