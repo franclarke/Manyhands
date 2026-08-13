@@ -152,6 +152,21 @@ function compileVerifiedPlan(input: CompilePlanInput): CompilePlanResult {
   for (const integration of Object.values(integrations)) {
     refs.push(refFor(integration, input.plan.revision, input.hasher));
   }
+  const refCollision = findCanonicalRefCollision(refs);
+  if (refCollision !== undefined) {
+    return {
+      ok: false,
+      findings: [{
+        code: "canonical_contract_ref_collision",
+        severity: "error",
+        authority: "deterministic",
+        message: `Canonical contract identity ${refCollision.id}@${refCollision.revision} names conflicting digests.`,
+        subjectId: refCollision.id,
+        evidenceRefs: [],
+        resolution: "none"
+      }]
+    };
+  }
 
   const graph = buildGraphRevision(graphMaterial(input, taskBundles, artifactRefs, seamRefs, refs), input.hasher);
   const graphFindings = validateGraphRevision(graph, {
@@ -413,6 +428,20 @@ function unique(values: readonly string[]): string[] {
 function uniqueRefs(refs: readonly CanonicalContractRef[]): CanonicalContractRef[] {
   return [...new Map(refs.map((ref) => [`${ref.id}\0${ref.revision}\0${ref.digest}`, ref])).values()]
     .sort((left, right) => `${left.id}\0${left.revision}\0${left.digest}`.localeCompare(`${right.id}\0${right.revision}\0${right.digest}`));
+}
+
+function findCanonicalRefCollision(
+  refs: readonly CanonicalContractRef[]
+): { id: string; revision: number; digests: string[] } | undefined {
+  const byIdentity = new Map<string, { id: string; revision: number; digests: Set<string> }>();
+  for (const ref of refs) {
+    const key = `${ref.id}\0${ref.revision}`;
+    const group = byIdentity.get(key) ?? { id: ref.id, revision: ref.revision, digests: new Set<string>() };
+    group.digests.add(ref.digest);
+    byIdentity.set(key, group);
+  }
+  const collision = [...byIdentity.values()].find(({ digests }) => digests.size > 1);
+  return collision === undefined ? undefined : { ...collision, digests: [...collision.digests].sort() };
 }
 
 function sortedRecord<T>(record: Readonly<Record<string, T>>): Record<string, T> {

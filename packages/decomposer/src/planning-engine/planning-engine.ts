@@ -65,6 +65,7 @@ export interface PlanningContinuationContext {
   basePlanDigest?: string;
   unitId?: string;
   decisions: readonly AmendmentDecision[];
+  proofStrategyDigests: readonly string[];
 }
 
 export type PlanningOperation = "plan" | "expand" | "amend";
@@ -235,10 +236,9 @@ export class PlanningEngine {
       };
     }
 
-    const seenProposalDigests = new Set<string>([
-      ...(request.basePlan === undefined ? [] : [request.basePlan.digest]),
-      ...revisions.flatMap(({ proposalDigest }) => proposalDigest === undefined ? [] : [proposalDigest])
-    ]);
+    const seenCausalStates = new Set(revisions.flatMap(({ causalStateDigest }) =>
+      causalStateDigest === undefined ? [] : [causalStateDigest]
+    ));
     let previousFindings: PlanningFinding[] = [];
     let parentDigest = revisions.at(-1)?.digest ?? request.basePlan?.digest;
     for (;;) {
@@ -299,10 +299,11 @@ export class PlanningEngine {
       } catch (error) {
         proposalDigest = computeCanonicalDigest(proposal.material, this.hasher);
         previousFindings = [terminalFinding("schema_invalid", error instanceof Error ? error.message : String(error), [])];
-        if (seenProposalDigests.has(proposalDigest)) return rejected([noProgressFinding()], trace(budget, consumed, revisions, advisoryFindings));
-        seenProposalDigests.add(proposalDigest);
+        const causalDigest = planningCausalStateDigest(proposalDigest, request, inspection, previousFindings, this.hasher);
+        if (seenCausalStates.has(causalDigest)) return rejected([noProgressFinding()], trace(budget, consumed, revisions, advisoryFindings));
+        seenCausalStates.add(causalDigest);
         consumed.revisions += 1;
-        const revision = buildRevision(operation, request.decisions, budget, consumed, revisions, parentDigest, inspection, proposalDigest, previousFindings, this.hasher);
+        const revision = buildRevision(operation, request.decisions, budget, consumed, revisions, parentDigest, inspection, proposalDigest, causalDigest, previousFindings, this.hasher);
         revisions.push(revision);
         parentDigest = revision.digest;
         if (!canRepair(consumed, budget)) return rejected(previousFindings, trace(budget, consumed, revisions, advisoryFindings));
@@ -310,10 +311,9 @@ export class PlanningEngine {
         continue;
       }
 
-      if (seenProposalDigests.has(proposalDigest)) {
+      if (request.basePlan?.digest === proposalDigest) {
         return rejected([noProgressFinding()], trace(budget, consumed, revisions, advisoryFindings));
       }
-      seenProposalDigests.add(proposalDigest);
       const transitionFinding = validateProposalTransition(operation, request, plan);
       if (transitionFinding !== undefined) {
         return rejected([transitionFinding], trace(budget, consumed, revisions, advisoryFindings));
@@ -325,8 +325,13 @@ export class PlanningEngine {
         repositoryView: request.repositoryView,
         hasher: this.hasher
       });
+      const causalDigest = planningCausalStateDigest(proposalDigest, request, inspection, verification.findings, this.hasher);
+      if (seenCausalStates.has(causalDigest)) {
+        return rejected([noProgressFinding()], trace(budget, consumed, revisions, advisoryFindings));
+      }
+      seenCausalStates.add(causalDigest);
       consumed.revisions += 1;
-      const revision = buildRevision(operation, request.decisions, budget, consumed, revisions, parentDigest, inspection, proposalDigest, verification.findings, this.hasher);
+      const revision = buildRevision(operation, request.decisions, budget, consumed, revisions, parentDigest, inspection, proposalDigest, causalDigest, verification.findings, this.hasher);
       revisions.push(revision);
       parentDigest = revision.digest;
       if (verification.ok) {
@@ -412,6 +417,7 @@ function buildRevision(
   parentDigest: string | undefined,
   inspection: RepositoryInspection,
   proposalDigest: string,
+  causalStateDigest: string,
   findings: readonly PlanningFinding[],
   hasher: DigestHasher
 ): PlanningRevision {
@@ -425,7 +431,8 @@ function buildRevision(
     evidenceRefs: [...inspection.evidenceRefs],
     changedDecisionIds: decisions.map(({ id }) => id),
     changedFindingCodes: findings.map(({ code }) => code),
-    proposalDigest
+    proposalDigest,
+    causalStateDigest
   }, hasher);
 }
 
@@ -537,8 +544,9 @@ function validateOperationInput(
   request: InternalRequest,
   hasher: DigestHasher
 ): PlanningFinding | undefined {
-  if (request.continuation !== undefined) return validateContinuation(request, hasher);
-  if (operation === "plan") return undefined;
+  if (operation === "plan") {
+    return request.continuation === undefined ? undefined : validateContinuation(request, hasher);
+  }
   const basePlan = request.basePlan;
   if (basePlan === undefined) {
     return terminalFinding("base_plan_missing", `${operation} requires an exact base SemanticPlan.`, []);
@@ -568,7 +576,7 @@ function validateOperationInput(
   if (operation === "amend" && request.decisions.length === 0) {
     return terminalFinding("amendment_decision_missing", "Amendment requires at least one selected decision.", []);
   }
-  return undefined;
+  return request.continuation === undefined ? undefined : validateContinuation(request, hasher);
 }
 
 function validateContinuation(request: InternalRequest, hasher: DigestHasher): PlanningFinding | undefined {
@@ -601,7 +609,7 @@ function validateContinuation(request: InternalRequest, hasher: DigestHasher): P
     ...(basePlan === undefined ? {} : { basePlan }),
     ...(context.unitId === undefined ? {} : { unitId: context.unitId })
   };
-  if (planningRequestDigest(context.operation, originalRequest, hasher) !== continuationValue.requestDigest) {
+  if (planningRequestDigest(context.operation, originalRequest, hasher, context.proofStrategyDigests) !== continuationValue.requestDigest) {
     return terminalFinding("continuation_request_mismatch", "Continuation does not match the exact original planning request.", []);
   }
   if (!validPriorTrace(priorTrace, continuationValue, context, request.budget, hasher)) {
@@ -646,8 +654,9 @@ function validPriorTrace(
 
 function planningRequestDigest(
   operation: PlanningOperation,
-  request: Pick<InternalRequest, "goal" | "repositoryView" | "basePlan" | "unitId" | "decisions">,
-  hasher: DigestHasher
+  request: Pick<InternalRequest, "goal" | "repositoryView" | "proofStrategies" | "basePlan" | "unitId" | "decisions">,
+  hasher: DigestHasher,
+  proofStrategyDigests: readonly string[] = request.proofStrategies.map(({ digest }) => digest)
 ): string {
   return computeCanonicalDigest({
     operation,
@@ -655,7 +664,26 @@ function planningRequestDigest(
     repositoryViewDigest: request.repositoryView.digest,
     basePlanDigest: request.basePlan?.digest,
     unitId: request.unitId,
-    decisions: request.decisions
+    decisions: request.decisions,
+    proofStrategyDigests: [...new Set(proofStrategyDigests)].sort()
+  }, hasher);
+}
+
+function planningCausalStateDigest(
+  proposalDigest: string,
+  request: InternalRequest,
+  inspection: RepositoryInspection,
+  findings: readonly PlanningFinding[],
+  hasher: DigestHasher
+): string {
+  return computeCanonicalDigest({
+    proposalDigest,
+    proofStrategyDigests: request.proofStrategies.map(({ digest }) => digest).sort(),
+    decisions: [...request.decisions].sort((left, right) => left.id.localeCompare(right.id)),
+    evidenceRefs: [...new Set(inspection.evidenceRefs)].sort(),
+    queryReceipts: [...new Set(inspection.queryReceipts)].sort(),
+    findings: findings.map(({ code, authority, resolution, subjectId }) => ({ code, authority, resolution, subjectId }))
+      .sort((left, right) => `${left.code}\0${left.subjectId ?? ""}`.localeCompare(`${right.code}\0${right.subjectId ?? ""}`))
   }, hasher);
 }
 

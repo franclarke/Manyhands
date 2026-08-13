@@ -45,11 +45,12 @@ describe("Stage 5 direct compiler", () => {
     material.artifacts["artifact:a"]!.consumerUnitIds.reverse();
     material.evidence.reverse();
     material.decisions = [
-      { id: "decision:z", statement: "Z", selectedOptionId: "option:z", evidenceRefs: [] },
-      { id: "decision:a", statement: "A", selectedOptionId: "option:a", evidenceRefs: [] }
+      { id: "decision:z", statement: "Z", selectedOptionId: "option:z", evidenceRefs: ["evidence:b", "evidence:a"] },
+      { id: "decision:a", statement: "A", selectedOptionId: "option:a", evidenceRefs: ["evidence:architecture"] }
     ];
     const ordered = buildSemanticPlan(material, stage5Sha256);
     material.decisions.reverse();
+    material.decisions.find(({ id }) => id === "decision:z")!.evidenceRefs.reverse();
     const equivalent = buildSemanticPlan(material, stage5Sha256);
 
     const first = compilePlan({ ...fixture, plan: ordered, hasher: stage5Sha256, idFactory: ids });
@@ -282,6 +283,34 @@ describe("Stage 5 direct compiler", () => {
       digestsByIdentity.set(key, digests);
     }
     expect([...digestsByIdentity.values()].every((digests) => digests.size === 1)).toBe(true);
+  });
+
+  it("rejects conflicting canonical contract refs with the same identity", () => {
+    const fixture = groundedFixture();
+    const material = structuredClone(fixture.plan);
+    Reflect.deleteProperty(material, "digest");
+    const artifact = material.artifacts["artifact:a"]!;
+    Reflect.deleteProperty(material.artifacts, "artifact:a");
+    artifact.id = "integration:unit:root";
+    material.artifacts[artifact.id] = artifact;
+    material.units["unit:a"]!.produces = [artifact.id];
+    const writer = material.units["unit:a"]!.resourceIntents[0]!;
+    if (writer.access !== "modify") throw new Error("Fixture writer must be a modify intent.");
+    writer.outputArtifactId = artifact.id;
+    for (const unitId of ["unit:root", "unit:b"] as const) {
+      material.units[unitId]!.consumes = material.units[unitId]!.consumes.map((id) =>
+        id === "artifact:a" ? artifact.id : id
+      );
+    }
+    material.seams["seam:a-b"]!.artifactId = artifact.id;
+    material.units["unit:root"]!.integration!.artifactIds = [artifact.id, "artifact:b"];
+    const plan = buildSemanticPlan(material, stage5Sha256);
+
+    const compiled = compilePlan({ ...fixture, plan, hasher: stage5Sha256, idFactory: ids });
+
+    expect(compiled.ok).toBe(false);
+    expect(compiled.ok ? [] : compiled.findings.map(({ code }) => code))
+      .toContain("canonical_contract_ref_collision");
   });
 
   it("compiles an approved planning-frontier composite without making it executable", () => {

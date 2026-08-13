@@ -80,7 +80,8 @@ const PlanningRevisionMaterialObjectSchema = z.object({
   evidenceRefs: z.array(NonEmptyStringSchema).default([]),
   changedDecisionIds: z.array(EntityIdSchema).default([]),
   changedFindingCodes: z.array(NonEmptyStringSchema).default([]),
-  proposalDigest: CanonicalDigestSchema.optional()
+  proposalDigest: CanonicalDigestSchema.optional(),
+  causalStateDigest: CanonicalDigestSchema.optional()
 }).strict();
 
 function validatePlanningRevision(

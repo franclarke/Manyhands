@@ -222,7 +222,10 @@ export function buildSemanticPlan(input: SemanticPlanMaterial, hasher: DigestHas
     units,
     seams,
     artifacts,
-    decisions: [...parsed.decisions].sort((left, right) => left.id.localeCompare(right.id)),
+    decisions: parsed.decisions.map((decision) => ({
+      ...decision,
+      evidenceRefs: sortedUniqueStrings(decision.evidenceRefs)
+    })).sort((left, right) => left.id.localeCompare(right.id)),
     evidence: [...parsed.evidence].sort((left, right) => left.id.localeCompare(right.id))
   };
   return { ...material, digest: computeCanonicalDigest(material, hasher) };

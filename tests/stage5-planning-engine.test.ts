@@ -485,7 +485,11 @@ describe("Stage 5 progressive PlanningEngine", () => {
       ...request(fixture),
       decisions: [{ id: "decision:owner", selectedOptionId: "option:a" }],
       continuation: pending.continuation,
-      continuationContext: { operation: "plan", decisions: [] },
+      continuationContext: {
+        operation: "plan",
+        decisions: [],
+        proofStrategyDigests: fixture.proofStrategies.map(({ digest }) => digest)
+      },
       decisionDrafts: pending.decisions,
       priorTrace: pending.trace
     }, new AbortController().signal);
@@ -551,6 +555,18 @@ describe("Stage 5 progressive PlanningEngine", () => {
     expect(expandedBudget.kind).toBe("rejected");
     expect(expandedBudget.kind === "rejected" && expandedBudget.findings.map(({ code }) => code))
       .toEqual(["continuation_trace_invalid"]);
+
+    const staleBasePlan = structuredClone(basePlan);
+    staleBasePlan.units["unit:a"]!.objective = "Mutated without recomputing the canonical digest.";
+    const staleBase = await engine.amend({
+      ...request(fixture),
+      basePlan: staleBasePlan,
+      decisions: [{ id: "decision:owner", selectedOptionId: "option:a" }],
+      ...authorization
+    }, new AbortController().signal);
+    expect(staleBase.kind).toBe("rejected");
+    expect(staleBase.kind === "rejected" && staleBase.findings.map(({ code }) => code))
+      .toEqual(["base_plan_digest_mismatch"]);
     expect(model.propose).not.toHaveBeenCalled();
   });
 
@@ -567,6 +583,34 @@ describe("Stage 5 progressive PlanningEngine", () => {
     if (result.kind !== "needs_input") return;
     expect(result.decisions).toEqual([expect.objectContaining({ id: "decision:proof-authority" })]);
     expect(result.continuation.revisionDigest).toBeTruthy();
+  });
+
+  it("accepts the same plan after a continuation supplies newly authorized proof", async () => {
+    const fixture = stage5Fixture();
+    const authorizer = new PlanningEngine({
+      model: { propose: async () => ({ kind: "candidate", material: withoutDigest(fixture.plan) }) },
+      repository: repository(),
+      hasher: stage5Sha256
+    });
+    const pending = await authorizer.plan({ ...request(fixture), proofStrategies: [] }, new AbortController().signal);
+    expect(pending.kind).toBe("needs_input");
+    if (pending.kind !== "needs_input") return;
+
+    const responder = new PlanningEngine({
+      model: { propose: async () => ({ kind: "candidate", material: withoutDigest(fixture.plan) }) },
+      repository: repository(),
+      hasher: stage5Sha256
+    });
+    const result = await responder.continue({
+      ...request(fixture),
+      decisions: [{ id: "decision:proof-authority", selectedOptionId: "option:provide-proof" }],
+      continuation: pending.continuation,
+      continuationContext: { operation: "plan", decisions: [], proofStrategyDigests: [] },
+      decisionDrafts: pending.decisions,
+      priorTrace: pending.trace
+    }, new AbortController().signal);
+
+    expect(result.kind).toBe("ready");
   });
 
   it("keeps a deterministically ready plan when the advisory critic is unavailable", async () => {
@@ -759,7 +803,8 @@ async function amendmentAuthorization(
       operation: "expand" as const,
       basePlanDigest: basePlan.digest,
       unitId: "unit:a",
-      decisions: []
+      decisions: [],
+      proofStrategyDigests: fixture.proofStrategies.map(({ digest }) => digest)
     },
     decisionDrafts: result.decisions,
     priorTrace: result.trace
