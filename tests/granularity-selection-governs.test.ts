@@ -4,7 +4,7 @@ import {
   applyGranularitySelection,
   createSemanticPlan,
   flattenSemanticWorkUnits,
-  type GranularityStrategyAssessment,
+  type GranularityAssessment,
   type SemanticPlan,
   type SemanticWorkUnit
 } from "@manyhands/decomposer";
@@ -88,25 +88,22 @@ describe("granularity selection governs the compiled tree", () => {
 });
 
 function assessments(
-  byKey: Record<string, GranularityStrategyAssessment["selected"]>
-): Record<string, GranularityStrategyAssessment> {
+  byKey: Record<string, GranularityAssessment["selected"]>
+): Record<string, GranularityAssessment> {
   return Object.fromEntries(Object.entries(byKey).map(([unitKey, selected]) => [unitKey, {
     unitKey,
     candidateTreeHash: "sha256:test",
     selected,
     leafFeasible: true,
     splitViable: true,
-    features: {
-      contextRelief: 0, parallelism: 0, faultIsolation: 0,
-      coordination: 0, pathOverlap: 0, validationDuplication: 0, uncertainty: 0
+    reasons: {
+      doesNotFit: false,
+      runsInParallel: false,
+      verifiableApart: false
     },
-    benefit: 0,
-    cost: 0,
-    splitAdvantage: 0,
-    minimumAdvantage: 0.15,
     evidenceRefs: [],
     rationale: "test"
-  } satisfies GranularityStrategyAssessment]));
+  } satisfies GranularityAssessment]));
 }
 
 function planOf(): SemanticPlan {

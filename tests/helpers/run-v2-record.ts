@@ -12,6 +12,7 @@ export function makeRunRecordV2(
     runId: overrides.runId ?? "run-v2",
     workspaceId: "workspace-v2",
     userPrompt: "Implement the requested feature",
+    acceptanceCriteria: [],
     title: "Implement feature",
     planningSelection: { executorId: "claude-code-cli", model: "sonnet" },
     executionSelection: { executorId: "claude-code-cli", model: "sonnet" },

@@ -88,13 +88,14 @@ describe("repository context profiles", () => {
   });
 
   it("marks unavailable snapshots as fully uncertain without throwing", () => {
+    const unavailableSnapshot = snapshot([]);
+    delete unavailableSnapshot.index;
+    delete unavailableSnapshot.indexHash;
     const profiles = buildRepositoryContextProfiles({
       breakdown: breakdownWith(leaf("unknown", { evidenceIds: ["path-inventory"] })),
       repositorySnapshot: {
-        ...snapshot([]),
-        inspectionDisposition: "unavailable",
-        index: undefined,
-        indexHash: undefined
+        ...unavailableSnapshot,
+        inspectionDisposition: "unavailable"
       }
     });
 
