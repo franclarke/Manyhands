@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "caseId": "gp1:express-request-correlation",
+  "repository": {
+    "id": "repo:express",
+    "source": "https://github.com/expressjs/express.git",
+    "baseCommit": "a3714473feb3d2908add734d340e7755fd85e0a3",
+    "treeSha": "134de344af9d2e7785aae9a991d02fd85b404bcf",
+    "snapshot": {
+      "id": "sha256:50ec60862bd347340b4af549ca47c67be15372179df093bc4a3e38c2afd145d5",
+      "digest": "sha256:d9db1af99ae5b7a051966d4e5c8de737d5176f0db69fa92ab5af4da09f85892c"
+    },
+    "modelDigest": "sha256:50207902b527c06949f724fd9837a9d25052c10142d72e7a4768b87481c8d268",
+    "viewDigest": "sha256:f4bd61283c4f43e52cb247836aa04aaeb662cf2d3ccdd929889f914ca8b70777",
+    "catalogDigest": "sha256:da12e575d3a8166f0d12b042dde0c07120dbef065424b90a450c8274b26eaff9",
+    "coverage": "partial"
+  },
+  "goal": {
+    "id": "goal:express-request-correlation",
+    "revision": 1,
+    "goal": "Add opt-in request correlation IDs to Express so an incoming X-Request-Id is preserved or a secure ID is generated, req.id is available to handlers, the response header is emitted, and default behavior remains unchanged.",
+    "acceptanceCriteria": [
+      {
+        "id": "criterion:request-id",
+        "statement": "When enabled, each request exposes req.id and returns the same X-Request-Id, preserving a valid incoming value or generating one.",
+        "required": true,
+        "level": "product",
+        "protectedReferences": [],
+        "verification": {
+          "allowedProofs": [{ "mode": "executable", "authority": "orchestrator_deterministic" }],
+          "independence": "independent_required"
+        }
+      },
+      {
+        "id": "criterion:opt-in",
+        "statement": "Existing applications that do not enable correlation IDs retain current request and response behavior.",
+        "required": true,
+        "level": "constraint",
+        "protectedReferences": [],
+        "verification": {
+          "allowedProofs": [{ "mode": "executable", "authority": "orchestrator_deterministic" }],
+          "independence": "protected_baseline_or_negative_control"
+        }
+      },
+      {
+        "id": "criterion:documented",
+        "statement": "The public configuration and request property are documented with focused tests.",
+        "required": true,
+        "level": "quality",
+        "protectedReferences": [],
+        "verification": {
+          "allowedProofs": [{ "mode": "static", "authority": "orchestrator_deterministic" }],
+          "independence": "independent_required"
+        }
+      }
+    ],
+    "constraints": ["Do not add a runtime dependency.", "Keep the feature opt-in.", "Preserve Express public compatibility."],
+    "qualityAttributes": [
+      { "kind": "security", "statement": "Generated identifiers use a secure platform primitive." },
+      { "kind": "compatibility", "statement": "Default behavior and existing middleware ordering remain compatible." }
+    ],
+    "target": {
+      "repositoryId": "repo:express",
+      "baseCommit": "a3714473feb3d2908add734d340e7755fd85e0a3",
+      "treeSha": "134de344af9d2e7785aae9a991d02fd85b404bcf"
+    },
+    "digest": "sha256:27d2288af2a7c2dd6cb4dd5d7c564de641ea21bd3d41fd7894d3844381260e21"
+  },
+  "proofStrategies": [
+    { "id": "proof:request-id", "obligationId": "validation:request-id", "criterionId": "criterion:request-id", "mode": "executable", "authority": "orchestrator_deterministic", "independence": "independent_required", "procedureRef": "command:express-request-id" },
+    { "id": "proof:opt-in", "obligationId": "validation:opt-in", "criterionId": "criterion:opt-in", "mode": "executable", "authority": "orchestrator_deterministic", "independence": "protected_baseline_or_negative_control", "procedureRef": "command:express-baseline" },
+    { "id": "proof:documented", "obligationId": "validation:documented", "criterionId": "criterion:documented", "mode": "static", "authority": "orchestrator_deterministic", "independence": "independent_required", "procedureRef": "source-scan:express-docs" }
+  ],
+  "inspection": {
+    "queryTerms": ["request", "response", "header", "application", "middleware", "test", "documentation"],
+    "excerptPaths": ["lib/application.js", "lib/express.js", "lib/request.js", "lib/response.js", "test/app.request.js", "test/app.response.js", "Readme.md"],
+    "budget": { "maxResults": 40, "maxBytes": 48000, "maxDepth": 2 }
+  },
+  "planningBudget": {
+    "modelCalls": 1,
+    "repositoryQueries": 2,
+    "queryBytes": 48000,
+    "revisions": 1,
+    "repairs": 0,
+    "expansions": 0
+  },
+  "provider": {
+    "cli": "codex-cli",
+    "cliVersion": "0.146.0",
+    "model": "gpt-5.6-sol",
+    "reasoningEffort": "high",
+    "profile": "stage5-gp1-offline-v1",
+    "sandbox": "read-only",
+    "ephemeral": true,
+    "initialSessions": 1,
+    "repeatPolicy": "forbidden_without_recorded_causal_change"
+  },
+  "topologyOracle": {
+    "id": "oracle:express-request-correlation",
+    "repositoryId": "repo:express",
+    "goalDigest": "sha256:27d2288af2a7c2dd6cb4dd5d7c564de641ea21bd3d41fd7894d3844381260e21",
+    "repositoryViewDigest": "sha256:f4bd61283c4f43e52cb247836aa04aaeb662cf2d3ccdd929889f914ca8b70777",
+    "requiredResponsibilities": [
+      { "id": "opt-in-configuration", "terms": ["configuration", "opt-in"] },
+      { "id": "request-identity", "terms": ["request", "id"] },
+      { "id": "response-propagation", "terms": ["response", "header"] },
+      { "id": "focused-tests", "terms": ["test", "request id"] },
+      { "id": "public-docs", "terms": ["document"] }
+    ],
+    "forbiddenResponsibilities": [
+      { "id": "mandatory-default", "terms": ["always enabled"] },
+      { "id": "external-runtime-dependency", "terms": ["new dependency"] }
+    ],
+    "requiredSeams": [
+      { "id": "configuration-to-request", "producerTerms": ["configuration"], "consumerTerms": ["request"], "semanticTerms": ["opt-in"] },
+      { "id": "request-to-response", "producerTerms": ["request"], "consumerTerms": ["response"], "semanticTerms": ["x-request-id"] }
+    ],
+    "requiredOwnership": [
+      { "id": "application-owner", "path": "lib/application.js", "ownerTerms": ["configuration"] },
+      { "id": "request-owner", "path": "lib/request.js", "ownerTerms": ["request"] },
+      { "id": "response-owner", "path": "lib/response.js", "ownerTerms": ["response"] },
+      { "id": "test-owner", "path": "test/app.request.js", "ownerTerms": ["test"] },
+      { "id": "docs-owner", "path": "Readme.md", "ownerTerms": ["document"] }
+    ],
+    "requiredCriterionIds": ["criterion:request-id", "criterion:opt-in", "criterion:documented"],
+    "acceptableAlternatives": [
+      "Request identity and response propagation may be one vertical slice if both responsibilities and their seam remain explicit.",
+      "Focused tests may be split between request and application tests with one unambiguous owner per file."
+    ]
+  },
+  "browserOracle": {
+    "requiredSections": ["Responsibility hierarchy", "Explicit seams", "Proof coverage", "Advisory findings"],
+    "requiredVisibleTerms": ["opt-in", "request", "response", "test", "document"],
+    "viewports": [{ "width": 1440, "height": 1000 }, { "width": 390, "height": 844 }],
+    "requirements": ["read_only", "no_daemon_endpoint", "no_horizontal_page_overflow", "hierarchy_understandable_to_non_technical_viewer"]
+  }
+}

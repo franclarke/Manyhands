@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "caseId": "gp1:manyhands-canonical-planning",
+  "repository": {
+    "id": "repo:manyhands",
+    "source": ".",
+    "baseCommit": "963544a7a1b0e46e6faeb285bceff0f322811b86",
+    "treeSha": "d869635b11a2fa49728018883eaf98ed4e988ae8",
+    "snapshot": {
+      "id": "sha256:edcaf3e06b29078c971dfae1e22f8dddb504d112605cebbe25dacd2f82173719",
+      "digest": "sha256:00459afe315bab01fa60b7772be0ee11f58d343b144882f231f573cce3577543"
+    },
+    "modelDigest": "sha256:fb978e52cdc6d447a8aca8569c98cce46c8b5c47a480715541aaddd858b30f86",
+    "viewDigest": "sha256:73814cb0a91939cbb49f62aee02f5aa2a519dd057a6e7ac05bf6d1e1ff6b57a6",
+    "catalogDigest": "sha256:d4263669033d68dc0c10d19d6e8f567900ccfff2a688d7bd5fa2df5bb172c3c5",
+    "coverage": "partial"
+  },
+  "goal": {
+    "id": "goal:manyhands-canonical-planning-cutover",
+    "revision": 1,
+    "goal": "Cut over ManyHands productive planning in the daemon to the canonical PlanningEngine, deterministic verifier and direct SemanticPlan to GraphRevision compiler while preserving lifecycle ownership and making the legacy WorkBreakdown projection unreachable.",
+    "acceptanceCriteria": [
+      {
+        "id": "criterion:canonical-route",
+        "statement": "The daemon composes the canonical planner, verifier and direct compiler as the only productive planning route.",
+        "required": true,
+        "level": "product",
+        "protectedReferences": [],
+        "verification": {
+          "allowedProofs": [{ "mode": "executable", "authority": "orchestrator_deterministic" }],
+          "independence": "independent_required"
+        }
+      },
+      {
+        "id": "criterion:legacy-unreachable",
+        "statement": "RecursivePlanner, WorkBreakdown projection and the legacy graph compiler are unreachable from productive planning entrypoints.",
+        "required": true,
+        "level": "constraint",
+        "protectedReferences": [],
+        "verification": {
+          "allowedProofs": [{ "mode": "static", "authority": "orchestrator_deterministic" }],
+          "independence": "protected_baseline_or_negative_control"
+        }
+      },
+      {
+        "id": "criterion:regression",
+        "statement": "Daemon lifecycle ownership, repository grounding and existing gates remain green after cutover.",
+        "required": true,
+        "level": "quality",
+        "protectedReferences": [],
+        "verification": {
+          "allowedProofs": [{ "mode": "executable", "authority": "orchestrator_deterministic" }],
+          "independence": "independent_required"
+        }
+      }
+    ],
+    "constraints": [
+      "Do not introduce another plan or graph representation.",
+      "Do not move planning ownership into apps/web.",
+      "Preserve the exact repository view and daemon lifecycle boundary."
+    ],
+    "qualityAttributes": [
+      { "kind": "maintainability", "statement": "Keep the canonical planner/compiler seam explicit and replayable." },
+      { "kind": "operability", "statement": "Planning failures remain typed and attributable." }
+    ],
+    "target": {
+      "repositoryId": "repo:manyhands",
+      "baseCommit": "963544a7a1b0e46e6faeb285bceff0f322811b86",
+      "treeSha": "d869635b11a2fa49728018883eaf98ed4e988ae8"
+    },
+    "digest": "sha256:cd4522c0c75eb24777b0f6e0c30086fa1cd668367dd712a56179c5e47ef19523"
+  },
+  "proofStrategies": [
+    { "id": "proof:canonical-route", "obligationId": "validation:canonical-route", "criterionId": "criterion:canonical-route", "mode": "executable", "authority": "orchestrator_deterministic", "independence": "independent_required", "procedureRef": "command:stage6-productive-planning" },
+    { "id": "proof:legacy-unreachable", "obligationId": "validation:legacy-unreachable", "criterionId": "criterion:legacy-unreachable", "mode": "static", "authority": "orchestrator_deterministic", "independence": "protected_baseline_or_negative_control", "procedureRef": "source-scan:productive-planning" },
+    { "id": "proof:regression", "obligationId": "validation:regression", "criterionId": "criterion:regression", "mode": "executable", "authority": "orchestrator_deterministic", "independence": "independent_required", "procedureRef": "command:prior-gates" }
+  ],
+  "inspection": {
+    "queryTerms": ["planning", "daemon", "semantic", "compiler", "WorkBreakdown", "GraphRevision", "repository"],
+    "excerptPaths": [
+      "apps/daemon/src/current-lifecycle-adapters.ts",
+      "apps/daemon/src/transitional-unsafe-profile.ts",
+      "packages/contracts/src/semantic-plan.ts",
+      "packages/decomposer/src/compiler/graph-compiler.ts",
+      "packages/decomposer/src/planner/planning-module.ts",
+      "packages/task-graph/src/canonical-graph.ts"
+    ],
+    "budget": { "maxResults": 40, "maxBytes": 48000, "maxDepth": 2 }
+  },
+  "planningBudget": {
+    "modelCalls": 1,
+    "repositoryQueries": 2,
+    "queryBytes": 48000,
+    "revisions": 1,
+    "repairs": 0,
+    "expansions": 0
+  },
+  "provider": {
+    "cli": "codex-cli",
+    "cliVersion": "0.146.0",
+    "model": "gpt-5.6-sol",
+    "reasoningEffort": "high",
+    "profile": "stage5-gp1-offline-v1",
+    "sandbox": "read-only",
+    "ephemeral": true,
+    "initialSessions": 1,
+    "repeatPolicy": "forbidden_without_recorded_causal_change"
+  },
+  "topologyOracle": {
+    "id": "oracle:manyhands-canonical-planning",
+    "repositoryId": "repo:manyhands",
+    "goalDigest": "sha256:cd4522c0c75eb24777b0f6e0c30086fa1cd668367dd712a56179c5e47ef19523",
+    "repositoryViewDigest": "sha256:73814cb0a91939cbb49f62aee02f5aa2a519dd057a6e7ac05bf6d1e1ff6b57a6",
+    "requiredResponsibilities": [
+      { "id": "daemon-composition", "terms": ["daemon", "planning"] },
+      { "id": "canonical-planning", "terms": ["planning", "engine"] },
+      { "id": "deterministic-verification", "terms": ["verif"] },
+      { "id": "direct-compilation", "terms": ["direct", "compil"] },
+      { "id": "legacy-retirement", "terms": ["legacy", "unreachable"] },
+      { "id": "regression-proof", "terms": ["regression", "gate"] }
+    ],
+    "forbiddenResponsibilities": [
+      { "id": "web-planning-owner", "terms": ["web", "planning owner"] },
+      { "id": "parallel-plan-representation", "terms": ["new", "workbreakdown"] }
+    ],
+    "requiredSeams": [
+      { "id": "daemon-to-planner", "producerTerms": ["daemon"], "consumerTerms": ["planning", "engine"], "semanticTerms": ["planning"] },
+      { "id": "planner-to-compiler", "producerTerms": ["planning"], "consumerTerms": ["compil"], "semanticTerms": ["semanticplan"] }
+    ],
+    "requiredOwnership": [
+      { "id": "daemon-owner", "path": "apps/daemon/src/current-lifecycle-adapters.ts", "ownerTerms": ["daemon"] },
+      { "id": "planner-owner", "path": "packages/decomposer/src/planner/planning-module.ts", "ownerTerms": ["planning"] },
+      { "id": "compiler-owner", "path": "packages/decomposer/src/compiler/graph-compiler.ts", "ownerTerms": ["compil"] }
+    ],
+    "requiredCriterionIds": ["criterion:canonical-route", "criterion:legacy-unreachable", "criterion:regression"],
+    "acceptableAlternatives": [
+      "Verifier and direct compiler may be one cohesive unit if their authority remains deterministic and separately named.",
+      "Legacy retirement may be integrated by the daemon-composition owner if reachability proof remains explicit."
+    ]
+  },
+  "browserOracle": {
+    "requiredSections": ["Responsibility hierarchy", "Explicit seams", "Proof coverage", "Advisory findings"],
+    "requiredVisibleTerms": ["daemon", "planning", "compiler", "legacy", "regression"],
+    "viewports": [{ "width": 1440, "height": 1000 }, { "width": 390, "height": 844 }],
+    "requirements": ["read_only", "no_daemon_endpoint", "no_horizontal_page_overflow", "hierarchy_understandable_to_non_technical_viewer"]
+  }
+}
