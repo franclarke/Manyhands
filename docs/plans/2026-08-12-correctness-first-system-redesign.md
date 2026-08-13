@@ -63,7 +63,7 @@ match the code.
 |---|---|---|---|
 | Stage 0 / G0 | `pass` | [`../audits/stage-0/`](../audits/stage-0/); accepted candidate `c7819799d22e920359050d4491bbca57e4a3cf8f`, tree `cb68af5cb33bbbae4db295dccc094eb517076b57`, complete 18-receipt qualification and bounded independent GO review | Stage 1 is authorized. |
 | Stage 1 / G1 | `pass` | [`../audits/stage-1/`](../audits/stage-1/); accepted candidate `393603debcc202761c3aae5e4f6d233ac2701e3a`, tree `5acb5ed58028a23a7747f2a4fb03410496fe6bd9`, focused 18-file/122-test suite, full 239-file/1,523-test suite and bounded independent GO review | Stage 2 is authorized. |
-| Stage 2 / GD0+GD1 | `in_progress` | G1 closure authorizes implementation; Stage 2 evidence is not yet complete | Build the durable daemon kernel and effect protocol, then close GD0 and GD1 before Stage 3. |
+| Stage 2 / GD0+GD1 | `pass` | [`../audits/stage-2/`](../audits/stage-2/); accepted candidate `1c9c742687ec98c54b8d9330a0fe483c6d9d2ed3`, tree `8e21667c03d27b5f588dd4811ff2e0ab159ae2c3`, focused 23-file/228-test suite, full 259-file/1,735-test suite and bounded independent GO review | Stage 3 is eligible but remains `not_started`; resume from the [`Stage 2 -> Stage 3 handoff`](../handoffs/2026-08-12-stage-2-to-stage-3.md). |
 | Stages 3–11 | `not_started` | none | Must execute in normative order. |
 
 ### 0.2 Required reading and execution protocol
