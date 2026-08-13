@@ -339,12 +339,12 @@ function parsePackageResolutions(lockfile: string): string[] {
   for (const line of lines.slice(start + 1, end)) {
     const packageMatch = /^ {2}(\S.*):$/u.exec(line);
     if (packageMatch) {
-      packageId = unquoteYamlScalar(packageMatch[1]);
+      packageId = unquoteYamlScalar(packageMatch[1]!);
       continue;
     }
     const resolutionMatch = /^ {4}resolution: \{integrity: ([^,}]+).*\}$/u.exec(line);
     if (resolutionMatch && packageId) {
-      resolutions.push(`${packageId}|${unquoteYamlScalar(resolutionMatch[1])}`);
+      resolutions.push(`${packageId}|${unquoteYamlScalar(resolutionMatch[1]!)}`);
       packageId = undefined;
     }
   }
@@ -366,7 +366,7 @@ function parseImporterResolutions(lockfile: string): string[] {
   for (const line of lines.slice(start + 1, end)) {
     const importerMatch = /^ {2}(\S.*):$/u.exec(line);
     if (importerMatch) {
-      importer = unquoteYamlScalar(importerMatch[1]);
+      importer = unquoteYamlScalar(importerMatch[1]!);
       section = undefined;
       dependency = undefined;
       continue;
@@ -379,12 +379,12 @@ function parseImporterResolutions(lockfile: string): string[] {
     }
     const dependencyMatch = /^ {6}(\S.*):$/u.exec(line);
     if (dependencyMatch && section) {
-      dependency = unquoteYamlScalar(dependencyMatch[1]);
+      dependency = unquoteYamlScalar(dependencyMatch[1]!);
       continue;
     }
     const versionMatch = /^ {8}version: (.+)$/u.exec(line);
     if (versionMatch && importer && section && dependency) {
-      const encodedVersion = unquoteYamlScalar(versionMatch[1]);
+      const encodedVersion = unquoteYamlScalar(versionMatch[1]!);
       const version = encodedVersion.startsWith("link:")
         ? encodedVersion
         : encodedVersion.split("(", 1)[0];

@@ -60,7 +60,7 @@ describe("B-033 current product documentation", () => {
 });
 
 function tableIds(markdown: string, prefix: string): string[] {
-  return [...markdown.matchAll(new RegExp(`^\\| (${prefix}\\d+) \\|`, "gmu"))].map((match) => match[1]);
+  return [...markdown.matchAll(new RegExp(`^\\| (${prefix}\\d+) \\|`, "gmu"))].map((match) => match[1]!);
 }
 
 function numberedIds(prefix: string, start: number, end: number): string[] {

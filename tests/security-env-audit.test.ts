@@ -51,7 +51,7 @@ describe("security-env-audit: no raw env: process.env in spawn calls", () => {
       const lines = content.split("\n");
 
       for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
+        const line = lines[i]!;
         // Match `env: process.env` in spawn/exec option objects
         if (/env:\s*process\.env/u.test(line)) {
           violations.push({

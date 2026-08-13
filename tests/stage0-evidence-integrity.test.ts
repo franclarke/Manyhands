@@ -242,10 +242,11 @@ function parseManifest(text: string): Map<string, string> {
     if (!match) {
       throw new Error(`Invalid logs.sha256 entry: ${line}`);
     }
-    if (entries.has(match[2])) {
-      throw new Error(`Duplicate logs.sha256 entry: ${match[2]}`);
+    const [, hash, filename] = match;
+    if (entries.has(filename!)) {
+      throw new Error(`Duplicate logs.sha256 entry: ${filename}`);
     }
-    entries.set(match[2], match[1]);
+    entries.set(filename!, hash!);
   }
   return entries;
 }
@@ -257,7 +258,8 @@ function parseReceipt(text: string): Map<string, string[]> {
     if (!match) {
       continue;
     }
-    fields.set(match[1], [...(fields.get(match[1]) ?? []), match[2]]);
+    const [, key, value] = match;
+    fields.set(key!, [...(fields.get(key!) ?? []), value!]);
   }
   return fields;
 }
@@ -267,5 +269,5 @@ function singleReceiptValue(receipt: Map<string, string[]>, key: string): string
   if (values.length !== 1) {
     throw new Error(`Expected exactly one ${key} field; observed ${values.length}.`);
   }
-  return values[0];
+  return values[0]!;
 }
