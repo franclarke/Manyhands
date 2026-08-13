@@ -99,12 +99,62 @@ describe("daemon process physical effect adapters", () => {
 
     expect(terminate).toHaveBeenCalledOnce();
     expect(terminate).toHaveBeenCalledWith("operator cancelled during supervisor startup");
-    expect(observed.records).toEqual([{
-      observation: "failed",
-      observedAt: "2026-08-12T22:00:02.000Z",
-      processIdentity: PROCESS_IDENTITY,
-      resultDigest: `sha256:${"b".repeat(64)}`
-    }]);
+    expect(observed.records).toEqual([
+      {
+        observation: "started",
+        observedAt: "2026-08-12T22:00:00.000Z",
+        processIdentity: PROCESS_IDENTITY
+      },
+      {
+        observation: "failed",
+        observedAt: "2026-08-12T22:00:02.000Z",
+        processIdentity: PROCESS_IDENTITY,
+        resultDigest: `sha256:${"b".repeat(64)}`
+      }
+    ]);
+  });
+
+  it("terminates when cancellation becomes durable while the started receipt is being recorded", async () => {
+    const started = startedReceipt();
+    const succeeded = finalReceipt(started, "succeeded");
+    const terminated = finalReceipt(started, "terminated", {
+      reason: "operator cancelled while recording started"
+    });
+    const terminate = vi.fn<SupervisedProcess["terminate"]>().mockResolvedValue(terminated);
+    const handle: SupervisedProcess = {
+      started,
+      custodianPid: started.custodianIdentity.pid,
+      completion: Promise.resolve(succeeded),
+      terminate
+    };
+    const supervisor = fakeSupervisor({
+      spawn: vi.fn<ProcessSupervisorPort["spawn"]>().mockResolvedValue(handle)
+    });
+    const invalidation = { reason: undefined as string | undefined };
+    const startedRecording = deferred();
+    const allowStartedRecord = deferred();
+    const adapter = createProcessSpawnPhysicalEffectAdapter({ supervisor });
+    const observed = recordingContext(
+      "process_spawn",
+      spawnPayload(),
+      [],
+      async () => invalidation.reason,
+      async (observation) => {
+        if (observation.observation !== "started") return;
+        startedRecording.resolve();
+        await allowStartedRecord.promise;
+      }
+    );
+
+    const execution = adapter.execute(intent("process_spawn"), observed.context);
+    await startedRecording.promise;
+    invalidation.reason = "operator cancelled while recording started";
+    allowStartedRecord.resolve();
+    await execution;
+
+    expect(terminate).toHaveBeenCalledOnce();
+    expect(terminate).toHaveBeenCalledWith("operator cancelled while recording started");
+    expect(observed.records.map((record) => record.observation)).toEqual(["started", "failed"]);
   });
 
   it("reconciles a durable start by terminating the old tree without spawning a duplicate", async () => {
@@ -384,7 +434,8 @@ function recordingContext(
   kind: EffectIntent["kind"],
   payload: EffectInputSpec["payload"],
   priorReceipts: readonly PhysicalEffectReceipt[] = [],
-  invalidationReason: () => Promise<string | undefined> = async () => undefined
+  invalidationReason: () => Promise<string | undefined> = async () => undefined,
+  beforeRecord: (observation: PhysicalEffectObservationInput) => Promise<void> = async () => undefined
 ): {
   context: PhysicalEffectAdapterContext;
   records: PhysicalEffectObservationInput[];
@@ -398,6 +449,7 @@ function recordingContext(
       priorReceipts,
       invalidationReason,
       async record(observation) {
+        await beforeRecord(observation);
         records.push(structuredClone(observation));
         return {} as PhysicalEffectReceipt;
       }
