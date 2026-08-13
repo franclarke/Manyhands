@@ -11,6 +11,8 @@ describe("Stage 5 GP1 runner boundary", () => {
     expect(source).toContain('canonicalMaterialJson');
     expect(source).toContain('currentDraftJson');
     expect(source).toContain('criticFindingsJson');
+    expect(source).toContain('Closed enums');
+    expect(source).toContain('A repeated session requires a recorded causal change');
     expect(source).not.toMatch(/exec\s+resume|--dangerously-bypass/iu);
   });
 

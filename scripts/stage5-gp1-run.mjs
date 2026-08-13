@@ -11,16 +11,18 @@ const contracts = await import(pathToFileUrl(path.join(repositoryRoot, "packages
 const decomposer = await import(pathToFileUrl(path.join(repositoryRoot, "packages/decomposer/dist/index.js")));
 const repositoryIndex = await import(pathToFileUrl(path.join(repositoryRoot, "packages/repository-index/dist/index.js")));
 
-const [caseName, targetRootInput] = process.argv.slice(2);
+const [caseName, targetRootInput, runLabel = "initial", causalChange = ""] = process.argv.slice(2);
 if (!caseName || !targetRootInput) {
-  throw new Error("Usage: node scripts/stage5-gp1-run.mjs <manyhands|express> <target-root>");
+  throw new Error("Usage: node scripts/stage5-gp1-run.mjs <manyhands|express> <target-root> [run-label] [causal-change]");
 }
 if (!/^[a-z0-9-]+$/u.test(caseName)) throw new Error(`Unsafe case name ${caseName}.`);
+if (!/^[a-z0-9-]+$/u.test(runLabel)) throw new Error(`Unsafe run label ${runLabel}.`);
+if (runLabel !== "initial" && causalChange.trim() === "") throw new Error("A repeated session requires a recorded causal change.");
 
 const targetRoot = path.resolve(targetRootInput);
 const preregistrationPath = path.join(repositoryRoot, "docs/audits/stage-5/preregistration", `${caseName}.json`);
 const preregistration = JSON.parse(await readFile(preregistrationPath, "utf8"));
-const evidenceDirectory = path.join(repositoryRoot, "docs/audits/stage-5/evidence/gp1", caseName);
+const evidenceDirectory = path.join(repositoryRoot, "docs/audits/stage-5/evidence/gp1", caseName, runLabel);
 await mkdir(evidenceDirectory, { recursive: true });
 assertGitIdentity(targetRoot, preregistration.repository.baseCommit, preregistration.repository.treeSha);
 
@@ -211,6 +213,8 @@ if (stage5Candidate !== undefined) {
 const receipt = {
   schemaVersion: 1,
   caseId: preregistration.caseId,
+  runLabel,
+  causalChange: causalChange || null,
   candidate: { sha: candidateSha, tree: candidateTree },
   preregistration: { commit: preregistrationCommit, path: relative(repositoryRoot, preregistrationPath) },
   repository: {
@@ -270,11 +274,29 @@ function buildPrompt(input) {
 { id, revision:1, goalContract:{id,revision,digest}, repositorySnapshot:{id,digest}, repositoryView:{digest,treeSha,resourceCatalogDigest}, rootUnitId, units:Record, seams:Record, artifacts:Record, decisions:[], evidence:[], status:"ready" }.
 Each unit is {id,parentId?,role:"leaf"|"composite",title,objective,boundary:{kind,evidenceRefs},outcomes:[{id,statement}],criteria:[{criterionId,statement,sourceCriterionId}],repositorySurface:{resourceRefs,pathHints},resourceIntents,consumes,produces,seamRefs,validation,uncertainty:[],granularity,expansion,integration?}.
 An observe intent is {resourceId,access:"observe",inputArtifactId?,evidenceRefs,epistemic}. A modify intent is {resourceId,access:"modify",ownerPhase:"implementation"|"integration",inputArtifactId?,outputArtifactId,evidenceRefs,epistemic}.
-Validation is {obligationId,criterionId,proofStrategyId,layer,severity,acceptableEvidence,baselinePolicy,negativeControl,flakyPolicy}; use ONLY an exact registered proof strategy whose obligationId and criterionId both match.
+Validation is {obligationId,criterionId,proofStrategyId,layer,severity,acceptableEvidence,baselinePolicy,negativeControl,flakyPolicy}; use ONLY an exact registered proof strategy whose obligationId and criterionId both match. Use every registered ProofStrategy exactly once: proof:root on the root integration and every other strategy on one distinct leaf. Do not attach two validation obligations to one unit.
 Granularity leaf requires disposition:"leaf" and all feasibility yes/true/false as appropriate. Composite requires disposition:"split", at least one splitReason/evidenceRef, integrationObligationId, and integration {obligationId,objective,criterionIds,proofStrategyId,artifactIds,seamIds}.
 Artifact is {id,producerUnitId,consumerUnitIds,artifactType,mediaType?,materialization:"commit"|"patch"|"files"|"manifest"|"logical",expectedPaths}. Every consumed artifact names the consumer and every produced artifact names the producer. Every consumed artifact must be output by a modify resource intent of its producer.
 Seam is {id,kind,specification,producerUnitId,consumerUnitIds,semanticFacts,compatibility:{mode,rules},artifactId,validationObligationIds}. Producer and consumers must all list seamRefs. Seam artifact must flow producer to every seam consumer.
 Use only listed resourceId values and their exact paths. One path has one modifying leaf owner. Root/composites may describe broad surfaces but should not modify child-owned resources.`;
+  const exactEnums = `Closed enums (copy these exact string values; never invent semantic aliases):
+- boundary.kind: application | package | module | domain | vertical_slice | cross_cutting
+- resourceIntent.access: observe | modify
+- ownerPhase: implementation | integration
+- validation.layer: static | unit | integration | e2e | security | accessibility | manual
+- validation.severity: required | advisory
+- acceptableEvidence: static_analysis | test_result | runtime_observation | artifact_inspection | manual_attestation
+- baselinePolicy: required | optional | not_required
+- negativeControl: required | when_feasible | not_required
+- flakyPolicy: forbid | allow_with_warning
+- seam.kind: api | type | event | data | ui | command
+- compatibility.mode: exact | backward_compatible
+- artifact.materialization: commit | patch | files | manifest | logical
+- granularity.disposition: leaf | split | frontier
+- splitReasons: capacity | independent_delivery | parallelism | risk_isolation | integration_boundary | specialization
+- expansion: leaf | expanded | frontier
+- epistemic known form: {"state":"known","confidence":"high"|"medium"|"low","evidenceRefs":[non-empty ids]}; partial/conflicting have the same confidence/evidence shape; unknown is {"state":"unknown","reason":"...","evidenceRefs":[]}.
+Recommended executable validation defaults are layer:"integration", severity:"required", acceptableEvidence:["test_result"], baselinePolicy:"required", negativeControl:"when_feasible", flakyPolicy:"forbid". Static proof uses layer:"static" and acceptableEvidence:["static_analysis"].`;
   const currentShape = `Return currentDraftJson as a JSON string containing the current planner draft {root,seams,repositoryEvidence,uncertainties:[],questions:[]}.
 Current units use {key,kind,title,objective,concerns,evidenceIds,plannedPaths?,writePaths?,outcomes}; composite also has cut:{criterion,rationale},children. Outcomes use criterionIds "criterion-1", "criterion-2", ... in the same order as GoalContract acceptanceCriteria, and {verification:{kind:"existing"|"author_test"|"manual",references,rationale?}}. Each leaf must cite an exact supplied evidence id and declare exact writePaths. Seams use {id,producerUnitKey,consumerUnitKeys,purpose,paths,interface:{kind,promise,compatibility,materialization,verification},evidenceIds}. repositoryEvidence must be the exact supplied current evidence array.`;
   const criticShape = `Return criticFindingsJson as a JSON string containing an array of zero or more advisory findings {code,message,evidenceRefs,resolution}. resolution is deterministic_check, repository_query or human_decision. These findings cannot approve or reject.`;
@@ -284,6 +306,7 @@ Current units use {key,kind,title,objective,concerns,evidenceIds,plannedPaths?,w
     "Return the three required JSON-string fields through the provided outer response schema. No prose outside those fields.",
     "A proposal is not implementation and must not claim runtime success.",
     canonicalShape,
+    exactEnums,
     currentShape,
     criticShape,
     `Pre-registration:\n${JSON.stringify(input.preregistration, null, 2)}`,
