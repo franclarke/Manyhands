@@ -111,11 +111,28 @@ function semanticPlanMaterial() {
         ],
         criteria: [{ criterionId: "criterion:booking", statement: "A slot can be booked", sourceCriterionId: "criterion:booking" }],
         repositorySurface: { resourceRefs: ["resource:booking"], pathHints: ["src/booking.ts"] },
-        resourceIntents: [{ resourceRef: "resource:booking", access: "write" as const }],
+        resourceIntents: [{
+          resourceId: "resource:booking",
+          access: "modify" as const,
+          ownerPhase: "implementation" as const,
+          outputArtifactId: "artifact:booking",
+          evidenceRefs: ["evidence:boundary"],
+          epistemic: { state: "known" as const, confidence: "high" as const, evidenceRefs: ["evidence:boundary"] }
+        }],
         consumes: ["artifact:a", "artifact:z"],
         produces: ["artifact:booking"],
         seamRefs: ["seam:a", "seam:z"],
-        validation: [{ obligationId: "obligation:booking", criterionId: "criterion:booking" }],
+        validation: [{
+          obligationId: "obligation:booking",
+          criterionId: "criterion:booking",
+          proofStrategyId: "proof:booking",
+          layer: "integration" as const,
+          severity: "required" as const,
+          acceptableEvidence: ["test_result" as const],
+          baselinePolicy: "required" as const,
+          negativeControl: "when_feasible" as const,
+          flakyPolicy: "forbid" as const
+        }],
         uncertainty: [],
         granularity: {
           disposition: "leaf" as const,

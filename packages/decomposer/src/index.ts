@@ -1564,6 +1564,10 @@ export type {
 } from "./planner/semantic-plan.js";
 export { PlanningModule } from "./planner/planning-module.js";
 export * from "./planner/recursive-planner.js";
+export * from "./compiler/plan-verifier.js";
+export * from "./compiler/direct-plan-compiler.js";
+export * from "./planning-engine/planning-engine.js";
+export * from "./evaluation/planning-evaluation.js";
 export * from "./planner/cut-feasibility-critic.js";
 export * from "./planner/derived-relations.js";
 export * from "./planner/semantic-plan-projection.js";
