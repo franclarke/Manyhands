@@ -22,7 +22,9 @@ describe("Stage 5 GP1 runner boundary", () => {
     expect(source).toContain('cut.criterion is exactly "cohesion"|"integration"|"risk"|"verifiability"');
     expect(source).toContain('A repeated session requires a recorded causal change');
     expect(source).toContain('deterministic_replay');
-    expect(source).toContain('assertEqual(sha256(prompt), sha256(sourcePrompt), "replay prompt digest")');
+    expect(source).toContain('deterministic_reevaluation');
+    expect(source).toContain('sourcePromptDigest');
+    expect(source).toContain('harnessPromptDigest');
     expect(source).not.toMatch(/exec\s+resume|--dangerously-bypass/iu);
   });
 

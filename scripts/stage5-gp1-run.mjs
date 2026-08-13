@@ -243,9 +243,10 @@ const receipt = {
     profile: preregistration.provider.profile,
     invocation,
     exitCode: providerReceipt.exitCode,
-    mode: replaySource === undefined ? "model_session" : "deterministic_replay",
+    mode: replaySource === undefined ? "model_session" : providerReceipt.mode,
     replaySource: replaySource === undefined ? null : relative(repositoryRoot, replaySource),
-    promptDigest: sha256(prompt),
+    promptDigest: providerReceipt.sourcePromptDigest ?? sha256(prompt),
+    harnessPromptDigest: sha256(prompt),
     outputDigest: sha256(await readFile(outputPath, "utf8")),
     eventLogDigest: sha256(await readFile(providerLogPath, "utf8"))
   },
@@ -353,10 +354,15 @@ function runProvider({ invocation, prompt, logPath, cwd }) {
 
 async function replayProviderOutput({ source, prompt, outputPath, logPath }) {
   const sourcePrompt = await readFile(path.join(source, "prompt.txt"), "utf8");
-  assertEqual(sha256(prompt), sha256(sourcePrompt), "replay prompt digest");
+  const sourcePromptDigest = sha256(sourcePrompt);
+  const harnessPromptDigest = sha256(prompt);
   await writeFile(outputPath, await readFile(path.join(source, "provider-output.json"), "utf8"), "utf8");
   await writeFile(logPath, await readFile(path.join(source, "provider-events.jsonl"), "utf8"), "utf8");
-  return { exitCode: 0 };
+  return {
+    exitCode: 0,
+    mode: sourcePromptDigest === harnessPromptDigest ? "deterministic_replay" : "deterministic_reevaluation",
+    sourcePromptDigest
+  };
 }
 
 function assertGitIdentity(root, commit, tree) {
