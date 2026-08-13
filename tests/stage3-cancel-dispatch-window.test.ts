@@ -1,10 +1,11 @@
 import { createHash } from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   EffectKindSchema,
   buildEffectInput,
   buildEffectIntent,
+  buildPhysicalEffectReceipt,
   type DigestHasher,
   type EffectInput,
   type EffectInputSpec,
@@ -40,7 +41,7 @@ describe("Stage 3 cancellation during the dispatcher pre-dispatch window", () =>
     const journal = new MemoryJournal();
     const inputStore = new BlockingEffectInputStore(blockedRead === "input");
     const receiptStore = new MemoryReceiptStore(blockedRead === "receipts");
-    const adapterCalls: EffectIntent[] = [];
+    const adapterCalls: Array<{ kind: EffectIntent["kind"]; mode: "execute" | "reconcile" }> = [];
     const dispatcher = new KindAwarePhysicalEffectDispatcher({
       inputStore,
       receiptStore,
@@ -48,15 +49,15 @@ describe("Stage 3 cancellation during the dispatcher pre-dispatch window", () =>
       adapters: EffectKindSchema.options.map((kind): PhysicalEffectAdapter => ({
         kind,
         async execute(intent, context) {
-          adapterCalls.push(structuredClone(intent));
+          adapterCalls.push({ kind: intent.kind, mode: "execute" });
           await context.record({
             observation: "succeeded",
             observedAt: "2026-08-13T13:00:04.000Z",
             resultDigest: `sha256:${kind}-result`
           });
         },
-        async reconcile() {
-          throw new Error("This scenario dispatches only new effects.");
+        async reconcile(intent) {
+          adapterCalls.push({ kind: intent.kind, mode: "reconcile" });
         }
       }))
     });
@@ -107,12 +108,63 @@ describe("Stage 3 cancellation during the dispatcher pre-dispatch window", () =>
     dispatchGate.release.resolve();
     await actor.drainEffects();
 
-    expect(adapterCalls.map((intent) => intent.kind)).toEqual(["cleanup"]);
+    expect(adapterCalls).toEqual([
+      { kind: "process_spawn", mode: "reconcile" },
+      { kind: "cleanup", mode: "execute" }
+    ]);
     const projection = foldRun(journal.events);
     expect(projection.effectTerminals[spawn.intent.effectId]?.status).toBe("interrupted");
     expect(projection.effectTerminals[cleanup.intent.effectId]?.status).toBe("completed");
     expect(receiptStore.receipts.filter((receipt) => receipt.effectId === spawn.intent.effectId)).toEqual([]);
   }
+
+  it("reconciles durable physical state after cancellation instead of short-circuiting recovery", async () => {
+    const inputStore = new BlockingEffectInputStore(false);
+    const receiptStore = new MemoryReceiptStore(false);
+    const spawn = effect("process_spawn", "attempt:spawn", {
+      executable: "C:/runtime/node.exe",
+      argv: ["worker.mjs"],
+      cwd: "C:/work/run",
+      env: {}
+    });
+    await inputStore.put(spawn.inputSpec);
+    receiptStore.receipts.push(buildPhysicalEffectReceipt({
+      effectId: spawn.intent.effectId,
+      observation: "started",
+      inputDigest: spawn.intent.inputDigest,
+      daemonEpoch: spawn.intent.daemonEpoch,
+      processIdentity: {
+        pid: 4242,
+        creationIdentity: "windows-filetime:durable-start",
+        supervisorNonce: "nonce:durable-start"
+      },
+      observedAt: "2026-08-13T13:00:02.000Z"
+    }, sha256));
+    const execute = vi.fn();
+    const reconcile = vi.fn<PhysicalEffectAdapter["reconcile"]>(async (_intent, context) => {
+      await context.record({
+        observation: "failed",
+        resultDigest: "sha256:terminated-after-recovery",
+        observedAt: "2026-08-13T13:00:05.000Z"
+      });
+    });
+    const dispatcher = new KindAwarePhysicalEffectDispatcher({
+      inputStore,
+      receiptStore,
+      hasher: sha256,
+      adapters: EffectKindSchema.options.map((kind): PhysicalEffectAdapter => kind === "process_spawn"
+        ? { kind, execute, reconcile }
+        : { kind, execute: async () => undefined, reconcile: async () => undefined })
+    });
+
+    const receipts = await dispatcher.reconcile(spawn.intent, "epoch:recovered", {
+      reason: async () => "Run cancellation is durable."
+    });
+
+    expect(execute).not.toHaveBeenCalled();
+    expect(reconcile).toHaveBeenCalledOnce();
+    expect(receipts.map((receipt) => receipt.observation)).toEqual(["started", "failed"]);
+  });
 });
 
 class BlockingEffectInputStore implements EffectInputStorePort {
