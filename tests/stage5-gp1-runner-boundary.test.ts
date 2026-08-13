@@ -18,6 +18,8 @@ describe("Stage 5 GP1 runner boundary", () => {
     expect(source).toContain('Every outcome is exactly {id,description,criterionIds,verification:');
     expect(source).toContain('interface.verification is the same verification OBJECT');
     expect(source).toContain('A repeated session requires a recorded causal change');
+    expect(source).toContain('deterministic_replay');
+    expect(source).toContain('assertEqual(sha256(prompt), sha256(sourcePrompt), "replay prompt digest")');
     expect(source).not.toMatch(/exec\s+resume|--dangerously-bypass/iu);
   });
 

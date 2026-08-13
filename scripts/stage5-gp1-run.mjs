@@ -11,15 +11,16 @@ const contracts = await import(pathToFileUrl(path.join(repositoryRoot, "packages
 const decomposer = await import(pathToFileUrl(path.join(repositoryRoot, "packages/decomposer/dist/index.js")));
 const repositoryIndex = await import(pathToFileUrl(path.join(repositoryRoot, "packages/repository-index/dist/index.js")));
 
-const [caseName, targetRootInput, runLabel = "initial", causalChange = ""] = process.argv.slice(2);
+const [caseName, targetRootInput, runLabel = "initial", causalChange = "", replaySourceInput = ""] = process.argv.slice(2);
 if (!caseName || !targetRootInput) {
-  throw new Error("Usage: node scripts/stage5-gp1-run.mjs <manyhands|express> <target-root> [run-label] [causal-change]");
+  throw new Error("Usage: node scripts/stage5-gp1-run.mjs <manyhands|express> <target-root> [run-label] [causal-change] [replay-source]");
 }
 if (!/^[a-z0-9-]+$/u.test(caseName)) throw new Error(`Unsafe case name ${caseName}.`);
 if (!/^[a-z0-9-]+$/u.test(runLabel)) throw new Error(`Unsafe run label ${runLabel}.`);
 if (runLabel !== "initial" && causalChange.trim() === "") throw new Error("A repeated session requires a recorded causal change.");
 
 const targetRoot = path.resolve(targetRootInput);
+const replaySource = replaySourceInput === "" ? undefined : path.resolve(replaySourceInput);
 const preregistrationPath = path.join(repositoryRoot, "docs/audits/stage-5/preregistration", `${caseName}.json`);
 const preregistration = JSON.parse(await readFile(preregistrationPath, "utf8"));
 const evidenceDirectory = path.join(repositoryRoot, "docs/audits/stage-5/evidence/gp1", caseName, runLabel);
@@ -108,7 +109,9 @@ const invocation = [
   "--json",
   "--color", "never"
 ];
-const providerReceipt = await runProvider({ invocation, prompt, logPath: providerLogPath, cwd: evidenceDirectory });
+const providerReceipt = replaySource === undefined
+  ? await runProvider({ invocation, prompt, logPath: providerLogPath, cwd: evidenceDirectory })
+  : await replayProviderOutput({ source: replaySource, prompt, outputPath, logPath: providerLogPath });
 const providerEnvelope = JSON.parse(await readFile(outputPath, "utf8"));
 const canonicalMaterial = JSON.parse(providerEnvelope.canonicalMaterialJson);
 const currentDraft = JSON.parse(providerEnvelope.currentDraftJson);
@@ -234,6 +237,8 @@ const receipt = {
     profile: preregistration.provider.profile,
     invocation,
     exitCode: providerReceipt.exitCode,
+    mode: replaySource === undefined ? "model_session" : "deterministic_replay",
+    replaySource: replaySource === undefined ? null : relative(repositoryRoot, replaySource),
     promptDigest: sha256(prompt),
     outputDigest: sha256(await readFile(outputPath, "utf8")),
     eventLogDigest: sha256(await readFile(providerLogPath, "utf8"))
@@ -338,6 +343,14 @@ function runProvider({ invocation, prompt, logPath, cwd }) {
     });
     child.stdin.end(prompt);
   });
+}
+
+async function replayProviderOutput({ source, prompt, outputPath, logPath }) {
+  const sourcePrompt = await readFile(path.join(source, "prompt.txt"), "utf8");
+  assertEqual(sha256(prompt), sha256(sourcePrompt), "replay prompt digest");
+  await writeFile(outputPath, await readFile(path.join(source, "provider-output.json"), "utf8"), "utf8");
+  await writeFile(logPath, await readFile(path.join(source, "provider-events.jsonl"), "utf8"), "utf8");
+  return { exitCode: 0 };
 }
 
 function assertGitIdentity(root, commit, tree) {
