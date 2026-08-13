@@ -78,6 +78,11 @@ export interface PlanningCandidatesProjection {
   selection: PlanningCandidateSelection;
 }
 
+export type EffectTerminalProjection =
+  | { status: "completed"; receiptId: string }
+  | { status: "failed"; receiptId: string; reason: string }
+  | { status: "interrupted"; receiptId?: string; reason: string };
+
 export interface RunProjection {
   runId: string;
   goal: string;
@@ -93,6 +98,7 @@ export interface RunProjection {
   commandReceipts: Record<string, CommandReceipt>;
   effectIntents: Record<string, EffectIntent>;
   physicalEffectReceipts: Record<string, PhysicalEffectReceipt>;
+  effectTerminals: Record<string, EffectTerminalProjection>;
   decisions: Record<string, Decision>;
   stoppedNodeIds?: string[];
   readiness: { readyNodeIds: string[]; pendingDecisionIds: string[]; explanations?: Array<Record<string, unknown>>; effectiveConfig?: Record<string, unknown>; schedulerState?: Record<string, unknown>; budgetAvailable?: boolean; conflictEvidence?: Array<Record<string, unknown>>; evaluatedAt?: string };
@@ -131,6 +137,7 @@ export function foldRun(rawEvents: readonly RunEvent[]): RunProjection {
         commandReceipts: {},
         effectIntents: {},
         physicalEffectReceipts: {},
+        effectTerminals: {},
         decisions: {},
         stoppedNodeIds: [],
         readiness: { readyNodeIds: [], pendingDecisionIds: [] },
@@ -188,6 +195,33 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       if (intent === undefined) throw new Error(`Physical effect receipt ${receipt.receiptId} has no requested effect ${receipt.effectId}.`);
       if (receipt.inputDigest !== intent.inputDigest) throw new Error(`Physical effect receipt ${receipt.receiptId} does not match effect ${receipt.effectId} input digest.`);
       next.physicalEffectReceipts[receipt.receiptId] = structuredClone(receipt);
+      break;
+    }
+    case "effect.completed": {
+      const { effectId, receiptId } = event.payload;
+      const receipt = assertEffectTerminalLink(next, effectId, receiptId);
+      if (receipt.observation !== "succeeded") {
+        throw new Error(`Effect ${effectId} can only complete from a succeeded physical receipt.`);
+      }
+      next.effectTerminals[effectId] = { status: "completed", receiptId };
+      break;
+    }
+    case "effect.failed": {
+      const { effectId, receiptId, reason } = event.payload;
+      const receipt = assertEffectTerminalLink(next, effectId, receiptId);
+      if (receipt.observation !== "failed") {
+        throw new Error(`Effect ${effectId} can only fail from a failed physical receipt.`);
+      }
+      next.effectTerminals[effectId] = { status: "failed", receiptId, reason };
+      break;
+    }
+    case "effect.interrupted": {
+      const { effectId, receiptId, reason } = event.payload;
+      assertEffectIntentPending(next, effectId);
+      if (receiptId !== undefined) assertEffectReceiptLink(next, effectId, receiptId);
+      next.effectTerminals[effectId] = receiptId === undefined
+        ? { status: "interrupted", reason }
+        : { status: "interrupted", receiptId, reason };
       break;
     }
     case "legacy.run_imported":
@@ -553,6 +587,37 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
   next.sequence = event.sequence;
   next.appliedEventIds.push(event.eventId);
   return next;
+}
+
+function assertEffectIntentPending(state: RunProjection, effectId: string): EffectIntent {
+  const intent = state.effectIntents[effectId];
+  if (intent === undefined) throw new Error(`Terminal effect ${effectId} has no requested intent.`);
+  if (state.effectTerminals[effectId] !== undefined) throw new Error(`Effect ${effectId} is already terminal.`);
+  return intent;
+}
+
+function assertEffectReceiptLink(
+  state: RunProjection,
+  effectId: string,
+  receiptId: string
+): PhysicalEffectReceipt {
+  const receipt = state.physicalEffectReceipts[receiptId];
+  if (receipt === undefined) {
+    throw new Error(`Terminal effect ${effectId} references missing physical receipt ${receiptId}.`);
+  }
+  if (receipt.effectId !== effectId) {
+    throw new Error(`Physical receipt ${receiptId} belongs to effect ${receipt.effectId}, not ${effectId}.`);
+  }
+  return receipt;
+}
+
+function assertEffectTerminalLink(
+  state: RunProjection,
+  effectId: string,
+  receiptId: string
+): PhysicalEffectReceipt {
+  assertEffectIntentPending(state, effectId);
+  return assertEffectReceiptLink(state, effectId, receiptId);
 }
 
 function requireAttempt(state: RunProjection, attemptId: string, nodeId: string): AttemptProjection {

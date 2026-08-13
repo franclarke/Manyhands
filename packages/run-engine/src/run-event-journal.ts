@@ -70,5 +70,8 @@ export class FencedRunActorJournal implements RunActorJournalPort {
 function isActorJournalEvent(event: RunEvent): event is RunActorJournalEvent {
   return event.type === "command.accepted"
     || event.type === "effect.requested"
-    || event.type === "effect.observed";
+    || event.type === "effect.observed"
+    || event.type === "effect.completed"
+    || event.type === "effect.failed"
+    || event.type === "effect.interrupted";
 }

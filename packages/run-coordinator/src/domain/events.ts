@@ -121,6 +121,20 @@ export const RunEventSchema = z.discriminatedUnion("type", [
   event("command.accepted", z.object({ receipt: CommandReceiptSchema }).strict()),
   event("effect.requested", z.object({ intent: EffectIntentSchema }).strict()),
   event("effect.observed", z.object({ receipt: PhysicalEffectReceiptSchema }).strict()),
+  event("effect.completed", z.object({
+    effectId: NonEmptyStringSchema,
+    receiptId: NonEmptyStringSchema
+  }).strict()),
+  event("effect.failed", z.object({
+    effectId: NonEmptyStringSchema,
+    receiptId: NonEmptyStringSchema,
+    reason: NonEmptyStringSchema
+  }).strict()),
+  event("effect.interrupted", z.object({
+    effectId: NonEmptyStringSchema,
+    receiptId: NonEmptyStringSchema.optional(),
+    reason: NonEmptyStringSchema
+  }).strict()),
   event("legacy.run_imported", z.object({
     sourceHash: NonEmptyStringSchema,
     importerVersion: z.literal(1),

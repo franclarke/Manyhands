@@ -82,7 +82,7 @@ describe("RunActor GD1 physical-effect crash matrix", () => {
         expect(harness.receiptStore.receipts).toEqual([
           expect.objectContaining({ observation: "succeeded" })
         ]);
-        expect(terminalJournalReceipts(harness.journal.events)).toHaveLength(0);
+        expect(terminalActorEvents(harness.journal.events)).toHaveLength(0);
 
         harness.journal.currentEpoch = "daemon:epoch-2";
         await harness.actor("daemon:epoch-2").recoverPendingEffects();
@@ -127,7 +127,7 @@ describe("RunActor GD1 physical-effect crash matrix", () => {
         await firstActor.submit(harness.command);
         await expect(firstActor.drainEffects())
           .rejects.toThrow("crash after authoritative observation flush");
-        expect(terminalJournalReceipts(harness.journal.events)).toHaveLength(1);
+        expect(terminalActorEvents(harness.journal.events)).toHaveLength(1);
         expect(harness.physicalExecutionCount).toBe(1);
 
         harness.journal.currentEpoch = "daemon:epoch-2";
@@ -147,7 +147,7 @@ function assertRecoveredOutcome(harness: CrashHarness): void {
     (event): event is Extract<RunEvent, { type: "effect.requested" }> =>
       event.type === "effect.requested"
   );
-  const journalTerminals = terminalJournalReceipts(harness.journal.events);
+  const journalTerminals = terminalActorEvents(harness.journal.events);
   const physicalTerminals = harness.receiptStore.receipts.filter(
     (receipt) => receipt.observation !== "started"
   );
@@ -162,18 +162,34 @@ function assertRecoveredOutcome(harness: CrashHarness): void {
   expect(harness.physicalExecutionCount).toBe(1);
   expect(physicalTerminals).toHaveLength(1);
   expect(journalTerminals).toHaveLength(1);
-  expect(journalTerminals[0]).toEqual(physicalTerminals[0]);
   expect(journalTerminals[0]).toEqual(expect.objectContaining({
+    type: "effect.completed",
+    payload: {
+      effectId: intents[0]!.payload.intent.effectId,
+      receiptId: physicalTerminals[0]!.receiptId
+    }
+  }));
+  expect(physicalTerminals[0]).toEqual(expect.objectContaining({
     observation: "succeeded",
     resultDigest: `sha256:result:${harness.kind}`
   }));
+  const terminalBatchTypes = harness.journal.appendBatches.at(-1)?.map((event) => event.type) ?? [];
+  expect(terminalBatchTypes.at(-1)).toBe("effect.completed");
+  expect(terminalBatchTypes.slice(0, -1).every((type) => type === "effect.observed")).toBe(true);
+  expect(terminalBatchTypes.length).toBeGreaterThanOrEqual(2);
 }
 
-function terminalJournalReceipts(events: readonly RunEvent[]): PhysicalEffectReceipt[] {
+function terminalActorEvents(events: readonly RunEvent[]): Array<Extract<
+  RunEvent,
+  { type: "effect.completed" | "effect.failed" | "effect.interrupted" }
+>> {
   return events
-    .filter((event): event is Extract<RunEvent, { type: "effect.observed" }> =>
-      event.type === "effect.observed" && event.payload.receipt.observation !== "started")
-    .map((event) => event.payload.receipt);
+    .filter((event): event is Extract<
+      RunEvent,
+      { type: "effect.completed" | "effect.failed" | "effect.interrupted" }
+    > => event.type === "effect.completed"
+      || event.type === "effect.failed"
+      || event.type === "effect.interrupted");
 }
 
 class CrashHarness {
@@ -277,6 +293,7 @@ class MemoryReceiptStore implements PhysicalEffectReceiptStorePort {
 
 class FaultInjectingJournal implements RunActorJournalPort {
   readonly events: RunEvent[];
+  readonly appendBatches: RunActorJournalInput[][] = [];
   failBeforeIntentAppend = false;
   failBeforeObservationAppend = false;
   failAfterObservationAppend = false;
@@ -318,12 +335,15 @@ class FaultInjectingJournal implements RunActorJournalPort {
     }
 
     const includesIntent = input.events.some((event) => event.type === "effect.requested");
-    const includesObservation = input.events.some((event) => event.type === "effect.observed");
+    const includesActorTerminal = input.events.some((event) =>
+      event.type === "effect.completed"
+      || event.type === "effect.failed"
+      || event.type === "effect.interrupted");
     if (includesIntent && this.failBeforeIntentAppend) {
       this.failBeforeIntentAppend = false;
       throw new Error("crash before intent flush");
     }
-    if (includesObservation && this.failBeforeObservationAppend) {
+    if (includesActorTerminal && this.failBeforeObservationAppend) {
       this.failBeforeObservationAppend = false;
       throw new Error("crash before authoritative observation flush");
     }
@@ -333,13 +353,14 @@ class FaultInjectingJournal implements RunActorJournalPort {
       runId: input.runId,
       sequence: input.expectedRevision + index + 1
     })) as RunActorJournalEvent[];
+    this.appendBatches.push(structuredClone(input.events));
     this.events.push(...appended);
 
     if (includesIntent && this.epochAfterIntentAppend !== undefined) {
       this.currentEpoch = this.epochAfterIntentAppend;
       this.epochAfterIntentAppend = undefined;
     }
-    if (includesObservation && this.failAfterObservationAppend) {
+    if (includesActorTerminal && this.failAfterObservationAppend) {
       this.failAfterObservationAppend = false;
       throw new Error("crash after authoritative observation flush");
     }

@@ -157,6 +157,40 @@ describe("KindAwarePhysicalEffectDispatcher", () => {
     ]);
   });
 
+  it("returns unknown never-repeat recovery to the actor without fabricating a receipt", async () => {
+    const store = new MemoryReceiptStore();
+    const effect = buildEffectIntent({
+      runId: "run:dispatcher",
+      attemptId: "attempt:delivery:unknown-no-evidence",
+      kind: "delivery",
+      inputDigest: "sha256:delivery:no-evidence",
+      daemonEpoch: "daemon:epoch-1",
+      idempotency: "never_repeat_unknown",
+      requestedAt: "2026-08-12T21:00:00.000Z"
+    }, sha256);
+    let executeCount = 0;
+    let reconcileCount = 0;
+    const dispatcher = new KindAwarePhysicalEffectDispatcher({
+      receiptStore: store,
+      hasher: sha256,
+      adapters: allEffectKinds.map((kind): PhysicalEffectAdapter => ({
+        kind,
+        async execute() {
+          executeCount += 1;
+        },
+        async reconcile() {
+          if (kind !== "delivery") throw new Error(`unexpected reconcile for ${kind}`);
+          reconcileCount += 1;
+        }
+      }))
+    });
+
+    await expect(dispatcher.reconcile(effect, "daemon:epoch-2")).resolves.toEqual([]);
+    expect(executeCount).toBe(0);
+    expect(reconcileCount).toBe(1);
+    expect(store.receipts).toEqual([]);
+  });
+
   it("replays one durable terminal receipt without invoking an adapter again", async () => {
     const store = new MemoryReceiptStore();
     let executeCount = 0;

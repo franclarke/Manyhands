@@ -20,14 +20,19 @@ describe("run coordinator command and effect facts", () => {
     expect(CommandReceiptSchema.safeParse({ ...receipt, transportState: "sent" }).success).toBe(false);
   });
 
-  it("round-trips strict command and physical-effect fact events", () => {
+  it("round-trips strict command, physical-effect and actor-terminal facts", () => {
     const commandReceipt = commandReceiptFixture();
     const intent = effectIntentFixture();
     const physicalReceipt = physicalReceiptFixture();
     const events = [
       event(2, "command.accepted", { receipt: commandReceipt }),
       event(3, "effect.requested", { intent }),
-      event(4, "effect.observed", { receipt: physicalReceipt })
+      event(4, "effect.observed", { receipt: physicalReceipt }),
+      event(5, "effect.interrupted", {
+        effectId: intent.effectId,
+        receiptId: physicalReceipt.receiptId,
+        reason: "operator cancellation superseded the physical observation"
+      })
     ];
 
     expect(CommandReceiptSchema.parse(commandReceipt)).toEqual(commandReceipt);
@@ -38,6 +43,15 @@ describe("run coordinator command and effect facts", () => {
       ...events[1],
       payload: { ...events[1].payload, dispatcherStatus: "started" }
     }).success).toBe(false);
+    expect(RunEventSchema.safeParse(event(5, "effect.completed", {
+      effectId: intent.effectId,
+      receiptId: physicalReceipt.receiptId,
+      reason: "success events do not carry failure reasons"
+    })).success).toBe(false);
+    expect(RunEventSchema.safeParse(event(5, "effect.failed", {
+      effectId: intent.effectId,
+      receiptId: physicalReceipt.receiptId
+    })).success).toBe(false);
   });
 
   it("rebuilds an accepted command and pending effect intent from the journal", () => {
@@ -52,8 +66,9 @@ describe("run coordinator command and effect facts", () => {
     expect(state.commandReceipts).toEqual({ [commandReceipt.commandId]: commandReceipt });
     expect(state.effectIntents).toEqual({ [intent.effectId]: intent });
     expect(state.physicalEffectReceipts).toEqual({});
-    const observedEffectIds = new Set(Object.values(state.physicalEffectReceipts).map((receipt) => receipt.effectId));
-    expect(Object.keys(state.effectIntents).filter((effectId) => !observedEffectIds.has(effectId))).toEqual([intent.effectId]);
+    expect(state.effectTerminals).toEqual({});
+    expect(Object.keys(state.effectIntents).filter((effectId) => state.effectTerminals[effectId] === undefined))
+      .toEqual([intent.effectId]);
     expect(state.lifecycle).toBe("planning");
   });
 
@@ -71,9 +86,98 @@ describe("run coordinator command and effect facts", () => {
     ]);
 
     expect(state.physicalEffectReceipts).toEqual({ [receipt.receiptId]: receipt });
+    expect(state.effectTerminals).toEqual({});
     expect(state.lifecycle).toBe("planning");
     expect(state.attempts).toEqual({});
     expect(state.outcomes).toEqual({ execution: "pending", artifact: "missing", delivery: "not_started" });
+  });
+
+  it("resolves pending work only from an actor-owned terminal event", () => {
+    const intent = effectIntentFixture();
+    const receipt = {
+      ...physicalReceiptFixture(),
+      observation: "succeeded" as const,
+      resultDigest: "digest:result:1"
+    };
+    const state = foldRun(parseEvents(
+      event(1, "run.created", { goal: "Build safely" }),
+      event(2, "effect.requested", { intent }),
+      event(3, "effect.observed", { receipt }),
+      event(4, "effect.completed", {
+        effectId: intent.effectId,
+        receiptId: receipt.receiptId
+      })
+    ));
+
+    expect(state.effectTerminals).toEqual({
+      [intent.effectId]: {
+        status: "completed",
+        receiptId: receipt.receiptId
+      }
+    });
+    expect(Object.keys(state.effectIntents).filter((effectId) => state.effectTerminals[effectId] === undefined))
+      .toEqual([]);
+  });
+
+  it("keeps a successful physical receipt while interruption remains the logical outcome", () => {
+    const intent = effectIntentFixture();
+    const receipt = {
+      ...physicalReceiptFixture(),
+      observation: "succeeded" as const,
+      resultDigest: "digest:result:1"
+    };
+    const state = foldRun(parseEvents(
+      event(1, "run.created", { goal: "Build safely" }),
+      event(2, "effect.requested", { intent }),
+      event(3, "effect.observed", { receipt }),
+      event(4, "effect.interrupted", {
+        effectId: intent.effectId,
+        receiptId: receipt.receiptId,
+        reason: "attempt:1 became stale before adoption"
+      })
+    ));
+
+    expect(state.physicalEffectReceipts[receipt.receiptId]).toEqual(receipt);
+    expect(state.effectTerminals[intent.effectId]).toEqual({
+      status: "interrupted",
+      receiptId: receipt.receiptId,
+      reason: "attempt:1 became stale before adoption"
+    });
+  });
+
+  it("rejects terminal events that do not bind to their intent and physical receipt", () => {
+    const intent = effectIntentFixture();
+    const succeeded = {
+      ...physicalReceiptFixture(),
+      observation: "succeeded" as const,
+      resultDigest: "digest:result:1"
+    };
+    const failed = {
+      ...physicalReceiptFixture(),
+      receiptId: "receipt:physical:failed",
+      observation: "failed" as const
+    };
+
+    expect(() => foldRun(parseEvents(
+      event(1, "run.created", { goal: "Build safely" }),
+      event(2, "effect.requested", { intent }),
+      event(3, "effect.completed", { effectId: intent.effectId, receiptId: succeeded.receiptId })
+    ))).toThrow(/physical receipt/i);
+
+    expect(() => foldRun(parseEvents(
+      event(1, "run.created", { goal: "Build safely" }),
+      event(2, "effect.requested", { intent }),
+      event(3, "effect.observed", { receipt: failed }),
+      event(4, "effect.completed", { effectId: intent.effectId, receiptId: failed.receiptId })
+    ))).toThrow(/succeeded/i);
+
+    expect(() => foldRun(parseEvents(
+      event(1, "run.created", { goal: "Build safely" }),
+      event(2, "effect.requested", { intent }),
+      event(3, "effect.observed", { receipt: succeeded }),
+      event(4, "effect.completed", { effectId: intent.effectId, receiptId: succeeded.receiptId }),
+      event(5, "effect.interrupted", { effectId: intent.effectId, reason: "too late" })
+    ))).toThrow(/already terminal/i);
   });
 
   it("rejects command, effect and receipt identity reuse", () => {

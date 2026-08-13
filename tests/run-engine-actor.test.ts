@@ -33,6 +33,7 @@ describe("RunActor durable command authority", () => {
     expect(replay).toEqual(first);
     expect(journal.events.filter((event) => event.type === "command.accepted")).toHaveLength(1);
     expect(journal.events.filter((event) => event.type === "effect.observed")).toHaveLength(1);
+    expect(journal.events.filter((event) => event.type === "effect.completed")).toHaveLength(1);
     expect(dispatcher.observed).toHaveLength(1);
   });
 
@@ -101,6 +102,10 @@ describe("RunActor durable command authority", () => {
       expect.objectContaining({ intentEpoch: "epoch:1", observerEpoch: "epoch:2" })
     ]);
     expect(journal.events.at(-1)).toEqual(expect.objectContaining({
+      type: "effect.completed",
+      payload: expect.objectContaining({ effectId: recovered.reconciled[0]?.effectId })
+    }));
+    expect(journal.events.at(-2)).toEqual(expect.objectContaining({
       type: "effect.observed",
       payload: { receipt: expect.objectContaining({ observation: "succeeded", daemonEpoch: "epoch:2" }) }
     }));
@@ -162,7 +167,14 @@ describe("RunActor durable command authority", () => {
     const intent = (journal.events.at(-1) as Extract<RunEvent, { type: "effect.requested" }>).payload.intent;
     physical.resolve([physicalReceipt(intent, "epoch:1")]);
     await actor.drainEffects();
-    expect(journal.events.at(-1)?.type).toBe("effect.observed");
+    expect(journal.events.slice(-2).map((event) => event.type)).toEqual([
+      "effect.observed",
+      "effect.completed"
+    ]);
+    expect(journal.appendBatches.at(-1)?.map((event) => event.type)).toEqual([
+      "effect.observed",
+      "effect.completed"
+    ]);
   });
 
   it("accepts another command while prior physical work remains in flight", async () => {
@@ -219,6 +231,192 @@ describe("RunActor durable command authority", () => {
     physical.resolve([physicalReceipt(intent, "epoch:1")]);
     await actor.drainEffects();
   });
+
+  it("keeps started physical evidence pending until an actor terminal event exists", async () => {
+    const journal = new MemoryJournal("epoch:1");
+    let reconciliations = 0;
+    const actor = new RunActor({
+      runId: "run:1",
+      daemonEpoch: "epoch:1",
+      journal,
+      dispatcher: {
+        observe: async (intent) => [physicalReceipt(intent, "epoch:1", "started")],
+        reconcile: async (intent) => {
+          reconciliations += 1;
+          return [physicalReceipt(intent, "epoch:1", "succeeded")];
+        }
+      },
+      hasher: sha256,
+      clock: () => "2026-08-12T20:00:00.000Z",
+      decide: (_command, context) => [buildEffectIntent({
+        runId: context.runId,
+        attemptId: "attempt:started",
+        kind: "process_spawn",
+        inputDigest: "sha256:started-input",
+        daemonEpoch: context.daemonEpoch,
+        idempotency: "reconcile_then_repeat",
+        requestedAt: "2026-08-12T20:00:01.000Z"
+      }, sha256)]
+    });
+
+    await actor.submit(command("command:started", 1));
+    await actor.drainEffects();
+    expect(journal.events.at(-1)?.type).toBe("effect.observed");
+    expect(journal.events.some((event) => event.type === "effect.completed")).toBe(false);
+
+    await actor.recoverPendingEffects();
+    expect(reconciliations).toBe(1);
+    expect(journal.events.at(-1)?.type).toBe("effect.completed");
+  });
+
+  it("preserves successful physical evidence but interrupts a concurrently cancelled effect", async () => {
+    const journal = new MemoryJournal("epoch:1");
+    const physical = deferred<PhysicalEffectReceipt[]>();
+    const actor = new RunActor({
+      runId: "run:1",
+      daemonEpoch: "epoch:1",
+      journal,
+      dispatcher: { observe: () => physical.promise, reconcile: () => physical.promise },
+      hasher: sha256,
+      clock: () => "2026-08-12T20:00:05.000Z",
+      decide: (_command, context) => [buildEffectIntent({
+        runId: context.runId,
+        attemptId: "attempt:cancelled",
+        kind: "process_spawn",
+        inputDigest: "sha256:cancelled-input",
+        daemonEpoch: context.daemonEpoch,
+        idempotency: "reconcile_then_repeat",
+        requestedAt: "2026-08-12T20:00:01.000Z"
+      }, sha256)]
+    });
+
+    await actor.submit(command("command:cancelled", 1));
+    journal.events.push({
+      eventId: "event:cancel",
+      runId: "run:1",
+      sequence: 4,
+      occurredAt: "2026-08-12T20:00:03.000Z",
+      type: "operation.cancel_requested",
+      payload: { invalidationReceiptId: "invalidation:1", reason: "operator cancelled" }
+    });
+    const intent = journal.events.find(
+      (event): event is Extract<RunEvent, { type: "effect.requested" }> => event.type === "effect.requested"
+    )!.payload.intent;
+    physical.resolve([physicalReceipt(intent, "epoch:1")]);
+    await actor.drainEffects();
+
+    expect(journal.events.slice(-2).map((event) => event.type)).toEqual([
+      "effect.observed",
+      "effect.interrupted"
+    ]);
+    expect(journal.events.at(-1)).toEqual(expect.objectContaining({
+      payload: expect.objectContaining({
+        receiptId: expect.any(String),
+        reason: expect.stringMatching(/cancel/i)
+      })
+    }));
+  });
+
+  it("interrupts stale attempt work even when the physical receipt succeeded", async () => {
+    const journal = new MemoryJournal("epoch:1");
+    const physical = deferred<PhysicalEffectReceipt[]>();
+    const actor = new RunActor({
+      runId: "run:1",
+      daemonEpoch: "epoch:1",
+      journal,
+      dispatcher: { observe: () => physical.promise, reconcile: () => physical.promise },
+      hasher: sha256,
+      clock: () => "2026-08-12T20:00:05.000Z",
+      decide: (_command, context) => [buildEffectIntent({
+        runId: context.runId,
+        attemptId: "attempt:stale",
+        kind: "validation",
+        inputDigest: "sha256:stale-input",
+        daemonEpoch: context.daemonEpoch,
+        idempotency: "repeat_safe",
+        requestedAt: "2026-08-12T20:00:01.000Z"
+      }, sha256)]
+    });
+
+    await actor.submit(command("command:stale", 1));
+    journal.events.push({
+      eventId: "event:stale",
+      runId: "run:1",
+      sequence: 4,
+      occurredAt: "2026-08-12T20:00:03.000Z",
+      type: "attempt.stale",
+      payload: {
+        attemptId: "attempt:stale",
+        nodeId: "node:1",
+        attemptedFingerprint: "sha256:old",
+        currentFingerprint: "sha256:new",
+        reason: "inputs changed"
+      }
+    });
+    const intent = journal.events.find(
+      (event): event is Extract<RunEvent, { type: "effect.requested" }> => event.type === "effect.requested"
+    )!.payload.intent;
+    physical.resolve([physicalReceipt(intent, "epoch:1")]);
+    await actor.drainEffects();
+
+    expect(journal.events.at(-1)).toEqual(expect.objectContaining({
+      type: "effect.interrupted",
+      payload: expect.objectContaining({ reason: expect.stringMatching(/stale/i) })
+    }));
+  });
+
+  it("interrupts never-repeat recovery with no evidence without executing it", async () => {
+    const journal = new MemoryJournal("epoch:2");
+    const intent = buildEffectIntent({
+      runId: "run:1",
+      attemptId: "attempt:unknown",
+      kind: "delivery",
+      inputDigest: "sha256:unknown-input",
+      daemonEpoch: "epoch:1",
+      idempotency: "never_repeat_unknown",
+      requestedAt: "2026-08-12T20:00:01.000Z"
+    }, sha256);
+    journal.events.push({
+      eventId: "event:intent:unknown",
+      runId: "run:1",
+      sequence: 2,
+      occurredAt: intent.requestedAt,
+      type: "effect.requested",
+      payload: { intent }
+    });
+    let observed = 0;
+    let reconciled = 0;
+    const actor = new RunActor({
+      runId: "run:1",
+      daemonEpoch: "epoch:2",
+      journal,
+      dispatcher: {
+        async observe() {
+          observed += 1;
+          throw new Error("must not execute");
+        },
+        async reconcile() {
+          reconciled += 1;
+          return [];
+        }
+      },
+      hasher: sha256,
+      clock: () => "2026-08-12T20:00:05.000Z",
+      decide: () => []
+    });
+
+    await actor.recoverPendingEffects();
+
+    expect(observed).toBe(0);
+    expect(reconciled).toBe(1);
+    expect(journal.events.at(-1)).toEqual(expect.objectContaining({
+      type: "effect.interrupted",
+      payload: {
+        effectId: intent.effectId,
+        reason: expect.stringMatching(/unknown/i)
+      }
+    }));
+  });
 });
 
 function createActor(
@@ -265,6 +463,7 @@ class MemoryJournal implements RunActorJournalPort {
     payload: { goal: "Build safely" }
   }];
   operations: string[] = [];
+  appendBatches: RunActorJournalInput[][] = [];
   epochAfterNextAppend: string | undefined;
 
   constructor(public currentEpoch: string) {}
@@ -286,6 +485,7 @@ class MemoryJournal implements RunActorJournalPort {
     events: RunActorJournalInput[];
   }): Promise<RunActorJournalEvent[]> {
     this.operations.push(`appendAndFlush:${input.expectedRevision}`);
+    this.appendBatches.push(structuredClone(input.events));
     if (input.daemonEpoch !== this.currentEpoch) throw new Error("stale daemon epoch");
     if (input.runId !== "run:1") throw new Error("run mismatch");
     if (input.expectedRevision !== this.events.length) throw new Error("revision conflict");
@@ -330,13 +530,17 @@ class RecordingDispatcher implements RunActorDispatcherPort {
   }
 }
 
-function physicalReceipt(intent: EffectIntent, daemonEpoch: string): PhysicalEffectReceipt {
+function physicalReceipt(
+  intent: EffectIntent,
+  daemonEpoch: string,
+  observation: "started" | "succeeded" | "failed" = "succeeded"
+): PhysicalEffectReceipt {
   return buildPhysicalEffectReceipt({
     effectId: intent.effectId,
-    observation: "succeeded",
+    observation,
     inputDigest: intent.inputDigest,
     daemonEpoch,
-    resultDigest: "sha256:result",
+    ...(observation === "started" ? {} : { resultDigest: "sha256:result" }),
     observedAt: "2026-08-12T20:00:02.000Z"
   }, sha256);
 }

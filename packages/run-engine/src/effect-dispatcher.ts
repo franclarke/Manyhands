@@ -111,6 +111,16 @@ export class KindAwarePhysicalEffectDispatcher {
 
     const completedReceipts = await this.loadBoundReceipts(intent);
     if (authoritativeTerminal(completedReceipts) === undefined) {
+      if (
+        mode === "reconcile"
+        && intent.idempotency === "never_repeat_unknown"
+        && completedReceipts.length === 0
+      ) {
+        // The adapter inspected physical state but could prove neither success
+        // nor failure. The actor records an interrupted terminal fact; it must
+        // not turn absence of evidence into a repeated non-idempotent effect.
+        return [];
+      }
       throw new Error(
         `Physical effect adapter ${intent.kind} returned without a durable terminal receipt for ${intent.effectId}.`
       );

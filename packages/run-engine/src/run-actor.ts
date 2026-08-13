@@ -1,4 +1,5 @@
 import {
+  canonicalJson,
   computeCanonicalDigest,
   validateEffectIntentIdentity,
   validatePhysicalEffectReceiptBinding,
@@ -21,11 +22,27 @@ import {
 
 export type RunActorJournalEvent = Extract<
   RunEvent,
-  { type: "command.accepted" | "effect.requested" | "effect.observed" }
+  {
+    type:
+      | "command.accepted"
+      | "effect.requested"
+      | "effect.observed"
+      | "effect.completed"
+      | "effect.failed"
+      | "effect.interrupted"
+  }
 >;
 export type RunActorJournalInput = Extract<
   RunEventInput,
-  { type: "command.accepted" | "effect.requested" | "effect.observed" }
+  {
+    type:
+      | "command.accepted"
+      | "effect.requested"
+      | "effect.observed"
+      | "effect.completed"
+      | "effect.failed"
+      | "effect.interrupted"
+  }
 >;
 
 export interface RunActorJournalPort {
@@ -173,6 +190,7 @@ export class RunActor {
     await this.options.journal.assertAuthority(this.options.runId, this.options.daemonEpoch);
     const events = await this.options.journal.load(this.options.runId);
     const intents = new Map<string, EffectIntent>();
+    const receipts = new Map<string, PhysicalEffectReceipt>();
     const terminal = new Set<string>();
 
     for (const fact of events) {
@@ -195,7 +213,33 @@ export class RunActor {
         if (intent === undefined || intent.inputDigest !== receipt.inputDigest) {
           throw new Error(`Physical receipt ${receipt.receiptId} does not bind to a persisted intent.`);
         }
-        if (receipt.observation !== "started") terminal.add(receipt.effectId);
+        const prior = receipts.get(receipt.receiptId);
+        if (prior !== undefined && canonicalJson(prior) !== canonicalJson(receipt)) {
+          throw new Error(`Physical receipt id ${receipt.receiptId} identifies conflicting observations.`);
+        }
+        receipts.set(receipt.receiptId, receipt);
+      }
+      if (
+        fact.type === "effect.completed"
+        || fact.type === "effect.failed"
+        || fact.type === "effect.interrupted"
+      ) {
+        const { effectId } = fact.payload;
+        if (!intents.has(effectId)) throw new Error(`Terminal effect ${effectId} has no persisted intent.`);
+        if (terminal.has(effectId)) throw new Error(`Effect ${effectId} has multiple terminal actor events.`);
+        if (fact.payload.receiptId !== undefined) {
+          const receipt = receipts.get(fact.payload.receiptId);
+          if (receipt === undefined || receipt.effectId !== effectId) {
+            throw new Error(`Terminal effect ${effectId} does not bind to physical receipt ${fact.payload.receiptId}.`);
+          }
+          if (fact.type === "effect.completed" && receipt.observation !== "succeeded") {
+            throw new Error(`Completed effect ${effectId} does not bind to succeeded physical evidence.`);
+          }
+          if (fact.type === "effect.failed" && receipt.observation !== "failed") {
+            throw new Error(`Failed effect ${effectId} does not bind to failed physical evidence.`);
+          }
+        }
+        terminal.add(effectId);
       }
     }
 
@@ -211,7 +255,7 @@ export class RunActor {
       const receipts = mode === "observe"
         ? await this.options.dispatcher.observe(intent)
         : await this.options.dispatcher.reconcile(intent, this.options.daemonEpoch);
-      await this.enqueue(() => this.recordObservations(intent, receipts, mode === "observe"));
+      await this.enqueue(() => this.recordObservations(intent, receipts, mode));
     })();
     const task = operation.catch((error) => {
       this.effectFailures.push(error);
@@ -227,7 +271,7 @@ export class RunActor {
   private async recordObservations(
     intent: EffectIntent,
     receipts: readonly PhysicalEffectReceipt[],
-    requireCurrentEpoch: boolean
+    mode: "observe" | "reconcile"
   ): Promise<void> {
     for (const receipt of receipts) {
       const identity = validatePhysicalEffectReceiptIdentity(receipt, this.options.hasher);
@@ -235,36 +279,73 @@ export class RunActor {
       if (!identity.ok || !binding.ok) {
         throw new Error(`Physical receipt ${receipt.receiptId} is not valid evidence for effect ${intent.effectId}.`);
       }
-      if (requireCurrentEpoch && receipt.daemonEpoch !== this.options.daemonEpoch) {
+      if (mode === "observe" && receipt.daemonEpoch !== this.options.daemonEpoch) {
         throw new Error(`New physical receipt ${receipt.receiptId} was produced under a stale daemon epoch.`);
       }
     }
-    if (receipts.length === 0) return;
 
     await this.options.journal.assertAuthority(this.options.runId, this.options.daemonEpoch);
     const current = await this.options.journal.load(this.options.runId);
-    const persisted = new Map(
-      current
-        .filter((event): event is Extract<RunEvent, { type: "effect.observed" }> => event.type === "effect.observed")
-        .map((event) => [event.payload.receipt.receiptId, event.payload.receipt])
-    );
+    const persisted = new Map<string, PhysicalEffectReceipt>();
+    for (const event of current) {
+      if (event.type !== "effect.observed") continue;
+      const receipt = event.payload.receipt;
+      const existing = persisted.get(receipt.receiptId);
+      if (existing !== undefined && canonicalJson(existing) !== canonicalJson(receipt)) {
+        throw new Error(`Physical receipt id ${receipt.receiptId} identifies conflicting observations.`);
+      }
+      persisted.set(receipt.receiptId, receipt);
+    }
+    if (hasTerminalEvent(current, intent.effectId)) return;
+
     const unseen = receipts.filter((receipt) => {
       const existing = persisted.get(receipt.receiptId);
       if (existing === undefined) return true;
-      if (JSON.stringify(existing) !== JSON.stringify(receipt)) {
+      if (canonicalJson(existing) !== canonicalJson(receipt)) {
         throw new Error(`Physical receipt id ${receipt.receiptId} identifies conflicting observations.`);
       }
       return false;
     });
-    if (unseen.length === 0) return;
+
+    const boundReceipts = new Map<string, PhysicalEffectReceipt>();
+    for (const receipt of persisted.values()) {
+      if (receipt.effectId === intent.effectId) boundReceipts.set(receipt.receiptId, receipt);
+    }
+    for (const receipt of receipts) boundReceipts.set(receipt.receiptId, receipt);
+    const terminalReceipts = [...boundReceipts.values()]
+      .filter((receipt) => receipt.observation !== "started")
+      .sort(comparePhysicalReceipts);
+    if (terminalReceipts.length > 1) {
+      throw new Error(`Effect ${intent.effectId} has multiple terminal physical receipts and no authoritative outcome.`);
+    }
+    const terminalReceipt = terminalReceipts[0];
+    const interruptedReason = persistedInterruptionReason(current, intent);
+    const terminalInput = interruptedReason !== undefined
+      ? interruptedEffectInput(intent, terminalReceipt, interruptedReason, this.options)
+      : terminalReceipt?.observation === "succeeded"
+        ? completedEffectInput(intent, terminalReceipt, this.options)
+        : terminalReceipt?.observation === "failed"
+          ? failedEffectInput(intent, terminalReceipt, this.options)
+          : mode === "reconcile"
+            && intent.idempotency === "never_repeat_unknown"
+            && boundReceipts.size === 0
+            ? interruptedEffectInput(
+              intent,
+              undefined,
+              "Unknown prior execution has no physical evidence and must not be repeated.",
+              this.options
+            )
+            : undefined;
 
     const revision = journalRevision(current);
-    const inputs = unseen.map((receipt): RunActorJournalInput => ({
+    const inputs: RunActorJournalInput[] = unseen.map((receipt): RunActorJournalInput => ({
       eventId: computeCanonicalDigest({ type: "effect.observed", receiptId: receipt.receiptId }, this.options.hasher),
       occurredAt: receipt.observedAt,
       type: "effect.observed",
       payload: { receipt }
     }));
+    if (terminalInput !== undefined) inputs.push(terminalInput);
+    if (inputs.length === 0) return;
     const appended = await this.options.journal.appendAndFlush({
       runId: this.options.runId,
       expectedRevision: revision,
@@ -272,7 +353,7 @@ export class RunActor {
       events: inputs
     });
     if (appended.length !== inputs.length || journalRevision(appended) !== revision + inputs.length) {
-      throw new Error("Journal returned an impossible revision after recording physical observations.");
+      throw new Error("Journal returned an impossible revision after recording physical observations and actor outcome.");
     }
   }
 
@@ -312,6 +393,115 @@ function commandReceipt(
     });
   if (matches.length > 1) throw new Error(`Command id ${commandId} has duplicate durable receipts.`);
   return matches[0];
+}
+
+function hasTerminalEvent(events: readonly RunEvent[], effectId: string): boolean {
+  const matches = events.filter((event) =>
+    (event.type === "effect.completed"
+      || event.type === "effect.failed"
+      || event.type === "effect.interrupted")
+    && event.payload.effectId === effectId);
+  if (matches.length > 1) throw new Error(`Effect ${effectId} has multiple terminal actor events.`);
+  return matches.length === 1;
+}
+
+function completedEffectInput(
+  intent: EffectIntent,
+  receipt: PhysicalEffectReceipt,
+  options: Pick<RunActorOptions, "hasher">
+): RunActorJournalInput {
+  return {
+    eventId: computeCanonicalDigest({
+      type: "effect.completed",
+      effectId: intent.effectId,
+      receiptId: receipt.receiptId
+    }, options.hasher),
+    occurredAt: receipt.observedAt,
+    type: "effect.completed",
+    payload: { effectId: intent.effectId, receiptId: receipt.receiptId }
+  };
+}
+
+function failedEffectInput(
+  intent: EffectIntent,
+  receipt: PhysicalEffectReceipt,
+  options: Pick<RunActorOptions, "hasher">
+): RunActorJournalInput {
+  const reason = "Physical effect adapter reported a failed observation.";
+  return {
+    eventId: computeCanonicalDigest({
+      type: "effect.failed",
+      effectId: intent.effectId,
+      receiptId: receipt.receiptId,
+      reason
+    }, options.hasher),
+    occurredAt: receipt.observedAt,
+    type: "effect.failed",
+    payload: { effectId: intent.effectId, receiptId: receipt.receiptId, reason }
+  };
+}
+
+function interruptedEffectInput(
+  intent: EffectIntent,
+  receipt: PhysicalEffectReceipt | undefined,
+  reason: string,
+  options: Pick<RunActorOptions, "hasher" | "clock">
+): RunActorJournalInput {
+  const identity = {
+    type: "effect.interrupted",
+    effectId: intent.effectId,
+    ...(receipt === undefined ? {} : { receiptId: receipt.receiptId }),
+    reason
+  };
+  return {
+    eventId: computeCanonicalDigest(identity, options.hasher),
+    occurredAt: receipt?.observedAt ?? options.clock(),
+    type: "effect.interrupted",
+    payload: receipt === undefined
+      ? { effectId: intent.effectId, reason }
+      : { effectId: intent.effectId, receiptId: receipt.receiptId, reason }
+  };
+}
+
+function persistedInterruptionReason(
+  events: readonly RunEvent[],
+  intent: EffectIntent
+): string | undefined {
+  const requestedSequence = events.find((event) =>
+    event.type === "effect.requested" && event.payload.intent.effectId === intent.effectId)?.sequence;
+  if (requestedSequence === undefined) {
+    throw new Error(`Effect ${intent.effectId} has no persisted request.`);
+  }
+
+  const reasons: Array<{ sequence: number; reason: string }> = [];
+  for (const event of events) {
+    if (event.type === "operation.cancel_requested" && event.sequence > requestedSequence) {
+      reasons.push({
+        sequence: event.sequence,
+        reason: `Run cancellation applies to effect ${intent.effectId}: ${event.payload.reason}`
+      });
+    }
+    if (
+      event.type === "attempt.stale"
+      && intent.attemptId !== undefined
+      && event.payload.attemptId === intent.attemptId
+    ) {
+      reasons.push({
+        sequence: event.sequence,
+        reason: `Attempt ${intent.attemptId} is stale: ${event.payload.reason}`
+      });
+    }
+  }
+  reasons.sort((left, right) => right.sequence - left.sequence);
+  return reasons[0]?.reason;
+}
+
+function comparePhysicalReceipts(
+  left: PhysicalEffectReceipt,
+  right: PhysicalEffectReceipt
+): number {
+  return left.observedAt.localeCompare(right.observedAt)
+    || left.receiptId.localeCompare(right.receiptId);
 }
 
 function journalRevision(events: readonly RunEvent[]): number {

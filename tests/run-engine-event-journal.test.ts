@@ -64,6 +64,7 @@ describe("FencedRunActorJournal", () => {
 
     const accepted = await actor.submit(envelope);
     const replayed = await actor.submit(envelope);
+    await actor.drainEffects();
     const events = await new JsonlRunEventStore({ directory: store.directory }).load("run:1");
 
     expect(replayed).toEqual(accepted);
@@ -71,9 +72,10 @@ describe("FencedRunActorJournal", () => {
       "run.created",
       "command.accepted",
       "effect.requested",
-      "effect.observed"
+      "effect.observed",
+      "effect.completed"
     ]);
-    expect(events.map((event) => event.sequence)).toEqual([1, 2, 3, 4]);
+    expect(events.map((event) => event.sequence)).toEqual([1, 2, 3, 4, 5]);
   });
 
   it("rejects a journal after a successor daemon takes the run fence", async () => {
