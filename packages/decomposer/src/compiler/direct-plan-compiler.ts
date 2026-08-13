@@ -220,6 +220,7 @@ function compileTask(
   seams: Readonly<Record<string, SeamContract>>,
   revision: string
 ): TaskContract {
+  const locallyValidatedCriteria = new Set(validation.obligations.map(({ criterionId }) => criterionId));
   return {
     schemaVersion: 2,
     id: `task:${unit.id}`,
@@ -231,7 +232,7 @@ function compileTask(
       id: criterion.criterionId,
       kind: criterionKind(unit.validation.find((item) => item.criterionId === criterion.criterionId)?.layer),
       description: criterion.statement,
-      required: true
+      required: locallyValidatedCriteria.has(criterion.criterionId)
     })),
     scope: legacyRef(scope),
     consumes: unit.consumes.map((id) => legacyRef(artifacts[id]!)),
