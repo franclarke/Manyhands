@@ -66,17 +66,31 @@ export interface RunActorOptions {
 export class RunActor {
   private readonly options: RunActorOptions;
   private mailbox: Promise<unknown> = Promise.resolve();
+  private readonly effectTasks = new Map<string, Promise<void>>();
+  private readonly effectFailures: unknown[] = [];
 
   constructor(options: RunActorOptions) {
     this.options = options;
   }
 
-  submit(input: unknown): Promise<CommandReceipt> {
-    return this.enqueue(() => this.accept(input));
+  async submit(input: unknown): Promise<CommandReceipt> {
+    const accepted = await this.enqueue(() => this.accept(input));
+    for (const intent of accepted.intents) this.startEffect(intent, "observe");
+    return accepted.receipt;
   }
 
-  recoverPendingEffects(): Promise<void> {
-    return this.enqueue(() => this.recover());
+  async recoverPendingEffects(): Promise<void> {
+    const intents = await this.enqueue(() => this.pendingEffects());
+    await Promise.all(intents.map((intent) => this.startEffect(intent, "reconcile")));
+  }
+
+  /** Waits for actor-owned physical work and surfaces any background failure. */
+  async drainEffects(): Promise<void> {
+    while (this.effectTasks.size > 0) {
+      await Promise.allSettled([...this.effectTasks.values()]);
+    }
+    const failure = this.effectFailures.shift();
+    if (failure !== undefined) throw failure;
   }
 
   private enqueue<T>(operation: () => Promise<T>): Promise<T> {
@@ -85,7 +99,10 @@ export class RunActor {
     return current;
   }
 
-  private async accept(input: unknown): Promise<CommandReceipt> {
+  private async accept(input: unknown): Promise<{
+    receipt: CommandReceipt;
+    intents: EffectIntent[];
+  }> {
     const envelope = parseEnvelope(input, this.options.hasher);
     if (envelope.runId !== this.options.runId) {
       throw new Error(`Command ${envelope.commandId} belongs to run ${envelope.runId}, not ${this.options.runId}.`);
@@ -99,7 +116,7 @@ export class RunActor {
       if (existing.commandDigest !== envelope.commandDigest) {
         throw new Error(`Command id ${envelope.commandId} was already accepted with different content.`);
       }
-      return existing;
+      return { receipt: existing, intents: [] };
     }
     if (currentRevision !== envelope.expectedRevision) {
       throw new Error(
@@ -149,15 +166,10 @@ export class RunActor {
       throw new Error("Journal returned an impossible revision after durable command acceptance.");
     }
 
-    for (const intent of intents) {
-      await this.options.journal.assertAuthority(this.options.runId, this.options.daemonEpoch);
-      const receipts = await this.options.dispatcher.observe(intent);
-      await this.recordObservations(intent, receipts, true);
-    }
-    return receipt;
+    return { receipt, intents };
   }
 
-  private async recover(): Promise<void> {
+  private async pendingEffects(): Promise<EffectIntent[]> {
     await this.options.journal.assertAuthority(this.options.runId, this.options.daemonEpoch);
     const events = await this.options.journal.load(this.options.runId);
     const intents = new Map<string, EffectIntent>();
@@ -187,13 +199,29 @@ export class RunActor {
       }
     }
 
-    for (const intent of intents.values()) {
-      if (!terminal.has(intent.effectId)) {
-        await this.options.journal.assertAuthority(this.options.runId, this.options.daemonEpoch);
-        const receipts = await this.options.dispatcher.reconcile(intent, this.options.daemonEpoch);
-        await this.recordObservations(intent, receipts, false);
-      }
-    }
+    return [...intents.values()].filter((intent) => !terminal.has(intent.effectId));
+  }
+
+  private startEffect(intent: EffectIntent, mode: "observe" | "reconcile"): Promise<void> {
+    const existing = this.effectTasks.get(intent.effectId);
+    if (existing !== undefined) return existing;
+
+    const operation = (async () => {
+      await this.options.journal.assertAuthority(this.options.runId, this.options.daemonEpoch);
+      const receipts = mode === "observe"
+        ? await this.options.dispatcher.observe(intent)
+        : await this.options.dispatcher.reconcile(intent, this.options.daemonEpoch);
+      await this.enqueue(() => this.recordObservations(intent, receipts, mode === "observe"));
+    })();
+    const task = operation.catch((error) => {
+      this.effectFailures.push(error);
+      throw error;
+    }).finally(() => {
+      if (this.effectTasks.get(intent.effectId) === task) this.effectTasks.delete(intent.effectId);
+    });
+    this.effectTasks.set(intent.effectId, task);
+    void task.catch(() => undefined);
+    return task;
   }
 
   private async recordObservations(

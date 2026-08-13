@@ -42,7 +42,9 @@ describe("RunActor GD1 physical-effect crash matrix", () => {
         await harness.actor("daemon:epoch-2").recoverPendingEffects();
         expect(harness.physicalExecutionCount).toBe(0);
 
-        await harness.actor("daemon:epoch-2").submit(harness.command);
+        const redelivered = harness.actor("daemon:epoch-2");
+        await redelivered.submit(harness.command);
+        await redelivered.drainEffects();
         assertRecoveredOutcome(harness);
       });
 
@@ -50,8 +52,11 @@ describe("RunActor GD1 physical-effect crash matrix", () => {
         const harness = new CrashHarness(kind);
         harness.journal.epochAfterIntentAppend = "daemon:epoch-2";
 
-        await expect(harness.actor("daemon:epoch-1").submit(harness.command))
-          .rejects.toThrow("stale daemon epoch");
+        const firstActor = harness.actor("daemon:epoch-1");
+        await expect(firstActor.submit(harness.command)).resolves.toEqual(
+          expect.objectContaining({ commandId: harness.command.commandId })
+        );
+        await expect(firstActor.drainEffects()).rejects.toThrow("stale daemon epoch");
         expect(harness.physicalExecutionCount).toBe(0);
         expect(harness.journal.events.map((event) => event.type)).toEqual([
           "run.created",
@@ -67,7 +72,11 @@ describe("RunActor GD1 physical-effect crash matrix", () => {
         const harness = new CrashHarness(kind);
         harness.journal.failBeforeObservationAppend = true;
 
-        await expect(harness.actor("daemon:epoch-1").submit(harness.command))
+        const firstActor = harness.actor("daemon:epoch-1");
+        await expect(firstActor.submit(harness.command)).resolves.toEqual(
+          expect.objectContaining({ commandId: harness.command.commandId })
+        );
+        await expect(firstActor.drainEffects())
           .rejects.toThrow("crash before authoritative observation flush");
         expect(harness.physicalExecutionCount).toBe(1);
         expect(harness.receiptStore.receipts).toEqual([
@@ -84,8 +93,11 @@ describe("RunActor GD1 physical-effect crash matrix", () => {
         const harness = new CrashHarness(kind);
         harness.crashAfterStartedReceipt = true;
 
-        await expect(harness.actor("daemon:epoch-1").submit(harness.command))
-          .rejects.toThrow("crash after durable started receipt");
+        const firstActor = harness.actor("daemon:epoch-1");
+        await expect(firstActor.submit(harness.command)).resolves.toEqual(
+          expect.objectContaining({ commandId: harness.command.commandId })
+        );
+        await expect(firstActor.drainEffects()).rejects.toThrow("crash after durable started receipt");
         expect(harness.physicalExecutionCount).toBe(1);
         expect(harness.receiptStore.receipts).toEqual([
           expect.objectContaining({ observation: "started" })
@@ -104,11 +116,16 @@ describe("RunActor GD1 physical-effect crash matrix", () => {
         assertRecoveredOutcome(harness);
       });
 
-      it("replays the durable command after terminal append but before acknowledgement", async () => {
+      it("replays the durable command when the transport loses its acknowledgement", async () => {
         const harness = new CrashHarness(kind);
         harness.journal.failAfterObservationAppend = true;
 
-        await expect(harness.actor("daemon:epoch-1").submit(harness.command))
+        const firstActor = harness.actor("daemon:epoch-1");
+        // The actor acknowledges durable command acceptance before physical work.
+        // Treat the returned value as lost at the transport boundary, then prove
+        // replay returns the same receipt after the terminal event was flushed.
+        await firstActor.submit(harness.command);
+        await expect(firstActor.drainEffects())
           .rejects.toThrow("crash after authoritative observation flush");
         expect(terminalJournalReceipts(harness.journal.events)).toHaveLength(1);
         expect(harness.physicalExecutionCount).toBe(1);

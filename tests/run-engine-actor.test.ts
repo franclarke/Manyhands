@@ -28,6 +28,7 @@ describe("RunActor durable command authority", () => {
     const envelope = command("command:1", 1);
 
     const [first, replay] = await Promise.all([actor.submit(envelope), actor.submit(envelope)]);
+    await actor.drainEffects();
 
     expect(replay).toEqual(first);
     expect(journal.events.filter((event) => event.type === "command.accepted")).toHaveLength(1);
@@ -54,6 +55,7 @@ describe("RunActor durable command authority", () => {
     const actor = createActor(journal, dispatcher);
 
     await actor.submit(command("command:1", 1));
+    await actor.drainEffects();
 
     expect(dispatcher.observedAtRevision).toEqual([3]);
     expect(journal.operations).toEqual([
@@ -80,7 +82,10 @@ describe("RunActor durable command authority", () => {
     const crashing = new RecordingDispatcher(journal, true);
     const firstActor = createActor(journal, crashing);
 
-    await expect(firstActor.submit(command("command:1", 1))).rejects.toThrow("simulated crash");
+    await expect(firstActor.submit(command("command:1", 1))).resolves.toEqual(
+      expect.objectContaining({ commandId: "command:1" })
+    );
+    await expect(firstActor.drainEffects()).rejects.toThrow("simulated crash");
     expect(journal.events.map((event) => event.type)).toEqual([
       "run.created",
       "command.accepted",
@@ -107,7 +112,10 @@ describe("RunActor durable command authority", () => {
     const dispatcher = new RecordingDispatcher(journal);
     const actor = createActor(journal, dispatcher);
 
-    await expect(actor.submit(command("command:1", 1))).rejects.toThrow(/stale daemon epoch/i);
+    await expect(actor.submit(command("command:1", 1))).resolves.toEqual(
+      expect.objectContaining({ commandId: "command:1" })
+    );
+    await expect(actor.drainEffects()).rejects.toThrow(/stale daemon epoch/i);
 
     expect(journal.events.map((event) => event.type)).toEqual([
       "run.created",
@@ -115,6 +123,101 @@ describe("RunActor durable command authority", () => {
       "effect.requested"
     ]);
     expect(dispatcher.observed).toEqual([]);
+  });
+
+  it("acknowledges durable acceptance before long physical work completes", async () => {
+    const journal = new MemoryJournal("epoch:1");
+    const physical = deferred<PhysicalEffectReceipt[]>();
+    const dispatcher: RunActorDispatcherPort = {
+      observe: () => physical.promise,
+      reconcile: () => physical.promise
+    };
+    const actor = new RunActor({
+      runId: "run:1",
+      daemonEpoch: "epoch:1",
+      journal,
+      dispatcher,
+      hasher: sha256,
+      clock: () => "2026-08-12T20:00:00.000Z",
+      decide: (_command, context) => [buildEffectIntent({
+        runId: context.runId,
+        attemptId: "attempt:slow",
+        kind: "process_spawn",
+        inputDigest: "sha256:slow-input",
+        daemonEpoch: context.daemonEpoch,
+        idempotency: "reconcile_then_repeat",
+        requestedAt: "2026-08-12T20:00:01.000Z"
+      }, sha256)]
+    });
+
+    const receipt = await actor.submit(command("command:slow", 1));
+
+    expect(receipt.commandId).toBe("command:slow");
+    expect(journal.events.map((event) => event.type)).toEqual([
+      "run.created",
+      "command.accepted",
+      "effect.requested"
+    ]);
+
+    const intent = (journal.events.at(-1) as Extract<RunEvent, { type: "effect.requested" }>).payload.intent;
+    physical.resolve([physicalReceipt(intent, "epoch:1")]);
+    await actor.drainEffects();
+    expect(journal.events.at(-1)?.type).toBe("effect.observed");
+  });
+
+  it("accepts another command while prior physical work remains in flight", async () => {
+    const journal = new MemoryJournal("epoch:1");
+    const physical = deferred<PhysicalEffectReceipt[]>();
+    const actor = new RunActor({
+      runId: "run:1",
+      daemonEpoch: "epoch:1",
+      journal,
+      dispatcher: {
+        observe: () => physical.promise,
+        reconcile: () => physical.promise
+      },
+      hasher: sha256,
+      clock: () => "2026-08-12T20:00:00.000Z",
+      decide: (envelope, context) => envelope.command.type === "slow"
+        ? [buildEffectIntent({
+          runId: context.runId,
+          attemptId: "attempt:mailbox",
+          kind: "process_spawn",
+          inputDigest: "sha256:mailbox-input",
+          daemonEpoch: context.daemonEpoch,
+          idempotency: "reconcile_then_repeat",
+          requestedAt: "2026-08-12T20:00:01.000Z"
+        }, sha256)]
+        : []
+    });
+    const slow = buildRunCommandEnvelope({
+      commandId: "command:slow",
+      runId: "run:1",
+      expectedRevision: 1,
+      submittedAt: "2026-08-12T19:59:59.000Z",
+      command: { type: "slow" }
+    }, sha256);
+    const pause = buildRunCommandEnvelope({
+      commandId: "command:pause",
+      runId: "run:1",
+      expectedRevision: 3,
+      submittedAt: "2026-08-12T20:00:02.000Z",
+      command: { type: "pause" }
+    }, sha256);
+
+    await actor.submit(slow);
+    await expect(actor.submit(pause)).resolves.toEqual(
+      expect.objectContaining({ commandId: "command:pause", acceptedRevision: 4 })
+    );
+    expect(journal.events.filter((event) => event.type === "command.accepted")).toHaveLength(2);
+    expect(journal.events.filter((event) => event.type === "effect.observed")).toHaveLength(0);
+
+    const intent = journal.events.find(
+      (event): event is Extract<RunEvent, { type: "effect.requested" }> =>
+        event.type === "effect.requested"
+    )!.payload.intent;
+    physical.resolve([physicalReceipt(intent, "epoch:1")]);
+    await actor.drainEffects();
   });
 });
 
@@ -236,4 +339,15 @@ function physicalReceipt(intent: EffectIntent, daemonEpoch: string): PhysicalEff
     resultDigest: "sha256:result",
     observedAt: "2026-08-12T20:00:02.000Z"
   }, sha256);
+}
+
+function deferred<T>(): {
+  promise: Promise<T>;
+  resolve(value: T | PromiseLike<T>): void;
+} {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
 }
