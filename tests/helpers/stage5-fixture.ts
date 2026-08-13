@@ -248,7 +248,7 @@ function planMaterial(goal: GoalContract, view: RepositoryView): SemanticPlanMat
 function resource(id: string, path: string) {
   return {
     id,
-    kind: "file" as const,
+    kind: "path" as const,
     canonicalLocator: `path:${path}`,
     path,
     gitEntryKind: "file" as const,

@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { buildGoalContract, verifyCanonicalDigest } from "@manyhands/contracts";
+import { buildGoalContract, verifyCanonicalDigest, type GoalContract } from "@manyhands/contracts";
 import { stage5Sha256 } from "./helpers/stage5-fixture.js";
 
 const root = "docs/audits/stage-5/preregistration";
@@ -32,7 +32,10 @@ describe("Stage 5 GP1 pre-registration", () => {
   it("binds canonical goals and independent topology/browser oracles before outputs", () => {
     for (const file of files) {
       const value = load(file);
-      expect(buildGoalContract(withoutDigest(value.goal), stage5Sha256)).toEqual(value.goal);
+      expect(buildGoalContract(
+        withoutDigest(value.goal) as Parameters<typeof buildGoalContract>[0],
+        stage5Sha256
+      )).toEqual(value.goal);
       expect(verifyCanonicalDigest(value.goal, "digest", stage5Sha256)).toBe(true);
       expect(value.topologyOracle.goalDigest).toBe(value.goal.digest);
       expect(value.topologyOracle.repositoryViewDigest).toBe(value.repository.viewDigest);
@@ -50,11 +53,26 @@ describe("Stage 5 GP1 pre-registration", () => {
   });
 });
 
-function load(file: string): any {
-  return JSON.parse(readFileSync(join(root, file), "utf8"));
+interface PreregisteredCase {
+  repository: { baseCommit: string; treeSha: string; viewDigest: string };
+  provider: Record<string, unknown>;
+  goal: GoalContract;
+  topologyOracle: {
+    goalDigest: string;
+    repositoryViewDigest: string;
+    requiredResponsibilities: unknown[];
+    requiredSeams: unknown[];
+    requiredOwnership: unknown[];
+  };
+  browserOracle: { requiredSections: string[]; viewports: Array<{ width: number; height: number }> };
+}
+
+function load(file: string): PreregisteredCase {
+  return JSON.parse(readFileSync(join(root, file), "utf8")) as PreregisteredCase;
 }
 
 function withoutDigest<T extends { digest: string }>(value: T): Omit<T, "digest"> {
-  const { digest: _digest, ...material } = value;
+  const material = structuredClone(value);
+  Reflect.deleteProperty(material, "digest");
   return material;
 }

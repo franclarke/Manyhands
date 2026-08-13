@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { PlanningEngine, type PlanningModel, type PlanningRepositoryReader } from "@manyhands/decomposer";
+import {
+  PlanningEngine,
+  type PlanningModel,
+  type PlanningModelProposal,
+  type PlanningRepositoryReader
+} from "@manyhands/decomposer";
 import { stage5Fixture, stage5Sha256 } from "./helpers/stage5-fixture.js";
 
 const budget = () => ({
@@ -15,7 +20,7 @@ describe("Stage 5 progressive PlanningEngine", () => {
   it("returns a verified ready plan with attributable unified-budget trace", async () => {
     const fixture = stage5Fixture();
     const model: PlanningModel = {
-      propose: vi.fn(async () => ({ kind: "candidate", material: withoutDigest(fixture.plan) }))
+      propose: vi.fn(async (): Promise<PlanningModelProposal> => ({ kind: "candidate", material: withoutDigest(fixture.plan) }))
     };
     const engine = new PlanningEngine({
       model,
@@ -43,7 +48,7 @@ describe("Stage 5 progressive PlanningEngine", () => {
     const fixture = stage5Fixture();
     const material = withoutDigest(fixture.plan);
     material.units["unit:a"]!.resourceIntents[0]!.resourceId = "resource:missing";
-    const model: PlanningModel = { propose: vi.fn(async () => ({ kind: "candidate", material })) };
+    const model: PlanningModel = { propose: vi.fn(async (): Promise<PlanningModelProposal> => ({ kind: "candidate", material })) };
     const engine = new PlanningEngine({ model, repository: repository(), hasher: stage5Sha256 });
 
     const result = await engine.plan(request(fixture), new AbortController().signal);
@@ -58,14 +63,14 @@ describe("Stage 5 progressive PlanningEngine", () => {
     "preserves the explicit %s outcome without a partial plan",
     async (kind) => {
       const fixture = stage5Fixture();
-      const proposal = kind === "needs_input"
-        ? { kind, decisions: [decision()] } as const
+      const proposal: PlanningModelProposal = kind === "needs_input"
+        ? { kind, decisions: [decision()] }
         : kind === "ambiguous"
           ? { kind, decisions: [decision()], alternatives: [
               { id: "alternative:a", proposalDigest: "sha256:a", summary: "A owns the seam.", evidenceRefs: [] },
               { id: "alternative:b", proposalDigest: "sha256:b", summary: "B owns the seam.", evidenceRefs: [] }
-            ] } as const
-          : { kind, findings: [{ code: "language_unsupported", message: "Parser unavailable.", evidenceRefs: [] }], missingCapabilities: ["parser:language"] } as const;
+            ] }
+          : { kind, findings: [{ code: "language_unsupported", message: "Parser unavailable.", evidenceRefs: [] }], missingCapabilities: ["parser:language"] };
       const engine = new PlanningEngine({
         model: { propose: async () => proposal },
         repository: repository(),
@@ -80,7 +85,7 @@ describe("Stage 5 progressive PlanningEngine", () => {
 
   it("fails closed before a model call when repository usage exceeds budget", async () => {
     const fixture = stage5Fixture();
-    const model: PlanningModel = { propose: vi.fn(async () => ({ kind: "candidate", material: withoutDigest(fixture.plan) })) };
+    const model: PlanningModel = { propose: vi.fn(async (): Promise<PlanningModelProposal> => ({ kind: "candidate", material: withoutDigest(fixture.plan) })) };
     const engine = new PlanningEngine({
       model,
       repository: repository({ queryBytes: 20_000 }),
@@ -149,6 +154,7 @@ function decision() {
 }
 
 function withoutDigest(plan: ReturnType<typeof stage5Fixture>["plan"]) {
-  const { digest: _digest, ...material } = structuredClone(plan);
+  const material = structuredClone(plan);
+  Reflect.deleteProperty(material, "digest");
   return material;
 }

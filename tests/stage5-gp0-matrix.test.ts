@@ -22,8 +22,10 @@ describe("Stage 5 GP0 fixture and adverse matrix", () => {
     };
     root.integration = undefined;
     root.repositorySurface = { resourceRefs: ["resource:a"], pathHints: ["src/a.ts"] };
+    const sourceIntent = material.units["unit:a"]!.resourceIntents[0]!;
+    if (sourceIntent.access !== "modify") throw new Error("fixture source intent must modify");
     root.resourceIntents = [{
-      ...material.units["unit:a"]!.resourceIntents[0]!,
+      ...sourceIntent,
       outputArtifactId: "artifact:root"
     }];
     root.consumes = [];
@@ -92,7 +94,8 @@ describe("Stage 5 GP0 fixture and adverse matrix", () => {
 });
 
 function planMaterial(fixture: ReturnType<typeof stage5Fixture>) {
-  const { digest: _digest, ...material } = structuredClone(fixture.plan);
+  const material = structuredClone(fixture.plan);
+  Reflect.deleteProperty(material, "digest");
   return material;
 }
 

@@ -15,7 +15,10 @@ const sha256: DigestHasher = (value) =>
 describe("Stage 5 planning contracts", () => {
   it("keeps compileability exclusive to ready results", () => {
     const plan = buildSemanticPlan(planMaterial(), sha256);
-    expect(PlanningResultSchema.parse({ kind: "ready", plan, trace: trace() }).plan).toEqual(plan);
+    const result = PlanningResultSchema.parse({ kind: "ready", plan, trace: trace() });
+    expect(result.kind).toBe("ready");
+    if (result.kind !== "ready") return;
+    expect(result.plan).toEqual(plan);
     expect(PlanningResultSchema.safeParse({
       kind: "needs_input",
       plan,
@@ -53,7 +56,8 @@ describe("Stage 5 planning contracts", () => {
       changedFindingCodes: [],
       proposalDigest: "sha256:proposal"
     }, sha256);
-    const { digest: _digest, ...revisionMaterial } = revision;
+    const revisionMaterial = structuredClone(revision);
+    Reflect.deleteProperty(revisionMaterial, "digest");
     const replay = buildPlanningRevision(revisionMaterial, sha256);
 
     expect(revision.digest).toBe(replay.digest);
@@ -66,7 +70,10 @@ describe("Stage 5 planning contracts", () => {
     expect(plan.artifacts["artifact:change"]?.producerUnitId).toBe("unit:root");
     expect(plan.seams["seam:public"]?.compatibility.mode).toBe("exact");
     expect(plan.units["unit:root"]?.validation[0]?.proofStrategyId).toBe("proof:criterion");
-    expect(plan.units["unit:root"]?.resourceIntents[0]?.outputArtifactId).toBe("artifact:change");
+    const intent = plan.units["unit:root"]?.resourceIntents[0];
+    expect(intent?.access).toBe("modify");
+    if (intent?.access !== "modify") return;
+    expect(intent.outputArtifactId).toBe("artifact:change");
   });
 });
 
