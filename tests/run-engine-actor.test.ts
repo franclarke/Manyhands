@@ -1,16 +1,22 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
+  buildEffectInput,
   buildEffectIntent,
   buildPhysicalEffectReceipt,
   type DigestHasher,
+  type EffectInput,
+  type EffectInputSpec,
   type EffectIntent,
+  type EffectIntentMaterial,
   type PhysicalEffectReceipt
 } from "@manyhands/contracts";
 import { buildRunCommandEnvelope } from "@manyhands/run-coordinator";
 import type { RunEvent } from "@manyhands/run-coordinator";
 import {
   RunActor,
+  type EffectInputStorePort,
+  type RunActorEffectRequest,
   type RunActorDispatcherPort,
   type RunActorJournalEvent,
   type RunActorJournalInput,
@@ -68,6 +74,43 @@ describe("RunActor durable command authority", () => {
       "load",
       "appendAndFlush:3"
     ]);
+  });
+
+  it("persists the exact effect input before appending its intent", async () => {
+    const journal = new MemoryJournal("epoch:1");
+    const dispatcher = new RecordingDispatcher(journal);
+    const actor = createActor(journal, dispatcher);
+
+    await actor.submit(command("command:input-order", 1));
+    await actor.drainEffects();
+
+    const requested = journal.events.find(
+      (event): event is Extract<RunEvent, { type: "effect.requested" }> =>
+        event.type === "effect.requested"
+    )!;
+    expect(journal.inputStore.inputs.get(requested.payload.intent.inputDigest)).toEqual({
+      inputDigest: requested.payload.intent.inputDigest,
+      spec: {
+        schemaVersion: 1,
+        kind: "process_spawn",
+        payload: { operation: "process_spawn" }
+      }
+    });
+    expect(journal.timeline.indexOf(`put:${requested.payload.intent.inputDigest}`))
+      .toBeLessThan(journal.timeline.indexOf("appendAndFlush:1"));
+  });
+
+  it("leaves a benign orphan input when the journal crashes before intent append", async () => {
+    const journal = new MemoryJournal("epoch:1");
+    journal.failBeforeIntentAppend = true;
+    const dispatcher = new RecordingDispatcher(journal);
+    const actor = createActor(journal, dispatcher);
+
+    await expect(actor.submit(command("command:orphan", 1))).rejects.toThrow("crash before intent append");
+
+    expect(journal.inputStore.inputs.size).toBe(1);
+    expect(journal.events.map((event) => event.type)).toEqual(["run.created"]);
+    expect(dispatcher.observed).toEqual([]);
   });
 
   it("rejects stale daemon authority before accepting a command", async () => {
@@ -142,17 +185,17 @@ describe("RunActor durable command authority", () => {
       daemonEpoch: "epoch:1",
       journal,
       dispatcher,
+      inputStore: journal.inputStore,
       hasher: sha256,
       clock: () => "2026-08-12T20:00:00.000Z",
-      decide: (_command, context) => [buildEffectIntent({
+      decide: (_command, context) => [effectRequest({
         runId: context.runId,
         attemptId: "attempt:slow",
         kind: "process_spawn",
-        inputDigest: "sha256:slow-input",
         daemonEpoch: context.daemonEpoch,
         idempotency: "reconcile_then_repeat",
         requestedAt: "2026-08-12T20:00:01.000Z"
-      }, sha256)]
+      })]
     });
 
     const receipt = await actor.submit(command("command:slow", 1));
@@ -184,6 +227,7 @@ describe("RunActor durable command authority", () => {
       runId: "run:1",
       daemonEpoch: "epoch:1",
       journal,
+      inputStore: journal.inputStore,
       dispatcher: {
         observe: () => physical.promise,
         reconcile: () => physical.promise
@@ -191,15 +235,14 @@ describe("RunActor durable command authority", () => {
       hasher: sha256,
       clock: () => "2026-08-12T20:00:00.000Z",
       decide: (envelope, context) => envelope.command.type === "slow"
-        ? [buildEffectIntent({
+        ? [effectRequest({
           runId: context.runId,
           attemptId: "attempt:mailbox",
           kind: "process_spawn",
-          inputDigest: "sha256:mailbox-input",
           daemonEpoch: context.daemonEpoch,
           idempotency: "reconcile_then_repeat",
           requestedAt: "2026-08-12T20:00:01.000Z"
-        }, sha256)]
+        })]
         : []
     });
     const slow = buildRunCommandEnvelope({
@@ -239,6 +282,7 @@ describe("RunActor durable command authority", () => {
       runId: "run:1",
       daemonEpoch: "epoch:1",
       journal,
+      inputStore: journal.inputStore,
       dispatcher: {
         observe: async (intent) => [physicalReceipt(intent, "epoch:1", "started")],
         reconcile: async (intent) => {
@@ -248,15 +292,14 @@ describe("RunActor durable command authority", () => {
       },
       hasher: sha256,
       clock: () => "2026-08-12T20:00:00.000Z",
-      decide: (_command, context) => [buildEffectIntent({
+      decide: (_command, context) => [effectRequest({
         runId: context.runId,
         attemptId: "attempt:started",
         kind: "process_spawn",
-        inputDigest: "sha256:started-input",
         daemonEpoch: context.daemonEpoch,
         idempotency: "reconcile_then_repeat",
         requestedAt: "2026-08-12T20:00:01.000Z"
-      }, sha256)]
+      })]
     });
 
     await actor.submit(command("command:started", 1));
@@ -276,18 +319,18 @@ describe("RunActor durable command authority", () => {
       runId: "run:1",
       daemonEpoch: "epoch:1",
       journal,
+      inputStore: journal.inputStore,
       dispatcher: { observe: () => physical.promise, reconcile: () => physical.promise },
       hasher: sha256,
       clock: () => "2026-08-12T20:00:05.000Z",
-      decide: (_command, context) => [buildEffectIntent({
+      decide: (_command, context) => [effectRequest({
         runId: context.runId,
         attemptId: "attempt:cancelled",
         kind: "process_spawn",
-        inputDigest: "sha256:cancelled-input",
         daemonEpoch: context.daemonEpoch,
         idempotency: "reconcile_then_repeat",
         requestedAt: "2026-08-12T20:00:01.000Z"
-      }, sha256)]
+      })]
     });
 
     await actor.submit(command("command:cancelled", 1));
@@ -324,18 +367,18 @@ describe("RunActor durable command authority", () => {
       runId: "run:1",
       daemonEpoch: "epoch:1",
       journal,
+      inputStore: journal.inputStore,
       dispatcher: { observe: () => physical.promise, reconcile: () => physical.promise },
       hasher: sha256,
       clock: () => "2026-08-12T20:00:05.000Z",
-      decide: (_command, context) => [buildEffectIntent({
+      decide: (_command, context) => [effectRequest({
         runId: context.runId,
         attemptId: "attempt:stale",
         kind: "validation",
-        inputDigest: "sha256:stale-input",
         daemonEpoch: context.daemonEpoch,
         idempotency: "repeat_safe",
         requestedAt: "2026-08-12T20:00:01.000Z"
-      }, sha256)]
+      })]
     });
 
     await actor.submit(command("command:stale", 1));
@@ -390,6 +433,7 @@ describe("RunActor durable command authority", () => {
       runId: "run:1",
       daemonEpoch: "epoch:2",
       journal,
+      inputStore: journal.inputStore,
       dispatcher: {
         async observe() {
           observed += 1;
@@ -429,17 +473,17 @@ function createActor(
     daemonEpoch,
     journal,
     dispatcher,
+    inputStore: journal.inputStore,
     hasher: sha256,
     clock: () => "2026-08-12T20:00:00.000Z",
-    decide: (_command, context) => [buildEffectIntent({
+    decide: (_command, context) => [effectRequest({
       runId: context.runId,
       attemptId: "attempt:1",
       kind: "process_spawn",
-      inputDigest: "sha256:input",
       daemonEpoch: context.daemonEpoch,
       idempotency: "reconcile_then_repeat",
       requestedAt: "2026-08-12T20:00:01.000Z"
-    }, sha256)]
+    })]
   });
 }
 
@@ -453,7 +497,43 @@ function command(commandId: string, expectedRevision: number) {
   }, sha256);
 }
 
+function effectRequest(
+  material: Omit<EffectIntentMaterial, "inputDigest">,
+  payload: EffectInputSpec["payload"] = { operation: material.kind }
+): RunActorEffectRequest {
+  const inputSpec: EffectInputSpec = {
+    schemaVersion: 1,
+    kind: material.kind,
+    payload
+  };
+  const effectInput = buildEffectInput(inputSpec, sha256);
+  return {
+    inputSpec,
+    intent: buildEffectIntent({ ...material, inputDigest: effectInput.inputDigest }, sha256)
+  };
+}
+
+class MemoryEffectInputStore implements EffectInputStorePort {
+  readonly inputs = new Map<string, EffectInput>();
+
+  constructor(private readonly timeline: string[] = []) {}
+
+  async put(spec: EffectInputSpec): Promise<EffectInput> {
+    const effectInput = buildEffectInput(spec, sha256);
+    this.timeline.push(`put:${effectInput.inputDigest}`);
+    this.inputs.set(effectInput.inputDigest, structuredClone(effectInput));
+    return structuredClone(effectInput);
+  }
+
+  async get(inputDigest: string): Promise<EffectInput | undefined> {
+    const input = this.inputs.get(inputDigest);
+    return input === undefined ? undefined : structuredClone(input);
+  }
+}
+
 class MemoryJournal implements RunActorJournalPort {
+  readonly timeline: string[] = [];
+  readonly inputStore = new MemoryEffectInputStore(this.timeline);
   events: RunEvent[] = [{
     eventId: "event:created",
     runId: "run:1",
@@ -465,6 +545,7 @@ class MemoryJournal implements RunActorJournalPort {
   operations: string[] = [];
   appendBatches: RunActorJournalInput[][] = [];
   epochAfterNextAppend: string | undefined;
+  failBeforeIntentAppend = false;
 
   constructor(public currentEpoch: string) {}
 
@@ -485,10 +566,15 @@ class MemoryJournal implements RunActorJournalPort {
     events: RunActorJournalInput[];
   }): Promise<RunActorJournalEvent[]> {
     this.operations.push(`appendAndFlush:${input.expectedRevision}`);
+    this.timeline.push(`appendAndFlush:${input.expectedRevision}`);
     this.appendBatches.push(structuredClone(input.events));
     if (input.daemonEpoch !== this.currentEpoch) throw new Error("stale daemon epoch");
     if (input.runId !== "run:1") throw new Error("run mismatch");
     if (input.expectedRevision !== this.events.length) throw new Error("revision conflict");
+    if (this.failBeforeIntentAppend && input.events.some((event) => event.type === "effect.requested")) {
+      this.failBeforeIntentAppend = false;
+      throw new Error("crash before intent append");
+    }
     const appended = input.events.map((event, index) => ({
       ...structuredClone(event),
       runId: input.runId,

@@ -4,12 +4,13 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  buildEffectInput,
   buildEffectIntent,
   buildPhysicalEffectReceipt,
   type DigestHasher
 } from "@manyhands/contracts";
 import { buildRunCommandEnvelope } from "@manyhands/run-coordinator";
-import { JsonlRunEventStore, StaleFencingTokenError } from "@manyhands/run-store";
+import { FileEffectInputStore, JsonlRunEventStore, StaleFencingTokenError } from "@manyhands/run-store";
 import { FencedRunActorJournal, RunActor } from "@manyhands/run-engine";
 
 const sha256: DigestHasher = (value) =>
@@ -23,21 +24,32 @@ afterEach(async () => {
 describe("FencedRunActorJournal", () => {
   it("persists command, intent and physical receipt through the canonical event store", async () => {
     const { store, journal } = await fixture("epoch:1");
+    const inputStore = new FileEffectInputStore({ directory: path.join(store.directory, "effect-inputs"), hasher: sha256 });
+    const inputSpec = {
+      schemaVersion: 1 as const,
+      kind: "process_spawn" as const,
+      payload: { operation: "spawn-test" }
+    };
+    const effectInput = buildEffectInput(inputSpec, sha256);
     const actor = new RunActor({
       runId: "run:1",
       daemonEpoch: "epoch:1",
       journal,
+      inputStore,
       hasher: sha256,
       clock: () => "2026-08-12T20:00:00.000Z",
-      decide: (_command, context) => [buildEffectIntent({
-        runId: context.runId,
-        attemptId: "attempt:1",
-        kind: "process_spawn",
-        inputDigest: "sha256:input",
-        daemonEpoch: context.daemonEpoch,
-        idempotency: "reconcile_then_repeat",
-        requestedAt: "2026-08-12T20:00:01.000Z"
-      }, sha256)],
+      decide: (_command, context) => [{
+        inputSpec,
+        intent: buildEffectIntent({
+          runId: context.runId,
+          attemptId: "attempt:1",
+          kind: "process_spawn",
+          inputDigest: effectInput.inputDigest,
+          daemonEpoch: context.daemonEpoch,
+          idempotency: "reconcile_then_repeat",
+          requestedAt: "2026-08-12T20:00:01.000Z"
+        }, sha256)
+      }],
       dispatcher: {
         async observe(intent) {
           return [buildPhysicalEffectReceipt({

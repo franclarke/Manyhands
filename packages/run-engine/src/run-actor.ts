@@ -1,10 +1,15 @@
 import {
+  EffectInputSchema,
+  buildEffectInput,
   canonicalJson,
   computeCanonicalDigest,
   validateEffectIntentIdentity,
+  validateEffectInputIdentity,
   validatePhysicalEffectReceiptBinding,
   validatePhysicalEffectReceiptIdentity,
   type DigestHasher,
+  type EffectInput,
+  type EffectInputSpec,
   type EffectIntent,
   type PhysicalEffectReceipt
 } from "@manyhands/contracts";
@@ -19,6 +24,7 @@ import {
   type RunEvent,
   type RunEventInput
 } from "@manyhands/run-coordinator";
+import type { EffectInputStorePort } from "./effect-dispatcher.js";
 
 export type RunActorJournalEvent = Extract<
   RunEvent,
@@ -67,15 +73,21 @@ export interface RunActorDecisionContext {
   acceptedRevision: number;
 }
 
+export interface RunActorEffectRequest {
+  readonly intent: EffectIntent;
+  readonly inputSpec: EffectInputSpec;
+}
+
 export interface RunActorOptions {
   runId: string;
   daemonEpoch: string;
   journal: RunActorJournalPort;
   dispatcher: RunActorDispatcherPort;
+  inputStore: Pick<EffectInputStorePort, "put">;
   decide(
     command: RunCommandEnvelope,
     context: RunActorDecisionContext
-  ): Promise<EffectIntent[]> | EffectIntent[];
+  ): Promise<readonly RunActorEffectRequest[]> | readonly RunActorEffectRequest[];
   hasher: DigestHasher;
   clock(): string;
 }
@@ -152,12 +164,17 @@ export class RunActor {
       daemonEpoch: this.options.daemonEpoch,
       acceptedAt
     }, this.options.hasher);
-    const intents = await this.options.decide(envelope, {
+    const requests = await this.options.decide(envelope, {
       runId: this.options.runId,
       daemonEpoch: this.options.daemonEpoch,
       acceptedRevision
     });
-    for (const intent of intents) this.assertDispatchableIntent(intent);
+    const prepared = requests.map((request) => this.prepareEffectRequest(request));
+    for (const request of prepared) {
+      const published = await this.options.inputStore.put(structuredClone(request.effectInput.spec));
+      this.assertPublishedEffectInput(published, request.effectInput, request.intent);
+    }
+    const intents = prepared.map((request) => request.intent);
 
     const journalInputs: RunActorJournalInput[] = [
       {
@@ -365,6 +382,46 @@ export class RunActor {
     }
     if (intent.daemonEpoch !== this.options.daemonEpoch) {
       throw new Error(`New effect intent ${intent.effectId} was created under a stale daemon epoch.`);
+    }
+  }
+
+  private prepareEffectRequest(request: RunActorEffectRequest): {
+    intent: EffectIntent;
+    effectInput: EffectInput;
+  } {
+    this.assertDispatchableIntent(request.intent);
+    const effectInput = buildEffectInput(request.inputSpec, this.options.hasher);
+    if (effectInput.inputDigest !== request.intent.inputDigest) {
+      throw new Error(
+        `Effect input digest ${effectInput.inputDigest} does not match intent ${request.intent.effectId} digest ${request.intent.inputDigest}.`
+      );
+    }
+    if (effectInput.spec.kind !== request.intent.kind) {
+      throw new Error(
+        `Effect input kind ${effectInput.spec.kind} does not match intent kind ${request.intent.kind}.`
+      );
+    }
+    return {
+      intent: structuredClone(request.intent),
+      effectInput
+    };
+  }
+
+  private assertPublishedEffectInput(
+    input: unknown,
+    expected: EffectInput,
+    intent: EffectIntent
+  ): void {
+    const parsed = EffectInputSchema.safeParse(input);
+    if (!parsed.success || !validateEffectInputIdentity(input, this.options.hasher).ok) {
+      throw new Error(`Input store returned invalid canonical input for effect ${intent.effectId}.`);
+    }
+    if (
+      parsed.data.inputDigest !== intent.inputDigest
+      || parsed.data.spec.kind !== intent.kind
+      || canonicalJson(parsed.data) !== canonicalJson(expected)
+    ) {
+      throw new Error(`Input store did not durably publish the exact input for effect ${intent.effectId}.`);
     }
   }
 }

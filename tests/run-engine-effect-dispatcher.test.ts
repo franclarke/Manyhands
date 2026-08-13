@@ -2,15 +2,19 @@ import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
   EffectKindSchema,
+  buildEffectInput,
   buildEffectIntent,
   buildPhysicalEffectReceipt,
   type DigestHasher,
+  type EffectInput,
+  type EffectInputSpec,
   type EffectIntent,
   type EffectKind,
   type PhysicalEffectReceipt
 } from "@manyhands/contracts";
 import {
   KindAwarePhysicalEffectDispatcher,
+  type EffectInputStorePort,
   type PhysicalEffectAdapter,
   type PhysicalEffectReceiptStorePort
 } from "../packages/run-engine/src/effect-dispatcher.js";
@@ -23,15 +27,21 @@ describe("KindAwarePhysicalEffectDispatcher", () => {
   it("routes every physical effect kind to its only registered adapter", async () => {
     for (const kind of allEffectKinds) {
       const store = new MemoryReceiptStore();
+      const inputStore = new MemoryEffectInputStore();
+      const effect = intent(kind, inputStore);
       const calls: EffectKind[] = [];
       const dispatcher = new KindAwarePhysicalEffectDispatcher({
         receiptStore: store,
+        inputStore,
         hasher: sha256,
         adapters: allEffectKinds.map((adapterKind): PhysicalEffectAdapter => ({
           kind: adapterKind,
           async execute(received, context) {
             calls.push(adapterKind);
-            expect(received).toEqual(intent(kind));
+            expect(received).toEqual(effect);
+            expect(context.inputSpec).toEqual(inputSpec(kind));
+            expect(Object.isFrozen(context.inputSpec)).toBe(true);
+            expect(Object.isFrozen(context.inputSpec.payload)).toBe(true);
             await context.record({
               observation: "succeeded",
               resultDigest: `sha256:result:${adapterKind}`,
@@ -44,13 +54,13 @@ describe("KindAwarePhysicalEffectDispatcher", () => {
         }))
       });
 
-      const receipts = await dispatcher.observe(intent(kind));
+      const receipts = await dispatcher.observe(effect);
 
       expect(calls).toEqual([kind]);
       expect(receipts).toEqual([
         expect.objectContaining({
-          effectId: intent(kind).effectId,
-          inputDigest: intent(kind).inputDigest,
+          effectId: effect.effectId,
+          inputDigest: effect.inputDigest,
           daemonEpoch: "daemon:epoch-1",
           observation: "succeeded"
         })
@@ -60,7 +70,8 @@ describe("KindAwarePhysicalEffectDispatcher", () => {
 
   it("reconciles a durable started receipt after a crash without executing the effect again", async () => {
     const store = new MemoryReceiptStore();
-    const effect = intent("process_spawn");
+    const inputStore = new MemoryEffectInputStore();
+    const effect = intent("process_spawn", inputStore);
     let executeCount = 0;
     let reconcileCount = 0;
     const adapters = allEffectKinds.map((kind): PhysicalEffectAdapter => ({
@@ -83,6 +94,7 @@ describe("KindAwarePhysicalEffectDispatcher", () => {
         if (kind !== "process_spawn") throw new Error(`unexpected reconcile for ${kind}`);
         reconcileCount += 1;
         expect(received).toEqual(effect);
+        expect(context.inputSpec).toEqual(inputSpec("process_spawn"));
         expect(context.priorReceipts).toEqual([
           expect.objectContaining({ observation: "started", daemonEpoch: "daemon:epoch-1" })
         ]);
@@ -96,6 +108,7 @@ describe("KindAwarePhysicalEffectDispatcher", () => {
 
     const firstDispatcher = new KindAwarePhysicalEffectDispatcher({
       receiptStore: store,
+      inputStore,
       hasher: sha256,
       adapters
     });
@@ -103,6 +116,7 @@ describe("KindAwarePhysicalEffectDispatcher", () => {
 
     const recoveredDispatcher = new KindAwarePhysicalEffectDispatcher({
       receiptStore: store,
+      inputStore,
       hasher: sha256,
       adapters
     });
@@ -116,11 +130,13 @@ describe("KindAwarePhysicalEffectDispatcher", () => {
 
   it("reconciles a recovered intent with no receipt instead of repeating an unknown effect", async () => {
     const store = new MemoryReceiptStore();
+    const inputStore = new MemoryEffectInputStore();
+    const effectInput = inputStore.seed(inputSpec("delivery", { scenario: "unknown" }));
     const effect = buildEffectIntent({
       runId: "run:dispatcher",
       attemptId: "attempt:delivery:unknown",
       kind: "delivery",
-      inputDigest: "sha256:delivery:unknown",
+      inputDigest: effectInput.inputDigest,
       daemonEpoch: "daemon:epoch-1",
       idempotency: "never_repeat_unknown",
       requestedAt: "2026-08-12T21:00:00.000Z"
@@ -129,6 +145,7 @@ describe("KindAwarePhysicalEffectDispatcher", () => {
     let reconcileCount = 0;
     const dispatcher = new KindAwarePhysicalEffectDispatcher({
       receiptStore: store,
+      inputStore,
       hasher: sha256,
       adapters: allEffectKinds.map((kind): PhysicalEffectAdapter => ({
         kind,
@@ -159,11 +176,13 @@ describe("KindAwarePhysicalEffectDispatcher", () => {
 
   it("returns unknown never-repeat recovery to the actor without fabricating a receipt", async () => {
     const store = new MemoryReceiptStore();
+    const inputStore = new MemoryEffectInputStore();
+    const effectInput = inputStore.seed(inputSpec("delivery", { scenario: "no-evidence" }));
     const effect = buildEffectIntent({
       runId: "run:dispatcher",
       attemptId: "attempt:delivery:unknown-no-evidence",
       kind: "delivery",
-      inputDigest: "sha256:delivery:no-evidence",
+      inputDigest: effectInput.inputDigest,
       daemonEpoch: "daemon:epoch-1",
       idempotency: "never_repeat_unknown",
       requestedAt: "2026-08-12T21:00:00.000Z"
@@ -172,6 +191,7 @@ describe("KindAwarePhysicalEffectDispatcher", () => {
     let reconcileCount = 0;
     const dispatcher = new KindAwarePhysicalEffectDispatcher({
       receiptStore: store,
+      inputStore,
       hasher: sha256,
       adapters: allEffectKinds.map((kind): PhysicalEffectAdapter => ({
         kind,
@@ -193,10 +213,12 @@ describe("KindAwarePhysicalEffectDispatcher", () => {
 
   it("replays one durable terminal receipt without invoking an adapter again", async () => {
     const store = new MemoryReceiptStore();
+    const inputStore = new MemoryEffectInputStore();
     let executeCount = 0;
     let reconcileCount = 0;
     const dispatcher = new KindAwarePhysicalEffectDispatcher({
       receiptStore: store,
+      inputStore,
       hasher: sha256,
       adapters: allEffectKinds.map((kind): PhysicalEffectAdapter => ({
         kind,
@@ -213,7 +235,7 @@ describe("KindAwarePhysicalEffectDispatcher", () => {
         }
       }))
     });
-    const effect = intent("delivery");
+    const effect = intent("delivery", inputStore);
 
     const first = await dispatcher.observe(effect);
     const replay = await dispatcher.observe(effect);
@@ -226,6 +248,7 @@ describe("KindAwarePhysicalEffectDispatcher", () => {
 
   it("fails closed when the adapter registry is missing or duplicates a kind", () => {
     const store = new MemoryReceiptStore();
+    const inputStore = new MemoryEffectInputStore();
     const complete = allEffectKinds.map((kind): PhysicalEffectAdapter => ({
       kind,
       async execute() {},
@@ -234,11 +257,13 @@ describe("KindAwarePhysicalEffectDispatcher", () => {
 
     expect(() => new KindAwarePhysicalEffectDispatcher({
       receiptStore: store,
+      inputStore,
       hasher: sha256,
       adapters: complete.slice(1)
     })).toThrow(/missing physical effect adapters: model_call/i);
     expect(() => new KindAwarePhysicalEffectDispatcher({
       receiptStore: store,
+      inputStore,
       hasher: sha256,
       adapters: [...complete, complete[0]!]
     })).toThrow(/duplicate physical effect adapter for model_call/i);
@@ -246,8 +271,10 @@ describe("KindAwarePhysicalEffectDispatcher", () => {
 
   it("rejects a successful adapter return that did not durably record a terminal observation", async () => {
     const store = new MemoryReceiptStore();
+    const inputStore = new MemoryEffectInputStore();
     const dispatcher = new KindAwarePhysicalEffectDispatcher({
       receiptStore: store,
+      inputStore,
       hasher: sha256,
       adapters: allEffectKinds.map((kind): PhysicalEffectAdapter => ({
         kind,
@@ -261,7 +288,7 @@ describe("KindAwarePhysicalEffectDispatcher", () => {
       }))
     });
 
-    await expect(dispatcher.observe(intent("model_call"))).rejects.toThrow(
+    await expect(dispatcher.observe(intent("model_call", inputStore))).rejects.toThrow(
       /returned without a durable terminal receipt/i
     );
     expect(store.receipts).toEqual([
@@ -271,9 +298,11 @@ describe("KindAwarePhysicalEffectDispatcher", () => {
 
   it("validates canonical intent and receipt identities before invoking an adapter", async () => {
     const store = new MemoryReceiptStore();
+    const inputStore = new MemoryEffectInputStore();
     let adapterCalls = 0;
     const dispatcher = new KindAwarePhysicalEffectDispatcher({
       receiptStore: store,
+      inputStore,
       hasher: sha256,
       adapters: allEffectKinds.map((kind): PhysicalEffectAdapter => ({
         kind,
@@ -285,7 +314,7 @@ describe("KindAwarePhysicalEffectDispatcher", () => {
         }
       }))
     });
-    const effect = intent("cleanup");
+    const effect = intent("cleanup", inputStore);
 
     await expect(dispatcher.observe({ ...effect, daemonEpoch: "daemon:tampered" }))
       .rejects.toThrow(/invalid canonical identity/i);
@@ -303,9 +332,72 @@ describe("KindAwarePhysicalEffectDispatcher", () => {
     expect(adapterCalls).toBe(0);
   });
 
+  it("fails closed before adapter execution when the addressed input is missing or tampered", async () => {
+    const receiptStore = new MemoryReceiptStore();
+    const inputStore = new MemoryEffectInputStore();
+    const effect = intent("model_call", inputStore);
+    let adapterCalls = 0;
+    const dispatcher = new KindAwarePhysicalEffectDispatcher({
+      receiptStore,
+      inputStore,
+      hasher: sha256,
+      adapters: allEffectKinds.map((kind): PhysicalEffectAdapter => ({
+        kind,
+        async execute() { adapterCalls += 1; },
+        async reconcile() { adapterCalls += 1; }
+      }))
+    });
+
+    inputStore.inputs.delete(effect.inputDigest);
+    await expect(dispatcher.observe(effect)).rejects.toThrow(/effect input.*missing/i);
+
+    inputStore.inputs.set(effect.inputDigest, {
+      inputDigest: effect.inputDigest,
+      spec: inputSpec("model_call", { operation: "tampered" })
+    });
+    await expect(dispatcher.observe(effect)).rejects.toThrow(/invalid canonical identity/i);
+
+    const different = inputStore.seed(inputSpec("model_call", { operation: "different-address" }));
+    inputStore.inputs.set(effect.inputDigest, different);
+    await expect(dispatcher.observe(effect)).rejects.toThrow(/returned .* for requested digest/i);
+    expect(adapterCalls).toBe(0);
+    expect(receiptStore.receipts).toEqual([]);
+  });
+
+  it("rejects an input whose kind does not match its intent before adapter execution", async () => {
+    const receiptStore = new MemoryReceiptStore();
+    const inputStore = new MemoryEffectInputStore();
+    const stored = inputStore.seed(inputSpec("process_spawn"));
+    const effect = buildEffectIntent({
+      runId: "run:dispatcher",
+      attemptId: "attempt:kind-mismatch",
+      kind: "validation",
+      inputDigest: stored.inputDigest,
+      daemonEpoch: "daemon:epoch-1",
+      idempotency: "repeat_safe",
+      requestedAt: "2026-08-12T21:00:00.000Z"
+    }, sha256);
+    let adapterCalls = 0;
+    const dispatcher = new KindAwarePhysicalEffectDispatcher({
+      receiptStore,
+      inputStore,
+      hasher: sha256,
+      adapters: allEffectKinds.map((kind): PhysicalEffectAdapter => ({
+        kind,
+        async execute() { adapterCalls += 1; },
+        async reconcile() { adapterCalls += 1; }
+      }))
+    });
+
+    await expect(dispatcher.observe(effect)).rejects.toThrow(/input kind.*does not match/i);
+    expect(adapterCalls).toBe(0);
+    expect(receiptStore.receipts).toEqual([]);
+  });
+
   it("rejects an identity-valid receipt bound to different effect inputs", async () => {
     const store = new MemoryReceiptStore();
-    const effect = intent("artifact_materialize");
+    const inputStore = new MemoryEffectInputStore();
+    const effect = intent("artifact_materialize", inputStore);
     store.receipts.push(buildPhysicalEffectReceipt({
       effectId: effect.effectId,
       observation: "started",
@@ -315,6 +407,7 @@ describe("KindAwarePhysicalEffectDispatcher", () => {
     }, sha256));
     const dispatcher = new KindAwarePhysicalEffectDispatcher({
       receiptStore: store,
+      inputStore,
       hasher: sha256,
       adapters: allEffectKinds.map((kind): PhysicalEffectAdapter => ({
         kind,
@@ -328,9 +421,11 @@ describe("KindAwarePhysicalEffectDispatcher", () => {
 
   it("owns receipt binding fields even when an adapter supplies unexpected runtime keys", async () => {
     const store = new MemoryReceiptStore();
-    const effect = intent("validation");
+    const inputStore = new MemoryEffectInputStore();
+    const effect = intent("validation", inputStore);
     const dispatcher = new KindAwarePhysicalEffectDispatcher({
       receiptStore: store,
+      inputStore,
       hasher: sha256,
       adapters: allEffectKinds.map((kind): PhysicalEffectAdapter => ({
         kind,
@@ -361,16 +456,40 @@ describe("KindAwarePhysicalEffectDispatcher", () => {
   });
 });
 
-function intent(kind: EffectKind): EffectIntent {
+function inputSpec(kind: EffectKind, payload: EffectInputSpec["payload"] = { operation: kind }): EffectInputSpec {
+  return { schemaVersion: 1, kind, payload };
+}
+
+function intent(kind: EffectKind, inputStore: MemoryEffectInputStore): EffectIntent {
+  const effectInput = inputStore.seed(inputSpec(kind));
   return buildEffectIntent({
     runId: "run:dispatcher",
     attemptId: `attempt:${kind}:1`,
     kind,
-    inputDigest: `sha256:input:${kind}`,
+    inputDigest: effectInput.inputDigest,
     daemonEpoch: "daemon:epoch-1",
     idempotency: "reconcile_then_repeat",
     requestedAt: "2026-08-12T21:00:00.000Z"
   }, sha256);
+}
+
+class MemoryEffectInputStore implements EffectInputStorePort {
+  readonly inputs = new Map<string, EffectInput>();
+
+  seed(spec: EffectInputSpec): EffectInput {
+    const effectInput = buildEffectInput(spec, sha256);
+    this.inputs.set(effectInput.inputDigest, structuredClone(effectInput));
+    return structuredClone(effectInput);
+  }
+
+  async put(spec: EffectInputSpec): Promise<EffectInput> {
+    return this.seed(spec);
+  }
+
+  async get(inputDigest: string): Promise<EffectInput | undefined> {
+    const input = this.inputs.get(inputDigest);
+    return input === undefined ? undefined : structuredClone(input);
+  }
 }
 
 class MemoryReceiptStore implements PhysicalEffectReceiptStorePort {

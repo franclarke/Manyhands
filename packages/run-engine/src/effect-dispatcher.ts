@@ -1,4 +1,5 @@
 import {
+  EffectInputSchema,
   EffectIntentSchema,
   EffectKindSchema,
   PhysicalEffectReceiptSchema,
@@ -6,15 +7,22 @@ import {
   canonicalJson,
   replayPhysicalEffectReceipts,
   validateEffectIntentIdentity,
+  validateEffectInputIdentity,
   validatePhysicalEffectReceiptBinding,
   validatePhysicalEffectReceiptIdentity,
   type DigestHasher,
+  type EffectInputSpec,
   type EffectIntent,
   type EffectKind,
   type PhysicalEffectObservation,
   type PhysicalEffectReceipt,
   type ProcessIdentity
 } from "@manyhands/contracts";
+
+export interface EffectInputStorePort {
+  put(inputSpec: EffectInputSpec): Promise<unknown>;
+  get(inputDigest: string): Promise<unknown | undefined>;
+}
 
 export interface PhysicalEffectReceiptStorePort {
   list(): Promise<readonly unknown[]>;
@@ -30,6 +38,7 @@ export interface PhysicalEffectObservationInput {
 
 export interface PhysicalEffectAdapterContext {
   readonly observerDaemonEpoch: string;
+  readonly inputSpec: Readonly<EffectInputSpec>;
   readonly priorReceipts: readonly Readonly<PhysicalEffectReceipt>[];
   record(observation: PhysicalEffectObservationInput): Promise<Readonly<PhysicalEffectReceipt>>;
 }
@@ -48,6 +57,7 @@ export interface PhysicalEffectAdapter {
 
 export interface KindAwarePhysicalEffectDispatcherOptions {
   receiptStore: PhysicalEffectReceiptStorePort;
+  inputStore: EffectInputStorePort;
   hasher: DigestHasher;
   adapters: readonly PhysicalEffectAdapter[];
 }
@@ -95,6 +105,7 @@ export class KindAwarePhysicalEffectDispatcher {
     mode: "observe" | "reconcile"
   ): Promise<PhysicalEffectReceipt[]> {
     assertObserverEpoch(observerDaemonEpoch);
+    const inputSpec = await this.loadEffectInput(intent);
     const priorReceipts = await this.loadBoundReceipts(intent);
     if (authoritativeTerminal(priorReceipts) !== undefined) return priorReceipts;
 
@@ -102,7 +113,7 @@ export class KindAwarePhysicalEffectDispatcher {
     if (adapter === undefined) {
       throw new Error(`No physical effect adapter is registered for ${intent.kind}.`);
     }
-    const context = this.createContext(intent, observerDaemonEpoch, priorReceipts);
+    const context = this.createContext(intent, observerDaemonEpoch, inputSpec, priorReceipts);
     if (mode === "observe" && priorReceipts.length === 0) {
       await adapter.execute(intent, context);
     } else {
@@ -131,10 +142,12 @@ export class KindAwarePhysicalEffectDispatcher {
   private createContext(
     intent: Readonly<EffectIntent>,
     observerDaemonEpoch: string,
+    inputSpec: Readonly<EffectInputSpec>,
     priorReceipts: readonly PhysicalEffectReceipt[]
   ): PhysicalEffectAdapterContext {
     return Object.freeze({
       observerDaemonEpoch,
+      inputSpec,
       priorReceipts: Object.freeze(priorReceipts.map((receipt) => Object.freeze(structuredClone(receipt)))),
       record: async (observation: PhysicalEffectObservationInput) => {
         const candidate = buildPhysicalEffectReceipt({
@@ -147,6 +160,39 @@ export class KindAwarePhysicalEffectDispatcher {
         return Object.freeze(this.assertPublishedReceipt(published, candidate, intent, observerDaemonEpoch));
       }
     });
+  }
+
+  private async loadEffectInput(
+    intent: Readonly<EffectIntent>
+  ): Promise<Readonly<EffectInputSpec>> {
+    const stored = await this.options.inputStore.get(intent.inputDigest);
+    if (stored === undefined) {
+      throw new Error(`Effect input ${intent.inputDigest} is missing for effect ${intent.effectId}.`);
+    }
+
+    const parsed = EffectInputSchema.safeParse(stored);
+    if (!parsed.success) {
+      throw new Error(`Effect input ${intent.inputDigest} has invalid canonical identity: ${parsed.error.message}`);
+    }
+    const identity = validateEffectInputIdentity(parsed.data, this.options.hasher);
+    if (!identity.ok) {
+      throw new Error(
+        `Effect input ${intent.inputDigest} has invalid canonical identity: ${identity.issues
+          .map((issue) => issue.message)
+          .join("; ")}`
+      );
+    }
+    if (parsed.data.inputDigest !== intent.inputDigest) {
+      throw new Error(
+        `Effect input store returned ${parsed.data.inputDigest} for requested digest ${intent.inputDigest}.`
+      );
+    }
+    if (parsed.data.spec.kind !== intent.kind) {
+      throw new Error(
+        `Effect input kind ${parsed.data.spec.kind} does not match intent kind ${intent.kind}.`
+      );
+    }
+    return deepFreeze(structuredClone(parsed.data.spec));
   }
 
   private async loadBoundReceipts(
@@ -257,4 +303,12 @@ function compareReceipts(left: PhysicalEffectReceipt, right: PhysicalEffectRecei
 
 function assertObserverEpoch(value: string): void {
   if (value.trim().length === 0) throw new TypeError("observerDaemonEpoch must not be empty.");
+}
+
+function deepFreeze<T>(value: T): T {
+  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
+    for (const child of Object.values(value)) deepFreeze(child);
+    Object.freeze(value);
+  }
+  return value;
 }

@@ -2,8 +2,11 @@ import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
   EffectKindSchema,
+  buildEffectInput,
   buildEffectIntent,
   type DigestHasher,
+  type EffectInput,
+  type EffectInputSpec,
   type EffectKind,
   type PhysicalEffectReceipt
 } from "@manyhands/contracts";
@@ -15,6 +18,7 @@ import {
 import {
   KindAwarePhysicalEffectDispatcher,
   RunActor,
+  type EffectInputStorePort,
   type PhysicalEffectAdapter,
   type PhysicalEffectReceiptStorePort,
   type RunActorJournalEvent,
@@ -36,6 +40,7 @@ describe("RunActor GD1 physical-effect crash matrix", () => {
         await expect(harness.actor("daemon:epoch-1").submit(harness.command))
           .rejects.toThrow("crash before intent flush");
         expect(harness.journal.events.map((event) => event.type)).toEqual(["run.created"]);
+        expect(harness.inputStore.inputs.size).toBe(1);
         expect(harness.physicalExecutionCount).toBe(0);
 
         harness.journal.currentEpoch = "daemon:epoch-2";
@@ -45,6 +50,26 @@ describe("RunActor GD1 physical-effect crash matrix", () => {
         const redelivered = harness.actor("daemon:epoch-2");
         await redelivered.submit(harness.command);
         await redelivered.drainEffects();
+        assertRecoveredOutcome(harness);
+      });
+
+      it("loads the exact cold-recovery input before invoking the adapter", async () => {
+        const harness = new CrashHarness(kind);
+        harness.journal.epochAfterIntentAppend = "daemon:epoch-2";
+
+        const firstActor = harness.actor("daemon:epoch-1");
+        await firstActor.submit(harness.command);
+        await expect(firstActor.drainEffects()).rejects.toThrow("stale daemon epoch");
+        expect(harness.inputStore.putCalls).toBe(1);
+
+        await harness.actor("daemon:epoch-2").recoverPendingEffects();
+
+        expect(harness.inputStore.putCalls).toBe(1);
+        expect(harness.adapterInputSpecs).toEqual([{
+          schemaVersion: 1,
+          kind,
+          payload: { scenario: "gd1", kind }
+        }]);
         assertRecoveredOutcome(harness);
       });
 
@@ -197,8 +222,10 @@ class CrashHarness {
   readonly command: RunCommandEnvelope;
   readonly journal: FaultInjectingJournal;
   readonly receiptStore = new MemoryReceiptStore();
+  readonly inputStore = new MemoryEffectInputStore();
   physicalExecutionCount = 0;
   reconciliationCount = 0;
+  readonly adapterInputSpecs: EffectInputSpec[] = [];
   crashAfterStartedReceipt = false;
   crashDuringReconciliation = false;
 
@@ -215,28 +242,39 @@ class CrashHarness {
   }
 
   actor(daemonEpoch: string): RunActor {
+    const inputSpec: EffectInputSpec = {
+      schemaVersion: 1,
+      kind: this.kind,
+      payload: { scenario: "gd1", kind: this.kind }
+    };
+    const effectInput = buildEffectInput(inputSpec, sha256);
     return new RunActor({
       runId: this.runId,
       daemonEpoch,
       journal: this.journal,
       dispatcher: this.dispatcher(),
+      inputStore: this.inputStore,
       hasher: sha256,
       clock: () => "2026-08-12T22:00:01.000Z",
-      decide: (_command, context) => [buildEffectIntent({
-        runId: context.runId,
-        attemptId: `attempt:gd1:${this.kind}`,
-        kind: this.kind,
-        inputDigest: `sha256:input:${this.kind}`,
-        daemonEpoch: context.daemonEpoch,
-        idempotency: "reconcile_then_repeat",
-        requestedAt: "2026-08-12T22:00:02.000Z"
-      }, sha256)]
+      decide: (_command, context) => [{
+        inputSpec,
+        intent: buildEffectIntent({
+          runId: context.runId,
+          attemptId: `attempt:gd1:${this.kind}`,
+          kind: this.kind,
+          inputDigest: effectInput.inputDigest,
+          daemonEpoch: context.daemonEpoch,
+          idempotency: "reconcile_then_repeat",
+          requestedAt: "2026-08-12T22:00:02.000Z"
+        }, sha256)
+      }]
     });
   }
 
   private dispatcher(): KindAwarePhysicalEffectDispatcher {
     return new KindAwarePhysicalEffectDispatcher({
       receiptStore: this.receiptStore,
+      inputStore: this.inputStore,
       hasher: sha256,
       adapters: allEffectKinds.map((adapterKind): PhysicalEffectAdapter => ({
         kind: adapterKind,
@@ -260,6 +298,7 @@ class CrashHarness {
         reconcile: async (_intent, context) => {
           if (adapterKind !== this.kind) throw new Error(`unexpected reconcile for ${adapterKind}`);
           this.reconciliationCount += 1;
+          this.adapterInputSpecs.push(structuredClone(context.inputSpec));
           if (this.crashDuringReconciliation) {
             this.crashDuringReconciliation = false;
             throw new Error("crash during reconciliation");
@@ -288,6 +327,23 @@ class MemoryReceiptStore implements PhysicalEffectReceiptStorePort {
   async put(receipt: PhysicalEffectReceipt): Promise<PhysicalEffectReceipt> {
     this.receipts.push(structuredClone(receipt));
     return structuredClone(receipt);
+  }
+}
+
+class MemoryEffectInputStore implements EffectInputStorePort {
+  readonly inputs = new Map<string, EffectInput>();
+  putCalls = 0;
+
+  async put(spec: EffectInputSpec): Promise<EffectInput> {
+    this.putCalls += 1;
+    const input = buildEffectInput(spec, sha256);
+    this.inputs.set(input.inputDigest, structuredClone(input));
+    return structuredClone(input);
+  }
+
+  async get(inputDigest: string): Promise<EffectInput | undefined> {
+    const input = this.inputs.get(inputDigest);
+    return input === undefined ? undefined : structuredClone(input);
   }
 }
 
