@@ -23,9 +23,9 @@ import { atomicWriteJson, durableWritesEnabled } from "./durable-file.js";
 import { acquireDurableLock } from "./durable-lock.js";
 import { foldRunEvents, reduceRunEvents } from "./projection-fold.js";
 
-interface DurableEventEnvelope {
-  schemaVersion: 4;
-  event: RunEvent;
+interface DurableEventBatchEnvelope {
+  schemaVersion: number;
+  events: RunEvent[];
   checksum: string;
 }
 
@@ -307,23 +307,40 @@ function inspectRawLog(runId: string, raw: string, startingSequence = 1): RunEve
   const lines = raw.split("\n");
   if (complete) lines.pop();
   const events: RunEvent[] = [];
+  let expectedSequence = startingSequence;
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index]!;
+    if (!complete && index === lines.length - 1) {
+      return { events, status: "degraded", reason: "incomplete trailing record" };
+    }
     if (line.trim().length === 0) return corrupt(events, `blank record at line ${index + 1}`);
     try {
-      const rawEnvelope = JSON.parse(line) as { schemaVersion?: unknown; event?: unknown; checksum?: unknown };
-      if (typeof rawEnvelope.schemaVersion !== "number" || rawEnvelope.event === undefined || typeof rawEnvelope.checksum !== "string") {
+      const rawEnvelope = JSON.parse(line) as { schemaVersion?: unknown; event?: unknown; events?: unknown; checksum?: unknown };
+      const hasLegacyEvent = rawEnvelope.event !== undefined;
+      const hasEventBatch = Array.isArray(rawEnvelope.events);
+      if (
+        typeof rawEnvelope.schemaVersion !== "number"
+        || typeof rawEnvelope.checksum !== "string"
+        || hasLegacyEvent === hasEventBatch
+      ) {
         return corrupt(events, `invalid envelope at line ${index + 1}`);
       }
-      const event = RunEventSchema.parse(upcastEventToCurrent(rawEnvelope.schemaVersion, rawEnvelope.event));
-      if (event.runId !== runId) return corrupt(events, `record at line ${index + 1} belongs to ${event.runId}`);
-      const expectedSequence = startingSequence + index;
-      if (event.sequence !== expectedSequence) return corrupt(events, `expected sequence ${expectedSequence}, received ${event.sequence}`);
-      if (rawEnvelope.checksum !== checksumFor(event)) return corrupt(events, `checksum mismatch at line ${index + 1}`);
-      events.push(event);
+      const rawEvents = hasEventBatch ? rawEnvelope.events as unknown[] : [rawEnvelope.event];
+      if (rawEvents.length === 0) return corrupt(events, `empty event batch at line ${index + 1}`);
+      const recordEvents = rawEvents.map((event) => RunEventSchema.parse(
+        upcastEventToCurrent(rawEnvelope.schemaVersion as number, event)
+      ));
+      const checksumSubject = hasEventBatch ? recordEvents : recordEvents[0]!;
+      if (rawEnvelope.checksum !== checksumFor(checksumSubject)) {
+        return corrupt(events, `checksum mismatch at line ${index + 1}`);
+      }
+      for (const event of recordEvents) {
+        if (event.runId !== runId) return corrupt(events, `record at line ${index + 1} belongs to ${event.runId}`);
+        if (event.sequence !== expectedSequence) return corrupt(events, `expected sequence ${expectedSequence}, received ${event.sequence}`);
+        expectedSequence += 1;
+      }
+      events.push(...recordEvents);
     } catch (error) {
-      const isTrailingPartial = !complete && index === lines.length - 1;
-      if (isTrailingPartial) return { events, status: "degraded", reason: "incomplete trailing record" };
       return corrupt(events, `invalid record at line ${index + 1}: ${errorMessage(error)}`);
     }
   }
@@ -340,13 +357,17 @@ function corrupt(events: RunEvent[], reason: string): RunEventLogInspection {
 }
 
 async function appendDurableEvents(filePath: string, events: readonly RunEvent[]): Promise<void> {
-  const contents = events.map((event) => JSON.stringify({ schemaVersion: CURRENT_EVENT_SCHEMA_VERSION, event, checksum: checksumFor(event) } satisfies DurableEventEnvelope)).join("\n");
+  const contents = JSON.stringify({
+    schemaVersion: CURRENT_EVENT_SCHEMA_VERSION,
+    events: [...events],
+    checksum: checksumFor(events)
+  } satisfies DurableEventBatchEnvelope);
   await mkdir(path.dirname(filePath), { recursive: true });
   await appendAndFlush(filePath, `${contents}\n`);
 }
 
-function checksumFor(event: RunEvent): string {
-  return createHash("sha256").update(JSON.stringify(event)).digest("hex");
+function checksumFor(events: RunEvent | readonly RunEvent[]): string {
+  return createHash("sha256").update(JSON.stringify(events)).digest("hex");
 }
 
 function assertSameInput(event: RunEvent, input: RunEventInput): void {
@@ -375,8 +396,12 @@ function errorMessage(error: unknown): string {
 function readFirstSequence(raw: string): number | null {
   try {
     const firstLine = raw.slice(0, raw.indexOf("\n") < 0 ? raw.length : raw.indexOf("\n"));
-    const value = JSON.parse(firstLine) as { event?: { sequence?: unknown } };
-    return typeof value.event?.sequence === "number" ? value.event.sequence : null;
+    const value = JSON.parse(firstLine) as {
+      event?: { sequence?: unknown };
+      events?: Array<{ sequence?: unknown }>;
+    };
+    const sequence = value.event?.sequence ?? value.events?.[0]?.sequence;
+    return typeof sequence === "number" ? sequence : null;
   } catch {
     return null;
   }

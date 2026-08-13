@@ -52,6 +52,63 @@ describe("canonical run event source", () => {
     await expect(store.load("run-tail")).rejects.toBeInstanceOf(CorruptRunEventLogError);
   });
 
+  it("persists an append batch as one record so a torn write exposes none of its events", async () => {
+    const store = new JsonlRunEventStore({ directory });
+    const authority = { operationId: "planning-1", fencingToken: 1 };
+    await store.advanceFence("run-batch", authority);
+    await store.appendFenced("run-batch", 0, authority, [
+      { eventId: "created", occurredAt: at, type: "run.created", payload: { goal: "Build notes" } }
+    ]);
+
+    const batch = [
+      { eventId: "graph", occurredAt: at, type: "graph.revision.proposed" as const, payload: { graphId: "graph-1", revision: 1 } },
+      { eventId: "approved", occurredAt: at, type: "graph.revision.approved" as const, payload: { graphId: "graph-1", revision: 1 } }
+    ];
+    await store.appendFenced("run-batch", 1, authority, batch);
+
+    const records = (await readFile(store.eventLogPath("run-batch"), "utf8")).trimEnd().split("\n");
+    expect(records).toHaveLength(2);
+    const durableBatch = JSON.parse(records[1]!) as { events?: unknown[] };
+    expect(durableBatch.events).toHaveLength(2);
+
+    const tornBatch = records[1]!.slice(0, Math.floor(records[1]!.length / 2));
+    await writeFile(store.eventLogPath("run-batch"), `${records[0]}\n${tornBatch}`, "utf8");
+
+    expect(await store.inspect("run-batch")).toMatchObject({
+      status: "degraded",
+      events: [{ eventId: "created", sequence: 1 }]
+    });
+
+    await store.appendFenced("run-batch", 1, authority, batch);
+    expect((await store.load("run-batch")).map((event) => event.sequence)).toEqual([1, 2, 3]);
+  });
+
+  it("treats an unterminated final batch as degraded and replaces it on the next append", async () => {
+    const store = new JsonlRunEventStore({ directory });
+    const authority = { operationId: "planning-1", fencingToken: 1 };
+    await store.advanceFence("run-unterminated", authority);
+    await store.appendFenced("run-unterminated", 0, authority, [
+      { eventId: "created", occurredAt: at, type: "run.created", payload: { goal: "Build notes" } }
+    ]);
+    const graph = {
+      eventId: "graph",
+      occurredAt: at,
+      type: "graph.revision.proposed" as const,
+      payload: { graphId: "graph-1", revision: 1 }
+    };
+    await store.appendFenced("run-unterminated", 1, authority, [graph]);
+
+    const withoutFinalDelimiter = (await readFile(store.eventLogPath("run-unterminated"), "utf8")).trimEnd();
+    await writeFile(store.eventLogPath("run-unterminated"), withoutFinalDelimiter, "utf8");
+
+    expect(await store.inspect("run-unterminated")).toMatchObject({
+      status: "degraded",
+      events: [{ eventId: "created", sequence: 1 }]
+    });
+    await store.appendFenced("run-unterminated", 1, authority, [graph]);
+    expect((await store.load("run-unterminated")).map((event) => event.sequence)).toEqual([1, 2]);
+  });
+
   it("serializes concurrent CAS writers so only one wins a sequence", async () => {
     const store = new JsonlRunEventStore({ directory });
     const authority = { operationId: "planning-1", fencingToken: 1 };

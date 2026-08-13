@@ -48,9 +48,15 @@ export async function verifyAndRecoverRunStore(
   const release = await acquireDurableLock(`${store.eventLogPath(runId)}.lock`);
   try {
     const returnAfterOwnershipCheck = async <T>(value: T): Promise<T> => {
+      if (options.authority !== undefined) {
+        await store.assertAuthority(runId, options.authority);
+      }
       await release.renew();
       return value;
     };
+    if (options.authority !== undefined) {
+      await store.assertAuthority(runId, options.authority);
+    }
     try {
       await readCompactedGeneration(directory, runId);
     } catch (error) {
@@ -107,7 +113,7 @@ export async function rebuildCanonicalSnapshotAfterRecovery(
   const store = options.store ?? new JsonlRunEventStore(
     options.directory === undefined ? {} : { directory: options.directory }
   );
-  const report = await verifyAndRecoverRunStore(runId, { ...options, store });
+  const report = await verifyAndRecoverRunStore(runId, { ...options, store, authority });
   if (report.status === "corrupt" || report.projection === null) {
     throw new Error(`Cannot rebuild snapshot for corrupt or empty run ${runId}.`);
   }

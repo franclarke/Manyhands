@@ -80,7 +80,11 @@ export class EventStoreCompactor {
     runId: string,
     authority: FencingAuthority
   ): Promise<CompactionResult | null> {
-    if (await countCompleteLines(this.store.eventLogPath(runId)) <= this.threshold) {
+    const [events, previous] = await Promise.all([
+      this.store.load(runId),
+      readCompactedGeneration(this.store.directory, runId)
+    ]);
+    if (events.length - (previous?.events.length ?? 0) <= this.threshold) {
       return null;
     }
     return this.compact(runId, authority);
@@ -88,12 +92,11 @@ export class EventStoreCompactor {
 
   async compact(runId: string, authority: FencingAuthority): Promise<CompactionResult | null> {
     return this.store.withFencedWrite(runId, authority, async () => {
-      const activeCount = await countCompleteLines(this.store.eventLogPath(runId));
-      if (activeCount === 0) return null;
-
       const events = await this.store.load(runId);
       if (events.length === 0) return null;
       const previous = await readCompactedGeneration(this.store.directory, runId);
+      const activeEventCount = events.length - (previous?.events.length ?? 0);
+      if (activeEventCount === 0) return null;
       const generation = (previous?.generation ?? 0) + 1;
       const last = events.at(-1)!;
       const snapshotBase: GenerationSnapshotBase = {
@@ -136,7 +139,7 @@ export class EventStoreCompactor {
         projection: snapshot.projection,
         eventSequence: last.sequence,
         lastEventId: last.eventId,
-        compactedEventCount: activeCount,
+        compactedEventCount: activeEventCount,
         snapshotPath,
         manifestPath: compactionManifestPath(this.store.directory, runId)
       };
@@ -280,17 +283,6 @@ function parseManifest(contents: string, runId: string): CompactionManifest {
   };
   if (checksum(base) !== raw.checksum) throw new Error(`Compaction manifest checksum mismatch for run ${runId}.`);
   return raw as CompactionManifest;
-}
-
-async function countCompleteLines(filePath: string): Promise<number> {
-  try {
-    const contents = await readFile(filePath, "utf8");
-    if (contents.length === 0) return 0;
-    return contents.split("\n").length - (contents.endsWith("\n") ? 1 : 0);
-  } catch (error) {
-    if (isNotFound(error)) return 0;
-    throw error;
-  }
 }
 
 function checksum(value: unknown): string {

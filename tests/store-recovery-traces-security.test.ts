@@ -20,6 +20,46 @@ afterEach(async () => {
 });
 
 describe("durable recovery, traces and bounded grounding", () => {
+  it("counts canonical events rather than physical batch records for compaction", async () => {
+    const directory = await tempRoot("mh-run-batch-compaction-");
+    const store = new JsonlRunEventStore({ directory });
+    const authority = { operationId: "batch-compaction", fencingToken: 1 };
+    await store.advanceFence("run-batch-compaction", authority);
+    await store.appendFenced("run-batch-compaction", 0, authority, [{
+      eventId: "created",
+      occurredAt: at,
+      type: "run.created",
+      payload: { goal: "compact exact event count" }
+    }]);
+    await store.appendFenced("run-batch-compaction", 1, authority, [
+      {
+        eventId: "graph",
+        occurredAt: at,
+        type: "graph.revision.proposed",
+        payload: { graphId: "graph:1", revision: 1 }
+      },
+      {
+        eventId: "approved",
+        occurredAt: at,
+        type: "graph.revision.approved",
+        payload: { graphId: "graph:1", revision: 1 }
+      }
+    ]);
+
+    const result = await new EventStoreCompactor(store, { threshold: 2 })
+      .compactIfNeeded("run-batch-compaction", authority);
+
+    expect(result?.compactedEventCount).toBe(3);
+    await store.appendFenced("run-batch-compaction", 3, authority, [{
+      eventId: "cancel",
+      occurredAt: at,
+      type: "operation.cancel_requested",
+      payload: { invalidationReceiptId: "receipt:cancel", reason: "stop" }
+    }]);
+    await expect(new EventStoreCompactor(store, { threshold: 2 })
+      .compactIfNeeded("run-batch-compaction", authority)).resolves.toBeNull();
+  });
+
   it("rebuilds a run from a compacted generation plus active journal and repairs a torn tail", async () => {
     const directory = await tempRoot("mh-run-recovery-");
     const store = new JsonlRunEventStore({ directory });
@@ -44,13 +84,36 @@ describe("durable recovery, traces and bounded grounding", () => {
     }]);
     await writeFile(store.eventLogPath("run-recovery"), `${await readFile(store.eventLogPath("run-recovery"), "utf8")}{"schemaVersion":4`, "utf8");
 
-    const report = await verifyAndRecoverRunStore("run-recovery", { store });
+    const report = await verifyAndRecoverRunStore("run-recovery", { store, authority });
 
     expect(report.status).toBe("recovered");
     expect(report.repairedTrailingBytes).toBeGreaterThan(0);
     expect(report.eventCount).toBe(2);
     expect(report.projection?.lifecycle).toBe("cancelling");
     expect(await store.load("run-recovery")).toHaveLength(2);
+  });
+
+  it("requires current fencing authority before repairing a journal", async () => {
+    const directory = await tempRoot("mh-run-stale-recovery-");
+    const store = new JsonlRunEventStore({ directory });
+    const stale = { operationId: "recovery:old", fencingToken: 1 };
+    const current = { operationId: "recovery:new", fencingToken: 2 };
+    await store.advanceFence("run-stale-recovery", stale);
+    await store.appendFenced("run-stale-recovery", 0, stale, [{
+      eventId: "created",
+      occurredAt: at,
+      type: "run.created",
+      payload: { goal: "fence recovery" }
+    }]);
+    await store.advanceFence("run-stale-recovery", current);
+    const journalPath = store.eventLogPath("run-stale-recovery");
+    await writeFile(journalPath, `${await readFile(journalPath, "utf8")}{"schemaVersion":4`, "utf8");
+    const before = await readFile(journalPath);
+
+    await expect(verifyAndRecoverRunStore("run-stale-recovery", { store, authority: stale }))
+      .rejects.toThrow(/no longer owns/i);
+
+    expect(await readFile(journalPath)).toEqual(before);
   });
 
   it("renews a durable lock lease before its stale deadline", async () => {
