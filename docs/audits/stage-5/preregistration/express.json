@@ -77,12 +77,12 @@
   "inspection": {
     "queryTerms": ["request", "response", "header", "application", "middleware", "test", "documentation"],
     "excerptPaths": ["lib/application.js", "lib/express.js", "lib/request.js", "lib/response.js", "test/app.request.js", "test/app.response.js", "Readme.md"],
-    "budget": { "maxResults": 40, "maxBytes": 48000, "maxDepth": 2 }
+    "budget": { "maxResults": 40, "maxBytes": 120000, "maxDepth": 2 }
   },
   "planningBudget": {
     "modelCalls": 1,
     "repositoryQueries": 2,
-    "queryBytes": 48000,
+    "queryBytes": 120000,
     "revisions": 1,
     "repairs": 0,
     "expansions": 0

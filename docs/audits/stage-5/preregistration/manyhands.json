@@ -89,12 +89,12 @@
       "packages/decomposer/src/planner/planning-module.ts",
       "packages/task-graph/src/canonical-graph.ts"
     ],
-    "budget": { "maxResults": 40, "maxBytes": 48000, "maxDepth": 2 }
+    "budget": { "maxResults": 40, "maxBytes": 120000, "maxDepth": 2 }
   },
   "planningBudget": {
     "modelCalls": 1,
     "repositoryQueries": 2,
-    "queryBytes": 48000,
+    "queryBytes": 120000,
     "revisions": 1,
     "repairs": 0,
     "expansions": 0
