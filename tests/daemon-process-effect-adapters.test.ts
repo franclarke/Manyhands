@@ -44,7 +44,7 @@ describe("daemon process physical effect adapters", () => {
       effectId: effect.effectId,
       inputDigest: effect.inputDigest,
       daemonEpoch: effect.daemonEpoch,
-      attemptId: effect.attemptId,
+      ...(effect.attemptId === undefined ? {} : { attemptId: effect.attemptId }),
       executable: "C:/runtime/node.exe",
       argv: ["worker.mjs", "--once"],
       cwd: "C:/work/attempt-1",

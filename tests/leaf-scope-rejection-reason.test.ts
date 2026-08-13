@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { V2NodeExecutor } from "@manyhands/execution-core";
+import { V2NodeExecutor, type V2NodeValidationPort } from "@manyhands/execution-core";
 import { FakeGitRunner } from "./helpers/fake-git-runner";
 
 /**
@@ -55,6 +55,16 @@ async function runLeaf(options: { changed: string[]; forbiddenPaths?: string[] }
     manifest: { resultingCommit: "BASE_SHA" },
     release: async () => undefined
   };
+  const validator: V2NodeValidationPort = {
+    validate: async ({ candidateCommit, contract }) => ({
+      matrixId: "matrix-1",
+      candidateCommit,
+      validationContract: { id: contract.validation.id, revision: contract.validation.revision },
+      criteria: [],
+      observations: [],
+      outcome: "verified" as const
+    })
+  };
   const executor = new V2NodeExecutor({
     git: git as never,
     repoRoot: "C:/repo",
@@ -64,15 +74,7 @@ async function runLeaf(options: { changed: string[]; forbiddenPaths?: string[] }
         execute: async () => ({ exitCode: 0, durationMs: 10, timedOut: false, stdout: "", stderr: "" })
       })
     } as never,
-    validator: {
-      validate: async ({ candidateCommit, contract }) => ({
-        matrixId: "matrix-1",
-        candidateCommit,
-        validationContract: { id: contract.validation.id, revision: contract.validation.revision },
-        criteria: [],
-        outcome: "verified" as const
-      })
-    } as never,
+    validator,
     worktrees: { acquire: async () => base } as never,
     baseBuilder: { build: async () => base } as never,
     writeInstructions: async () => undefined,

@@ -9,6 +9,7 @@ import {
   resolveExecutorModel,
   RunExecutor,
   type DependencyInstaller,
+  type AgentExecutionResult,
   type ExecutorRouter,
   type ValidationRunContext,
   type ValidationRunner,
@@ -133,7 +134,6 @@ function graphWith(
         granularity: "medium",
         depth: 0,
         childrenIds: leafIds,
-        dependencies: [],
         ...(rootContract ? { contract: rootContract } : {})
       },
       ...Object.fromEntries(
@@ -149,7 +149,6 @@ function graphWith(
             granularity: "fine" as const,
             depth: 1,
             childrenIds: [],
-            dependencies: [],
             acceptanceCriteria: ["criterion one"],
             contract:
               leafContractFor !== undefined
@@ -194,8 +193,7 @@ function nestedCompositeGraph(): TaskGraph {
         status: "planned",
         granularity: "medium",
         depth: 0,
-        childrenIds: ["child-composite"],
-        dependencies: []
+        childrenIds: ["child-composite"]
       },
       "child-composite": {
         id: "child-composite",
@@ -206,8 +204,7 @@ function nestedCompositeGraph(): TaskGraph {
         status: "planned",
         granularity: "medium",
         depth: 1,
-        childrenIds: ["a", "b"],
-        dependencies: []
+        childrenIds: ["a", "b"]
       },
       a: {
         id: "a",
@@ -219,7 +216,6 @@ function nestedCompositeGraph(): TaskGraph {
         granularity: "fine",
         depth: 2,
         childrenIds: [],
-        dependencies: [],
         acceptanceCriteria: ["criterion one"],
         contract: { ...leafContract(["src/**"], [], ["src/x.ts"]), taskId: "a", objective: "Implement a." }
       },
@@ -233,7 +229,6 @@ function nestedCompositeGraph(): TaskGraph {
         granularity: "fine",
         depth: 2,
         childrenIds: [],
-        dependencies: [],
         acceptanceCriteria: ["criterion one"],
         contract: { ...leafContract(["src/**"], [], ["src/x.ts"]), taskId: "b", objective: "Implement b." }
       }

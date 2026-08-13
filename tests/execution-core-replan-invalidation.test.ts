@@ -19,7 +19,6 @@ function node(partial: Partial<TaskNode> & Pick<TaskNode, "id" | "kind" | "depth
     status: "planned",
     granularity: "auto",
     childrenIds: [],
-    dependencies: [],
     ...partial
   } as TaskNode;
 }
@@ -42,7 +41,7 @@ function graphFixture(): TaskGraph {
       A: node({ id: "A", kind: "composite", depth: 1, parentId: "root", childrenIds: ["A1", "A2"] }),
       A1: node({ id: "A1", kind: "leaf", depth: 2, parentId: "A" }),
       A2: node({ id: "A2", kind: "leaf", depth: 2, parentId: "A" }),
-      B: node({ id: "B", kind: "leaf", depth: 1, parentId: "root", dependencies: ["A1"] }),
+      B: node({ id: "B", kind: "leaf", depth: 1, parentId: "root" }),
       C: node({ id: "C", kind: "leaf", depth: 1, parentId: "root" })
     },
     dependencies: [{ fromTaskId: "A1", toTaskId: "B", type: "contractual", inferred: false }]

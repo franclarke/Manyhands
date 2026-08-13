@@ -1,7 +1,7 @@
 import { EventEmitter } from "node:events";
 import { join } from "node:path";
 import { PassThrough } from "node:stream";
-import type { SpawnOptionsWithoutStdio } from "node:child_process";
+import type { SpawnOptions } from "node:child_process";
 import { describe, expect, it } from "vitest";
 import {
   CODEX_EXECUTOR_ID,
@@ -127,7 +127,7 @@ describe("CliAgentExecutor with the Codex profile (injected spawn)", () => {
   it("runs Windows batch shims through explicit cmd.exe without shell:true", async () => {
     const child = fakeChild();
     let call:
-      | { command: string; args: readonly string[]; options: SpawnOptionsWithoutStdio }
+      | { command: string; args: readonly string[]; options: SpawnOptions }
       | undefined;
     const executor = new CliAgentExecutor(CODEX_PROFILE, {
       readInstructions: async () => "do the thing",

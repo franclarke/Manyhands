@@ -1,10 +1,13 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { resolve, sep } from "node:path";
+import { describe, it, expect } from "vitest";
+import { resolve } from "node:path";
 import { ScopeChecker } from "@manyhands/execution-core";
 
 // NOTE: Import error types from the scope-errors module path.
 // The test references the class from execution-core's barrel export.
-import { ScopeViolationError, SymlinkEscapeError } from "@manyhands/execution-core";
+import {
+  ScopePathTraversalError,
+  ScopeViolationError
+} from "@manyhands/execution-core";
 
 /**
  * B-008 — ScopeChecker path traversal guard regression tests.
@@ -101,13 +104,13 @@ describe("B-008 ScopeChecker path traversal guard", () => {
   });
 
   describe("error properties", () => {
-    it("ScopeViolationError carries attempted, resolved, and root paths", () => {
+    it("ScopePathTraversalError carries attempted, resolved, and root paths", () => {
       try {
         checker.validatePathBoundary(worktreeRoot, "../../escape");
         expect.unreachable("should have thrown");
       } catch (error) {
-        expect(error).toBeInstanceOf(ScopeViolationError);
-        const e = error as InstanceType<typeof ScopeViolationError>;
+        expect(error).toBeInstanceOf(ScopePathTraversalError);
+        const e = error as InstanceType<typeof ScopePathTraversalError>;
         expect(e.attemptedPath).toBe("../../escape");
         expect(e.worktreeRoot).toBe(resolve(worktreeRoot));
         expect(e.resolvedPath).toBeDefined();

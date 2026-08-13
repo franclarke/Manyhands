@@ -91,7 +91,7 @@ describe("ResultRecorder empty-diff no-op handling", () => {
   it("rejects an empty diff when only one of several concrete outputs exists", async () => {
     const git = new FakeGitRunner({
       heads: { [WORKTREE.path]: "BASE_SHA" }, diffCachedNameOnly: [],
-      showFile: { "src/a.ts": "export const a = 1;", "src/b.ts": null }
+      showFile: { "src/a.ts": "export const a = 1;" }
     });
     const result = await new ResultRecorder({ git, traceStore: new InMemoryTraceStore() }).record({
       worktree: WORKTREE, executorOutcome: okOutcome(),
