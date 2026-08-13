@@ -145,7 +145,7 @@ describe("authenticated local daemon IPC", () => {
       capabilityFilePath: capability.filePath,
       handlers: handlers(),
       production: true,
-      windowsPipeAclHelperPath: windowsAclHelperPath,
+      windowsPipeAclHelperPath: windowsAclHelperPath!,
       assertOsRestrictedCapabilityPath: rejectFile
     })).rejects.toBe(verificationFailure);
 
