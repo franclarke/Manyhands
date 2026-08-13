@@ -12,6 +12,11 @@ describe("Stage 5 GP1 runner boundary", () => {
     expect(source).toContain('currentDraftJson');
     expect(source).toContain('criticFindingsJson');
     expect(source).toContain('Closed enums');
+    expect(source).toContain('Validation is ALWAYS a JSON array');
+    expect(source).toContain('semanticFacts is ALWAYS a JSON object');
+    expect(source).toContain('Every child criterion sourceCriterionId must instead equal one criterionId declared by its direct parent');
+    expect(source).toContain('Every outcome is exactly {id,description,criterionIds,verification:');
+    expect(source).toContain('interface.verification is the same verification OBJECT');
     expect(source).toContain('A repeated session requires a recorded causal change');
     expect(source).not.toMatch(/exec\s+resume|--dangerously-bypass/iu);
   });
