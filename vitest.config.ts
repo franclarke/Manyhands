@@ -16,6 +16,7 @@ export default defineConfig({
       "@manyhands/repository-index": path.resolve(root, "packages/repository-index/src/index.ts"),
       "@manyhands/run-store": path.resolve(root, "packages/run-store/src/index.ts"),
       "@manyhands/run-coordinator": path.resolve(root, "packages/run-coordinator/src/index.ts"),
+      "@manyhands/run-engine": path.resolve(root, "packages/run-engine/src/index.ts"),
       "@manyhands/trace-store": path.resolve(root, "packages/trace-store/src/index.ts"),
       "@manyhands/execution-core": path.resolve(root, "packages/execution-core/src/index.ts"),
       "@manyhands/orchestrator-graph": path.resolve(root, "packages/orchestrator-graph/src/index.ts"),

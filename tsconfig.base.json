@@ -27,6 +27,7 @@
       "@manyhands/scheduler": ["packages/scheduler/src/index.ts"],
       "@manyhands/repository-index": ["packages/repository-index/src/index.ts"],
       "@manyhands/run-coordinator": ["packages/run-coordinator/src/index.ts"],
+      "@manyhands/run-engine": ["packages/run-engine/src/index.ts"],
       "@manyhands/run-store": ["packages/run-store/src/index.ts"],
       "@manyhands/trace-store": ["packages/trace-store/src/index.ts"],
       "@manyhands/execution-core": ["packages/execution-core/src/index.ts"],
