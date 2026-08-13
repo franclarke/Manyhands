@@ -188,7 +188,13 @@ const currentResult = await currentPlanner.plan({
   candidateCount: 1
 });
 const currentCandidate = currentResult.kind === "ready"
-  ? { label: "current", observedTopology: decomposer.observeCurrentPlannerTopology(currentResult.plan) }
+  ? {
+      label: "current",
+      observedTopology: decomposer.observeCurrentPlannerTopology(
+        currentResult.plan,
+        goal.acceptanceCriteria.map(({ id }) => id)
+      )
+    }
   : { label: "current", unavailableReason: `Current planner returned ${currentResult.kind}.` };
 
 const topologyEvaluation = decomposer.evaluatePlanningCandidates({
@@ -304,7 +310,7 @@ Use only listed resourceId values and their exact paths. One path has one modify
 - epistemic known form: {"state":"known","confidence":"high"|"medium"|"low","evidenceRefs":[non-empty ids]}; partial/conflicting have the same confidence/evidence shape; unknown is {"state":"unknown","reason":"...","evidenceRefs":[]}.
 Recommended executable validation defaults are layer:"integration", severity:"required", acceptableEvidence:["test_result"], baselinePolicy:"required", negativeControl:"when_feasible", flakyPolicy:"forbid". Static proof uses layer:"static" and acceptableEvidence:["static_analysis"].`;
   const currentShape = `Return currentDraftJson as a JSON string containing the current planner draft {root,seams,repositoryEvidence,uncertainties:[],questions:[]}.
-Current units use {key,kind,title,objective,concerns,evidenceIds,plannedPaths?,writePaths?,outcomes}; composite also has cut:{criterion,rationale},children. Every outcome is exactly {id,description,criterionIds,verification:{kind:"existing"|"author_test"|"manual",references:[non-empty strings],rationale?}}; never use "statement" in the current draft. Use criterionIds "criterion-1", "criterion-2", ... in the same order as GoalContract acceptanceCriteria. Each leaf must cite an exact supplied evidence id and declare exact writePaths. Seams use {id,producerUnitKey,consumerUnitKeys,purpose,paths,interface:{kind,promise,compatibility,materialization,verification},evidenceIds}. Current seam interface.materialization is exactly "logical"|"files"|"manifest"|"commit" (never "patch"), and interface.verification is the same verification OBJECT used by outcomes, never a string. repositoryEvidence must be the exact supplied current evidence array.`;
+Current units use {key,kind,title,objective,concerns,evidenceIds,plannedPaths?,writePaths?,outcomes}; composite also has cut:{criterion,rationale},children, where cut.criterion is exactly "cohesion"|"integration"|"risk"|"verifiability". Every outcome is exactly {id,description,criterionIds,verification:{kind:"existing"|"author_test"|"manual",references:[non-empty strings],rationale?}}; never use "statement" in the current draft. Use criterionIds "criterion-1", "criterion-2", ... in the same order as GoalContract acceptanceCriteria. Each leaf must cite an exact supplied evidence id and declare exact writePaths. Seams use {id,producerUnitKey,consumerUnitKeys,purpose,paths,interface:{kind,promise,compatibility,materialization,verification},evidenceIds}. Current seam interface.materialization is exactly "logical"|"files"|"manifest"|"commit" (never "patch"), and interface.verification is the same verification OBJECT used by outcomes, never a string. repositoryEvidence must be the exact supplied current evidence array.`;
   const criticShape = `Return criticFindingsJson as a JSON string containing an array of zero or more advisory findings {code,message,evidenceRefs,resolution}. resolution is deterministic_check, repository_query or human_decision. These findings cannot approve or reject.`;
   return [
     "You are producing two offline planning proposals for a pre-registered ManyHands Stage 5 evaluation.",

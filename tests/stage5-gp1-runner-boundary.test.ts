@@ -17,6 +17,7 @@ describe("Stage 5 GP1 runner boundary", () => {
     expect(source).toContain('Every child criterion sourceCriterionId must instead equal one criterionId declared by its direct parent');
     expect(source).toContain('Every outcome is exactly {id,description,criterionIds,verification:');
     expect(source).toContain('interface.verification is the same verification OBJECT');
+    expect(source).toContain('cut.criterion is exactly "cohesion"|"integration"|"risk"|"verifiability"');
     expect(source).toContain('A repeated session requires a recorded causal change');
     expect(source).toContain('deterministic_replay');
     expect(source).toContain('assertEqual(sha256(prompt), sha256(sourcePrompt), "replay prompt digest")');

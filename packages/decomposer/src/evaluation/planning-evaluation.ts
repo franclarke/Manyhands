@@ -50,7 +50,10 @@ export interface ObservedPlanningTopology {
   criterionIds: string[];
 }
 
-export function observeCurrentPlannerTopology(plan: CurrentSemanticPlan): ObservedPlanningTopology {
+export function observeCurrentPlannerTopology(
+  plan: CurrentSemanticPlan,
+  canonicalCriterionIds?: readonly string[]
+): ObservedPlanningTopology {
   const units = flattenSemanticWorkUnits(plan.root);
   const byId = new Map(units.map((unit) => [unit.key, unit]));
   return {
@@ -61,7 +64,7 @@ export function observeCurrentPlannerTopology(plan: CurrentSemanticPlan): Observ
       semantics: `${seam.purpose} ${seam.interface.promise} ${seam.interface.compatibility}`
     })),
     ownership: units.map((unit) => ({ ownerText: unitText(unit), paths: [...new Set([...(unit.writePaths ?? []), ...(unit.plannedPaths ?? [])])].sort() })),
-    criterionIds: [...new Set(plan.criteria.map(({ id }) => id))].sort()
+    criterionIds: [...new Set(canonicalCriterionIds ?? plan.criteria.map(({ id }) => id))].sort()
   };
 }
 
@@ -154,8 +157,12 @@ function evaluateCandidate(candidate: PlanningCandidate, oracle: PlanningTopolog
       });
     }
   }
-  const coveredCriteria = new Set(Object.values(contracts.taskBundles)
-    .flatMap(({ task }) => task.acceptanceCriteria.map(({ id }) => id)));
+  const coveredCriteria = new Set(Object.entries(contracts.taskBundles).flatMap(([unitId, { validation }]) => {
+    const unit = plan.units[unitId];
+    return unit === undefined
+      ? []
+      : validation.obligations.map(({ criterionId }) => rootCriterionFor(plan, unit.id, criterionId));
+  }));
   for (const criterionId of oracle.requiredCriterionIds) {
     if (!coveredCriteria.has(criterionId)) {
       issues.push({ code: "missing_proof_criterion", oracleId: criterionId, message: `Criterion ${criterionId} is not represented.` });
@@ -226,6 +233,20 @@ function nodeText(node: GraphRevision["nodes"][string]): string {
 
 function unitText(unit: { title: string; objective: string; concerns: string[] } | undefined): string {
   return unit === undefined ? "" : `${unit.title} ${unit.objective} ${unit.concerns.join(" ")}`;
+}
+
+function rootCriterionFor(plan: SemanticPlan, unitId: string, criterionId: string): string {
+  let current = plan.units[unitId];
+  let currentCriterion = criterionId;
+  const visited = new Set<string>();
+  while (current !== undefined && !visited.has(current.id)) {
+    visited.add(current.id);
+    const refinement = current.criteria.find(({ criterionId: id }) => id === currentCriterion);
+    if (refinement === undefined) return currentCriterion;
+    currentCriterion = refinement.sourceCriterionId;
+    current = current.parentId === undefined ? undefined : plan.units[current.parentId];
+  }
+  return currentCriterion;
 }
 
 export interface OfflinePreviewInput {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { buildSemanticPlan } from "@manyhands/contracts";
 import { compilePlan, evaluatePlanningCandidates, renderOfflinePlanningPreview } from "@manyhands/decomposer";
 import { stage5Fixture, stage5Sha256 } from "./helpers/stage5-fixture.js";
 
@@ -47,6 +48,31 @@ describe("Stage 5 offline evaluation", () => {
     expect(html).toContain("Explicit seams");
     expect(html).toContain("ORACLE PASS");
     expect(html).not.toMatch(/<script|fetch\(|\/api\/|ipc/iu);
+  });
+
+  it("attributes refined local validation criteria to their root goal criterion", () => {
+    const fixture = stage5Fixture();
+    const material = structuredClone(fixture.plan);
+    Reflect.deleteProperty(material, "digest");
+    material.units["unit:root"]!.criteria[0]!.criterionId = "criterion-ref:root";
+    material.units["unit:root"]!.validation[0]!.criterionId = "criterion-ref:root";
+    material.units["unit:root"]!.integration!.criterionIds = ["criterion-ref:root"];
+    for (const id of ["unit:a", "unit:b"] as const) {
+      material.units[id]!.criteria[0]!.criterionId = `criterion-ref:${id.slice("unit:".length)}`;
+      material.units[id]!.criteria[0]!.sourceCriterionId = "criterion-ref:root";
+      material.units[id]!.validation[0]!.criterionId = `criterion-ref:${id.slice("unit:".length)}`;
+    }
+    const plan = buildSemanticPlan(material, stage5Sha256);
+    const compiled = compilePlan({ ...fixture, plan, hasher: stage5Sha256, idFactory: ids });
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) return;
+
+    const result = evaluatePlanningCandidates({
+      oracle: oracle(fixture),
+      candidates: [{ label: "stage5", plan, graph: compiled.graph, contracts: compiled.contracts }]
+    });
+
+    expect(result.candidates[0]).toEqual(expect.objectContaining({ passed: true }));
   });
 });
 
