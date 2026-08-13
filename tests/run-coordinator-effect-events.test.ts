@@ -40,8 +40,8 @@ describe("run coordinator command and effect facts", () => {
     expect(PhysicalEffectReceiptSchema.parse(physicalReceipt)).toEqual(physicalReceipt);
     expect(events.map((item) => RunEventSchema.parse(item))).toEqual(events);
     expect(RunEventSchema.safeParse({
-      ...events[1],
-      payload: { ...events[1].payload, dispatcherStatus: "started" }
+      ...event(3, "effect.requested", { intent }),
+      payload: { intent, dispatcherStatus: "started" }
     }).success).toBe(false);
     expect(RunEventSchema.safeParse(event(5, "effect.completed", {
       effectId: intent.effectId,
