@@ -15,6 +15,7 @@ export * from "./contract-bundle.js";
 export * from "./contract-identity.js";
 export * from "./evidence-binding.js";
 export * from "./effect-protocol.js";
+export * from "./effect-input.js";
 export * from "./legacy-adapter.js";
 export * from "./goal-contract.js";
 export * from "./input-fingerprint.js";

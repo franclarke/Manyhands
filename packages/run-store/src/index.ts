@@ -11,3 +11,4 @@ export * from "./compactor.js";
 export * from "./recovery.js";
 export * from "./projection-fold.js";
 export * from "./effect-receipt-store.js";
+export * from "./effect-input-store.js";
