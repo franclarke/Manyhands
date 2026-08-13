@@ -65,7 +65,7 @@ match the code.
 | Stage 1 / G1 | `pass` | [`../audits/stage-1/`](../audits/stage-1/); accepted candidate `393603debcc202761c3aae5e4f6d233ac2701e3a`, tree `5acb5ed58028a23a7747f2a4fb03410496fe6bd9`, focused 18-file/122-test suite, full 239-file/1,523-test suite and bounded independent GO review | Stage 2 is authorized. |
 | Stage 2 / GD0+GD1 | `pass` | [`../audits/stage-2/`](../audits/stage-2/); accepted candidate `1c9c742687ec98c54b8d9330a0fe483c6d9d2ed3`, tree `8e21667c03d27b5f588dd4811ff2e0ab159ae2c3`, focused 23-file/228-test suite, full 259-file/1,735-test suite and bounded independent GO review | Stage 3 resumed from the historical [`Stage 2 -> Stage 3 handoff`](../handoffs/2026-08-12-stage-2-to-stage-3.md) and has now passed. |
 | Stage 3 / GR | `pass` | [`../audits/stage-3/`](../audits/stage-3/); accepted code candidate `4e495abd0805c62f7641dc73c19b82ffc7eedc38`, tree `84a59b1d9db2ee978d87b6a079dafee281e38a64`, focused 10-file/38-test suite, GD0+GD1 20-file/198-test matrix, full 243-file/1,652-test suite, exact productive browser/restart/cancellation evidence and bounded independent GO review | Stage 4 is eligible but remains `not_started`; resume from the [`Stage 3 -> Stage 4 handoff`](../handoffs/2026-08-13-stage-3-to-stage-4.md). |
-| Stage 4 / GRepo | `pass` | [`../audits/stage-4/`](../audits/stage-4/); accepted code candidate `292daaee3803404cdb473f929c1fbfa36a8b4964`, tree `8cd98afa812d3e7927985d6edf99c1744e4b5f5d`, focused 4-file/11-test suite, full 247-file/1,663-test suite, deterministic fresh-process evidence over the real repository and bounded independent GO review | Stage 5 is eligible but remains `not_started`. |
+| Stage 4 / GRepo | `pass` | [`../audits/stage-4/`](../audits/stage-4/); accepted code candidate `292daaee3803404cdb473f929c1fbfa36a8b4964`, tree `8cd98afa812d3e7927985d6edf99c1744e4b5f5d`, focused 4-file/11-test suite, full 247-file/1,663-test suite, deterministic fresh-process evidence over the real repository and bounded independent GO review | Stage 5 is eligible but remains `not_started`; resume from the [`Stage 4 -> Stage 5 handoff`](../handoffs/2026-08-13-stage-4-to-stage-5.md). |
 | Stages 5–11 | `not_started` | none | Must execute in normative order. Stage 4 closure did not initiate Stage 5, a live-model run, the experiment or thesis changes. |
 
 ### 0.2 Required reading and execution protocol
@@ -1229,7 +1229,7 @@ type SemanticPlan = {
   artifacts: Record<string, PlannedArtifact>;
   decisions: PlanningDecisionRecord[];
   evidence: PlanningEvidenceRef[];
-  status: "ready" | "needs_input" | "rejected";
+  status: "ready";
   digest: string;
 };
 
@@ -1662,7 +1662,129 @@ interface PlanningEngine {
 ```
 
 `PlanningResult` is `ready(SemanticPlan)`, `needs_input(DecisionDraft[])` or
-`rejected(PlanningFinding[])`.
+`ambiguous(DecisionDraft[], PlanningAlternativeRef[])`,
+`unsupported(PlanningFinding[])` or `rejected(PlanningFinding[])`.
+
+#### 9.2.1 Accepted Stage 5 design decisions
+
+These decisions close the remaining Stage 5 design ambiguity. They refine the
+normative architecture but do not start Stage 5 or authorize productive
+cutover; that remains Stage 6.
+
+##### D5.1 — Result taxonomy and canonical-plan boundary
+
+**Context:** `needs_input`, repository/tooling incapability, genuine semantic
+ambiguity and an invalid proposal require different operator actions. Treating
+all four as model failure or a partially compileable plan hides authority and
+can create retry loops.
+
+**Decision:** `PlanningResult` is the explicit discriminated union below. Only
+`ready` carries a canonical, compileable `SemanticPlan`; `SemanticPlan.status`
+is therefore always `ready`. Non-ready results may retain immutable proposal,
+revision and evidence references for explanation or continuation, but those
+references are not a second planning representation and cannot enter the
+compiler.
+
+```ts
+type PlanningResult =
+  | { kind: "ready"; plan: SemanticPlan; trace: PlanningTrace }
+  | { kind: "needs_input"; decisions: DecisionDraft[]; continuation: PlanningContinuation; trace: PlanningTrace }
+  | { kind: "ambiguous"; decisions: DecisionDraft[]; alternatives: PlanningAlternativeRef[]; trace: PlanningTrace }
+  | { kind: "unsupported"; findings: PlanningFinding[]; missingCapabilities: string[]; trace: PlanningTrace }
+  | { kind: "rejected"; findings: PlanningFinding[]; trace: PlanningTrace };
+```
+
+`needs_input` means a bounded human answer can change the outcome;
+`ambiguous` means multiple incompatible but still viable semantic choices
+remain; `unsupported` means the exact repository/view/request needs a capability
+the configured planner does not have; `rejected` means deterministic
+invariants, budget exhaustion or explicit no-progress prevent a safe plan.
+
+**Consequences and trade-off:** callers become more explicit and migrations
+touch the current result types, but no incapability or ambiguity is silently
+converted into a retryable model error. A single `error` result and a
+`SemanticPlan` with partial statuses were rejected because both make
+compileability ambiguous.
+
+##### D5.2 — Contract material belongs to the SemanticPlan
+
+**Context:** the accepted schema currently gives planned seams and artifacts
+canonical contract references, while a direct compiler must deterministically
+create node, seam, artifact, validation and integration contracts without
+reconstructing a `WorkBreakdown` or consulting a model.
+
+**Decision:** each planned seam, artifact, validation and integration entry
+contains the canonical semantic material required to build its referenced
+contract. `buildSemanticPlan` normalizes that material and computes its identity
+inside the one plan. The compiler receives the accepted `SemanticPlan`, exact
+`GoalContract`, allowed `ProofStrategy` values, exact `RepositoryView` and pure
+hash/identity ports. It verifies refs and derives all remaining contract
+digests; it does not receive parallel ownership, scope, seam or artifact lists.
+
+Existing external contracts such as the `GoalContract` remain immutable inputs
+by canonical ref. Planned contract material is not stored in a separate
+`PlanBundle`, sidecar or prompt-only structure.
+
+**Consequences and trade-off:** `SemanticPlan` becomes richer and its schema
+must be migrated deliberately, but compilation is replayable from exact inputs
+and semantic loss can be tested field by field. Keeping refs without material,
+letting the compiler invent semantics and returning a second contract bundle
+from the planner were rejected.
+
+##### D5.3 — Unified budget, revision lineage and no-progress termination
+
+**Context:** bounded model attempts alone do not bound repository reads,
+expansion, local repair or repeated equivalent revisions.
+
+**Decision:** every request supplies one immutable `PlanningBudget` covering at
+least model calls, repository queries, query bytes, revisions, repairs and
+expansions. Each `PlanningRevision` records its parent digest, cause, consumed
+budget, query receipts, new evidence refs, decisions/findings changed and
+canonical digest.
+
+Progress is defined as at least one causal change in repository evidence, human
+decision, deterministic finding set or semantic proposal digest. Repeating the
+same contract/view and causal state cannot consume another equivalent revision.
+The engine must instead return `needs_input`, `ambiguous`, `unsupported` or
+`rejected` with finding code `no_progress`, as appropriate. Budget exhaustion
+returns a terminal typed result and never triggers an implicit retry.
+
+**Consequences and trade-off:** traces and tests carry more bookkeeping, but
+cost is predictable and replay can distinguish repair from repetition. Separate
+uncoordinated retry counters and wall-clock-only termination were rejected.
+
+##### D5.4 — Minimal attributable evidence for GP1
+
+**Context:** deterministic fakes can prove authority and structure but cannot by
+themselves establish the product quality of a model-assisted planner. A broad
+benchmark would spend disproportionate time and tokens and would overlap the
+post-GProd exploratory study.
+
+**Decision:** GP0 uses deterministic fakes, recorded outputs and the complete
+fixture/adverse matrix. Before any GP1 planner output is generated, commit
+topology and browser oracles for exactly two attributable real repositories and
+one goal per repository. Execute one offline planning session per case with one
+pinned provider/model/profile. A repeat is allowed only after recording a
+changed causal input. Compare the new and current planners against the same
+exact goal, repository view and oracle; the current planner is a comparator,
+not truth.
+
+The topology oracle declares required and forbidden responsibilities, seams,
+ownership/proof properties and acceptable alternatives rather than an exact
+node count or one perfect DAG. The browser oracle uses a read-only offline
+preview of the compiled `GraphRevision`; it checks understandable hierarchy,
+responsibilities, seams, decisions and evidence without routing planning into
+the productive daemon. A minimal standard-library fixture remains only a
+control-plane smoke.
+
+If no attributable model-assisted outputs are executed, GP0 may pass but GP1
+must remain `not_run`; recorded fixtures may not be relabeled as planner product
+quality. The larger thesis experiment remains deferred until GProd.
+
+**Consequences and trade-off:** GP1 spends at most two initial model-assisted
+sessions and obtains real product evidence without claiming statistical
+generality. Zero real outputs and a multi-model/multi-run benchmark were both
+rejected.
 
 **Internal phases:**
 

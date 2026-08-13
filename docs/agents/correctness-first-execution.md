@@ -165,11 +165,14 @@ candidate, external oracle, and destination receipt. Preserve adverse evidence.
 - Update the canonical plan's active-stage status only with attributable
   evidence.
 - No large live-model benchmark, five-run series, or wide-graph experiment is
-  permitted. The bounded two-run plus optional-third
+  permitted. Stage 5 / GP1 may execute only the two pre-registered, offline,
+  attributable planner sessions authorized by D5.4 of the canonical plan; a
+  repeat requires a recorded causal change and does not authorize productive
+  cutover. The bounded two-run plus optional-third
   [exploratory study](../plans/2026-08-13-exploratory-longitudinal-study.md)
-  starts only after Stage 11 establishes GProd eligibility. Earlier live-model
-  use is limited to the explicitly authorized Stage 8 smoke path after its
-  prerequisites pass.
+  starts only after Stage 11 establishes GProd eligibility. Other earlier
+  live-model use remains prohibited except for the explicitly authorized Stage
+  8 smoke path after its prerequisites pass.
 - Documentation may track verified as-built behavior incrementally, but the
   final experiment and thesis cannot reinterpret target design as implemented
   fact.

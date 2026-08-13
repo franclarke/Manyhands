@@ -232,4 +232,6 @@ El dictamen final fue **GO**, sin blocker remanente.
 - No existe aún Progressive Planning Engine, SemanticPlan verifier ni compiler
   directo a GraphRevision: son Stage 5.
 
-Con GRepo aprobado, Stage 5 queda elegible pero continúa `not_started`.
+Con GRepo aprobado, Stage 5 queda elegible pero continúa `not_started`. Las
+decisiones y el procedimiento de entrada quedaron congelados en el
+[handoff Stage 4 → Stage 5](../../handoffs/2026-08-13-stage-4-to-stage-5.md).

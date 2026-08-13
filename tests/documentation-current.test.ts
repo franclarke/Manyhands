@@ -59,15 +59,17 @@ describe("B-033 current product documentation", () => {
   });
 
   it("records the attributable Stage 4 closure and leaves Stage 5 not started", async () => {
-    const [docsReadme, plan, stage2, stage3, stage4, historicalHandoff, stage4Handoff, study] =
+    const [docsReadme, plan, runbook, stage2, stage3, stage4, historicalHandoff, stage4Handoff, stage5Handoff, study] =
       await Promise.all([
         readFile(path.join(root, "docs", "README.md"), "utf8"),
         readFile(path.join(root, "docs", "plans", "2026-08-12-correctness-first-system-redesign.md"), "utf8"),
+        readFile(path.join(root, "docs", "agents", "correctness-first-execution.md"), "utf8"),
         readFile(path.join(root, "docs", "audits", "stage-2", "README.md"), "utf8"),
         readFile(path.join(root, "docs", "audits", "stage-3", "README.md"), "utf8"),
         readFile(path.join(root, "docs", "audits", "stage-4", "README.md"), "utf8"),
         readFile(path.join(root, "docs", "handoffs", "2026-08-12-stage-2-to-stage-3.md"), "utf8"),
         readFile(path.join(root, "docs", "handoffs", "2026-08-13-stage-3-to-stage-4.md"), "utf8"),
+        readFile(path.join(root, "docs", "handoffs", "2026-08-13-stage-4-to-stage-5.md"), "utf8"),
         readFile(path.join(root, "docs", "plans", "2026-08-13-exploratory-longitudinal-study.md"), "utf8")
       ]);
 
@@ -92,10 +94,22 @@ describe("B-033 current product documentation", () => {
     expect(stage4).toContain("292daaee3803404cdb473f929c1fbfa36a8b4964");
     expect(stage4).toContain("8cd98afa812d3e7927985d6edf99c1744e4b5f5d");
     expect(stage4).toContain("Stage 5 permanece");
+    expect(stage4).toContain("../../handoffs/2026-08-13-stage-4-to-stage-5.md");
     expect(stage4Handoff).toContain("**Stage 4 / GRepo:** `not_started`");
     expect(stage4Handoff).toContain("`gpt-5.6-sol`");
     expect(stage4Handoff).toContain("**esfuerzo principal:** `high`");
     expect(stage4Handoff).toContain("4e495abd0805c62f7641dc73c19b82ffc7eedc38");
+    expect(docsReadme).toContain("[`handoffs/2026-08-13-stage-4-to-stage-5.md`](handoffs/2026-08-13-stage-4-to-stage-5.md)");
+    expect(stage5Handoff).toContain("**Stage 5 / GP0+GP1:** `not_started`");
+    expect(stage5Handoff).toContain("292daaee3803404cdb473f929c1fbfa36a8b4964");
+    expect(stage5Handoff).toContain("**conductor:** `gpt-5.6-sol`, razonamiento `ultra`");
+    expect(stage5Handoff).toContain("exactamente las dos");
+    expect(plan).toContain("D5.1 — Result taxonomy and canonical-plan boundary");
+    expect(plan).toContain("D5.2 — Contract material belongs to the SemanticPlan");
+    expect(plan).toContain("D5.3 — Unified budget, revision lineage and no-progress termination");
+    expect(plan).toContain("D5.4 — Minimal attributable evidence for GP1");
+    expect(runbook).toContain("Stage 5 / GP1 may execute only the two pre-registered");
+    expect(plan).toContain("2026-08-13-stage-4-to-stage-5.md");
     expect(plan).toContain("2026-08-13-stage-3-to-stage-4.md");
     expect(plan).toContain("2026-08-13-exploratory-longitudinal-study.md");
     expect(study).toContain("Corrida 1 — producto visual inicial");
