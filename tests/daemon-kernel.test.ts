@@ -7,6 +7,7 @@ import { EffectKindSchema, type DigestHasher } from "@manyhands/contracts";
 import {
   CommandReceiptSchema,
   buildRunCommandEnvelope,
+  type IpcCapabilityOsProtection,
   type RunCommandEnvelope
 } from "@manyhands/run-coordinator";
 import { JsonlRunEventStore } from "@manyhands/run-store";
@@ -95,9 +96,54 @@ describe("durable daemon composition root", () => {
       await kernel.close();
     }
   });
+
+  it("separates Windows capability protection from later verification", async () => {
+    if (process.platform !== "win32") return;
+    const root = await temporaryRoot();
+    const protectedPaths: string[] = [];
+    const verifiedPaths: string[] = [];
+    const protect: IpcCapabilityOsProtection = async (targetPath, kind) => {
+      protectedPaths.push(`${kind}:${targetPath}`);
+    };
+    const verify: IpcCapabilityOsProtection = async (targetPath, kind) => {
+      verifiedPaths.push(`${kind}:${targetPath}`);
+    };
+
+    const kernel = await startKernel(root, "daemon:acl", {
+      production: true,
+      protectCapabilityPath: protect,
+      assertOsRestrictedCapabilityPath: verify,
+      assertOsRestrictedEndpoint: async () => undefined
+    });
+    try {
+      expect(protectedPaths.map((entry) => entry.split(":", 1)[0])).toEqual([
+        "directory",
+        "file",
+        "directory",
+        "file"
+      ]);
+      expect(verifiedPaths.map((entry) => entry.split(":", 1)[0])).toEqual([
+        "directory",
+        "file"
+      ]);
+    } finally {
+      await kernel.close();
+    }
+  });
 });
 
-async function startKernel(root: string, daemonEpoch: string) {
+interface StartKernelOverrides {
+  production?: boolean;
+  protectCapabilityPath?: IpcCapabilityOsProtection;
+  assertOsRestrictedCapabilityPath?: IpcCapabilityOsProtection;
+  assertOsRestrictedEndpoint?: (endpoint: string) => void | Promise<void>;
+}
+
+async function startKernel(
+  root: string,
+  daemonEpoch: string,
+  overrides: StartKernelOverrides = {}
+) {
   return startDaemonKernel({
     stateRoot: root,
     endpoint: `\\\\.\\pipe\\manyhands-kernel-${randomUUID()}`,
@@ -115,7 +161,8 @@ async function startKernel(root: string, daemonEpoch: string) {
     adapters: noEffectAdapters(),
     decide: () => [],
     hasher: sha256,
-    clock: () => "2026-08-12T22:30:00.000Z"
+    clock: () => "2026-08-12T22:30:00.000Z",
+    ...overrides
   });
 }
 

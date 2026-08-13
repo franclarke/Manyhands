@@ -45,7 +45,8 @@ export interface StartDaemonKernelOptions {
   production?: boolean;
   createLeaseNonce?: () => string;
   createDaemonEpoch?: () => string;
-  protectOrVerifyCapabilityPath?: IpcCapabilityOsProtection;
+  protectCapabilityPath?: IpcCapabilityOsProtection;
+  assertOsRestrictedCapabilityPath?: IpcCapabilityOsProtection;
   assertOsRestrictedEndpoint?: (endpoint: string) => void | Promise<void>;
   ipcNow?: () => number;
   onIpcError?: (error: Error) => void;
@@ -84,9 +85,9 @@ export async function startDaemonKernel(
       path.join(stateRoot, "installation"),
       {
         production,
-        ...(options.protectOrVerifyCapabilityPath === undefined
+        ...(options.protectCapabilityPath === undefined
           ? {}
-          : { protectOrVerifyOsRestrictedPath: options.protectOrVerifyCapabilityPath })
+          : { protectOrVerifyOsRestrictedPath: options.protectCapabilityPath })
       }
     );
     const eventStore = new JsonlRunEventStore({ directory: path.join(stateRoot, "runs") });
@@ -155,9 +156,9 @@ export async function startDaemonKernel(
           return asIpcJson(await engine.eventsReady(input.runId, input.afterSequence));
         }
       },
-      ...(options.protectOrVerifyCapabilityPath === undefined
+      ...(options.assertOsRestrictedCapabilityPath === undefined
         ? {}
-        : { assertOsRestrictedCapabilityPath: options.protectOrVerifyCapabilityPath }),
+        : { assertOsRestrictedCapabilityPath: options.assertOsRestrictedCapabilityPath }),
       ...(options.assertOsRestrictedEndpoint === undefined
         ? {}
         : { assertOsRestrictedEndpoint: options.assertOsRestrictedEndpoint }),
