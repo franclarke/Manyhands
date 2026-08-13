@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "candidate": {
-    "sha": "90cd96502c1ecba0d0ea039603c9e04a797f4025",
-    "tree": "0421d2630c5699923f7e6f7f84a5ebf21c7a8552"
+    "sha": "75f1403e705964051a83fa5be8fc3236cd47d2de",
+    "tree": "06918612e3dd0eeb2dec2a02a825b74677f2aaf9"
   },
   "tool": {
     "name": "@playwright/cli",
@@ -13,7 +13,7 @@
   "cases": [
     {
       "caseId": "gp1:manyhands-canonical-planning",
-      "preview": "../gp1/manyhands/candidate-replay/preview.html",
+      "preview": "../gp1/manyhands/final-candidate/preview.html",
       "status": "pass",
       "visible": [
         "ORACLE PASS",
@@ -32,19 +32,19 @@
           "path": "manyhands-desktop.png",
           "viewport": { "width": 1440, "height": 1000 },
           "image": { "width": 1440, "height": 3080 },
-          "sha256": "88712ea200aaf57d802414e8923ada110e02b3e5e28e09dc18a593df6ee82790"
+          "sha256": "04f83d6212651ea898f3170c56c728de6117e6d76c7dfc9b61eaff7114969a33"
         },
         {
           "path": "manyhands-mobile.png",
           "viewport": { "width": 390, "height": 844 },
           "image": { "width": 390, "height": 5401 },
-          "sha256": "8fdfca0c0327782540fa9b76c1e8167be83acacbfd5cb66b3a5ddf1b972381fe"
+          "sha256": "e011c4b79a33d398da36443f86bb20146269257955361f87b385d0e1e853359b"
         }
       ]
     },
     {
       "caseId": "gp1:express-request-correlation",
-      "preview": "../gp1/express/candidate-replay/preview.html",
+      "preview": "../gp1/express/final-candidate/preview.html",
       "status": "pass",
       "visible": [
         "ORACLE PASS",
@@ -63,13 +63,13 @@
           "path": "express-desktop.png",
           "viewport": { "width": 1440, "height": 1000 },
           "image": { "width": 1440, "height": 2509 },
-          "sha256": "33ab77c210386c7655508c761c9a69e84278da3efc879787493c2fafeb39d3e8"
+          "sha256": "f35d540a4e28e9220b1020045eafedde3af526efd6cbc29676a19087d83ffbdf"
         },
         {
           "path": "express-mobile.png",
           "viewport": { "width": 390, "height": 844 },
           "image": { "width": 390, "height": 4160 },
-          "sha256": "7110c18b8609551c7bb5d53e4dc6ee206419f115ed46a50e7da91674bdef020e"
+          "sha256": "cc4cdc03ea1b1457c7ef11e577891893b605d7264954efbc410586a86b8af910"
         }
       ]
     }
