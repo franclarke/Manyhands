@@ -1,8 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, open, readFile, rename, rm } from "node:fs/promises";
+import { mkdir, open, readFile, readdir, rename, rm, stat } from "node:fs/promises";
 import path from "node:path";
 
 const OWNER_FILE_NAME = "owner.json";
+const GUARD_TICKET_FILE_NAME = "ticket.json";
+const GUARD_RETRY_MS = 5;
+const GUARD_TIMEOUT_MS = 30_000;
 
 export type ProcessIdentityStatus = "same" | "different" | "dead" | "unknown";
 
@@ -20,6 +23,15 @@ export interface InstallationLeaseOwner {
   acquiredAt: string;
 }
 
+export interface InstallationLeaseTestHooks {
+  /** @internal Deterministic interleaving seam for the release fencing regression. */
+  afterReleaseOwnerObserved?: () => void | Promise<void>;
+  /** @internal Pauses a takeover while it holds the installation guard. */
+  afterTakeoverOwnerObserved?: () => void | Promise<void>;
+  /** @internal Signals that this operation is waiting behind a live guard claim. */
+  afterGuardBlocked?: () => void | Promise<void>;
+}
+
 export interface AcquireInstallationLeaseOptions {
   processStartIdentity: string;
   processIdentityProbe: ProcessIdentityProbe;
@@ -27,6 +39,7 @@ export interface AcquireInstallationLeaseOptions {
   createNonce?: () => string;
   createDaemonEpoch?: () => string;
   now?: () => Date;
+  testHooks?: InstallationLeaseTestHooks;
 }
 
 export interface InstallationLease {
@@ -53,6 +66,32 @@ export class InstallationLeaseLostError extends Error {
   }
 }
 
+interface GuardClaimOwner {
+  schemaVersion: 1;
+  claimId: string;
+  pid: number;
+  processStartIdentity: string;
+  claimedAt: string;
+}
+
+interface GuardTicket {
+  schemaVersion: 1;
+  number: string;
+}
+
+interface GuardClaim {
+  directory: string;
+  owner: GuardClaimOwner;
+  ticket?: bigint;
+}
+
+interface GuardContext {
+  pid: number;
+  processStartIdentity: string;
+  processIdentityProbe: ProcessIdentityProbe;
+  testHooks?: InstallationLeaseTestHooks;
+}
+
 export async function acquireInstallationLease(
   leaseDirectory: string,
   options: AcquireInstallationLeaseOptions
@@ -65,50 +104,58 @@ export async function acquireInstallationLease(
     daemonEpoch: requireNonEmpty((options.createDaemonEpoch ?? randomUUID)(), "daemonEpoch"),
     acquiredAt: (options.now ?? (() => new Date()))().toISOString()
   };
-  if (!Number.isSafeInteger(owner.pid) || owner.pid <= 0) {
-    throw new Error("Installation lease pid must be a positive safe integer.");
-  }
+  assertValidPid(owner.pid);
 
   await mkdir(path.dirname(leaseDirectory), { recursive: true });
   const stagingDirectory = `${leaseDirectory}.staging-${randomUUID()}`;
   try {
-    await writeOwnerDirectory(stagingDirectory, owner);
+    await writeJsonDirectory(stagingDirectory, owner);
   } catch (error) {
     await rm(stagingDirectory, { recursive: true, force: true }).catch(() => undefined);
     throw error;
   }
 
+  const guardContext = createGuardContext(owner, options);
   try {
-    await rename(stagingDirectory, leaseDirectory);
-  } catch (error) {
-    if (!isPathCollision(error)) throw error;
-    const currentOwner = await readStrictOwner(leaseDirectory);
-    const status = currentOwner === undefined
-      ? "unknown"
-      : normalizeProcessIdentityStatus(
-        await options.processIdentityProbe.probe({
-          pid: currentOwner.pid,
-          processStartIdentity: currentOwner.processStartIdentity
-        })
-      );
-    if (currentOwner === undefined || status === "same" || status === "unknown") {
-      throw new InstallationLeaseUnavailableError(
-        leaseDirectory,
-        status,
-        currentOwner
-      );
-    }
-    await replaceAbandonedOwner(leaseDirectory, stagingDirectory, currentOwner);
+    await withInstallationGuard(leaseDirectory, guardContext, async () => {
+      await publishInstallationOwner(leaseDirectory, stagingDirectory, owner, options);
+      if (!sameOwner(await readStrictOwner(leaseDirectory), owner)) {
+        throw new InstallationLeaseLostError(leaseDirectory);
+      }
+    });
   } finally {
     await rm(stagingDirectory, { recursive: true, force: true }).catch(() => undefined);
   }
 
-  const published = await readStrictOwner(leaseDirectory);
-  if (!sameOwner(published, owner)) {
-    throw new InstallationLeaseLostError(leaseDirectory);
+  return createLease(leaseDirectory, Object.freeze({ ...owner }), guardContext);
+}
+
+async function publishInstallationOwner(
+  leaseDirectory: string,
+  stagingDirectory: string,
+  owner: InstallationLeaseOwner,
+  options: AcquireInstallationLeaseOptions
+): Promise<void> {
+  try {
+    await rename(stagingDirectory, leaseDirectory);
+    return;
+  } catch (error) {
+    if (!isPathCollision(error)) throw error;
   }
 
-  return createLease(leaseDirectory, Object.freeze({ ...owner }));
+  const currentOwner = await readStrictOwner(leaseDirectory);
+  const status = currentOwner === undefined
+    ? "unknown"
+    : await probeProcessIdentity(options.processIdentityProbe, currentOwner);
+  if (currentOwner === undefined || status === "same" || status === "unknown") {
+    throw new InstallationLeaseUnavailableError(leaseDirectory, status, currentOwner);
+  }
+  await options.testHooks?.afterTakeoverOwnerObserved?.();
+  await replaceAbandonedOwner(leaseDirectory, stagingDirectory, currentOwner);
+
+  if (!sameOwner(await readStrictOwner(leaseDirectory), owner)) {
+    throw new InstallationLeaseLostError(leaseDirectory);
+  }
 }
 
 async function replaceAbandonedOwner(
@@ -168,50 +215,316 @@ async function replaceAbandonedOwner(
 
 function createLease(
   leaseDirectory: string,
-  owner: Readonly<InstallationLeaseOwner>
+  owner: Readonly<InstallationLeaseOwner>,
+  guardContext: GuardContext
 ): InstallationLease {
   return {
     owner,
     async assertCurrent(): Promise<void> {
-      if (!sameOwner(await readStrictOwner(leaseDirectory), owner)) {
-        throw new InstallationLeaseLostError(leaseDirectory);
-      }
+      await withInstallationGuard(leaseDirectory, guardContext, async () => {
+        if (!sameOwner(await readStrictOwner(leaseDirectory), owner)) {
+          throw new InstallationLeaseLostError(leaseDirectory);
+        }
+      });
     },
     async release(): Promise<void> {
-      const current = await readStrictOwner(leaseDirectory);
-      if (!sameOwner(current, owner)) return;
+      await withInstallationGuard(leaseDirectory, guardContext, async () => {
+        const current = await readStrictOwner(leaseDirectory);
+        if (!sameOwner(current, owner)) return;
+        await guardContext.testHooks?.afterReleaseOwnerObserved?.();
 
-      const quarantine = `${leaseDirectory}.released-${randomUUID()}`;
-      try {
-        await rename(leaseDirectory, quarantine);
-      } catch (error) {
-        if (isNotFound(error)) return;
-        throw error;
-      }
+        const quarantine = `${leaseDirectory}.released-${randomUUID()}`;
+        try {
+          await rename(leaseDirectory, quarantine);
+        } catch (error) {
+          if (isNotFound(error)) return;
+          throw error;
+        }
 
-      const captured = await readStrictOwner(quarantine);
-      if (!sameOwner(captured, owner)) {
-        await restoreQuarantine(quarantine, leaseDirectory);
-        throw new InstallationLeaseLostError(leaseDirectory);
-      }
-      await rm(quarantine, { recursive: true, force: true }).catch(() => undefined);
+        const captured = await readStrictOwner(quarantine);
+        if (!sameOwner(captured, owner)) {
+          await restoreQuarantine(quarantine, leaseDirectory);
+          throw new InstallationLeaseLostError(leaseDirectory);
+        }
+        await rm(quarantine, { recursive: true, force: true }).catch(() => undefined);
+      });
     }
   };
 }
 
-async function writeOwnerDirectory(
-  directory: string,
-  owner: InstallationLeaseOwner
+async function withInstallationGuard<T>(
+  leaseDirectory: string,
+  context: GuardContext,
+  operation: () => Promise<T>
+): Promise<T> {
+  const claim = await publishGuardClaim(leaseDirectory, context);
+  try {
+    const ticket = await publishGuardTicket(leaseDirectory, claim);
+    await waitUntilGuardElected(leaseDirectory, claim.owner, ticket, context);
+    return await operation();
+  } finally {
+    await removeGuardClaim(leaseDirectory, claim.directory);
+  }
+}
+
+async function publishGuardClaim(
+  leaseDirectory: string,
+  context: GuardContext
+): Promise<GuardClaim> {
+  const guardDirectory = guardDirectoryFor(leaseDirectory);
+  const claimsDirectory = path.join(guardDirectory, "claims");
+  await mkdir(claimsDirectory, { recursive: true, mode: 0o700 });
+
+  const claimId = randomUUID();
+  const stagingDirectory = path.join(guardDirectory, `.claim-staging-${claimId}`);
+  const claimDirectory = path.join(claimsDirectory, claimId);
+  const owner: GuardClaimOwner = {
+    schemaVersion: 1,
+    claimId,
+    pid: context.pid,
+    processStartIdentity: context.processStartIdentity,
+    claimedAt: new Date().toISOString()
+  };
+  try {
+    await writeJsonDirectory(stagingDirectory, owner);
+    await rename(stagingDirectory, claimDirectory);
+  } catch (error) {
+    await rm(stagingDirectory, { recursive: true, force: true }).catch(() => undefined);
+    throw error;
+  }
+  return { directory: claimDirectory, owner };
+}
+
+async function publishGuardTicket(
+  leaseDirectory: string,
+  ownClaim: GuardClaim
+): Promise<bigint> {
+  const claims = await readGuardClaims(leaseDirectory);
+  let maximumTicket = 0n;
+  for (const claim of claims) {
+    if (claim.ticket !== undefined && claim.ticket > maximumTicket) {
+      maximumTicket = claim.ticket;
+    }
+  }
+  const ticket = maximumTicket + 1n;
+  await writeJsonFileAtomically(
+    ownClaim.directory,
+    GUARD_TICKET_FILE_NAME,
+    { schemaVersion: 1, number: ticket.toString() } satisfies GuardTicket
+  );
+  return ticket;
+}
+
+async function waitUntilGuardElected(
+  leaseDirectory: string,
+  ownOwner: GuardClaimOwner,
+  ownTicket: bigint,
+  context: GuardContext
 ): Promise<void> {
+  const deadline = Date.now() + GUARD_TIMEOUT_MS;
+  for (;;) {
+    let blocked = false;
+    for (const claim of await readGuardClaims(leaseDirectory)) {
+      if (claim.owner.claimId === ownOwner.claimId) continue;
+
+      const isChoosing = claim.ticket === undefined;
+      const hasPriority = claim.ticket !== undefined &&
+        compareGuardPriority(claim.ticket, claim.owner.claimId, ownTicket, ownOwner.claimId) < 0;
+      if (!isChoosing && !hasPriority) continue;
+
+      const status = sameProcessIdentity(claim.owner, context)
+        ? "same"
+        : await probeProcessIdentity(context.processIdentityProbe, claim.owner);
+      if (status === "different" || status === "dead") {
+        await removeGuardClaim(leaseDirectory, claim.directory);
+        continue;
+      }
+      if (status === "unknown") {
+        throw new Error(
+          `Installation guard ${guardDirectoryFor(leaseDirectory)} has an owner with unknown identity.`
+        );
+      }
+      blocked = true;
+    }
+
+    if (!blocked) return;
+    await context.testHooks?.afterGuardBlocked?.();
+    if (Date.now() >= deadline) {
+      throw new Error(`Timed out waiting for installation guard ${guardDirectoryFor(leaseDirectory)}.`);
+    }
+    await delay(GUARD_RETRY_MS);
+  }
+}
+
+async function readGuardClaims(leaseDirectory: string): Promise<GuardClaim[]> {
+  const claimsDirectory = path.join(guardDirectoryFor(leaseDirectory), "claims");
+  let entries;
+  try {
+    entries = await readdir(claimsDirectory, { withFileTypes: true });
+  } catch (error) {
+    if (isNotFound(error)) return [];
+    throw error;
+  }
+
+  const claims: GuardClaim[] = [];
+  for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
+    if (!entry.isDirectory()) {
+      throw new Error(`Installation guard contains an invalid claim entry: ${entry.name}.`);
+    }
+    const directory = path.join(claimsDirectory, entry.name);
+    const owner = await readGuardClaimOwner(directory);
+    if (owner === undefined) continue;
+    if (owner === null || owner.claimId !== entry.name) {
+      throw new Error(`Installation guard contains an unreadable claim: ${entry.name}.`);
+    }
+    claims.push({
+      directory,
+      owner,
+      ...await readGuardTicket(directory)
+    });
+  }
+  return claims;
+}
+
+async function readGuardClaimOwner(
+  directory: string
+): Promise<GuardClaimOwner | null | undefined> {
+  let value: unknown;
+  try {
+    value = JSON.parse(await readFile(path.join(directory, OWNER_FILE_NAME), "utf8"));
+  } catch (error) {
+    if (isNotFound(error)) {
+      return await pathExists(directory) ? null : undefined;
+    }
+    if (error instanceof SyntaxError) return null;
+    throw error;
+  }
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  const expectedKeys = ["claimId", "claimedAt", "pid", "processStartIdentity", "schemaVersion"];
+  if (Object.keys(record).sort().join("\0") !== expectedKeys.join("\0")) return null;
+  if (
+    record.schemaVersion !== 1 ||
+    !isNonEmptyString(record.claimId) ||
+    !Number.isSafeInteger(record.pid) ||
+    (record.pid as number) <= 0 ||
+    !isNonEmptyString(record.processStartIdentity) ||
+    !isCanonicalTimestamp(record.claimedAt)
+  ) return null;
+  return record as unknown as GuardClaimOwner;
+}
+
+async function removeGuardClaim(leaseDirectory: string, claimDirectory: string): Promise<void> {
+  const quarantine = path.join(
+    guardDirectoryFor(leaseDirectory),
+    `.claim-released-${path.basename(claimDirectory)}-${randomUUID()}`
+  );
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      await rename(claimDirectory, quarantine);
+      break;
+    } catch (error) {
+      if (isNotFound(error)) return;
+      if (attempt < 80 && isTransientWindowsRenameError(error)) {
+        await delay(5 + Math.floor(Math.random() * 15));
+        continue;
+      }
+      throw error;
+    }
+  }
+  await rm(quarantine, { recursive: true, force: true }).catch(() => undefined);
+}
+
+async function readGuardTicket(directory: string): Promise<{ ticket?: bigint }> {
+  let value: unknown;
+  try {
+    value = JSON.parse(await readFile(path.join(directory, GUARD_TICKET_FILE_NAME), "utf8"));
+  } catch (error) {
+    if (isNotFound(error)) return {};
+    if (error instanceof SyntaxError) {
+      throw new Error(`Installation guard contains a corrupt ticket at ${directory}.`);
+    }
+    throw error;
+  }
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`Installation guard contains an invalid ticket at ${directory}.`);
+  }
+  const record = value as Record<string, unknown>;
+  if (
+    Object.keys(record).sort().join("\0") !== "number\0schemaVersion" ||
+    record.schemaVersion !== 1 ||
+    typeof record.number !== "string" ||
+    !/^[1-9][0-9]{0,39}$/.test(record.number)
+  ) {
+    throw new Error(`Installation guard contains an invalid ticket at ${directory}.`);
+  }
+  return { ticket: BigInt(record.number) };
+}
+
+function compareGuardPriority(
+  leftTicket: bigint,
+  leftClaimId: string,
+  rightTicket: bigint,
+  rightClaimId: string
+): number {
+  if (leftTicket < rightTicket) return -1;
+  if (leftTicket > rightTicket) return 1;
+  return leftClaimId.localeCompare(rightClaimId);
+}
+
+function sameProcessIdentity(owner: GuardClaimOwner, context: GuardContext): boolean {
+  return owner.pid === context.pid &&
+    owner.processStartIdentity === context.processStartIdentity;
+}
+
+function createGuardContext(
+  owner: InstallationLeaseOwner,
+  options: AcquireInstallationLeaseOptions
+): GuardContext {
+  const context: GuardContext = {
+    pid: owner.pid,
+    processStartIdentity: owner.processStartIdentity,
+    processIdentityProbe: options.processIdentityProbe
+  };
+  if (options.testHooks !== undefined) context.testHooks = options.testHooks;
+  return context;
+}
+
+function guardDirectoryFor(leaseDirectory: string): string {
+  return `${leaseDirectory}.guard`;
+}
+
+async function writeJsonDirectory(directory: string, value: unknown): Promise<void> {
   await mkdir(directory, { recursive: false, mode: 0o700 });
   const ownerFile = await open(path.join(directory, OWNER_FILE_NAME), "wx", 0o600);
   try {
-    await ownerFile.writeFile(`${JSON.stringify(owner)}\n`, "utf8");
+    await ownerFile.writeFile(`${JSON.stringify(value)}\n`, "utf8");
     await ownerFile.sync();
   } finally {
     await ownerFile.close();
   }
   await syncDirectoryWhenSupported(directory);
+}
+
+async function writeJsonFileAtomically(
+  directory: string,
+  fileName: string,
+  value: unknown
+): Promise<void> {
+  const stagingPath = path.join(directory, `.${fileName}.staging-${randomUUID()}`);
+  const targetPath = path.join(directory, fileName);
+  const handle = await open(stagingPath, "wx", 0o600);
+  try {
+    await handle.writeFile(`${JSON.stringify(value)}\n`, "utf8");
+    await handle.sync();
+  } finally {
+    await handle.close();
+  }
+  try {
+    await rename(stagingPath, targetPath);
+  } finally {
+    await rm(stagingPath, { force: true }).catch(() => undefined);
+  }
 }
 
 async function syncDirectoryWhenSupported(directory: string): Promise<void> {
@@ -277,11 +590,31 @@ function sameOwner(
     actual.acquiredAt === expected.acquiredAt;
 }
 
+async function probeProcessIdentity(
+  probe: ProcessIdentityProbe,
+  owner: Pick<InstallationLeaseOwner, "pid" | "processStartIdentity">
+): Promise<ProcessIdentityStatus> {
+  try {
+    return normalizeProcessIdentityStatus(await probe.probe({
+      pid: owner.pid,
+      processStartIdentity: owner.processStartIdentity
+    }));
+  } catch {
+    return "unknown";
+  }
+}
+
 async function restoreQuarantine(quarantine: string, leaseDirectory: string): Promise<void> {
   try {
     await rename(quarantine, leaseDirectory);
   } catch (error) {
     if (!isPathCollision(error)) throw error;
+  }
+}
+
+function assertValidPid(pid: number): void {
+  if (!Number.isSafeInteger(pid) || pid <= 0) {
+    throw new Error("Installation lease pid must be a positive safe integer.");
   }
 }
 
@@ -314,10 +647,28 @@ function isNotFound(error: unknown): boolean {
   return isErrno(error) && error.code === "ENOENT";
 }
 
+async function pathExists(targetPath: string): Promise<boolean> {
+  try {
+    await stat(targetPath);
+    return true;
+  } catch (error) {
+    if (isNotFound(error)) return false;
+    throw error;
+  }
+}
+
 function isDirectorySyncUnsupported(error: unknown): boolean {
   return isErrno(error) && ["EACCES", "EINVAL", "EISDIR", "ENOTSUP", "EPERM"].includes(error.code ?? "");
 }
 
+function isTransientWindowsRenameError(error: unknown): boolean {
+  return isErrno(error) && ["EACCES", "EBUSY", "EPERM"].includes(error.code ?? "");
+}
+
 function isErrno(error: unknown): error is NodeJS.ErrnoException {
   return error instanceof Error && "code" in error;
+}
+
+function delay(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
