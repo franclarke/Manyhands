@@ -25,22 +25,38 @@ describe("target architecture migration baseline", () => {
     expect(nvmrc.trim()).toBe("22.22.0");
   });
 
-  it("converts the package-manager lock without changing baseline resolutions", async () => {
+  it("preserves baseline resolutions while allowing declared additive workspace importers", async () => {
     const lockfile = await readFile(path.join(REPO_ROOT, "pnpm-lock.yaml"), "utf8");
     const packageResolutions = parsePackageResolutions(lockfile);
     const importerResolutions = parseImporterResolutions(lockfile);
-
-    expect(sha256Text(lockfile)).toBe(
-      "b0b6b366349c303e70a3b76c71ed757e7bcc9c808093ad0440f59aa3b20c8697"
+    const declaredTransitionResolutions = [
+      "apps/daemon|dependencies|@manyhands/contracts|link:../../packages/contracts",
+      "apps/daemon|dependencies|@manyhands/run-coordinator|link:../../packages/run-coordinator",
+      "apps/daemon|dependencies|@manyhands/run-engine|link:../../packages/run-engine",
+      "apps/daemon|dependencies|@manyhands/run-store|link:../../packages/run-store",
+      "packages/run-coordinator|dependencies|@manyhands/contracts|link:../contracts",
+      "packages/run-engine|dependencies|@manyhands/contracts|link:../contracts",
+      "packages/run-engine|dependencies|@manyhands/run-coordinator|link:../run-coordinator",
+      "packages/run-engine|dependencies|@manyhands/run-store|link:../run-store",
+      "packages/run-store|dependencies|@manyhands/contracts|link:../contracts"
+    ].sort();
+    const transitionResolutionSet = new Set(declaredTransitionResolutions);
+    const baselineImporterResolutions = importerResolutions.filter(
+      (resolution) => !transitionResolutionSet.has(resolution)
     );
+    const transitionImporterResolutions = importerResolutions.filter(
+      (resolution) => transitionResolutionSet.has(resolution)
+    );
+
     expect(packageResolutions).toHaveLength(778);
     expect(sha256Lines(packageResolutions)).toBe(
       "845bda9823eacae6bf087008b95b5fc99a80888a69026a967df71026b71e6673"
     );
-    expect(importerResolutions).toHaveLength(100);
-    expect(sha256Lines(importerResolutions)).toBe(
+    expect(baselineImporterResolutions).toHaveLength(100);
+    expect(sha256Lines(baselineImporterResolutions)).toBe(
       "0d5aeecdbc69dd8e6a5523c39e96855b805d214d7b7935b44b9a31310b706e5f"
     );
+    expect(transitionImporterResolutions).toEqual(declaredTransitionResolutions);
   });
 
   it("keeps clean-clone qualification reproducible and its receipts versionable", async () => {
@@ -388,8 +404,4 @@ function unquoteYamlScalar(value: string): string {
 
 function sha256Lines(lines: readonly string[]): string {
   return createHash("sha256").update(`${lines.join("\n")}\n`).digest("hex");
-}
-
-function sha256Text(text: string): string {
-  return createHash("sha256").update(text.replaceAll("\r\n", "\n")).digest("hex");
 }
