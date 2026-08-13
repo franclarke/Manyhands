@@ -46,17 +46,20 @@ describe("RepositoryQuery", () => {
     expect(first).toEqual(second);
     expect(first.digest).toMatch(/^sha256:[a-f0-9]{64}$/u);
     expect(first.items.map((item) => item.locator)).toContain("module:src/weather.ts");
-    expect(first.epistemic.state).toBe("known");
+    expect(first.epistemic.state).toBe("partial");
+    expect(first.items.every((item) => item.epistemic !== undefined)).toBe(true);
 
     const dependencies = query.dependencyNeighborhood("module:src/dashboard.ts", budget);
     expect(dependencies.items.map((item) => item.locator)).toContain("module:src/weather.ts");
+    const symbols = query.relatedSymbols("module:src/weather.ts", budget);
+    expect(symbols.items.map((item) => item.locator)).toContain("symbol:src/weather.ts#loadWeather");
     const relatedTests = query.relatedTests("module:src/weather.ts", budget);
     expect(relatedTests.items.map((item) => item.locator)).toContain("path:tests/weather.test.ts");
     const validation = query.validationCapabilities(budget);
     expect(validation.items.map((item) => item.name)).toEqual(["test", "typecheck"]);
 
     const evidenceIds = new Set(view.model.evidence.map((item) => item.id));
-    for (const answer of [first, dependencies, relatedTests, validation]) {
+    for (const answer of [first, dependencies, symbols, relatedTests, validation]) {
       expect(answer.evidenceRefs.length).toBeGreaterThan(0);
       expect(answer.evidenceRefs.every((evidenceRef) => evidenceIds.has(evidenceRef))).toBe(true);
       expect(answer.cost.results).toBeLessThanOrEqual(answer.budget.maxResults);

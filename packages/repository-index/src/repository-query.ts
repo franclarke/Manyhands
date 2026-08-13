@@ -24,6 +24,7 @@ export interface RepositoryQueryItem {
   locator: string;
   summary: string;
   evidenceRefs: string[];
+  epistemic: EpistemicAssessment;
   name?: string;
 }
 
@@ -48,6 +49,7 @@ export interface RepositoryQuery {
   searchGoalTerms(terms: readonly string[], budget: RepositoryQueryBudget): RepositoryQueryAnswer;
   inspectBoundary(reference: string, budget: RepositoryQueryBudget): RepositoryQueryAnswer;
   dependencyNeighborhood(reference: string, budget: RepositoryQueryBudget): RepositoryQueryAnswer;
+  relatedSymbols(reference: string, budget: RepositoryQueryBudget): RepositoryQueryAnswer;
   relatedTests(reference: string, budget: RepositoryQueryBudget): RepositoryQueryAnswer;
   validationCapabilities(budget: RepositoryQueryBudget): RepositoryQueryAnswer;
   readExcerpts(references: readonly string[], budget: RepositoryQueryBudget): Promise<RepositoryQueryAnswer<RepositoryExcerptItem>>;
@@ -72,7 +74,7 @@ export function createRepositoryQuery(input: {
       })).filter(({ score }) => score > 0).sort((left, right) =>
         right.score - left.score || left.item.kind.localeCompare(right.item.kind) || left.item.locator.localeCompare(right.item.locator)
       ).map(({ item }) => item);
-      return answer(view.digest, candidates, checked, candidates.length);
+      return answer(view, candidates, checked, candidates.length);
     },
 
     inspectBoundary(reference, budget) {
@@ -82,15 +84,16 @@ export function createRepositoryQuery(input: {
         kind: "resource" as const,
         locator: resource.canonicalLocator,
         summary: resource.path ?? resource.canonicalLocator,
-        evidenceRefs: [...resource.evidenceRefs]
+        evidenceRefs: [...resource.evidenceRefs],
+        epistemic: resource.epistemic
       }));
-      return answer(view.digest, resources, checked, Object.keys(view.catalog.resources).length);
+      return answer(view, resources, checked, Object.keys(view.catalog.resources).length);
     },
 
     dependencyNeighborhood(reference, budget) {
       const checked = validateBudget(budget);
       const modulePath = resolveModulePath(view, reference);
-      if (modulePath === undefined) return answer(view.digest, [], checked, 0);
+      if (modulePath === undefined) return answer(view, [], checked, 0);
       const visited = new Set([modulePath]);
       let frontier = [modulePath];
       for (let depth = 0; depth < checked.maxDepth; depth += 1) {
@@ -109,7 +112,31 @@ export function createRepositoryQuery(input: {
       }
       const modules = view.model.modules.filter((module) => visited.has(module.path) && module.path !== modulePath)
         .map(moduleItem);
-      return answer(view.digest, modules, checked, view.model.relationships.length);
+      return answer(view, modules, checked, view.model.relationships.length);
+    },
+
+    relatedSymbols(reference, budget) {
+      const checked = validateBudget(budget);
+      const modulePath = resolveModulePath(view, reference);
+      if (modulePath === undefined) return answer(view, [], checked, 0);
+      const relatedModules = new Set([modulePath]);
+      if (checked.maxDepth > 0) {
+        for (const relationship of view.model.relationships) {
+          if (relationship.resolvedModulePath === undefined) continue;
+          if (relationship.fromModulePath === modulePath) relatedModules.add(relationship.resolvedModulePath);
+          if (relationship.resolvedModulePath === modulePath) relatedModules.add(relationship.fromModulePath);
+        }
+      }
+      const symbols = view.model.symbols.filter((symbol) => relatedModules.has(symbol.modulePath)).map((symbol) => ({
+        id: symbol.id,
+        kind: "symbol" as const,
+        locator: `symbol:${symbol.modulePath}#${symbol.name}`,
+        name: symbol.name,
+        summary: `${symbol.kind} ${symbol.name} in ${symbol.modulePath}`,
+        evidenceRefs: [...symbol.evidenceRefs],
+        epistemic: symbol.epistemic
+      }));
+      return answer(view, symbols, checked, view.model.relationships.length + view.model.symbols.length);
     },
 
     relatedTests(reference, budget) {
@@ -122,9 +149,10 @@ export function createRepositoryQuery(input: {
           kind: "test" as const,
           locator: `path:${test.path}`,
           summary: `Test covering ${test.sourceModulePaths.join(", ")}`,
-          evidenceRefs: [...test.evidenceRefs]
+          evidenceRefs: [...test.evidenceRefs],
+          epistemic: test.epistemic
         }));
-      return answer(view.digest, tests, checked, view.model.tests.length);
+      return answer(view, tests, checked, view.model.tests.length);
     },
 
     validationCapabilities(budget) {
@@ -138,9 +166,10 @@ export function createRepositoryQuery(input: {
           locator: `command:${command.packageId}:${command.name}`,
           name: command.name,
           summary: command.command,
-          evidenceRefs: [...command.evidenceRefs]
+          evidenceRefs: [...command.evidenceRefs],
+          epistemic: command.epistemic
         }));
-      return answer(view.digest, commands, checked, view.model.commands.length);
+      return answer(view, commands, checked, view.model.commands.length);
     },
 
     async readExcerpts(references, budget) {
@@ -169,12 +198,13 @@ export function createRepositoryQuery(input: {
           summary: resolved.resource.path,
           text,
           truncated: itemTruncated,
-          evidenceRefs: [...resolved.resource.evidenceRefs]
+          evidenceRefs: [...resolved.resource.evidenceRefs],
+          epistemic: resolved.resource.epistemic
         });
         remainingBytes -= Buffer.byteLength(text, "utf8");
         wasTruncated ||= itemTruncated;
       }
-      return answer(view.digest, candidates, checked, references.length, wasTruncated, (item) => Buffer.byteLength(item.text, "utf8"));
+      return answer(view, candidates, checked, references.length, wasTruncated, (item) => Buffer.byteLength(item.text, "utf8"));
     }
   };
 }
@@ -187,7 +217,8 @@ function searchCandidates(view: RepositoryView): RepositoryQueryItem[] {
       locator: `package:${boundary.rootPath || "."}`,
       name: boundary.name,
       summary: `${boundary.name} ${boundary.entrypoints.join(" ")}`.trim(),
-      evidenceRefs: [...boundary.evidenceRefs]
+      evidenceRefs: [...boundary.evidenceRefs],
+      epistemic: boundary.epistemic
     })),
     ...view.model.modules.map(moduleItem),
     ...view.model.symbols.map((symbol) => ({
@@ -196,7 +227,8 @@ function searchCandidates(view: RepositoryView): RepositoryQueryItem[] {
       locator: `symbol:${symbol.modulePath}#${symbol.name}`,
       name: symbol.name,
       summary: `${symbol.kind} ${symbol.name} in ${symbol.modulePath}`,
-      evidenceRefs: [...symbol.evidenceRefs]
+      evidenceRefs: [...symbol.evidenceRefs],
+      epistemic: symbol.epistemic
     })),
     ...view.model.commands.map((command) => ({
       id: command.id,
@@ -204,7 +236,8 @@ function searchCandidates(view: RepositoryView): RepositoryQueryItem[] {
       locator: `command:${command.packageId}:${command.name}`,
       name: command.name,
       summary: command.command,
-      evidenceRefs: [...command.evidenceRefs]
+      evidenceRefs: [...command.evidenceRefs],
+      epistemic: command.epistemic
     })),
     ...view.model.diagnostics.map((diagnostic) => ({
       id: diagnostic.id,
@@ -212,7 +245,8 @@ function searchCandidates(view: RepositoryView): RepositoryQueryItem[] {
       locator: diagnostic.path === undefined ? `diagnostic:${diagnostic.code}` : `path:${diagnostic.path}`,
       name: diagnostic.code,
       summary: diagnostic.message,
-      evidenceRefs: [...diagnostic.evidenceRefs]
+      evidenceRefs: [...diagnostic.evidenceRefs],
+      epistemic: diagnostic.epistemic
     }))
   ];
 }
@@ -223,7 +257,8 @@ function moduleItem(module: RepositoryView["model"]["modules"][number]): Reposit
     kind: "module",
     locator: `module:${module.path}`,
     summary: `${module.path} ${module.exportedSymbols.join(" ")}`.trim(),
-    evidenceRefs: [...module.evidenceRefs]
+    evidenceRefs: [...module.evidenceRefs],
+    epistemic: module.epistemic
   };
 }
 
@@ -236,7 +271,7 @@ function resolveModulePath(view: RepositoryView, reference: string): string | un
 }
 
 function answer<T extends RepositoryQueryItem>(
-  viewDigest: string,
+  view: RepositoryView,
   candidates: readonly T[],
   budget: RepositoryQueryBudget,
   visited: number,
@@ -256,13 +291,19 @@ function answer<T extends RepositoryQueryItem>(
     bytes += candidateBytes;
   }
   const evidenceRefs = [...new Set(items.flatMap((item) => item.evidenceRefs))].sort();
+  const itemStates = items.map((item) => item.epistemic.state);
+  const incomplete = truncated
+    || view.model.coverage.disposition !== "known"
+    || itemStates.some((state) => state === "partial" || state === "unknown");
   const epistemic: EpistemicAssessment = evidenceRefs.length === 0
     ? { state: "unknown", reason: "The bounded query returned no evidence for this repository view.", evidenceRefs: [] }
-    : truncated
-      ? { state: "partial", confidence: "high", evidenceRefs }
+    : itemStates.includes("conflicting")
+      ? { state: "conflicting", confidence: "low", evidenceRefs }
+      : incomplete
+        ? { state: "partial", confidence: view.model.coverage.disposition === "unknown" ? "low" : "medium", evidenceRefs }
       : { state: "known", confidence: "high", evidenceRefs };
   const material = {
-    viewDigest,
+    viewDigest: view.digest,
     items,
     budget,
     cost: { results: items.length, bytes, visited },

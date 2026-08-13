@@ -3,8 +3,9 @@ import path from "node:path";
 import { promisify } from "node:util";
 
 import type { EpistemicAssessment } from "@manyhands/shared";
+import ts from "typescript";
 
-import { buildFastRepositorySnapshot, type RepositorySnapshot } from "./index.js";
+import type { RepositorySnapshot } from "./index.js";
 import { repositoryDigest, repositoryFactId } from "./identity.js";
 import { parseRepositorySourceText } from "./source-parser.js";
 
@@ -41,6 +42,8 @@ export interface PackageBoundary extends RepositoryFact {
   rootPath: string;
   manifestPath: string;
   entrypoints: string[];
+  exportTargets: Record<string, string>;
+  workspacePatterns: string[];
   scripts: Record<string, string>;
 }
 
@@ -70,6 +73,7 @@ export interface ImportRelationship extends RepositoryFact {
 export interface PublicInterfaceRecord extends RepositoryFact {
   modulePath: string;
   symbolName: string;
+  signature?: string;
   packageId?: string;
 }
 
@@ -160,6 +164,9 @@ export async function inspectRepositoryModelWithSnapshot(
 ): Promise<RepositoryModelInspection> {
   const rootPath = path.resolve(input.rootPath);
   const gitPath = input.gitPath ?? "git";
+  // Load the transitional snapshot adapter only after the public barrel has
+  // initialized; the repository domain module must not depend on its barrel.
+  const { buildFastRepositorySnapshot } = await import("./index.js");
   const [snapshot, treeSha, objectFormat, entries] = await Promise.all([
     buildFastRepositorySnapshot({
       rootPath,
@@ -194,8 +201,11 @@ export async function buildRepositoryModelFromTree(input: {
   objectFormat: "sha1" | "sha256";
   entries: RepositoryGitEntry[];
   signal?: AbortSignal;
+  readBlobObject?: (oid: string, signal?: AbortSignal) => Promise<string>;
 }): Promise<RepositoryModel> {
   const gitPath = input.gitPath ?? "git";
+  const readBlobObject = input.readBlobObject
+    ?? ((oid: string, signal?: AbortSignal) => readBlob(gitPath, input.rootPath, oid, signal));
   const entries = [...input.entries].sort((left, right) => left.path.localeCompare(right.path));
   const evidence: RepositoryEvidenceRecord[] = [];
   const evidenceByLocator = new Map<string, RepositoryEvidenceRecord>();
@@ -222,13 +232,14 @@ export async function buildRepositoryModelFromTree(input: {
   };
 
   const packageEntries = entries.filter((entry) => path.posix.basename(entry.path) === "package.json" && entry.kind === "file");
-  const packageManifests = await Promise.all(packageEntries.map(async (entry) => ({
+  const packageManifests = await mapWithConcurrency(packageEntries, 8, async (entry) => ({
     entry,
-    manifest: parseJsonObject(await readBlob(gitPath, input.rootPath, entry.oid, input.signal))
-  })));
-  const packages: PackageBoundary[] = packageManifests.map(({ entry, manifest }) => {
+    parsed: parseJsonObject(await readBlobObject(entry.oid, input.signal))
+  }));
+  const packages: PackageBoundary[] = packageManifests.map(({ entry, parsed }) => {
     const rootPath = path.posix.dirname(entry.path) === "." ? "" : path.posix.dirname(entry.path);
     const factEvidence = evidenceFor("file", entry.path, entry);
+    const manifest = parsed.value;
     const name = typeof manifest?.name === "string" && manifest.name.trim() !== ""
       ? manifest.name
       : rootPath === "" ? input.snapshot.repositoryId : path.posix.basename(rootPath);
@@ -238,19 +249,23 @@ export async function buildRepositoryModelFromTree(input: {
       rootPath,
       manifestPath: entry.path,
       entrypoints: packageEntrypoints(manifest),
+      exportTargets: packageExportTargets(manifest),
+      workspacePatterns: workspacePatterns(manifest?.workspaces),
       scripts: stringRecord(manifest?.scripts),
       evidenceRefs: [factEvidence.id],
-      epistemic: known(factEvidence.id)
+      epistemic: parsed.error === undefined
+        ? known(factEvidence.id)
+        : partial(undefined, factEvidence.id)
     };
   }).sort((left, right) => left.rootPath.localeCompare(right.rootPath));
 
   const sourceEntries = entries.filter((entry) =>
     (entry.kind === "file" || entry.kind === "executable") && SOURCE_EXTENSION.test(entry.path)
   );
-  const parsedSources = await Promise.all(sourceEntries.map(async (entry) => ({
-    entry,
-    parsed: parseRepositorySourceText(entry.path, await readBlob(gitPath, input.rootPath, entry.oid, input.signal))
-  })));
+  const parsedSources = await mapWithConcurrency(sourceEntries, 8, async (entry) => {
+    const sourceText = await readBlobObject(entry.oid, input.signal);
+    return { entry, sourceText, parsed: parseRepositorySourceText(entry.path, sourceText) };
+  });
   const modulePaths = new Set(parsedSources.map(({ entry }) => entry.path));
   const modules: ModuleBoundary[] = parsedSources.map(({ entry, parsed }) => {
     const factEvidence = evidenceFor("file", entry.path, entry);
@@ -286,7 +301,7 @@ export async function buildRepositoryModelFromTree(input: {
 
   const relationships: ImportRelationship[] = parsedSources.flatMap(({ entry, parsed }) =>
     parsed.imports.map((item) => {
-      const resolvedModulePath = resolveModulePath(entry.path, item.moduleSpecifier, modulePaths);
+      const resolvedModulePath = resolveModulePath(entry.path, item.moduleSpecifier, modulePaths, packages);
       const epistemic = resolvedModulePath === undefined
         ? partial(`Import ${item.moduleSpecifier} could not be resolved from the exact indexed source surface.`)
         : known();
@@ -307,17 +322,25 @@ export async function buildRepositoryModelFromTree(input: {
     })
   ).sort((left, right) => `${left.fromModulePath}\0${left.moduleSpecifier}`.localeCompare(`${right.fromModulePath}\0${right.moduleSpecifier}`));
 
+  const signaturesByModule = new Map(parsedSources.map(({ entry, sourceText }) => [
+    entry.path,
+    publicSignatures(entry.path, sourceText)
+  ]));
   const publicInterfaces: PublicInterfaceRecord[] = symbols.filter((symbol) => symbol.exported).map((symbol) => {
     const sourceEvidence = evidenceFor("symbol", `${symbol.modulePath}#export:${symbol.name}`, symbol);
+    const signature = signaturesByModule.get(symbol.modulePath)?.get(symbol.name);
     return {
       id: repositoryFactId("interface", { path: symbol.modulePath, name: symbol.name }),
       modulePath: symbol.modulePath,
       symbolName: symbol.name,
+      ...(signature === undefined ? {} : { signature }),
       ...(nearestPackage(packages, symbol.modulePath)?.id === undefined
         ? {}
         : { packageId: nearestPackage(packages, symbol.modulePath)!.id }),
       evidenceRefs: [sourceEvidence.id],
-      epistemic: known(sourceEvidence.id)
+      epistemic: signature === undefined
+        ? partial(undefined, sourceEvidence.id)
+        : known(sourceEvidence.id)
     };
   }).sort(compareFacts);
 
@@ -409,7 +432,15 @@ export async function buildRepositoryModelFromTree(input: {
       };
     }).sort(compareFacts);
 
-  const diagnostics: RepositoryModelDiagnostic[] = input.snapshot.diagnostics.map((diagnostic) => {
+  const packageDiagnostics = packageManifests.flatMap(({ entry, parsed }) => parsed.error === undefined
+    ? []
+    : [{
+        code: "repository.package_manifest_invalid",
+        message: parsed.error,
+        severity: "warning" as const,
+        filePath: entry.path
+      }]);
+  const diagnostics: RepositoryModelDiagnostic[] = [...input.snapshot.diagnostics, ...packageDiagnostics].map((diagnostic) => {
     const itemEvidence = evidenceFor("diagnostic", diagnostic.filePath ?? diagnostic.code, diagnostic);
     return {
       id: repositoryFactId("diagnostic", diagnostic),
@@ -434,7 +465,7 @@ export async function buildRepositoryModelFromTree(input: {
     unsupportedEntryCount,
     disposition: input.snapshot.inspectionDisposition === "unavailable"
       ? "unknown"
-      : unsupportedEntryCount > 0 || input.snapshot.inspectionDisposition === "partial"
+      : unsupportedEntryCount > 0 || packageDiagnostics.length > 0 || input.snapshot.inspectionDisposition === "partial"
         ? "partial"
         : "known",
     evidenceRefs: coverageEvidence
@@ -526,15 +557,35 @@ async function gitText(
   return trim ? stdout.trim() : stdout;
 }
 
-function parseJsonObject(value: string): Record<string, unknown> | undefined {
+function parseJsonObject(value: string): { value?: Record<string, unknown>; error?: string } {
   try {
     const parsed = JSON.parse(value) as unknown;
     return parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)
-      ? parsed as Record<string, unknown>
-      : undefined;
-  } catch {
-    return undefined;
+      ? { value: parsed as Record<string, unknown> }
+      : { error: "package.json must contain a JSON object; package metadata is partial." };
+  } catch (error) {
+    return {
+      error: `package.json could not be parsed; package metadata is partial: ${error instanceof Error ? error.message : String(error)}`
+    };
   }
+}
+
+async function mapWithConcurrency<T, U>(
+  values: readonly T[],
+  concurrency: number,
+  mapper: (value: T, index: number) => Promise<U>
+): Promise<U[]> {
+  const results = new Array<U>(values.length);
+  let nextIndex = 0;
+  const workers = Array.from({ length: Math.min(concurrency, values.length) }, async () => {
+    while (nextIndex < values.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await mapper(values[index]!, index);
+    }
+  });
+  await Promise.all(workers);
+  return results;
 }
 
 function packageEntrypoints(manifest: Record<string, unknown> | undefined): string[] {
@@ -545,6 +596,47 @@ function packageEntrypoints(manifest: Record<string, unknown> | undefined): stri
   }
   collectStringLeaves(manifest.exports, values);
   return [...values].sort();
+}
+
+function packageExportTargets(manifest: Record<string, unknown> | undefined): Record<string, string> {
+  if (manifest === undefined) return {};
+  if (typeof manifest.exports === "string") return { ".": normalizeManifestPath(manifest.exports) };
+  if (manifest.exports === null || typeof manifest.exports !== "object" || Array.isArray(manifest.exports)) return {};
+  const targets: Array<[string, string]> = [];
+  for (const [key, value] of Object.entries(manifest.exports as Record<string, unknown>).sort(([left], [right]) => left.localeCompare(right))) {
+    if (!key.startsWith(".")) continue;
+    const target = firstStringLeaf(value);
+    if (target !== undefined) targets.push([key, normalizeManifestPath(target)]);
+  }
+  return Object.fromEntries(targets);
+}
+
+function firstStringLeaf(value: unknown): string | undefined {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const candidate = firstStringLeaf(item);
+      if (candidate !== undefined) return candidate;
+    }
+    return undefined;
+  }
+  if (value !== null && typeof value === "object") {
+    for (const key of Object.keys(value as Record<string, unknown>).sort()) {
+      const candidate = firstStringLeaf((value as Record<string, unknown>)[key]);
+      if (candidate !== undefined) return candidate;
+    }
+  }
+  return undefined;
+}
+
+function workspacePatterns(value: unknown): string[] {
+  const source = Array.isArray(value)
+    ? value
+    : value !== null && typeof value === "object" && Array.isArray((value as Record<string, unknown>).packages)
+      ? (value as Record<string, unknown>).packages as unknown[]
+      : [];
+  return [...new Set(source.filter((item): item is string => typeof item === "string")
+    .map(normalizeManifestPath))].sort();
 }
 
 function collectStringLeaves(value: unknown, target: Set<string>): void {
@@ -574,9 +666,33 @@ function nearestPackage(packages: readonly PackageBoundary[], filePath: string):
     .sort((left, right) => right.rootPath.length - left.rootPath.length)[0];
 }
 
-function resolveModulePath(fromPath: string, specifier: string, modulePaths: ReadonlySet<string>): string | undefined {
-  if (!specifier.startsWith(".")) return undefined;
+function resolveModulePath(
+  fromPath: string,
+  specifier: string,
+  modulePaths: ReadonlySet<string>,
+  packages: readonly PackageBoundary[]
+): string | undefined {
+  if (!specifier.startsWith(".")) return resolvePackageModulePath(specifier, modulePaths, packages);
   const resolved = path.posix.normalize(path.posix.join(path.posix.dirname(fromPath), specifier));
+  return resolveModuleCandidate(resolved, modulePaths);
+}
+
+function resolvePackageModulePath(
+  specifier: string,
+  modulePaths: ReadonlySet<string>,
+  packages: readonly PackageBoundary[]
+): string | undefined {
+  const boundary = [...packages].sort((left, right) => right.name.length - left.name.length)
+    .find((candidate) => specifier === candidate.name || specifier.startsWith(`${candidate.name}/`));
+  if (boundary === undefined) return undefined;
+  const subpath = specifier === boundary.name ? "." : `./${specifier.slice(boundary.name.length + 1)}`;
+  const target = boundary.exportTargets[subpath]
+    ?? (subpath === "." ? boundary.entrypoints[0] : undefined);
+  if (target === undefined) return undefined;
+  return resolveModuleCandidate(path.posix.join(boundary.rootPath, target), modulePaths);
+}
+
+function resolveModuleCandidate(resolved: string, modulePaths: ReadonlySet<string>): string | undefined {
   const withoutRuntimeExtension = resolved.replace(/\.(?:mjs|cjs|js|jsx)$/u, "");
   const candidates = [
     resolved,
@@ -584,6 +700,47 @@ function resolveModulePath(fromPath: string, specifier: string, modulePaths: Rea
     ...[".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"].map((extension) => `${resolved}/index${extension}`)
   ];
   return candidates.find((candidate) => modulePaths.has(candidate));
+}
+
+function publicSignatures(relativePath: string, sourceText: string): Map<string, string> {
+  const sourceFile = ts.createSourceFile(
+    relativePath,
+    sourceText,
+    ts.ScriptTarget.Latest,
+    true,
+    relativePath.endsWith("x") ? ts.ScriptKind.TSX : ts.ScriptKind.TS
+  );
+  const signatures = new Map<string, string>();
+  for (const statement of sourceFile.statements) {
+    if (!hasExportModifier(statement)) continue;
+    if (ts.isVariableStatement(statement)) {
+      for (const declaration of statement.declarationList.declarations) {
+        if (ts.isIdentifier(declaration.name)) {
+          signatures.set(declaration.name.text, normalizeSignature(statement.getText(sourceFile)));
+        }
+      }
+      continue;
+    }
+    const named = statement as ts.Statement & { name?: ts.DeclarationName };
+    if (named.name === undefined || !ts.isIdentifier(named.name)) continue;
+    const end = ts.isFunctionDeclaration(statement) && statement.body !== undefined
+      ? statement.body.getStart(sourceFile)
+      : statement.end;
+    signatures.set(
+      named.name.text,
+      normalizeSignature(sourceText.slice(statement.getStart(sourceFile), end))
+    );
+  }
+  return signatures;
+}
+
+function hasExportModifier(node: ts.Node): boolean {
+  return ts.canHaveModifiers(node)
+    && (ts.getModifiers(node)?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword) ?? false);
+}
+
+function normalizeSignature(value: string): string {
+  return value.replace(/\s+/gu, " ").trim().replace(/\s*\{$/u, "").trim();
 }
 
 function resourceKindForPath(candidatePath: string): RepositoryResourceRecord["kind"] {

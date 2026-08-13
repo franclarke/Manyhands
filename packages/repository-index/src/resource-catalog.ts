@@ -83,8 +83,18 @@ export class ResourceCatalog {
 
     const resourcesByLocator = new Map<string, CatalogResource[]>();
     const aliasedLocators = new Set(this.aliases.map((alias) => alias.locator));
+    const aliasTargetsByLocator = new Map<string, CatalogResource[]>();
+    for (const alias of this.aliases) {
+      const target = this.resources[alias.resourceId];
+      if (target !== undefined) append(aliasTargetsByLocator, alias.locator, target);
+    }
     for (const resource of Object.values(this.resources)) {
-      append(resourcesByLocator, resource.id, resource);
+      const canonicalTargets = aliasTargetsByLocator.get(resource.canonicalLocator);
+      if (canonicalTargets === undefined) {
+        append(resourcesByLocator, resource.id, resource);
+      } else {
+        canonicalTargets.forEach((target) => append(resourcesByLocator, resource.id, target));
+      }
       if (!aliasedLocators.has(resource.canonicalLocator)) {
         append(resourcesByLocator, resource.canonicalLocator, resource);
       }
@@ -137,6 +147,7 @@ export class ResourceCatalog {
     const left = this.resolve(leftReference);
     const right = this.resolve(rightReference);
     if (left.state !== "known" || right.state !== "known") return "unknown";
+    if (left.resource.epistemic.state !== "known" || right.resource.epistemic.state !== "known") return "unknown";
     if (left.resource.id === right.resource.id) return "yes";
     if (this.containsResource(left.resource.id, right.resource.id)) return "yes";
     if (this.containsResource(right.resource.id, left.resource.id)) return "yes";
@@ -253,6 +264,20 @@ export function buildResourceCatalog(input: {
     });
   }
 
+  for (const boundary of input.model.packages) {
+    for (const [exportKey, exportTarget] of Object.entries(boundary.exportTargets)) {
+      const targetPath = pathInPackage(boundary.rootPath, exportTarget);
+      const target = byLocator.get(`path:${targetPath}`) ?? byLocator.get(`module:${targetPath}`);
+      if (target === undefined) continue;
+      aliases.push({
+        locator: `package-export:${boundary.name}${exportKey === "." ? "" : exportKey.slice(1)}`,
+        resourceId: target.id,
+        reason: "package_export",
+        evidenceRefs: [...new Set([...boundary.evidenceRefs, ...target.evidenceRefs])].sort()
+      });
+    }
+  }
+
   for (const inputAlias of input.aliases ?? []) {
     const target = byLocator.get(inputAlias.targetLocator);
     if (target === undefined) continue;
@@ -287,13 +312,18 @@ function generatedDisposition(
     return { state: "unknown", reason: "The resource has no path-level generated-file evidence.", evidenceRefs: [] };
   }
   const basename = resourcePath.split("/").at(-1)!;
-  const packageManager = model.commands.find((command) => command.name === "generate");
+  const owningPackage = [...model.packages]
+    .filter((boundary) => boundary.rootPath === "" || resourcePath.startsWith(`${boundary.rootPath}/`))
+    .sort((left, right) => right.rootPath.length - left.rootPath.length)[0];
+  const regenerationCommand = owningPackage === undefined
+    ? undefined
+    : model.commands.find((command) => command.packageId === owningPackage.id && command.name === "generate");
   if (["pnpm-lock.yaml", "package-lock.json", "yarn.lock", "bun.lockb"].includes(basename)) {
     return {
       state: "generated",
       reason: "The path is a package-manager lockfile.",
       evidenceRefs: [...resource.evidenceRefs],
-      ...(packageManager === undefined ? {} : { regenerationCommand: packageManager.command })
+      ...(regenerationCommand === undefined ? {} : { regenerationCommand: regenerationCommand.command })
     };
   }
   if (/(?:^|\/)(?:dist|generated|__generated__)(?:\/|$)|\.generated\.[^/]+$/u.test(resourcePath)) {
@@ -301,7 +331,7 @@ function generatedDisposition(
       state: "generated",
       reason: "The path matches an explicit generated-output convention; ownership must remain with its generator.",
       evidenceRefs: [...resource.evidenceRefs],
-      ...(packageManager === undefined ? {} : { regenerationCommand: packageManager.command })
+      ...(regenerationCommand === undefined ? {} : { regenerationCommand: regenerationCommand.command })
     };
   }
   if (resource.gitEntryKind === "symlink" || resource.gitEntryKind === "gitlink") {
@@ -312,10 +342,15 @@ function generatedDisposition(
     };
   }
   return {
-    state: "source",
-    reason: "The exact Git entry is not classified by an explicit generated-output policy.",
+    state: "unknown",
+    reason: "No explicit generated-output policy classifies this exact Git entry as source or generated.",
     evidenceRefs: [...resource.evidenceRefs]
   };
+}
+
+function pathInPackage(rootPath: string, relativePath: string): string {
+  const normalized = relativePath.replace(/^\.\//u, "");
+  return rootPath === "" ? normalized : `${rootPath}/${normalized}`;
 }
 
 function deduplicateModelResources(resources: readonly RepositoryResourceRecord[]): RepositoryResourceRecord[] {

@@ -29,7 +29,11 @@ describe("ResourceCatalog", () => {
       "src/trip.ts": "export const trip = true;\n",
       "src/other.ts": "export const other = true;\n",
       "generated/client.ts": "export const generatedClient = true;\n",
-      "packages/maps/package.json": JSON.stringify({ name: "maps" }),
+      "packages/maps/package.json": JSON.stringify({
+        name: "maps",
+        scripts: { generate: "node scripts/generate-maps.mjs" }
+      }),
+      "packages/maps/generated/client.ts": "export const mapsClient = true;\n",
       "packages/maps/src/index.ts": "export const map = true;\n",
       "scripts/generate.mjs": "// generator\n",
       "pnpm-lock.yaml": "lockfileVersion: '9.0'\n"
@@ -53,12 +57,19 @@ describe("ResourceCatalog", () => {
     const view = await composeRepositoryView({ rootPath: root, inspection, overlays: [] });
     const packageResource = view.catalog.resolve("package:.");
     const tripResource = view.catalog.resolve("path:src/trip.ts");
+    const moduleResourceRecord = Object.values(view.catalog.resources)
+      .find((resource) => resource.canonicalLocator === "module:src/trip.ts");
+    const pathResourceRecord = Object.values(view.catalog.resources)
+      .find((resource) => resource.canonicalLocator === "path:src/trip.ts");
 
     expect(packageResource.state).toBe("known");
     expect(tripResource.state).toBe("known");
     expect(view.catalog.overlaps("package:.", "path:src/trip.ts")).toBe("yes");
     expect(view.catalog.overlaps("package:packages/maps", "path:packages/maps/src/index.ts")).toBe("yes");
     expect(view.catalog.overlaps("module:src/trip.ts", "path:src/trip.ts")).toBe("yes");
+    expect(moduleResourceRecord).toBeDefined();
+    expect(pathResourceRecord).toBeDefined();
+    expect(view.catalog.asOverlapQuery().overlap(moduleResourceRecord!.id, pathResourceRecord!.id)).toBe("yes");
     expect(view.catalog.overlaps("path:src/current-trip.ts", "path:src/trip.ts")).toBe("yes");
     expect(view.model.modules.map((module) => module.path)).not.toContain("src/current-trip.ts");
     expect(view.catalog.overlaps("path:src/trip.ts", "path:src/other.ts")).toBe("no");
@@ -78,9 +89,17 @@ describe("ResourceCatalog", () => {
         }
       }
     });
+    expect(view.catalog.resolve("path:src/other.ts")).toMatchObject({
+      state: "known",
+      resource: { generated: { state: "unknown" } }
+    });
     expect(view.catalog.resolve("path:pnpm-lock.yaml")).toMatchObject({
       state: "known",
       resource: { generated: { state: "generated" } }
+    });
+    expect(view.catalog.resolve("path:packages/maps/generated/client.ts")).toMatchObject({
+      state: "known",
+      resource: { generated: { regenerationCommand: "node scripts/generate-maps.mjs" } }
     });
     for (const resource of Object.values(view.catalog.resources)) {
       expect(resource.evidenceRefs.length).toBeGreaterThan(0);

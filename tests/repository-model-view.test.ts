@@ -7,9 +7,11 @@ import { promisify } from "node:util";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  buildRepositoryModelFromTree,
   composeRepositoryView,
   inspectRepositoryModel,
-  inspectRepositoryModelWithSnapshot
+  inspectRepositoryModelWithSnapshot,
+  readBlob
 } from "@manyhands/repository-index";
 
 const execFileAsync = promisify(execFile);
@@ -123,6 +125,101 @@ describe("RepositoryModel", () => {
     expect(first.objectFormat).toBe("sha256");
     expect(first.gitEntries.every((entry) => entry.oid.length === 64)).toBe(true);
     expect(first.digest).toBe(second.digest);
+  });
+
+  it("marks malformed package metadata partial instead of inventing known facts", async () => {
+    const root = await createRepository({
+      "package.json": "{ invalid json",
+      "src/index.ts": "export const exact = true;\n"
+    });
+    const baseCommit = await commitAll(root, "base");
+    const model = await inspectRepositoryModel({
+      rootPath: root,
+      targetFingerprint: "target:malformed-package",
+      baseCommit
+    });
+
+    expect(model.packages[0]?.epistemic.state).toBe("partial");
+    expect(model.diagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "repository.package_manifest_invalid", path: "package.json" })
+    ]));
+    expect(model.coverage.disposition).toBe("partial");
+  });
+
+  it("bounds exact Git blob reads instead of spawning one subprocess per source at once", async () => {
+    const files = Object.fromEntries(Array.from({ length: 24 }, (_, index) => [
+      `src/module-${index}.ts`,
+      `export const module${index} = ${index};\n`
+    ]));
+    const root = await createRepository({ "package.json": JSON.stringify({ name: "bounded" }), ...files });
+    const baseCommit = await commitAll(root, "base");
+    const inspection = await inspectRepositoryModelWithSnapshot({
+      rootPath: root,
+      targetFingerprint: "target:bounded",
+      baseCommit
+    });
+    let active = 0;
+    let peak = 0;
+    await buildRepositoryModelFromTree({
+      rootPath: root,
+      snapshot: inspection.snapshot,
+      treeSha: inspection.model.treeSha,
+      objectFormat: inspection.model.objectFormat,
+      entries: inspection.model.gitEntries,
+      readBlobObject: async (oid) => {
+        active += 1;
+        peak = Math.max(peak, active);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        const value = await readBlob("git", root, oid);
+        active -= 1;
+        return value;
+      }
+    });
+
+    expect(peak).toBeGreaterThan(1);
+    expect(peak).toBeLessThanOrEqual(8);
+  });
+
+  it("resolves workspace package exports and records public signatures with provenance", async () => {
+    const root = await createRepository({
+      "package.json": JSON.stringify({ name: "workspace-root", workspaces: ["packages/*"] }),
+      "apps/web/package.json": JSON.stringify({ name: "web" }),
+      "apps/web/src/app.ts": "import { createMap } from '@trip/maps';\nexport const app = createMap();\n",
+      "packages/maps/package.json": JSON.stringify({
+        name: "@trip/maps",
+        exports: { ".": "./src/index.ts" }
+      }),
+      "packages/maps/src/index.ts": "export function createMap(): string { return 'map'; }\n"
+    });
+    const baseCommit = await commitAll(root, "base");
+    const inspection = await inspectRepositoryModelWithSnapshot({
+      rootPath: root,
+      targetFingerprint: "target:workspace-exports",
+      baseCommit
+    });
+    const view = await composeRepositoryView({ rootPath: root, inspection, overlays: [] });
+
+    expect(inspection.model.packages.find((boundary) => boundary.name === "workspace-root")?.workspacePatterns)
+      .toEqual(["packages/*"]);
+    expect(inspection.model.relationships).toContainEqual(expect.objectContaining({
+      fromModulePath: "apps/web/src/app.ts",
+      moduleSpecifier: "@trip/maps",
+      resolvedModulePath: "packages/maps/src/index.ts",
+      epistemic: expect.objectContaining({ state: "known" })
+    }));
+    expect(inspection.model.publicInterfaces).toContainEqual(expect.objectContaining({
+      modulePath: "packages/maps/src/index.ts",
+      symbolName: "createMap",
+      signature: expect.stringContaining("createMap")
+    }));
+    expect(view.catalog.resolve("package-export:@trip/maps")).toMatchObject({
+      state: "known",
+      resource: { canonicalLocator: "path:packages/maps/src/index.ts" }
+    });
+    expect(view.catalog.aliases).toContainEqual(expect.objectContaining({
+      locator: "package-export:@trip/maps",
+      reason: "package_export"
+    }));
   });
 
   it("composes ordered exact overlays without floating to the working tree", async () => {

@@ -35,8 +35,8 @@ import {
   composeRepositoryView,
   createRepositoryQuery,
   inspectRepositoryModelWithSnapshot,
+  type RepositoryQueryAnswer,
   type RepositoryQueryBudget,
-  type RepositoryQueryItem,
   type RepositorySnapshot,
   type RepositoryView
 } from "@manyhands/repository-index";
@@ -124,7 +124,7 @@ export async function buildProductiveRepositoryGrounding(input: {
   return {
     snapshot: inspection.snapshot,
     view,
-    evidence: legacyRepositoryEvidence(answers.flatMap((answer) => answer.items)),
+    evidence: legacyRepositoryEvidence(answers),
     queryDigests: answers.map((answer) => answer.digest),
     budget
   };
@@ -601,31 +601,44 @@ function strategyEvent(
   });
 }
 
-function legacyRepositoryEvidence(items: readonly RepositoryQueryItem[]): RepositoryEvidence[] {
+function legacyRepositoryEvidence(answers: readonly RepositoryQueryAnswer[]): RepositoryEvidence[] {
   const evidence = new Map<string, RepositoryEvidence>();
-  for (const item of items) {
-    for (const evidenceRef of item.evidenceRefs) {
-      if (evidence.has(evidenceRef)) continue;
-      evidence.set(evidenceRef, {
-        id: evidenceRef,
-        kind: legacyEvidenceKind(item),
-        reference: legacyEvidenceReference(item),
-        observation: item.summary,
-        confidence: 1
-      });
+  for (const answer of answers) {
+    const confidence = legacyEvidenceConfidence(answer.epistemic);
+    for (const item of answer.items) {
+      for (const evidenceRef of item.evidenceRefs) {
+        const candidate: RepositoryEvidence = {
+          id: evidenceRef,
+          kind: legacyEvidenceKind(item),
+          reference: legacyEvidenceReference(item),
+          observation: item.summary,
+          confidence
+        };
+        const existing = evidence.get(evidenceRef);
+        if (existing === undefined || candidate.confidence < existing.confidence) {
+          evidence.set(evidenceRef, candidate);
+        }
+      }
     }
   }
   return [...evidence.values()].sort((left, right) => left.id.localeCompare(right.id));
 }
 
-function legacyEvidenceKind(item: RepositoryQueryItem): RepositoryEvidence["kind"] {
+function legacyEvidenceConfidence(epistemic: RepositoryQueryAnswer["epistemic"]): number {
+  if (epistemic.state === "known") return epistemic.confidence === "high" ? 1 : epistemic.confidence === "medium" ? 0.8 : 0.6;
+  if (epistemic.state === "partial") return epistemic.confidence === "high" ? 0.7 : epistemic.confidence === "medium" ? 0.5 : 0.3;
+  if (epistemic.state === "conflicting") return 0.2;
+  return 0;
+}
+
+function legacyEvidenceKind(item: RepositoryQueryAnswer["items"][number]): RepositoryEvidence["kind"] {
   if (item.kind === "symbol") return "symbol";
   if (item.kind === "command") return "script";
   if (item.kind === "diagnostic") return "diagnostic";
   return "path";
 }
 
-function legacyEvidenceReference(item: RepositoryQueryItem): string {
+function legacyEvidenceReference(item: RepositoryQueryAnswer["items"][number]): string {
   if (item.kind === "command") return item.name ?? item.locator;
   if (item.locator.startsWith("path:")) return item.locator.slice("path:".length);
   if (item.locator.startsWith("module:")) return item.locator.slice("module:".length);
