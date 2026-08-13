@@ -217,7 +217,14 @@ export function buildSemanticPlan(input: SemanticPlanMaterial, hasher: DigestHas
   const units = Object.fromEntries(Object.entries(parsed.units).map(([id, unit]) => [id, normalizeWorkUnit(unit)]));
   const seams = Object.fromEntries(Object.entries(parsed.seams).map(([id, seam]) => [id, normalizeSeam(seam)]));
   const artifacts = Object.fromEntries(Object.entries(parsed.artifacts).map(([id, artifact]) => [id, normalizeArtifact(artifact)]));
-  const material: SemanticPlanMaterial = { ...parsed, units, seams, artifacts };
+  const material: SemanticPlanMaterial = {
+    ...parsed,
+    units,
+    seams,
+    artifacts,
+    decisions: [...parsed.decisions].sort((left, right) => left.id.localeCompare(right.id)),
+    evidence: [...parsed.evidence].sort((left, right) => left.id.localeCompare(right.id))
+  };
   return { ...material, digest: computeCanonicalDigest(material, hasher) };
 }
 

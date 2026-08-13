@@ -22,6 +22,7 @@ export interface Stage5Fixture {
 }
 
 export function stage5Fixture(): Stage5Fixture {
+  const evidence = fixtureEvidence();
   const catalog = new ResourceCatalog({
     schemaVersion: 1,
     repositoryContentDigest: "sha256:content",
@@ -42,7 +43,21 @@ export function stage5Fixture(): Stage5Fixture {
     resourceCatalogDigest: catalog.digest,
     digest: "sha256:view",
     catalog,
-    model: {} as RepositoryView["model"]
+    model: {
+      snapshot: { id: "snapshot:fixture", digest: "sha256:snapshot" },
+      repositoryId: "repo:fixture",
+      baseCommit: "a".repeat(40),
+      treeSha: "b".repeat(40),
+      coverage: {
+        treeEntryCount: 2,
+        sourceEntryCount: 2,
+        parsedSourceCount: 2,
+        unsupportedEntryCount: 0,
+        disposition: "known",
+        evidenceRefs: ["evidence:architecture"]
+      },
+      evidence: structuredClone(evidence)
+    } as RepositoryView["model"]
   } satisfies RepositoryView;
   const goal = buildGoalContract({
     id: "goal:feature",
@@ -66,6 +81,8 @@ export function stage5Fixture(): Stage5Fixture {
   const proofStrategies = [
     proof("proof:feature", "validation:root"),
     proof("proof:a", "validation:a"),
+    proof("proof:a-child", "validation:a-child"),
+    proof("proof:a-child-2", "validation:a-child-2"),
     proof("proof:b", "validation:b")
   ];
   function proof(id: string, obligationId: string) {
@@ -84,11 +101,15 @@ export function stage5Fixture(): Stage5Fixture {
     independence: "independent_required"
     }, stage5Sha256);
   }
-  const plan = buildSemanticPlan(planMaterial(goal, repositoryView), stage5Sha256);
+  const plan = buildSemanticPlan(planMaterial(goal, repositoryView, evidence), stage5Sha256);
   return { goal, plan, proofStrategies, repositoryView };
 }
 
-function planMaterial(goal: GoalContract, view: RepositoryView): SemanticPlanMaterial {
+function planMaterial(
+  goal: GoalContract,
+  view: RepositoryView,
+  evidence: SemanticPlanMaterial["evidence"]
+): SemanticPlanMaterial {
   const validation = (obligationId: string) => ({
     obligationId,
     criterionId: "criterion:feature",
@@ -194,7 +215,6 @@ function planMaterial(goal: GoalContract, view: RepositoryView): SemanticPlanMat
           resourceId: "resource:b",
           access: "modify",
           ownerPhase: "implementation",
-          inputArtifactId: "artifact:a",
           outputArtifactId: "artifact:b",
           evidenceRefs: ["evidence:b"],
           epistemic: { state: "known", confidence: "high", evidenceRefs: ["evidence:b"] }
@@ -214,7 +234,7 @@ function planMaterial(goal: GoalContract, view: RepositoryView): SemanticPlanMat
         kind: "api",
         specification: "Module A exports createFeature(): Feature.",
         producerUnitId: "unit:a",
-        consumerUnitIds: ["unit:b"],
+        consumerUnitIds: ["unit:b", "unit:root"],
         semanticFacts: { return: "Feature" },
         compatibility: { mode: "exact", rules: ["The return type is stable."] },
         artifactId: "artifact:a",
@@ -240,9 +260,28 @@ function planMaterial(goal: GoalContract, view: RepositoryView): SemanticPlanMat
       }
     },
     decisions: [],
-    evidence: [],
+    evidence,
     status: "ready"
   };
+}
+
+function fixtureEvidence(): SemanticPlanMaterial["evidence"] {
+  return [
+    evidence("evidence:architecture", "relationship", "path:src"),
+    evidence("evidence:a", "file", "path:src/a.ts"),
+    evidence("evidence:b", "file", "path:src/b.ts")
+  ];
+
+  function evidence(id: string, kind: "file" | "relationship", locator: string) {
+    return {
+      id,
+      snapshotId: "snapshot:fixture",
+      kind,
+      locator,
+      digest: stage5Sha256(`${id}\0${locator}`),
+      epistemic: { state: "known" as const, confidence: "high" as const, evidenceRefs: [id] }
+    };
+  }
 }
 
 function resource(id: string, path: string) {

@@ -57,7 +57,8 @@ export type DecisionDraft = z.infer<typeof DecisionDraftSchema>;
 
 export const PlanningContinuationSchema = z.object({
   requestDigest: CanonicalDigestSchema,
-  revisionDigest: CanonicalDigestSchema
+  revisionDigest: CanonicalDigestSchema,
+  decisionSetDigest: CanonicalDigestSchema
 }).strict();
 export type PlanningContinuation = z.infer<typeof PlanningContinuationSchema>;
 
@@ -91,8 +92,11 @@ function validatePlanningRevision(
       context.addIssue({ code: z.ZodIssueCode.custom, path: ["consumed", key], message: `${key} exceeds the request budget` });
     }
   }
-  if (revision.index === 1 && revision.parentDigest !== undefined) {
-    context.addIssue({ code: z.ZodIssueCode.custom, path: ["parentDigest"], message: "the initial revision cannot have a parent" });
+  if (revision.index === 1 && revision.cause === "initial" && revision.parentDigest !== undefined) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["parentDigest"], message: "an initial planning revision cannot have a parent" });
+  }
+  if (revision.index === 1 && (revision.cause === "expansion" || revision.cause === "amendment") && revision.parentDigest === undefined) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["parentDigest"], message: `${revision.cause} must reference its base SemanticPlan digest` });
   }
   if (revision.index > 1 && revision.parentDigest === undefined) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ["parentDigest"], message: "a later revision requires its parent digest" });

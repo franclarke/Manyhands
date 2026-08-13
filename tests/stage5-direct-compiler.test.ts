@@ -1,6 +1,11 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { buildGoalContract, buildProofStrategy, buildSemanticPlan } from "@manyhands/contracts";
+import {
+  buildGoalContract,
+  buildProofStrategy,
+  buildSemanticPlan,
+  verifyCanonicalDigest
+} from "@manyhands/contracts";
 import { compilePlan } from "@manyhands/decomposer";
 import { validateGraphRevision } from "@manyhands/task-graph";
 import { stage5Fixture, stage5Sha256 } from "./helpers/stage5-fixture.js";
@@ -9,7 +14,7 @@ const ids = (kind: string, parts: readonly string[]) => [kind, ...parts].join(":
 
 describe("Stage 5 direct compiler", () => {
   it("compiles SemanticPlan directly into a valid GraphRevision and derived contracts", () => {
-    const fixture = stage5Fixture();
+    const fixture = groundedFixture();
     const compiled = compilePlan({ ...fixture, hasher: stage5Sha256, idFactory: ids });
     expect(compiled.ok).toBe(true);
     if (!compiled.ok) return;
@@ -21,25 +26,39 @@ describe("Stage 5 direct compiler", () => {
     expect(compiled.contracts.taskBundles["unit:a"]?.task.goal).toBe("Implement module A.");
     expect(compiled.contracts.artifacts["artifact:a"]?.expectedPaths).toEqual(["src/a.ts"]);
     expect(compiled.contracts.seams["seam:a-b"]?.semanticFacts).toEqual({ return: "Feature" });
-    expect(compiled.graph.resourceClaims.find(({ nodeId }) => nodeId === "unit:b")?.inputVersion.kind).toBe("artifact_contract");
+    expect(compiled.contracts.validationObligations["validation:a"]?.proofStrategy)
+      .toEqual(expect.objectContaining({ id: "proof:a", digest: fixture.proofStrategies[1]!.digest }));
+    expect(verifyCanonicalDigest(
+      compiled.contracts.validationObligations["validation:a"]!,
+      "digest",
+      stage5Sha256
+    )).toBe(true);
+    expect(compiled.graph.resourceClaims.find(({ nodeId }) => nodeId === "unit:b")?.inputVersion.kind).toBe("repository_view");
   });
 
   it("is deterministic across semantically equivalent set order", () => {
-    const fixture = stage5Fixture();
+    const fixture = groundedFixture();
     const material = structuredClone(fixture.plan);
     Reflect.deleteProperty(material, "digest");
     material.units["unit:root"]!.consumes.reverse();
     material.units["unit:root"]!.repositorySurface.pathHints.reverse();
     material.artifacts["artifact:a"]!.consumerUnitIds.reverse();
+    material.evidence.reverse();
+    material.decisions = [
+      { id: "decision:z", statement: "Z", selectedOptionId: "option:z", evidenceRefs: [] },
+      { id: "decision:a", statement: "A", selectedOptionId: "option:a", evidenceRefs: [] }
+    ];
+    const ordered = buildSemanticPlan(material, stage5Sha256);
+    material.decisions.reverse();
     const equivalent = buildSemanticPlan(material, stage5Sha256);
 
-    const first = compilePlan({ ...fixture, hasher: stage5Sha256, idFactory: ids });
+    const first = compilePlan({ ...fixture, plan: ordered, hasher: stage5Sha256, idFactory: ids });
     const second = compilePlan({ ...fixture, plan: equivalent, hasher: stage5Sha256, idFactory: ids });
     expect(first).toEqual(second);
   });
 
   it("keeps a delegated composite criterion optional in the local task bundle", () => {
-    const fixture = stage5Fixture();
+    const fixture = groundedFixture();
     const goalMaterial = structuredClone(fixture.goal);
     Reflect.deleteProperty(goalMaterial, "digest");
     goalMaterial.acceptanceCriteria.push({
@@ -109,13 +128,228 @@ describe("Stage 5 direct compiler", () => {
     ]);
   });
 
+  it("does not promote an advisory-only validation obligation to a required task criterion", () => {
+    const fixture = groundedFixture();
+    const material = structuredClone(fixture.plan);
+    Reflect.deleteProperty(material, "digest");
+    material.units["unit:a"]!.validation[0]!.severity = "advisory";
+    const plan = buildSemanticPlan(material, stage5Sha256);
+
+    const compiled = compilePlan({ ...fixture, plan, hasher: stage5Sha256, idFactory: ids });
+
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) return;
+    expect(compiled.contracts.taskBundles["unit:a"]!.task.acceptanceCriteria)
+      .toContainEqual(expect.objectContaining({ id: "criterion:feature", required: false }));
+  });
+
   it("returns verifier findings and emits no graph for an invalid proposal", () => {
-    const fixture = stage5Fixture();
+    const fixture = groundedFixture();
     const result = compilePlan({ ...fixture, proofStrategies: [], hasher: stage5Sha256, idFactory: ids });
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.findings.map(({ code }) => code)).toContain("required_criterion_uncovered");
     expect("graph" in result).toBe(false);
+  });
+
+  it("preserves exact ProofStrategy material and makes its identity output-sensitive", () => {
+    const fixture = groundedFixture();
+    const changedMaterial = structuredClone(fixture.proofStrategies[1]!);
+    Reflect.deleteProperty(changedMaterial, "digest");
+    const changedProof = buildProofStrategy({
+      ...changedMaterial,
+      procedureRef: "command:pnpm-test-module-a"
+    }, stage5Sha256);
+    const changedProofs = fixture.proofStrategies.map((proof) =>
+      proof.id === changedProof.id ? changedProof : proof
+    );
+
+    const original = compilePlan({ ...fixture, hasher: stage5Sha256, idFactory: ids });
+    const changed = compilePlan({
+      ...fixture,
+      proofStrategies: changedProofs,
+      hasher: stage5Sha256,
+      idFactory: ids
+    });
+
+    expect(original.ok).toBe(true);
+    expect(changed.ok).toBe(true);
+    if (!original.ok || !changed.ok) return;
+    expect(changed.contracts.proofStrategies[changedProof.id]).toEqual(changedProof);
+    expect(changed.contracts.validationObligations["validation:a"]?.proofStrategy.digest).toBe(changedProof.digest);
+    expect(changed.graph.digest).not.toBe(original.graph.digest);
+  });
+
+  it("returns a deterministic finding when schema-valid material cannot compile", () => {
+    const fixture = groundedFixture();
+
+    const result = compilePlan({
+      ...fixture,
+      hasher: stage5Sha256,
+      idFactory: () => "relation:collision"
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      findings: [expect.objectContaining({
+        code: "compiler_invalid_material",
+        authority: "deterministic",
+        severity: "error"
+      })]
+    });
+  });
+
+  it("does not emit a scope path as both allowed and forbidden", () => {
+    const fixture = groundedFixture();
+    const material = structuredClone(fixture.plan);
+    Reflect.deleteProperty(material, "digest");
+    material.units["unit:root"]!.repositorySurface.pathHints.push("tests/protected-oracle.ts");
+    const plan = buildSemanticPlan(material, stage5Sha256);
+
+    const compiled = compilePlan({ ...fixture, plan, hasher: stage5Sha256, idFactory: ids });
+
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) return;
+    const scope = compiled.contracts.taskBundles["unit:root"]!.scope;
+    expect(scope.forbiddenPaths).toContain("tests/protected-oracle.ts");
+    expect(scope.allowedPaths).not.toContain("tests/protected-oracle.ts");
+  });
+
+  it("normalizes equivalent repository paths before emitting contracts", () => {
+    const fixture = groundedFixture();
+    const material = structuredClone(fixture.plan);
+    Reflect.deleteProperty(material, "digest");
+    material.units["unit:a"]!.repositorySurface.pathHints = [".\\src\\a.ts"];
+    material.artifacts["artifact:a"]!.expectedPaths = [".\\src\\a.ts"];
+    const equivalent = buildSemanticPlan(material, stage5Sha256);
+
+    const original = compilePlan({ ...fixture, hasher: stage5Sha256, idFactory: ids });
+    const normalized = compilePlan({ ...fixture, plan: equivalent, hasher: stage5Sha256, idFactory: ids });
+
+    expect(original.ok).toBe(true);
+    expect(normalized.ok).toBe(true);
+    if (!original.ok || !normalized.ok) return;
+    expect(normalized.contracts.taskBundles["unit:a"]!.scope)
+      .toEqual(original.contracts.taskBundles["unit:a"]!.scope);
+    expect(normalized.contracts.artifacts["artifact:a"])
+      .toEqual(original.contracts.artifacts["artifact:a"]);
+  });
+
+  it("omits valid proof strategies that no executable obligation references", () => {
+    const fixture = groundedFixture();
+    const extra = buildProofStrategy({
+      id: "proof:unused",
+      revision: 1,
+      goalContractDigest: fixture.goal.digest,
+      criterionId: "criterion:feature",
+      obligationId: "validation:unused",
+      mode: "executable",
+      authority: "orchestrator_deterministic",
+      repositoryViewDigest: fixture.repositoryView.digest,
+      procedureRef: "command:unused",
+      selectorDigest: "sha256:selector-unused",
+      environmentPolicyDigest: "sha256:environment",
+      independence: "independent_required"
+    }, stage5Sha256);
+
+    const original = compilePlan({ ...fixture, hasher: stage5Sha256, idFactory: ids });
+    const withUnused = compilePlan({
+      ...fixture,
+      proofStrategies: fixture.proofStrategies.concat(extra),
+      hasher: stage5Sha256,
+      idFactory: ids
+    });
+
+    expect(withUnused).toEqual(original);
+  });
+
+  it("uses a disjoint canonical identity for integration contracts", () => {
+    const fixture = groundedFixture();
+
+    const compiled = compilePlan({ ...fixture, hasher: stage5Sha256, idFactory: ids });
+
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) return;
+    expect(compiled.contracts.integrations["integration:unit:root"]).toEqual(expect.objectContaining({
+      id: "integration:unit:root",
+      obligationId: "validation:root"
+    }));
+    const digestsByIdentity = new Map<string, Set<string>>();
+    for (const ref of compiled.contracts.refs) {
+      const key = `${ref.id}\0${ref.revision}`;
+      const digests = digestsByIdentity.get(key) ?? new Set<string>();
+      digests.add(ref.digest);
+      digestsByIdentity.set(key, digests);
+    }
+    expect([...digestsByIdentity.values()].every((digests) => digests.size === 1)).toBe(true);
+  });
+
+  it("compiles an approved planning-frontier composite without making it executable", () => {
+    const fixture = groundedFixture();
+    const material = structuredClone(fixture.plan);
+    Reflect.deleteProperty(material, "digest");
+    material.units["unit:a"]!.role = "composite";
+    material.units["unit:a"]!.expansion = "frontier";
+    material.units["unit:a"]!.granularity = {
+      ...material.units["unit:a"]!.granularity,
+      disposition: "frontier",
+      integrationObligationId: undefined
+    };
+    material.units["unit:a"]!.integration = {
+      obligationId: "validation:a",
+      objective: "Integrate the eventual children.",
+      criterionIds: ["criterion:feature"],
+      proofStrategyId: "proof:a",
+      artifactIds: ["artifact:a"],
+      seamIds: ["seam:a-b"]
+    };
+    const plan = buildSemanticPlan(material, stage5Sha256);
+
+    const compiled = compilePlan({ ...fixture, plan, hasher: stage5Sha256, idFactory: ids });
+
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) return;
+    expect(compiled.graph.nodes["unit:a"]?.kind).toBe("composite");
+  });
+
+  it("compiles an empty composite scope from its descendant rollup", () => {
+    const fixture = groundedFixture();
+    const material = structuredClone(fixture.plan);
+    Reflect.deleteProperty(material, "digest");
+    material.units["unit:root"]!.repositorySurface = { resourceRefs: [], pathHints: [] };
+    const plan = buildSemanticPlan(material, stage5Sha256);
+
+    const compiled = compilePlan({ ...fixture, plan, hasher: stage5Sha256, idFactory: ids });
+
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) return;
+    expect(compiled.contracts.taskBundles["unit:root"]!.scope.allowedPaths).toEqual(["src/a.ts", "src/b.ts"]);
+  });
+
+  it("returns verifier findings for contract-invalid relations and paths instead of throwing", () => {
+    const fixture = groundedFixture();
+    const material = structuredClone(fixture.plan);
+    Reflect.deleteProperty(material, "digest");
+    material.artifacts["artifact:a"]!.consumerUnitIds.push("unit:a");
+    material.seams["seam:a-b"]!.consumerUnitIds.push("unit:a");
+    material.artifacts["artifact:a"]!.materialization = "files";
+    material.artifacts["artifact:a"]!.expectedPaths = [];
+    material.units["unit:b"]!.repositorySurface.pathHints = ["../src/b.ts"];
+    material.artifacts["artifact:b"]!.expectedPaths = ["C:\\repo\\src\\b.ts"];
+    const plan = buildSemanticPlan(material, stage5Sha256);
+
+    const compiled = compilePlan({ ...fixture, plan, hasher: stage5Sha256, idFactory: ids });
+
+    expect(compiled.ok).toBe(false);
+    if (compiled.ok) return;
+    expect(compiled.findings.map(({ code }) => code)).toEqual(expect.arrayContaining([
+      "artifact_self_consumer",
+      "seam_self_consumer",
+      "artifact_files_paths_missing",
+      "repository_path_invalid",
+      "artifact_path_invalid"
+    ]));
+    expect(compiled.findings.map(({ code }) => code)).not.toContain("compiler_invalid_material");
   });
 
   it("has no legacy intermediate or model/query reachability", () => {
@@ -124,3 +358,24 @@ describe("Stage 5 direct compiler", () => {
     expect(source).not.toMatch(/model\.generate|repositoryQuery|query\(/u);
   });
 });
+
+function groundedFixture(): ReturnType<typeof stage5Fixture> {
+  const fixture = stage5Fixture();
+  const material = structuredClone(fixture.plan);
+  Reflect.deleteProperty(material, "digest");
+  material.seams["seam:a-b"]!.consumerUnitIds.push("unit:root");
+  material.units["unit:b"]!.resourceIntents[0]!.inputArtifactId = undefined;
+  material.evidence = ["evidence:architecture", "evidence:a", "evidence:b"].map((id) => ({
+    id,
+    snapshotId: material.repositorySnapshot.id,
+    kind: "diagnostic",
+    locator: `fixture:${id}`,
+    digest: stage5Sha256(`fixture:${id}`),
+    epistemic: { state: "known", confidence: "high", evidenceRefs: [id] }
+  }));
+  const repositoryView = {
+    ...fixture.repositoryView,
+    model: { ...fixture.repositoryView.model, evidence: structuredClone(material.evidence) }
+  };
+  return { ...fixture, repositoryView, plan: buildSemanticPlan(material, stage5Sha256) };
+}

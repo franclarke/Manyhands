@@ -46,6 +46,10 @@ describe("Stage 5 offline evaluation", () => {
     expect(html).toContain("Responsibility hierarchy");
     expect(html).toContain("Module A");
     expect(html).toContain("Explicit seams");
+    expect(html).toContain("Decisions");
+    expect(html).toContain("No planning decisions were required.");
+    expect(html).toContain("Evidence provenance");
+    expect(html).toContain("evidence:architecture");
     expect(html).toContain("ORACLE PASS");
     expect(html).not.toMatch(/<script|fetch\(|\/api\/|ipc/iu);
   });

@@ -3,6 +3,7 @@ import {
   computeCanonicalDigest,
   type ArtifactContract,
   type CanonicalContractRef,
+  type CanonicalValidationObligation,
   type DigestHasher,
   type GoalContract,
   type PlanningFinding,
@@ -38,6 +39,7 @@ export interface CompilePlanInput {
 export interface CompiledIntegrationContract {
   id: string;
   revision: number;
+  obligationId: string;
   ownerUnitId: string;
   objective: string;
   criterionIds: string[];
@@ -51,6 +53,8 @@ export interface CompiledPlanContracts {
   artifacts: Record<string, ArtifactContract>;
   seams: Record<string, SeamContract>;
   integrations: Record<string, CompiledIntegrationContract>;
+  validationObligations: Record<string, CanonicalValidationObligation>;
+  proofStrategies: Record<string, ProofStrategy>;
   refs: CanonicalContractRef[];
 }
 
@@ -62,12 +66,34 @@ export function compilePlan(input: CompilePlanInput): CompilePlanResult {
   const verified = verifyPlan(input);
   if (!verified.ok) return { ok: false, findings: verified.findings };
 
+  try {
+    return compileVerifiedPlan(input);
+  } catch (error: unknown) {
+    return {
+      ok: false,
+      findings: [compilerFinding(error)]
+    };
+  }
+}
+
+function compileVerifiedPlan(input: CompilePlanInput): CompilePlanResult {
   const revision = String(input.plan.revision);
   const artifacts = compileArtifacts(input.plan, revision);
   const seams = compileSeams(input.plan, revision);
   const taskBundles: Record<string, TaskContractBundle> = {};
   const refs: CanonicalContractRef[] = [];
-  const obligationRefs = new Map<string, CanonicalContractRef>();
+  const referencedProofIds = new Set(Object.values(input.plan.units).flatMap((unit) => [
+    ...unit.validation.map(({ proofStrategyId }) => proofStrategyId),
+    ...(unit.integration === undefined ? [] : [unit.integration.proofStrategyId])
+  ]));
+  const proofStrategies = sortedRecord(Object.fromEntries(input.proofStrategies
+    .filter(({ id }) => referencedProofIds.has(id))
+    .map((proof) => [proof.id, proof])));
+  const proofRefs = new Map(Object.values(proofStrategies).map((proof) => [
+    proof.id,
+    { id: proof.id, revision: proof.revision, digest: proof.digest }
+  ]));
+  const validationObligations: Record<string, CanonicalValidationObligation> = {};
   for (const unit of Object.values(input.plan.units)) {
     const scope = compileScope(input, unit, revision);
     const validation = compileValidation(unit, revision);
@@ -87,8 +113,20 @@ export function compilePlan(input: CompilePlanInput): CompilePlanResult {
     refs.push(refFor(task, input.plan.revision, input.hasher));
     refs.push(refFor(scope, input.plan.revision, input.hasher));
     refs.push(refFor(validation, input.plan.revision, input.hasher));
-    for (const obligation of validation.obligations) {
-      obligationRefs.set(obligation.id, refFor(obligation, input.plan.revision, input.hasher, obligation.id));
+    for (const obligation of unit.validation) {
+      const proofRef = proofRefs.get(obligation.proofStrategyId)!;
+      const material = {
+        id: obligation.obligationId,
+        revision: input.plan.revision,
+        criterionId: obligation.criterionId,
+        ownerNodeId: unit.id,
+        required: obligation.severity === "required",
+        proofStrategy: proofRef
+      };
+      validationObligations[obligation.obligationId] = {
+        digest: computeCanonicalDigest(material, input.hasher),
+        ...material
+      };
     }
   }
   const artifactRefs = new Map(Object.values(artifacts).map((contract) => [
@@ -99,7 +137,16 @@ export function compilePlan(input: CompilePlanInput): CompilePlanResult {
     contract.id,
     refFor(contract, input.plan.revision, input.hasher)
   ]));
-  refs.push(...artifactRefs.values(), ...seamRefs.values(), ...obligationRefs.values());
+  refs.push(
+    ...artifactRefs.values(),
+    ...seamRefs.values(),
+    ...proofRefs.values(),
+    ...Object.values(validationObligations).map(({ id, revision: obligationRevision, digest }) => ({
+      id,
+      revision: obligationRevision,
+      digest
+    }))
+  );
 
   const integrations = compileIntegrations(input.plan);
   for (const integration of Object.values(integrations)) {
@@ -133,6 +180,8 @@ export function compilePlan(input: CompilePlanInput): CompilePlanResult {
       artifacts: sortedRecord(artifacts),
       seams: sortedRecord(seams),
       integrations: sortedRecord(integrations),
+      validationObligations: sortedRecord(validationObligations),
+      proofStrategies,
       refs: uniqueRefs(refs)
     }
   };
@@ -149,7 +198,7 @@ function compileArtifacts(plan: SemanticPlan, revision: string): Record<string, 
     artifactType: artifact.artifactType,
     ...(artifact.mediaType === undefined ? {} : { mediaType: artifact.mediaType }),
     materialization: artifact.materialization,
-    expectedPaths: [...artifact.expectedPaths]
+    expectedPaths: normalizedPaths(artifact.expectedPaths)
   }]));
 }
 
@@ -170,14 +219,21 @@ function compileSeams(plan: SemanticPlan, revision: string): Record<string, Seam
 }
 
 function compileScope(input: CompilePlanInput, unit: WorkUnit, revision: string): ScopeContract {
-  const catalogPaths = unit.repositorySurface.resourceRefs.flatMap((resourceId) => {
+  const contributors = scopeContributors(input.plan, unit);
+  const catalogPaths = contributors.flatMap((contributor) => contributor.repositorySurface.resourceRefs).flatMap((resourceId) => {
     const resolved = input.repositoryView.catalog.resolve(resourceId);
-    return resolved.state === "known" && resolved.resource.path !== undefined ? [resolved.resource.path] : [];
+    return resolved.state === "known" && resolved.resource.path !== undefined
+      ? [normalizePath(resolved.resource.path)]
+      : [];
   });
-  const allowedPaths = unique([...unit.repositorySurface.pathHints, ...catalogPaths]);
-  const forbiddenPaths = unique(input.goal.acceptanceCriteria.flatMap(({ protectedReferences }) =>
+  const forbiddenPaths = normalizedPaths(input.goal.acceptanceCriteria.flatMap(({ protectedReferences }) =>
     protectedReferences.filter((reference) => reference.startsWith("path:")).map((reference) => reference.slice(5))
   ));
+  const allowedPaths = normalizedPaths([
+    ...contributors.flatMap((contributor) => contributor.repositorySurface.pathHints),
+    ...catalogPaths
+  ])
+    .filter((candidate) => !forbiddenPaths.some((forbidden) => pathsOverlap(candidate, forbidden)));
   return {
     schemaVersion: 2,
     id: `scope:${unit.id}`,
@@ -220,7 +276,9 @@ function compileTask(
   seams: Readonly<Record<string, SeamContract>>,
   revision: string
 ): TaskContract {
-  const locallyValidatedCriteria = new Set(validation.obligations.map(({ criterionId }) => criterionId));
+  const locallyValidatedCriteria = new Set(validation.obligations
+    .filter(({ severity }) => severity === "required")
+    .map(({ criterionId }) => criterionId));
   return {
     schemaVersion: 2,
     id: `task:${unit.id}`,
@@ -246,19 +304,26 @@ function compileTask(
 }
 
 function compileIntegrations(plan: SemanticPlan): Record<string, CompiledIntegrationContract> {
-  return Object.fromEntries(Object.values(plan.units).flatMap((unit) => unit.integration === undefined ? [] : [[
-    unit.integration.obligationId,
-    {
-      id: unit.integration.obligationId,
-      revision: plan.revision,
-      ownerUnitId: unit.id,
-      objective: unit.integration.objective,
-      criterionIds: [...unit.integration.criterionIds],
-      proofStrategyId: unit.integration.proofStrategyId,
-      artifactIds: [...unit.integration.artifactIds],
-      seamIds: [...unit.integration.seamIds]
-    }
-  ]]));
+  const entries: Array<[string, CompiledIntegrationContract]> = [];
+  for (const unit of Object.values(plan.units)) {
+    if (unit.integration === undefined) continue;
+    const integrationId = `integration:${unit.id}`;
+    entries.push([
+      integrationId,
+      {
+        id: integrationId,
+        obligationId: unit.integration.obligationId,
+        revision: plan.revision,
+        ownerUnitId: unit.id,
+        objective: unit.integration.objective,
+        criterionIds: [...unit.integration.criterionIds],
+        proofStrategyId: unit.integration.proofStrategyId,
+        artifactIds: [...unit.integration.artifactIds],
+        seamIds: [...unit.integration.seamIds]
+      }
+    ]);
+  }
+  return Object.fromEntries(entries);
 }
 
 function graphMaterial(
@@ -352,4 +417,53 @@ function uniqueRefs(refs: readonly CanonicalContractRef[]): CanonicalContractRef
 
 function sortedRecord<T>(record: Readonly<Record<string, T>>): Record<string, T> {
   return Object.fromEntries(Object.entries(record).sort(([left], [right]) => left.localeCompare(right)));
+}
+
+function pathsOverlap(left: string, right: string): boolean {
+  const normalizedLeft = normalizePath(left);
+  const normalizedRight = normalizePath(right);
+  return normalizedLeft === normalizedRight ||
+    normalizedLeft.startsWith(`${normalizedRight}/`) ||
+    normalizedRight.startsWith(`${normalizedLeft}/`);
+}
+
+function normalizePath(path: string): string {
+  return path.replaceAll("\\", "/").replace(/^\.\//u, "").replace(/\/+$/u, "");
+}
+
+function normalizedPaths(paths: readonly string[]): string[] {
+  return unique(paths.map(normalizePath).filter((path) => path !== ""));
+}
+
+function scopeContributors(plan: SemanticPlan, unit: WorkUnit): WorkUnit[] {
+  if (hasDeclaredScope(unit)) return [unit];
+  const contributors: WorkUnit[] = [];
+  const pending = Object.values(plan.units).filter(({ parentId }) => parentId === unit.id);
+  const visited = new Set<string>([unit.id]);
+  while (pending.length > 0) {
+    const candidate = pending.pop()!;
+    if (visited.has(candidate.id)) continue;
+    visited.add(candidate.id);
+    if (hasDeclaredScope(candidate)) {
+      contributors.push(candidate);
+    } else {
+      pending.push(...Object.values(plan.units).filter(({ parentId }) => parentId === candidate.id));
+    }
+  }
+  return contributors;
+}
+
+function hasDeclaredScope(unit: WorkUnit): boolean {
+  return unit.repositorySurface.resourceRefs.length > 0 || unit.repositorySurface.pathHints.length > 0;
+}
+
+function compilerFinding(error: unknown): PlanningFinding {
+  return {
+    code: "compiler_invalid_material",
+    severity: "error",
+    authority: "deterministic",
+    message: error instanceof Error ? error.message : "Direct plan compilation failed with invalid material.",
+    evidenceRefs: [],
+    resolution: "none"
+  };
 }

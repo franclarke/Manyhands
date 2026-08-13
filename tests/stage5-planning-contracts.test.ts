@@ -23,7 +23,11 @@ describe("Stage 5 planning contracts", () => {
       kind: "needs_input",
       plan,
       decisions: [decision()],
-      continuation: { requestDigest: "sha256:request", revisionDigest: "sha256:revision" },
+      continuation: {
+        requestDigest: "sha256:request",
+        revisionDigest: "sha256:revision",
+        decisionSetDigest: "sha256:decisions"
+      },
       trace: trace()
     }).success).toBe(false);
     expect(PlanningResultSchema.safeParse({ ...plan, status: "needs_input" }).success).toBe(false);

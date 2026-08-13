@@ -113,20 +113,38 @@ const providerReceipt = replaySource === undefined
   ? await runProvider({ invocation, prompt, logPath: providerLogPath, cwd: evidenceDirectory })
   : await replayProviderOutput({ source: replaySource, prompt, outputPath, logPath: providerLogPath });
 const providerEnvelope = JSON.parse(await readFile(outputPath, "utf8"));
-const canonicalMaterial = JSON.parse(providerEnvelope.canonicalMaterialJson);
+const providerMaterial = JSON.parse(providerEnvelope.canonicalMaterialJson);
+const repositoryEvidenceById = new Map(inspection.model.evidence.map((item) => [item.id, item]));
+const referencedEvidenceIds = [...new Set(excerptAnswer.items.flatMap((item) => item.evidenceRefs))].sort();
+const canonicalEvidence = referencedEvidenceIds.map((id) => {
+  const evidence = repositoryEvidenceById.get(id);
+  if (evidence === undefined) throw new Error(`Repository evidence ${id} does not resolve in the exact RepositoryModel.`);
+  if (evidence.snapshotId !== inspection.model.snapshot.id) {
+    throw new Error(`Repository evidence ${id} is bound to another snapshot.`);
+  }
+  return structuredClone(evidence);
+});
+const canonicalMaterial = { ...providerMaterial, evidence: canonicalEvidence };
 const currentDraft = JSON.parse(providerEnvelope.currentDraftJson);
 const criticFindings = JSON.parse(providerEnvelope.criticFindingsJson);
 
 const planningEngine = new decomposer.PlanningEngine({
   model: { propose: async () => ({ kind: "candidate", material: canonicalMaterial }) },
   repository: {
-    inspect: async () => ({
-      queryReceipts: [queryAnswer.digest, excerptAnswer.digest],
-      evidenceRefs: [...new Set([...queryAnswer.evidenceRefs, ...excerptAnswer.evidenceRefs])].sort(),
-      repositoryQueries: 2,
-      queryBytes: queryAnswer.cost.bytes + excerptAnswer.cost.bytes,
-      missingCapabilities: []
-    })
+    inspect: async ({ allowance }) => {
+      const repositoryQueries = 2;
+      const queryBytes = queryAnswer.cost.bytes + excerptAnswer.cost.bytes;
+      if (repositoryQueries > allowance.repositoryQueries || queryBytes > allowance.queryBytes) {
+        throw new Error("GP1 repository inspection exceeds the PlanningEngine allowance.");
+      }
+      return {
+        queryReceipts: [queryAnswer.digest, excerptAnswer.digest],
+        evidenceRefs: [...new Set([...queryAnswer.evidenceRefs, ...excerptAnswer.evidenceRefs])].sort(),
+        repositoryQueries,
+        queryBytes,
+        missingCapabilities: []
+      };
+    }
   },
   hasher: sha256,
   critic: {
@@ -249,6 +267,15 @@ const receipt = {
     harnessPromptDigest: sha256(prompt),
     outputDigest: sha256(await readFile(outputPath, "utf8")),
     eventLogDigest: sha256(await readFile(providerLogPath, "utf8"))
+  },
+  canonicalization: {
+    transformation: "embed_exact_excerpt_evidence_v1",
+    source: "RepositoryQuery.readExcerpts bound to the exact RepositoryView and snapshot",
+    providerMaterialDigest: contracts.computeCanonicalDigest(providerMaterial, sha256),
+    enrichedMaterialDigest: contracts.computeCanonicalDigest(canonicalMaterial, sha256),
+    addedEvidenceIds: canonicalEvidence.map(({ id }) => id),
+    snapshotId: inspection.model.snapshot.id,
+    repositoryViewDigest: repositoryView.digest
   },
   query: {
     searchDigest: queryAnswer.digest,
