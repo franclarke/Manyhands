@@ -1,9 +1,20 @@
+import { createHash } from "node:crypto";
+
 import type { GitRunner } from "./runner.js";
 
 export interface RetainedGitArtifact {
   ref: string;
   candidateCommit: string;
   candidateTree: string;
+}
+
+/** Durable journal authorization; it binds the exact retained candidate to one terminal release decision. */
+export interface ArtifactRetentionReleaseDecision {
+  decisionId: string;
+  artifactId: string;
+  retainedByRef: string;
+  candidateCommit: string;
+  authorizedAt: string;
 }
 
 /**
@@ -62,6 +73,28 @@ export class GitArtifactRetainer {
     }
     return { ref, candidateCommit: retainedCommit, candidateTree: retainedTree };
   }
+
+  async release(input: {
+    cwd: string;
+    retained: RetainedGitArtifact;
+    decision: ArtifactRetentionReleaseDecision;
+  }): Promise<void> {
+    const decision = input.decision;
+    if (
+      decision.decisionId.length === 0 ||
+      decision.artifactId.length === 0 ||
+      decision.retainedByRef !== input.retained.ref ||
+      decision.candidateCommit !== input.retained.candidateCommit
+    ) {
+      throw new Error(`Retention release ${decision.decisionId} is not authorized for this retained artifact.`);
+    }
+    await this.git.updateRef({
+      cwd: input.cwd,
+      ref: input.retained.ref,
+      target: "0".repeat(input.retained.candidateCommit.length),
+      expectedOldOid: input.retained.candidateCommit
+    });
+  }
 }
 
 export function retainedArtifactRef(runId: string, attemptId: string, artifactId: string): string {
@@ -80,5 +113,7 @@ export function retainedArtifactRef(runId: string, attemptId: string, artifactId
 function refSegment(value: string): string {
   const normalized = value.toLowerCase().replace(/[^a-z0-9]+/gu, "-").replace(/^-+|-+$/gu, "");
   if (normalized.length === 0) throw new Error("Git artifact retention ref segment is empty.");
-  return normalized.slice(0, 48);
+  const readable = normalized.slice(0, 36);
+  const digest = createHash("sha256").update(value).digest("hex").slice(0, 12);
+  return `${readable}-${digest}`;
 }

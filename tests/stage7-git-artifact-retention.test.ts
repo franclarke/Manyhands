@@ -47,7 +47,7 @@ describe("Stage 7 retained Git artifacts", () => {
     await git(repo, "reflog", "expire", "--expire=now", "--all");
     await git(repo, "gc", "--prune=now");
 
-    expect(retained.ref).toMatch(/^refs\/manyhands\/runs\/run-1\/attempts\/attempt-1\/artifacts\//u);
+    expect(retained.ref).toMatch(/^refs\/manyhands\/runs\/run-1-[0-9a-f]+\/attempts\/attempt-1-[0-9a-f]+\/artifacts\//u);
     expect(await git(repo, "rev-parse", retained.ref)).toBe(candidateCommit);
     expect(await git(repo, "rev-parse", `${retained.ref}^{tree}`)).toBe(candidateTree);
   });
@@ -55,6 +55,11 @@ describe("Stage 7 retained Git artifacts", () => {
   it("uses stable run, attempt, and artifact identity instead of the manifest digest", () => {
     expect(retainedArtifactRef("run-1", "attempt-1", "artifact:owned"))
       .toBe(retainedArtifactRef("run-1", "attempt-1", "artifact:owned"));
+  });
+
+  it("uses distinct refs for identifiers that normalize to the same readable segment", () => {
+    expect(retainedArtifactRef("run:a", "attempt-1", "artifact:owned"))
+      .not.toBe(retainedArtifactRef("run-a", "attempt-1", "artifact:owned"));
   });
 
   it("never moves a run-owned ref from its original retained candidate", async () => {
@@ -85,6 +90,17 @@ describe("Stage 7 retained Git artifacts", () => {
     })).rejects.toThrow(/already names a different candidate/i);
 
     expect(await git(repo, "rev-parse", ref)).toBe(firstCommit);
+  });
+
+  it("requires a retained-candidate-bound durable release authorization before deleting a ref", async () => {
+    const candidateCommit = await git(repo, "rev-parse", "HEAD");
+    const candidateTree = await git(repo, "rev-parse", "HEAD^{tree}");
+    const retainer = new GitArtifactRetainer(new SimpleGitRunner());
+    const retained = await retainer.retain({ cwd: repo, runId: "run-release", attemptId: "attempt-release", artifactId: "artifact-release", manifestDigest: `sha256:${"c".repeat(64)}`, candidateCommit, candidateTree });
+    await expect(retainer.release({ cwd: repo, retained, decision: { decisionId: "release-blocked", artifactId: "artifact-release", retainedByRef: retained.ref, candidateCommit: "wrong", authorizedAt: "2026-08-14T12:00:00.000Z" } })).rejects.toThrow(/not authorized/i);
+    expect(await git(repo, "rev-parse", retained.ref)).toBe(candidateCommit);
+    await retainer.release({ cwd: repo, retained, decision: { decisionId: "release-clear", artifactId: "artifact-release", retainedByRef: retained.ref, candidateCommit, authorizedAt: "2026-08-14T12:00:00.000Z" } });
+    await expect(git(repo, "rev-parse", retained.ref)).rejects.toThrow();
   });
 });
 

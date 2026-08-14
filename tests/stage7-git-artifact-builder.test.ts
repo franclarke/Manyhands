@@ -56,7 +56,9 @@ describe("Stage 7 Git artifact builder", () => {
       oldMode: "100644",
       newMode: "100644"
     })]);
-    expect(manifest.retainedByRef).toBe("refs/manyhands/runs/run-1/attempts/attempt-1/artifacts/artifact-owned");
+    expect(manifest.retainedByRef).toMatch(
+      /^refs\/manyhands\/runs\/run-1-[0-9a-f]{12}\/attempts\/attempt-1-[0-9a-f]{12}\/artifacts\/artifact-owned-[0-9a-f]{12}$/u
+    );
     expect(await git(repo, "rev-parse", manifest.retainedByRef)).toBe(candidateCommit);
   });
 
@@ -86,7 +88,9 @@ describe("Stage 7 Git artifact builder", () => {
       commitOid: candidateCommit,
       treeOid: candidateTree,
       sourceCandidate: { commitOid: candidateCommit, treeOid: candidateTree },
-      retainedByRef: "refs/manyhands/runs/run-1/attempts/attempt-1/artifacts/candidate"
+      retainedByRef: expect.stringMatching(
+        /^refs\/manyhands\/runs\/run-1-[0-9a-f]{12}\/attempts\/attempt-1-[0-9a-f]{12}\/artifacts\/candidate-[0-9a-f]{12}$/u
+      )
     }));
     expect(await git(repo, "rev-parse", manifest.retainedByRef)).toBe(candidateCommit);
   });

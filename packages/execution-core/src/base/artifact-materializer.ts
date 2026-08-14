@@ -56,28 +56,13 @@ export class ArtifactMaterializer {
         });
       }
     }
-    if (artifact.kind !== "commit") {
-      throw new ExecutionBaseMaterializationError({
-        code: "unsupported_artifact_kind",
-        artifactId: artifact.artifactId,
-        conflictFiles: [],
-        output: `Artifact kind ${artifact.kind} requires an explicit materializer.`
-      });
-    }
-
-    const outcome = await this.git.cherryPick({
-      cwd: worktreePath,
-      commitSha: artifact.location,
-      ...(artifact.cherryPickMainline === undefined ? {} : { mainline: artifact.cherryPickMainline })
-    });
-    if (outcome.ok) return;
-
-    await this.git.cherryPickAbort(worktreePath).catch(() => undefined);
     throw new ExecutionBaseMaterializationError({
-      code: outcome.kind === "empty" ? "artifact_empty" : outcome.kind === "conflict" || outcome.conflictFiles.length > 0 ? "artifact_conflict" : "artifact_error",
+      // Commit artifacts are retained only for historical replay readers. A
+      // productive execution base is always an exact Git-native manifest.
+      code: "unsupported_artifact_kind",
       artifactId: artifact.artifactId,
-      conflictFiles: outcome.conflictFiles,
-      output: outcome.output
+      conflictFiles: [],
+      output: `Artifact kind ${artifact.kind} is not materializable on the productive route.`
     });
   }
 }

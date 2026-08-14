@@ -221,6 +221,8 @@ export interface V2NodeExecutorOptions {
     fencingToken?: number;
     allowTakeover?: boolean;
   };
+  /** Historical V2 replay may inspect commits; canonical daemon work may not transport them. */
+  allowCommitArtifactTransport?: boolean;
 }
 
 /** Executes one V2 node without translating its bundle back to AgentTaskContract. */
@@ -241,6 +243,9 @@ export class V2NodeExecutor {
 
   async execute(input: V2PhysicalNodeExecutionInput): Promise<V2PhysicalNodeExecutionOutcome> {
     try {
+      if (this.options.allowCommitArtifactTransport === false && input.consumedArtifacts.some((artifact) => artifact.kind === "commit")) {
+        return { kind: "failure", reason: "Commit artifacts are not accepted by the canonical execution route." };
+      }
       const prepared = this.options.validator.prepare?.({ contract: input.contract });
       const unmaterialized = requiredUnmaterializedObligations(input.contract, prepared);
       if (unmaterialized.length > 0) {
@@ -764,7 +769,7 @@ export class CanonicalNodeExecutor {
   private readonly artifactBuilder: Pick<GitArtifactBuilder, "build" | "buildCandidateTree">;
 
   constructor(private readonly options: V2NodeExecutorOptions) {
-    this.delegate = new V2NodeExecutor(options);
+    this.delegate = new V2NodeExecutor({ ...options, allowCommitArtifactTransport: false });
     this.artifactBuilder = options.artifactBuilder ?? new GitArtifactBuilder(options.git);
   }
 

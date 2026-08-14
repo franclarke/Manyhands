@@ -30,3 +30,14 @@ export const AdoptedArtifactSchema = AdoptedArtifactObjectSchema.superRefine((ar
 });
 
 export type AdoptedArtifact = z.infer<typeof AdoptedArtifactSchema>;
+
+/** A release may be authorized only after the terminal run journal proves no live consumer remains. */
+export const ArtifactRetentionReleaseAuthorizationSchema = z.object({
+  decisionId: EntityIdSchema,
+  artifactId: EntityIdSchema,
+  retainedByRef: NonEmptyStringSchema,
+  candidateCommit: NonEmptyStringSchema,
+  authorizedAt: IsoTimestampSchema
+}).strict();
+
+export type ArtifactRetentionReleaseAuthorization = z.infer<typeof ArtifactRetentionReleaseAuthorizationSchema>;

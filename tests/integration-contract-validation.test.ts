@@ -21,6 +21,6 @@ describe("integration contract validation", () => {
     }).integrate({ request, worktreePath: "/wt" });
     expect(result.disposition).toBe("failed");
     expect(result.parentEvidence).toEqual({ matrixId: "matrix-failed", outcome: "failed" });
-    expect(result.outputArtifacts).toEqual([]);
+    expect(result).not.toHaveProperty("outputArtifacts");
   });
 });

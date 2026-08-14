@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { access, constants, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -77,6 +77,29 @@ describe("Stage 7 exact artifact materialization", () => {
     expect(await git(repo, "rev-parse", "HEAD^{tree}")).toBe(resultTree);
     expect(await git(repo, "merge-base", "--is-ancestor", sourceCandidate, "HEAD").then(() => true, () => false)).toBe(false);
     expect(await git(repo, "show", "HEAD:owned.txt")).toBe("after");
+  });
+
+  it("does not run a repository smudge filter while materializing exact blobs", async () => {
+    const marker = path.join(repo, "smudge-ran.txt");
+    await git(repo, "config", "filter.hostile.smudge", `cmd /c echo smudged>\"${marker}\"`);
+    await writeFile(path.join(repo, ".gitattributes"), "owned.txt filter=hostile\n", "utf8");
+    await git(repo, "add", ".gitattributes");
+    await git(repo, "commit", "-m", "hostile attribute fixture");
+    const baseCommit = await git(repo, "rev-parse", "HEAD");
+    const baseTree = await git(repo, "rev-parse", "HEAD^{tree}");
+    const oldOid = await git(repo, "rev-parse", "HEAD:owned.txt");
+    await git(repo, "switch", "--create", "candidate");
+    await writeFile(path.join(repo, "owned.txt"), "after\n", "utf8");
+    await git(repo, "add", "owned.txt");
+    await git(repo, "commit", "-m", "candidate");
+    const candidate = await git(repo, "rev-parse", "HEAD");
+    const tree = await git(repo, "rev-parse", "HEAD^{tree}");
+    const newOid = await git(repo, "rev-parse", "HEAD:owned.txt");
+    await git(repo, "switch", "main");
+    await rm(marker, { force: true });
+    const manifest = buildChangeSetManifest({ id: "manifest:hostile", contract: { id: "artifact:owned", revision: 1, digest: "sha256:contract" }, producerNodeId: "node:producer", producerAttemptId: "attempt:producer", inputFingerprint: `sha256:${"c".repeat(64)}`, repositoryObjectStoreId: "object-store:repo", objectFormat: "sha1", sourceCandidate: { commitOid: candidate, treeOid: tree }, retainedByRef: "refs/manyhands/runs/run/attempts/attempt/artifacts/hostile", kind: "change_set", baseTreeSha: baseTree, resultTreeSha: tree, entries: [{ oldPath: "owned.txt", newPath: "owned.txt", operation: "modify", oldOid, newOid, oldMode: "100644", newMode: "100644" }] }, sha256);
+    await new ExactGitManifestMaterializer(new SimpleGitRunner(), sha256).materialize({ cwd: repo, baseCommit, manifest, allowedPaths: ["owned.txt"] });
+    await expect(access(marker, constants.F_OK)).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   it("cleans the managed worktree when a later manifest preimage is invalid", async () => {

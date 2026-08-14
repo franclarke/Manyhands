@@ -146,6 +146,11 @@ export class FakeGitRunner implements GitRunner {
     return "blob";
   }
 
+  async readBlob(params: { cwd: string; oid: string }): Promise<Buffer> {
+    this.record("readBlob", params);
+    return Buffer.from(params.oid, "utf8");
+  }
+
   async readTree(params: { cwd: string; tree: string; indexFile?: string }): Promise<void> {
     this.record("readTree", params);
   }

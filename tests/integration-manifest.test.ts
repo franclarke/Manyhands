@@ -122,10 +122,11 @@ describe("IntegrationManifestExecutor", () => {
     expect(git.calls.filter((call) => call.op === "cherryPick").map((call) => call.args.commitSha)).toEqual(["SHA_A"]);
     expect(result.disposition).toBe("success");
     expect(result.childArtifacts.map((item) => item.artifactId)).toEqual(["a"]);
-    expect(result.outputArtifacts).toEqual([expect.objectContaining({ digest: "digest-parent", location: "PICK_A" })]);
-    expect(decideIntegrationAdoption({ ...built, ...result }, "2026-07-17T12:02:00.000Z")).toEqual(
-      expect.objectContaining({ eligible: true, artifacts: [expect.objectContaining({ producerAttemptId: "attempt-parent", digest: "digest-parent" })] })
-    );
+    expect(result).not.toHaveProperty("outputArtifacts");
+    expect(decideIntegrationAdoption({ ...built, ...result })).toEqual({
+      eligible: false,
+      reason: "Integration result adoption is retired; the canonical execution driver adopts only exact Git-native manifests."
+    });
   });
 
   it("validates the final candidate when a later composition supersedes an intermediate line", async () => {

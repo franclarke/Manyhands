@@ -55,6 +55,8 @@ export interface GitRunner {
   updateRef(params: { cwd: string; ref: string; target: string; expectedOldOid?: string }): Promise<void>;
   treeEntry(params: { cwd: string; tree: string; path: string }): Promise<GitTreeEntry | undefined>;
   objectType(params: { cwd: string; oid: string }): Promise<GitTreeEntry["objectType"]>;
+  /** Raw blob bytes; never passes through a worktree filter or text conversion. */
+  readBlob(params: { cwd: string; oid: string }): Promise<Buffer>;
   readTree(params: { cwd: string; tree: string; indexFile?: string }): Promise<void>;
   updateIndexEntry(params: { cwd: string; mode: string; oid: string; path: string; indexFile?: string }): Promise<void>;
   removeIndexEntry(params: { cwd: string; path: string; indexFile?: string }): Promise<void>;
@@ -215,6 +217,15 @@ export class SimpleGitRunner implements GitRunner {
       throw new Error(`Unsupported Git object type ${value} for ${params.oid}.`);
     }
     return value;
+  }
+
+  async readBlob(params: { cwd: string; oid: string }): Promise<Buffer> {
+    const { stdout } = await execFileAsync(
+      "git",
+      safeGitArgs(params.cwd, ["cat-file", "blob", params.oid]),
+      { cwd: params.cwd, windowsHide: true, encoding: "buffer" }
+    );
+    return Buffer.from(stdout);
   }
 
   async readTree(params: { cwd: string; tree: string; indexFile?: string }): Promise<void> {

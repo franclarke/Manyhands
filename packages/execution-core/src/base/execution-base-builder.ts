@@ -80,15 +80,10 @@ export class ExecutionBaseBuilder {
       : await this.worktreeManager!.create(createParams);
 
     const materializedArtifacts: ExecutionBaseManifest["materializedArtifacts"] = [];
-    const materializedCommitLocations = new Set<string>();
     try {
       for (const artifact of request.artifacts) {
         const beforeCommit = await this.git.head(worktree.path);
-        const isRepeatedCommit = artifact.kind === "commit" && materializedCommitLocations.has(artifact.location);
-        if (!isRepeatedCommit) {
-          await this.materializer.materialize(worktree.path, artifact);
-          if (artifact.kind === "commit") materializedCommitLocations.add(artifact.location);
-        }
+        await this.materializer.materialize(worktree.path, artifact);
         const resultingCommit = await this.git.head(worktree.path);
         materializedArtifacts.push({ ...artifact, beforeCommit, resultingCommit });
       }

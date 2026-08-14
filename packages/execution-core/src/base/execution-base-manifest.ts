@@ -15,6 +15,13 @@ const ExecutionArtifactInputObjectSchema = z.object({
 }).strict();
 
 export const ExecutionArtifactInputSchema = ExecutionArtifactInputObjectSchema.superRefine((artifact, context) => {
+  if (artifact.kind === "commit") {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["kind"],
+      message: "Commit artifacts are historical replay data and cannot enter a productive execution base."
+    });
+  }
   if (artifact.kind === "manifest" && artifact.manifest === undefined) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ["manifest"], message: "manifest artifacts require immutable manifest content" });
   }

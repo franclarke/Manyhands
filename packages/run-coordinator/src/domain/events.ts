@@ -4,7 +4,7 @@ import { z } from "zod";
 import { CommandReceiptSchema, RunCommandEnvelopeSchema } from "../command-envelope.js";
 import { DecisionInputSchema, DecisionResolutionShape, requireDecisionResolution } from "./decisions.js";
 import { DeliveryApprovalSchema, DeliveryReceiptSchema } from "./outcomes.js";
-import { AdoptedArtifactSchema } from "./artifacts.js";
+import { AdoptedArtifactSchema, ArtifactRetentionReleaseAuthorizationSchema } from "./artifacts.js";
 import { FailureClassSchema, FailureObservationSchema } from "./failures.js";
 import { EvidenceMatrixRecordSchema } from "./evidence.js";
 import { HumanReviewInputSchema } from "./human-review.js";
@@ -318,6 +318,7 @@ export const RunEventSchema = z.discriminatedUnion("type", [
   event("validation.completed", z.object({ attemptId: EntityIdSchema, nodeId: EntityIdSchema, matrix: EvidenceMatrixRecordSchema }).strict()),
   event("human_review.recorded", z.object({ review: HumanReviewInputSchema }).strict()),
   event("artifact.adopted", z.object({ artifact: AdoptedArtifactSchema }).strict()),
+  event("artifact.retention_release_authorized", z.object({ authorization: ArtifactRetentionReleaseAuthorizationSchema }).strict()),
   event("integration.started", z.object({
     attemptId: EntityIdSchema,
     nodeId: EntityIdSchema,

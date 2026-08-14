@@ -4,7 +4,7 @@ import { DecisionSchema, type Decision } from "./domain/decisions.js";
 import { RunEventSchema, type RunEvent } from "./domain/events.js";
 import { assertLifecycleTransition, type RunLifecycle } from "./domain/lifecycle.js";
 import { INITIAL_RUN_OUTCOMES, type DeliveryApproval, type DeliveryReceipt, type FinalCandidate, type RunOutcomes } from "./domain/outcomes.js";
-import type { AdoptedArtifact } from "./domain/artifacts.js";
+import type { AdoptedArtifact, ArtifactRetentionReleaseAuthorization } from "./domain/artifacts.js";
 import type { HumanReview } from "./domain/human-review.js";
 import type { AttemptUsage, PlanningCandidateEvaluation, PlanningCandidateSelection } from "./domain/events.js";
 import type { FailureClass } from "./domain/failures.js";
@@ -116,6 +116,7 @@ export interface RunProjection {
   attempts: Record<string, AttemptProjection>;
   humanReviews: Record<string, HumanReview>;
   adoptedArtifacts: Record<string, AdoptedArtifact>;
+  artifactRetentionReleaseAuthorizations?: Record<string, ArtifactRetentionReleaseAuthorization>;
   nodeEvidenceMatrixIds: Record<string, string>;
   integrations: Record<string, IntegrationProjection>;
   recoveryHistory: Array<{ eventId: string; attemptId?: string; nodeId?: string; kind: "failure" | "amendment"; failureClass?: FailureClass }>;
@@ -162,6 +163,7 @@ export function foldRun(rawEvents: readonly RunEvent[]): RunProjection {
         attempts: {},
         humanReviews: {},
         adoptedArtifacts: {},
+        artifactRetentionReleaseAuthorizations: {},
         nodeEvidenceMatrixIds: {},
         integrations: {},
         recoveryHistory: [],
@@ -419,6 +421,35 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       if (attempt !== undefined) attempt.status = "adopted";
       break;
     }
+    case "artifact.retention_release_authorized": {
+      if (next.archivedAt === undefined) throw new Error("Artifact retention release requires an archived run.");
+      if (Object.values(next.attempts).some((attempt) => ["running", "candidate", "validated"].includes(attempt.status))) {
+        throw new Error("Artifact retention release requires every attempt to be terminal.");
+      }
+      if (Object.values(next.humanReviews).some((review) => review.status === "active")) {
+        throw new Error("Artifact retention release requires every human review to be stale or terminal.");
+      }
+      if (Object.values(next.decisions).some((decision) => decision.status === "pending")) {
+        throw new Error("Artifact retention release requires every decision to be resolved.");
+      }
+      const authorization = event.payload.authorization;
+      const artifact = next.adoptedArtifacts[authorization.artifactId];
+      if (artifact?.kind !== "manifest" || artifact.manifest === undefined) {
+        throw new Error(`Artifact retention release requires a retained manifest artifact: ${authorization.artifactId}.`);
+      }
+      if (
+        artifact.manifest.retainedByRef !== authorization.retainedByRef ||
+        artifact.manifest.sourceCandidate.commitOid !== authorization.candidateCommit
+      ) {
+        throw new Error(`Artifact retention release authorization does not match ${authorization.artifactId}'s retained candidate.`);
+      }
+      const authorizations = next.artifactRetentionReleaseAuthorizations ?? (next.artifactRetentionReleaseAuthorizations = {});
+      if (authorizations[authorization.artifactId] !== undefined) {
+        throw new Error(`Artifact ${authorization.artifactId} already has a retention release authorization.`);
+      }
+      authorizations[authorization.artifactId] = { ...authorization };
+      break;
+    }
     case "integration.started":
       if (next.lifecycle !== "running" && next.lifecycle !== "waiting_for_input") throw new Error(`Cannot integrate while ${next.lifecycle}.`);
       if (next.attempts[event.payload.attemptId] !== undefined) throw new Error(`Attempt ${event.payload.attemptId} already exists.`);
@@ -442,6 +473,11 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       if (event.payload.candidate !== undefined) {
         if (event.payload.candidate.commitOid !== attempt.candidateCommit) throw new Error(`Integration ${attempt.attemptId} candidate manifest does not match its candidate commit.`);
         attempt.candidate = { ...event.payload.candidate };
+      }
+      for (const review of Object.values(next.humanReviews)) {
+        if (review.status === "active" && review.nodeId === attempt.nodeId && !sameCandidate(review.candidate, attempt.candidate)) {
+          review.status = "stale";
+        }
       }
       next.nodeEvidenceMatrixIds[event.payload.nodeId] = event.payload.matrix.matrixId;
       if (!next.evidenceMatrices.includes(event.payload.matrix.matrixId)) next.evidenceMatrices.push(event.payload.matrix.matrixId);

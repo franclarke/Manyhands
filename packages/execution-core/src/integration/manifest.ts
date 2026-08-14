@@ -110,8 +110,8 @@ export interface IntegrationManifest {
     evidenceRefs: string[];
   };
   candidateSha?: string;
+  candidateDigest?: string;
   parentEvidence?: { matrixId: string; outcome: "verified" | "unverified" | "failed" };
-  outputArtifacts: Array<{ artifactId: string; digest: string; contract: { id: string; revision: string }; kind: "commit"; location: string }>;
   disposition: "success" | "failed" | "decision_required";
   errors: Array<{ code: "missing_required_artifact" | "unsupported_artifact" | "base_mismatch" | "materialization_failed" | "child_intent_not_retained" | "parent_validation_failed"; artifactId?: string; message: string }>;
 }
@@ -416,11 +416,10 @@ export class IntegrationManifestExecutor {
     if (journalOperation !== undefined) {
       journalOperation = await input.integrationOperation!.journal.update(journalOperation, { state: "validation_finished" });
     }
-    const digest = await this.deps.digestCandidate({ candidateSha, worktreePath });
+    const candidateDigest = await this.deps.digestCandidate({ candidateSha, worktreePath });
     signal?.throwIfAborted();
     const result: IntegrationManifest = {
-      ...base, operations, ...(repairAttempt !== undefined ? { repairAttempt } : {}), candidateSha, parentEvidence,
-      outputArtifacts: [{ artifactId: `${request.compositeNode.id}:r${request.compositeNode.graphRevision}`, digest, contract: request.outputArtifactContract, kind: "commit" as const, location: candidateSha }],
+      ...base, operations, ...(repairAttempt !== undefined ? { repairAttempt } : {}), candidateSha, candidateDigest, parentEvidence,
       disposition: "success", errors: []
     };
     if (journalOperation !== undefined) {
@@ -437,7 +436,7 @@ export class IntegrationManifestExecutor {
 
 }
 
-function manifestBase(request: IntegrationRequestManifest): Omit<IntegrationManifest, "operations" | "disposition" | "errors"> & { operations: []; outputArtifacts: [] } {
+function manifestBase(request: IntegrationRequestManifest): Omit<IntegrationManifest, "operations" | "disposition" | "errors"> & { operations: [] } {
   return {
     schemaVersion: 1,
     manifestId: `integration-result-${request.manifestId}`,
@@ -446,7 +445,6 @@ function manifestBase(request: IntegrationRequestManifest): Omit<IntegrationMani
     base: request.base,
     childArtifacts: request.childArtifacts,
     seamRevisions: request.seamRevisions,
-    operations: [],
-    outputArtifacts: []
+    operations: []
   };
 }

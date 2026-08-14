@@ -143,6 +143,14 @@ async function decide(
         }, envelope.commandDigest)],
         effects: []
       };
+    case "authorize_artifact_retention_release":
+      requireProjection(context);
+      return {
+        eventsAfterAcceptance: [event(options, context.runId, "artifact.retention_release_authorized", {
+          authorization: command.authorization
+        }, envelope.commandDigest)],
+        effects: []
+      };
     case "deliver_run":
       return deliveryEffects(envelope, context, command, options);
     case "rename_run":

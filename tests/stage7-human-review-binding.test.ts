@@ -58,6 +58,22 @@ describe("Stage 7 human review binding", () => {
     })).toThrow(/authority/);
   });
 
+  it("marks a composite review stale when a later integration replaces its exact candidate", () => {
+    const first = "e".repeat(40);
+    const second = "f".repeat(40);
+    const state = foldRun([
+      event(1, "run.created", { goal: "Review the composite" }),
+      event(2, "graph.revision.proposed", { graphId: "graph-1", revision: 1 }),
+      event(3, "graph.revision.approved", { graphId: "graph-1", revision: 1 }),
+      event(4, "integration.started", { attemptId: "integration-1", nodeId: "node-1", inputFingerprint: "sha256:integration-one", executorProfile: { id: "fake", revision: "1" }, requiredArtifactIds: ["artifact-1"] }),
+      event(5, "integration.completed", { attemptId: "integration-1", nodeId: "node-1", manifestId: "manifest-one", candidateCommit: first, candidate: candidate("manifest-one", first, "a".repeat(40)), matrix: matrix("matrix-one", first) }),
+      event(6, "human_review.recorded", { review: { reviewId: "review-composite", attemptId: "integration-1", nodeId: "node-1", candidate: candidate("manifest-one", first, "a".repeat(40)), rubricDigest: "sha256:rubric", authority: "operator", reviewerId: "operator:franc", decision: "approved", reviewedAt: at } }),
+      event(7, "integration.started", { attemptId: "integration-2", nodeId: "node-1", inputFingerprint: "sha256:integration-two", executorProfile: { id: "fake", revision: "1" }, requiredArtifactIds: ["artifact-1"] }),
+      event(8, "integration.completed", { attemptId: "integration-2", nodeId: "node-1", manifestId: "manifest-two", candidateCommit: second, candidate: candidate("manifest-two", second, "b".repeat(40)), matrix: matrix("matrix-two", second) })
+    ]);
+    expect(state.humanReviews["review-composite"]?.status).toBe("stale");
+  });
+
   it("rejects a review that changes the retained manifest or tree behind an unchanged commit", () => {
     expect(() => foldRun([
       event(1, "run.created", { goal: "Review the candidate" }),
@@ -88,4 +104,12 @@ function event(sequence: number, type: string, payload: Record<string, unknown>)
     type,
     payload
   });
+}
+
+function candidate(manifestDigest: string, commitOid: string, treeOid: string) {
+  return { manifestDigest: `sha256:${manifestDigest}`, commitOid, treeOid };
+}
+
+function matrix(matrixId: string, candidateCommit: string) {
+  return { matrixId, candidateCommit, validationContract: { id: "validation-1", revision: "1" }, criteria: [{ criterionId: "criterion-1", obligationId: "obligation-1", status: "satisfied", justification: "Exact candidate verified.", evidenceRefs: ["evidence-1"] }], outcome: "verified", validationRecipeDigest: "sha256:recipe", observations: [] };
 }

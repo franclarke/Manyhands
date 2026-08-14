@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdtemp, rm } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -54,7 +54,12 @@ export class ExactGitManifestMaterializer {
         parent: input.baseCommit,
         message: `mh: materialize ${input.manifest.manifestDigest}`
       });
-      await this.git.resetHard({ cwd: input.cwd, ref: executionBaseCommit });
+      // Do not use checkout/reset here: either can invoke repository-defined
+      // attributes and smudge filters.  The tree already exists as exact Git
+      // objects, so write only declared blob bytes and synchronize the index.
+      for (const entry of input.manifest.entries) await this.applyWorktreeEntry(input.cwd, entry);
+      await this.git.readTree({ cwd: input.cwd, tree: treeSha });
+      await this.git.updateRef({ cwd: input.cwd, ref: "HEAD", target: executionBaseCommit, expectedOldOid: input.baseCommit });
       return { treeSha, executionBaseCommit };
     } catch (error) {
       // The temporary index is the only mutable materialization state until
@@ -64,6 +69,21 @@ export class ExactGitManifestMaterializer {
     } finally {
       await rm(indexDirectory, { recursive: true, force: true }).catch(() => undefined);
     }
+  }
+
+  private async applyWorktreeEntry(cwd: string, entry: ChangeSetEntry): Promise<void> {
+    if (entry.operation === "delete") {
+      if (entry.oldPath === undefined) throw new Error("Invalid delete entry.");
+      await rm(join(cwd, entry.oldPath), { force: true });
+      return;
+    }
+    if (entry.newPath === undefined || entry.newOid === undefined || entry.newMode === undefined) {
+      throw new Error("Invalid artifact worktree postimage.");
+    }
+    const destination = join(cwd, entry.newPath);
+    await mkdir(join(destination, ".."), { recursive: true });
+    await writeFile(destination, await this.git.readBlob({ cwd, oid: entry.newOid }));
+    await chmod(destination, entry.newMode === "100755" ? 0o755 : 0o644);
   }
 
   private async applyEntry(cwd: string, baseTree: string, entry: ChangeSetEntry, indexFile: string): Promise<void> {
