@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "stage": 5,
+  "gates": ["GP0", "GP1"],
+  "status": "pass",
+  "branch": "codex/correctness-first-full-implementation",
+  "acceptedCodeCandidate": {
+    "sha": "94a3f27d959225643e4e0bdb6f3981c61ef0a7b5",
+    "tree": "6fc75ab60e3f8739e0ad9b9b7c55c040cc8f2eae"
+  },
+  "acceptedBase": {
+    "stage": 4,
+    "sha": "292daaee3803404cdb473f929c1fbfa36a8b4964",
+    "tree": "8cd98afa812d3e7927985d6edf99c1744e4b5f5d"
+  },
+  "evidenceCommit": {
+    "sha": "a227b816327f2090564390ceac6dfe2d873aff7f",
+    "tree": "57a2722d450f4ddb69647918e0dc5f57d625fb9f"
+  },
+  "runtime": {
+    "node": "22.22.0",
+    "vitest": "2.1.9",
+    "typescript": "5.9.3",
+    "eslint": "8.57.1",
+    "tsup": "8.5.1",
+    "git": "2.40.1.windows.1",
+    "codexCli": "0.146.0"
+  },
+  "verification": {
+    "stage5": { "files": 8, "passed": 97, "failed": 0 },
+    "grepo": { "files": 4, "passed": 11, "failed": 0 },
+    "grRelevant": { "files": 10, "passed": 38, "failed": 0 },
+    "stage3To5Combined": { "files": 19, "passed": 137, "failed": 0 },
+    "full": { "files": 255, "passed": 1760, "skipped": 4, "failed": 0, "retry": 0, "singleFork": false, "reportSha256": "2db56c46a3db29140855f832c74ce86727ed4fccd7abb3aa66dd0d4e1ecd4159" },
+    "rootAndAffectedTypechecks": "pass",
+    "esmCjsDtsBuilds": "pass",
+    "nextProductionBuild": "pass",
+    "rust": "not_applicable_no_stage5_changes",
+    "scopedLint": "pass",
+    "browser": "pass",
+    "diffCheck": "pass"
+  },
+  "independentReview": {
+    "verdict": "GO",
+    "scope": "bounded_A_to_L",
+    "fullSuite": { "files": 255, "passed": 1760, "skipped": 4, "failed": 0, "retry": 0, "singleFork": true, "durationSeconds": 348.84 }
+  },
+  "gp1": {
+    "initialSessions": 2,
+    "model": "gpt-5.6-sol",
+    "reasoningEffort": "high",
+    "manyhands": "pass",
+    "express": "pass",
+    "currentComparatorManyhands": "pass",
+    "currentComparatorExpress": "rejected"
+  },
+  "nextStage": { "stage": 6, "status": "not_started" }
+}
