@@ -67,8 +67,9 @@ match the code.
 | Stage 3 / GR | `pass` | [`../audits/stage-3/`](../audits/stage-3/); accepted code candidate `4e495abd0805c62f7641dc73c19b82ffc7eedc38`, tree `84a59b1d9db2ee978d87b6a079dafee281e38a64`, focused 10-file/38-test suite, GD0+GD1 20-file/198-test matrix, full 243-file/1,652-test suite, exact productive browser/restart/cancellation evidence and bounded independent GO review | Stage 4 is eligible but remains `not_started`; resume from the [`Stage 3 -> Stage 4 handoff`](../handoffs/2026-08-13-stage-3-to-stage-4.md). |
 | Stage 4 / GRepo | `pass` | [`../audits/stage-4/`](../audits/stage-4/); accepted code candidate `292daaee3803404cdb473f929c1fbfa36a8b4964`, tree `8cd98afa812d3e7927985d6edf99c1744e4b5f5d`, focused 4-file/11-test suite, full 247-file/1,663-test suite, deterministic fresh-process evidence over the real repository and bounded independent GO review | Stage 5 is eligible but remains `not_started`; resume from the [`Stage 4 -> Stage 5 handoff`](../handoffs/2026-08-13-stage-4-to-stage-5.md). |
 | Stage 5 / GP0+GP1 | `pass` | [`../audits/stage-5/`](../audits/stage-5/); accepted code candidate `94a3f27d959225643e4e0bdb6f3981c61ef0a7b5`, tree `6fc75ab60e3f8739e0ad9b9b7c55c040cc8f2eae`, focused 8-file/97-test suite, full 255-file/1,760-test suite, two attributable real-repository outputs, browser/topology oracles and bounded independent GO review | Stage 6 / GS passed at [`02f05e4c`](../audits/stage-6/README.md). |
-| Stage 7 / GA | `pass` | [`../audits/stage-7/README.md`](../audits/stage-7/README.md); bounded 48-test artifact/fingerprint matrix, 78-test exact-validation matrix, and real-daemon GA scenario | Stage 8 remains `not_started`; no live model, experiment or thesis work began. |
-| Stages 8–11 | `not_started` | none | Must execute in normative order. |
+| Stage 7 / GA | `pass` | [`../audits/stage-7/README.md`](../audits/stage-7/README.md); bounded 48-test artifact/fingerprint matrix, 78-test exact-validation matrix, and real-daemon GA scenario | Stage 8 is now in review for gate closure. |
+| Stage 8 / GLeaf | `in_review` | [`../audits/stage-8/README.md`](../audits/stage-8/README.md); exact implementation candidate `d3c617c4`, tree `df2b0b5e3a5c72da48d7ffea713b3fa517a02aea`, required R0/R10/R14/R17 evidence, and the bounded independent gate review at [`../audits/stage-8/evidence/review-gate.md`](../audits/stage-8/evidence/review-gate.md) | The gate review returned `NO-GO`. B2 is closed by the 2026-08-14 Codex-only scope amendment. B1 remains: one live R0 re-run under the corrected capability record, deferred for Codex quota. Stage 9 is not authorized. |
+| Stages 9–11 | `not_started` | none | Must execute in normative order. |
 
 ### 0.2 Required reading and execution protocol
 
@@ -2886,7 +2887,12 @@ and executor remain behind adapters.
 
 - Capability-driven sandbox with read-only inputs, scoped outputs, network and
   credential policy, and observable enforcement.
-- Live Codex, then Claude, through the same attempt/effect protocol.
+- Exactly one qualified live executor: Codex. Amended on 2026-08-14 — the
+  original deliverable named Claude as a second live executor. Claude Code
+  carries no native OS sandbox, so it has no measured capability record and
+  reusing the Codex-measured one would degrade silently. The adapter stays in
+  the tree as unqualified code and the `sandboxed_live` profile refuses it.
+  Qualifying a second live executor is outside this plan and needs its own gate.
 - Agent-created Git state is observation; the orchestrator creates candidates.
 - Cause-specific bounded repair and durable cleanup.
 
@@ -2895,7 +2901,10 @@ and executor remain behind adapters.
 - One visible real run yields a scoped artifact and exact validation evidence.
 - Attempts cannot write outside scope or access undeclared credentials/network.
 - Repository/project settings cannot enable undeclared hooks, tools, MCP servers
-  or additional directories in either executor profile.
+  or additional directories in the qualified executor profile.
+- The recorded capability values match what the retained trace of the qualifying
+  run shows. A boundary the run refutes fails the gate even when the run
+  succeeded.
 - Timeout, cancellation, supervisor restart and cleanup crash leave no orphan
   or unjournaled candidate.
 - Missing enforcement blocks rather than silently degrades.

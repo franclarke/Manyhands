@@ -317,7 +317,7 @@ function inheritedWorkerEnvironment(): Record<string, string> {
     "PATH", "PATHEXT", "SystemRoot", "WINDIR", "TEMP", "TMP",
     "MANYHANDS_CODEX_BIN", "MANYHANDS_CLAUDE_BIN", "MANYHANDS_PLANNING_STEP_TIMEOUT_MS",
     "MANYHANDS_STAGE8_SANDBOX", "MANYHANDS_STAGE8_WINDOWS_SANDBOX",
-    "MANYHANDS_CODEX_AUTH_PATH", "MANYHANDS_CLAUDE_CREDENTIAL_PATH"
+    "MANYHANDS_CODEX_AUTH_PATH"
   ];
   return Object.fromEntries(names.flatMap((name) => {
     const value = process.env[name];

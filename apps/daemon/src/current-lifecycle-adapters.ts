@@ -67,7 +67,14 @@ export interface CurrentLifecycleAdapterOptions {
   readonly clock?: () => string;
   readonly planningStepTimeoutMs?: number;
   readonly spawnProcess?: typeof spawn;
-  /** Test-only model seam for exercising a downstream execution gate with a canonical plan. */
+  /**
+   * Model seam that lets a gate exercise the downstream execution path from a
+   * fixed canonical plan instead of spending a live planning call on it.
+   *
+   * Named consumer: `tests/stage8-live-codex.test.ts`. Retirement: Stage 11,
+   * with the temporary adapters. Leaving it undefined keeps the productive
+   * canonical planning proposal, so no productive caller depends on it.
+   */
   readonly planningProposal?: (input: PlanningModelInput, view: RepositoryView) => Promise<PlanningModelProposal>;
 }
 
@@ -190,7 +197,6 @@ export function createCurrentTransitionalUnsafeProfile(
 export function createCurrentSandboxedLiveProfile(
   options: CreateCurrentTransitionalUnsafeProfileOptions & {
     readonly codexCredentialPath?: string;
-    readonly claudeCredentialPath?: string;
     /** Opt-in fallback only when elevated native setup is unavailable. */
     readonly codexWindowsSandbox?: "elevated" | "unelevated";
   }
@@ -211,10 +217,7 @@ export function createCurrentSandboxedLiveProfile(
           MANYHANDS_STAGE8_WINDOWS_SANDBOX: options.codexWindowsSandbox ?? "elevated",
           ...(options.codexCredentialPath === undefined
             ? {}
-            : { MANYHANDS_CODEX_AUTH_PATH: options.codexCredentialPath }),
-          ...(options.claudeCredentialPath === undefined
-            ? {}
-            : { MANYHANDS_CLAUDE_CREDENTIAL_PATH: options.claudeCredentialPath })
+            : { MANYHANDS_CODEX_AUTH_PATH: options.codexCredentialPath })
         }
       };
     }

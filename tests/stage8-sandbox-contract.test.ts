@@ -61,10 +61,12 @@ describe("Stage 8 sandbox boundary", () => {
     });
 
     expect(session.capabilities).toMatchObject({
-      filesystem: "declared_mounts",
+      filesystemWrite: "workspace_only",
+      filesystemRead: "host_visible",
       process: "supervised_only",
-      network: "none",
+      network: "provider_only",
       hostIdentity: "brokered",
+      tooling: "host_visible",
       enforcement: "executor_native"
     });
     expect(session.environment.USERPROFILE).not.toBe(process.env.USERPROFILE);
@@ -145,9 +147,8 @@ describe("Stage 8 sandbox boundary", () => {
     expect(buildClaudeCodeArgs(options)).toEqual(expect.arrayContaining([
       "--setting-sources", ""
     ]));
-    expect(buildClaudeCodeArgs(options)).not.toEqual(expect.arrayContaining([
-      "--dangerously-skip-permissions", "project,local"
-    ]));
+    expect(buildClaudeCodeArgs(options)).not.toContain("--dangerously-skip-permissions");
+    expect(buildClaudeCodeArgs(options)).not.toContain("project,local");
   });
 
   it("selects the live daemon profile only with a declared broker source", () => {
@@ -158,7 +159,7 @@ describe("Stage 8 sandbox boundary", () => {
       cwd: "C:/stage8-workspace",
       nodeExecutable: process.execPath,
       env: { MANYHANDS_DAEMON_PROFILE: "sandboxed_live" }
-    })).toThrow(/declared Codex or Claude credential source/i);
+    })).toThrow(/declared Codex credential source/i);
 
     const resolved = resolveDaemonProfile({
       stateRoot: root,

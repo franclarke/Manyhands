@@ -16,7 +16,6 @@ import {
 } from "@manyhands/contracts";
 import {
   CanonicalNodeExecutor,
-  CredentialBroker,
   DefaultAgentExecutorFactory,
   EphemeralExecutionWorkspaceProvider,
   ExactCandidateValidatorV2,
@@ -27,7 +26,7 @@ import {
   NativeWorktreeGit,
   SimpleGitRunner,
   WorktreeManager,
-  WorkspaceSandboxProvider,
+  describeSandboxSurface,
   getExecutorDescriptor,
   isEffortLevel,
   resolveCliBinaryPath,
@@ -60,6 +59,7 @@ import {
 } from "@manyhands/task-graph";
 import { JsonlTraceStore } from "@manyhands/trace-store";
 
+import { stage8SandboxFor, type Stage8Sandbox } from "./stage8-sandbox.js";
 import { FileTransitionalLifecycleResultStore } from "./transitional-unsafe-profile.js";
 import { withTransitionalRepositoryLease } from "./transitional-repository-lease.js";
 
@@ -172,7 +172,7 @@ async function main(): Promise<void> {
     });
     const profile = {
       id: execution.executorId,
-      revision: executorProfileRevision(execution)
+      revision: executorProfileRevision(execution, sandbox)
     };
     const availableExecutorNodeIds = executorReady
       ? Object.keys(prepared.graph.nodes)
@@ -448,26 +448,24 @@ function finalCandidatePort(input: {
   };
 }
 
-function executorProfileRevision(selection: StageSelection): string {
-  const sandbox = process.env.MANYHANDS_STAGE8_SANDBOX === undefined
+/**
+ * The recorded surface comes from the provider that will actually create the
+ * session. An independently written capability literal here would be a second
+ * statement of the boundary with no way to fail when it disagrees with the one
+ * the sandbox enforces.
+ */
+function executorProfileRevision(
+  selection: StageSelection,
+  sandbox: Stage8Sandbox | undefined
+): string {
+  const surface = sandbox === undefined
     ? { profile: "unsafe_local", capabilities: "unverified" }
-    : {
-        profile: process.env.MANYHANDS_STAGE8_SANDBOX,
-        capabilities: {
-          filesystem: "declared_mounts",
-          process: "supervised_only",
-          network: "none",
-          hostIdentity: "brokered",
-          enforcement: "executor_native"
-        },
-        settingsSources: "fixed",
-        hooks: "disabled",
-        plugins: "disabled",
-        mcp: "disabled",
-        additionalDirectories: [],
-        windowsSandbox: stage8WindowsSandbox()
-      };
-  return `sha256:${createHash("sha256").update(JSON.stringify({ selection, sandbox })).digest("hex")}`;
+    : describeSandboxSurface({
+        profile: sandbox.profile,
+        capabilities: sandbox.provider.capabilities(),
+        ...(sandbox.windowsSandbox === undefined ? {} : { windowsSandbox: sandbox.windowsSandbox })
+      });
+  return `sha256:${createHash("sha256").update(JSON.stringify({ selection, sandbox: surface })).digest("hex")}`;
 }
 
 function stageSelection(
@@ -531,55 +529,6 @@ function slug(value: string): string {
     .replace(/[^a-z0-9]+/gu, "-")
     .replace(/^-+|-+$/gu, "")
     .slice(0, 48) || "run";
-}
-
-function stage8SandboxFor(input: {
-  stateRoot: string;
-  executionExecutorId: string;
-}) {
-  if (process.env.MANYHANDS_STAGE8_SANDBOX === undefined) return undefined;
-  if (process.env.MANYHANDS_STAGE8_SANDBOX !== "workspace") {
-    throw new Error("Unsupported Stage 8 sandbox profile; refusing unattended execution.");
-  }
-  const credential = input.executionExecutorId === "codex-cli"
-    ? { provider: "codex" as const, sourcePath: requiredAbsoluteEnvironment("MANYHANDS_CODEX_AUTH_PATH") }
-    : input.executionExecutorId === "claude-code-cli"
-      ? { provider: "claude" as const, sourcePath: requiredAbsoluteEnvironment("MANYHANDS_CLAUDE_CREDENTIAL_PATH") }
-      : (() => { throw new Error(`Stage 8 has no sandboxed credential policy for ${input.executionExecutorId}.`); })();
-  return {
-    provider: new WorkspaceSandboxProvider({
-      rootDirectory: path.join(input.stateRoot, "sandboxes"),
-      credentialBroker: new CredentialBroker({
-        rootDirectory: path.join(input.stateRoot, "credential-broker")
-      })
-    }),
-    profile: "workspace" as const,
-    credentials: [credential],
-    credentialScopeId: requiredEnvironment("MANYHANDS_STAGE8_SANDBOX_SCOPE"),
-    windowsSandbox: stage8WindowsSandbox()
-  };
-}
-
-function stage8WindowsSandbox(): "elevated" | "unelevated" {
-  const value = process.env.MANYHANDS_STAGE8_WINDOWS_SANDBOX ?? "elevated";
-  if (value === "elevated" || value === "unelevated") return value;
-  throw new Error("Unsupported Stage 8 Windows sandbox; refusing unattended execution.");
-}
-
-function requiredAbsoluteEnvironment(name: string): string {
-  const value = process.env[name];
-  if (value === undefined || value.length === 0 || !path.isAbsolute(value)) {
-    throw new Error(`Stage 8 requires declared absolute credential source ${name}.`);
-  }
-  return path.resolve(value);
-}
-
-function requiredEnvironment(name: string): string {
-  const value = process.env[name];
-  if (value === undefined || value.length === 0 || value.includes("\0")) {
-    throw new Error(`Stage 8 requires ${name}.`);
-  }
-  return value;
 }
 
 function now(): string {

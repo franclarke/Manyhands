@@ -44,10 +44,12 @@ export function resolveDaemonProfile(options: ResolveDaemonProfileOptions): {
   }
   if (requested === "sandboxed_live") {
     const codexCredentialPath = optionalAbsoluteEnv(env, "MANYHANDS_CODEX_AUTH_PATH");
-    const claudeCredentialPath = optionalAbsoluteEnv(env, "MANYHANDS_CLAUDE_CREDENTIAL_PATH");
     const codexWindowsSandbox = optionalWindowsSandbox(env);
-    if (codexCredentialPath === undefined && claudeCredentialPath === undefined) {
-      throw new Error("sandboxed_live requires a declared Codex or Claude credential source; refusing host identity inheritance.");
+    // Stage 8 qualified exactly one live executor. A Claude credential source
+    // alone cannot start a live run: no gate has measured that executor's
+    // boundary, and starting anyway would degrade silently.
+    if (codexCredentialPath === undefined) {
+      throw new Error("sandboxed_live requires a declared Codex credential source; refusing host identity inheritance.");
     }
     return {
       name: requested,
@@ -59,15 +61,10 @@ export function resolveDaemonProfile(options: ResolveDaemonProfileOptions): {
           "MANYHANDS_TRANSITIONAL_WORKER_SCRIPT"
         ) ?? path.join(absolute(options.daemonDirectory, "daemon directory"), "transitional-unsafe-worker.js"),
         cwd: absolute(options.cwd, "daemon cwd"),
-        ...(codexCredentialPath === undefined
-          ? {}
-          : { codexCredentialPath }),
+        codexCredentialPath,
         ...(codexWindowsSandbox === undefined
           ? {}
-          : { codexWindowsSandbox }),
-        ...(claudeCredentialPath === undefined
-          ? {}
-          : { claudeCredentialPath })
+          : { codexWindowsSandbox })
       })
     };
   }

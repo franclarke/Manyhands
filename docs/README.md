@@ -48,10 +48,13 @@ name as a target capability does not prove that the capability is implemented.
 Use the gap table and stage exit criteria in the redesign plan, then verify the
 productive path, tests and persisted evidence before reporting status.
 
-Stages 0, 1, 2, 3, 4 and 5 pass on attributable candidates. The daemon is the
-productive lifecycle owner, apps/web is its server-side command/query BFF, and
-productive planning is grounded through deterministic Repository Model views
+Stages 0, 1, 2, 3, 4, 5, 6 and 7 pass on attributable candidates. The daemon is
+the productive lifecycle owner, apps/web is its server-side command/query BFF,
+and productive planning is grounded through deterministic Repository Model views
 and budgeted queries. The semantic planner, verifier and compiler have passed
-offline, but productive cutover has not begun. Stages 6–11 remain
-`not_started`. No large live-model benchmark should run. The bounded
-exploratory study runs only after Stage 11 eligibility gates are satisfied.
+offline. Stage 8 / GLeaf is `in_review`: it has live R0/R10/R14/R17 evidence,
+but its bounded independent gate review returned `NO-GO`
+([`audits/stage-8/evidence/review-gate.md`](audits/stage-8/evidence/review-gate.md)).
+Stages 9–11 remain `not_started`. No large live-model benchmark should run. The
+bounded exploratory study runs only after Stage 11 eligibility gates are
+satisfied.

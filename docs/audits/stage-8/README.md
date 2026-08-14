@@ -2,9 +2,14 @@
 
 ## Status
 
-`in_review` — this record deliberately does **not** close GLeaf or update the
-canonical stage table. R0, R14, R17 and all required R10 live slices now have
-attributable evidence. The remaining gate is a bounded independent review.
+**Status:** `in_review`
+
+This record deliberately does **not** close GLeaf. R0, R14, R17 and all required
+R10 live slices have attributable evidence, and the bounded independent gate
+review has now been performed and returned `NO-GO`; see
+[`evidence/review-gate.md`](evidence/review-gate.md). Two findings remain open:
+the retained live evidence was produced under a sandbox capability record the
+same runs refute (B1), and the Claude executor deliverable is unexecuted (B2).
 
 ## Implemented boundary under qualification
 
@@ -20,9 +25,14 @@ attributable evidence. The remaining gate is a bounded independent review.
   such and is not GLeaf evidence.
 - Codex uses `workspace-write`, ignores user configuration, and pins
   `sandbox_workspace_write.network_access=false`. Claude receives no project or
-  local settings source. The profile surface declares no additional
-  directories, hooks, plugins or MCP configuration; their rejection still
-  requires live-path qualification.
+  local settings source. The profile surface declares no additional directories,
+  and the provider rejects them.
+- The capability record states the boundary the executor actually enforces:
+  writes confined to the workspace, reads host-visible, network `provider_only`
+  because the executor still calls its own model API, host tooling visible, and
+  enforcement `executor_native` rather than `os`. The executor profile revision
+  is derived from the provider own capabilities instead of a parallel literal,
+  so a future divergence fails a test rather than travelling into evidence.
 
 ## Deterministic evidence (uncommitted tree)
 
@@ -33,13 +43,20 @@ Executed with serial Vitest (`--retry=0 --minWorkers=1 --maxWorkers=1`):
 - `@manyhands/execution-core` typecheck: passed;
 - `@manyhands/daemon` typecheck: passed;
 - `git -c core.whitespace=cr-at-eol diff --check`: passed.
-- Current-tree `pnpm test` on 2026-08-14: **274 files / 1,819 tests passed**
-  (one opt-in live suite and ten tests skipped by design).
 - Exact implementation candidate `d3c617c4` ran `corepack pnpm test` on
   2026-08-14: **274 files / 1,819 tests passed** (one opt-in live suite and
   ten tests skipped by design). The prior Windows Stage 3 restart test was
   stabilized to wait for the supervised helper image to close before deleting
   its temporary directory; its focused physical regression also passed.
+- That figure was measured on the committed candidate, not on the tree being
+  handed off. The gate review found the working tree red on
+  `tests/documentation-current.test.ts`, which pins the plan status table; the
+  documentation contract and the table are now updated together.
+- After the gate-review corrections, `corepack pnpm test` on the exact handoff
+  tree: **275 files / 1,823 tests passed** (one opt-in live suite and ten tests
+  skipped by design). Workspace package typechecks passed (13 packages), the web
+  TypeScript check passed, and both `pnpm build:packages` and the production web
+  build succeeded.
 - Workspace package typechecks: passed (13 packages); web TypeScript check:
   passed; package builds and production web build: passed. These build commands
   were invoked through `corepack pnpm` because the host's global `pnpm` is an
@@ -70,11 +87,45 @@ authorized Node 24 for this Stage 8 qualification after R0 passed under that
 runtime and no Node-22-specific execution or sandbox requirement was found.
 This is a recorded runtime exception, not a claim that Node 22 was exercised.
 
+## Measured sandbox limits
+
+The R0 and R17 qualifying traces (`trace-5`, `trace-6`) record the sandboxed
+Codex leaf reading the operator skill file at
+`<host home>\.agents\skills\code-1.0.4\SKILL.md` — a host path outside the
+worktree and outside the brokered home — and succeeding, and Codex reporting
+that every host-installed skill remained in its context. `--ignore-user-config`
+and a brokered `CODEX_HOME` do not prevent this: the CLI resolves that location
+through the platform rather than the environment.
+
+These are real properties of the `workspace` profile, not defects in the run.
+They are now stated in the capability record. What they invalidate is the
+*earlier* record, which called the same boundary `declared_mounts`, `network:
+"none"` and host tooling `disabled`.
+
 ## Required evidence still missing
 
-- a bounded independent gate review. The exact implementation candidate
-  `d3c617c4` has a passing full suite, but this session cannot supply a review
-  independent from its implementation.
+- **Deferred, pending Codex quota.** One live R0 re-run under the corrected
+  capability record. The correction changes the executor profile revision digest
+  and therefore the attempt input fingerprint, so the retained R0 and R17
+  evidence attributes to the superseded declaration. Nothing about executor
+  behaviour changed: same argv, same Windows sandbox mode, same brokered home.
+  Re-run with `MANYHANDS_STAGE8_LIVE=1`,
+  `MANYHANDS_STAGE8_WINDOWS_SANDBOX=unelevated`,
+  `MANYHANDS_STAGE8_TARGET=C:\Users\franc\Documents\mh8-r0-sandbox`,
+  the declared `MANYHANDS_CODEX_AUTH_PATH`, and
+  `MANYHANDS_STAGE8_EVIDENCE_ROOT=C:\mh8-evidence\r0-corrected-record` over
+  `tests/stage8-live-codex.test.ts` with
+  `--retry=0 --minWorkers=1 --maxWorkers=1`. Rebuild the workspace packages
+  first; the worker runs from `dist`.
+
+## Closed by scope amendment
+
+The Claude live leaf is no longer required. On 2026-08-14 the plan was amended
+so Stage 8 qualifies exactly one live executor. The Claude adapter remains in
+the tree as unqualified code, and the productive path now refuses it rather than
+lending it the Codex-measured capability record: `resolveDaemonProfile` requires
+a declared Codex source, and `stage8SandboxFor` rejects any executor other than
+`codex-cli` before a sandbox session is created.
 
 ## Live R0 observations
 
