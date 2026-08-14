@@ -21,6 +21,7 @@ import { z } from "zod";
 export * from "./types-v2.js";
 export * from "./readiness-v2.js";
 export * from "./wave-selector-v2.js";
+export * from "./canonical-frontier.js";
 
 export const SchedulingPolicySchema = z.union([
   z.literal("sequential_dag"),

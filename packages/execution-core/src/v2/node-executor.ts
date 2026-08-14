@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 import type { ArtifactContract, TaskContractBundle } from "@manyhands/contracts";
 import type { CriterionEvidenceObservation, GranularityPolicyManifest } from "@manyhands/shared";
-import type { LegacyGraphRevisionV2, LegacyTaskNodeV2 } from "@manyhands/task-graph";
+import type { CanonicalTaskNode, GraphRevision } from "@manyhands/task-graph";
 import type { TraceStore } from "@manyhands/trace-store";
 
 import { ExecutionBaseBuilder, type BuiltExecutionBase } from "../base/execution-base-builder";
@@ -112,8 +112,8 @@ export interface V2PhysicalNodeExecutionInput {
   attemptId: string;
   inputFingerprint: string;
   priorFailure?: { attemptId: string; reason: string };
-  graph: LegacyGraphRevisionV2;
-  node: LegacyTaskNodeV2;
+  graph: ExecutionGraphContext;
+  node: ExecutionGraphNode;
   contract: TaskContractBundle;
   consumedArtifacts: V2ExecutionArtifact[];
   outputArtifactContract: ArtifactContract;
@@ -123,6 +123,22 @@ export interface V2PhysicalNodeExecutionInput {
   target: { sourceTargetFingerprint: string; targetBranch: string; targetHead: string };
   granularityPolicy?: GranularityPolicyManifest;
   signal?: AbortSignal;
+}
+
+/** Minimal immutable graph context consumed by the transitional executor. */
+export interface ExecutionGraphContext {
+  graphId: string;
+  revision: number;
+  rootId: string;
+  baseCommit: string;
+  nodes: Record<string, ExecutionGraphNode>;
+}
+
+export interface ExecutionGraphNode {
+  id: string;
+  parentId: string | null;
+  kind: "root" | "composite" | "leaf" | "integrator";
+  title: string;
 }
 
 /** What one attempt consumed, as the executor reported it. */
@@ -210,7 +226,7 @@ export class V2NodeExecutor {
       }
       const hasChildren = Object.values(input.graph.nodes).some((node) => node.parentId === input.node.id);
       return await (
-        (input.node.kind === "root" || input.node.kind === "composite") && hasChildren
+        (input.node.kind === "root" || input.node.kind === "composite" || input.node.kind === "integrator") && hasChildren
           ? this.executeComposite(input, prepared)
           : this.executeLeaf(input, prepared)
       );
@@ -699,6 +715,54 @@ export class V2NodeExecutor {
     } finally {
       await rm(instructionPath, { force: true }).catch(() => undefined);
     }
+  }
+}
+
+export interface CanonicalPhysicalNodeExecutionInput extends Omit<
+  V2PhysicalNodeExecutionInput,
+  "graph" | "node" | "outputArtifactContract"
+> {
+  graph: GraphRevision;
+  node: CanonicalTaskNode;
+}
+
+/**
+ * Transitional adapter for the existing executor. It receives the canonical
+ * graph directly and adds only the target commit required to materialize a
+ * worktree; it never constructs a LegacyGraphRevisionV2 or conflict matrix.
+ */
+export class CanonicalNodeExecutor {
+  private readonly delegate: V2NodeExecutor;
+
+  constructor(options: V2NodeExecutorOptions) {
+    this.delegate = new V2NodeExecutor(options);
+  }
+
+  execute(input: CanonicalPhysicalNodeExecutionInput): Promise<V2PhysicalNodeExecutionOutcome> {
+    const outputArtifactContract = input.contract.artifacts.find((artifact) => artifact.producerNodeId === input.node.id)
+      ?? {
+        schemaVersion: 2 as const,
+        id: `artifact:integration:${input.node.id}`,
+        revision: input.contract.task.revision,
+        provenance: "compiled" as const,
+        producerNodeId: input.node.id,
+        consumerNodeIds: [],
+        artifactType: "integrated_candidate",
+        materialization: "commit" as const,
+        expectedPaths: []
+      };
+    return this.delegate.execute({
+      ...input,
+      graph: {
+        graphId: input.graph.graphId,
+        revision: input.graph.revision,
+        rootId: input.graph.rootId,
+        baseCommit: input.target.targetHead,
+        nodes: input.graph.nodes
+      },
+      node: input.node,
+      outputArtifactContract
+    });
   }
 }
 

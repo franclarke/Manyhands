@@ -6,10 +6,7 @@ import { promisify } from "node:util";
 
 import { TaskContractBundleSchema, type TaskContractBundle } from "@manyhands/contracts";
 import {
-  createConflictConstraintEvidence,
-  type ConflictConstraintEvidence
-} from "@manyhands/conflict-risk";
-import {
+  CanonicalNodeExecutor,
   DefaultAgentExecutorFactory,
   EphemeralExecutionWorkspaceProvider,
   ExactCandidateValidatorV2,
@@ -19,7 +16,6 @@ import {
   JsonIntegrationOperationJournal,
   NativeWorktreeGit,
   SimpleGitRunner,
-  V2NodeExecutor,
   WorktreeManager,
   getExecutorDescriptor,
   isEffortLevel,
@@ -29,8 +25,8 @@ import {
   type V2FinalCandidatePort
 } from "@manyhands/execution-core";
 import {
-  V2ExecutionDriver,
-  type V2NodeExecutionOutcome
+  CanonicalExecutionDriver,
+  type CanonicalNodeExecutionOutcome
 } from "@manyhands/orchestrator-graph";
 import {
   RepositorySnapshotSchema,
@@ -47,10 +43,9 @@ import {
   type RunProjection
 } from "@manyhands/run-coordinator";
 import { JsonlRunEventStore } from "@manyhands/run-store";
-import type { GranularityPolicyManifest } from "@manyhands/shared";
 import {
-  LegacyGraphRevisionV2Schema,
-  type LegacyGraphRevisionV2
+  GraphRevisionSchema,
+  type GraphRevision
 } from "@manyhands/task-graph";
 import { JsonlTraceStore } from "@manyhands/trace-store";
 
@@ -66,8 +61,8 @@ interface WorkerArguments {
 }
 
 interface ApprovedExecutionPlan {
-  graph: LegacyGraphRevisionV2;
-  contracts: TaskContractBundle[];
+  graph: GraphRevision;
+  contracts: Record<string, TaskContractBundle>;
   repositorySnapshot: RepositorySnapshot;
   state: RunProjection;
   definition: ProductRunDefinition;
@@ -102,7 +97,7 @@ async function main(): Promise<void> {
     const repair = stageSelection(prepared.definition.repairSelection, "repair");
     const executorReady = await executorAvailability(execution.executorId);
     const git = new SimpleGitRunner();
-    await git.revParse(repoRoot, `${prepared.graph.baseCommit}^{commit}`);
+    await git.revParse(repoRoot, `${targetField(prepared.definition, "sourceBaseCommit")}^{commit}`);
     worktrees = new WorktreeManager({ git, repoRoot });
     const workspaces = new EphemeralExecutionWorkspaceProvider({
       repoRoot,
@@ -113,7 +108,7 @@ async function main(): Promise<void> {
       runId: input.runId,
       directory: path.join(input.stateRoot, "traces")
     });
-    const nodeExecutor = new V2NodeExecutor({
+    const nodeExecutor = new CanonicalNodeExecutor({
       git,
       repoRoot,
       worktrees,
@@ -132,7 +127,7 @@ async function main(): Promise<void> {
       finalCandidate: finalCandidatePort({
         git,
         repoRoot,
-        baseCommit: prepared.graph.baseCommit
+        baseCommit: targetField(prepared.definition, "sourceBaseCommit")
       }),
       integrationOperation: {
         journal: new JsonIntegrationOperationJournal(
@@ -159,20 +154,11 @@ async function main(): Promise<void> {
     const availableExecutorNodeIds = executorReady
       ? Object.keys(prepared.graph.nodes)
       : [];
-    const driver = new V2ExecutionDriver({
+    const driver = new CanonicalExecutionDriver({
       coordinator,
       now,
-      loadCurrentInputs: async () => ({
-        graph: prepared.graph,
-        contracts: prepared.contracts,
-        repositoryContextDigest: prepared.repositorySnapshot.snapshotId,
-        executorProfile: profile,
-        materializableNodeIds: materializableNodeIds(prepared.graph, prepared.contracts),
-        availableExecutorNodeIds,
-        evaluatedAt: now(),
-        conflictConstraints: conflictEvidence(prepared.graph)
-      }),
-      execute: async (nodeInput): Promise<V2NodeExecutionOutcome> => nodeExecutor.execute({
+      estimateIntegrationRisk: (candidate, selected) => integrationRisk(prepared.graph, candidate.nodeId, selected.map(({ nodeId }) => nodeId)),
+      execute: async (nodeInput): Promise<CanonicalNodeExecutionOutcome> => nodeExecutor.execute({
         ...nodeInput,
         selection: execution,
         repairSelection: repair,
@@ -185,7 +171,6 @@ async function main(): Promise<void> {
         signal: repositorySignal
       })
     });
-    const policy = granularityPolicy(prepared.state);
     await driver.run({
       runId: input.runId,
       graph: prepared.graph,
@@ -198,15 +183,8 @@ async function main(): Promise<void> {
           ? {}
           : { maxTokensTotal: config.maxTokensTotal }),
         ...(config.maxCostUsd === undefined ? {} : { maxCostUsd: config.maxCostUsd }),
-        ...(config.automaticRetryBudget === undefined
-          ? {}
-          : { automaticRetryBudget: config.automaticRetryBudget })
       },
-      materializableNodeIds: materializableNodeIds(prepared.graph, prepared.contracts),
       availableExecutorNodeIds,
-      evaluatedAt: now(),
-      conflictConstraints: conflictEvidence(prepared.graph),
-      ...(policy === undefined ? {} : { granularityPolicy: policy }),
       target: {
         sourceTargetFingerprint: targetField(prepared.definition, "fingerprint"),
         targetBranch: targetField(prepared.definition, "sourceBranch"),
@@ -264,16 +242,20 @@ function loadApprovedExecutionPlan(events: readonly RunEvent[]): ApprovedExecuti
   if (inspected?.type !== "repository.inspected") {
     throw new Error("Transitional execution requires the immutable repository snapshot from planning.");
   }
-  const graph = LegacyGraphRevisionV2Schema.parse(compiled.payload.graph);
-  const contracts = compiled.payload.contracts.map((contract) =>
-    TaskContractBundleSchema.parse(contract));
+  const graph = GraphRevisionSchema.parse(compiled.payload.graph);
+  const contracts = Object.fromEntries(compiled.payload.contracts.map((contract) => {
+    const bundle = TaskContractBundleSchema.parse(contract);
+    return [bundle.task.nodeId, bundle];
+  }));
   const repositorySnapshot = RepositorySnapshotSchema.parse(
     inspected.payload.snapshot
   ) as RepositorySnapshot;
-  if (graph.repositorySnapshotId !== repositorySnapshot.snapshotId) {
-    throw new Error(
-      `Graph repository snapshot ${graph.repositorySnapshotId} does not match ${repositorySnapshot.snapshotId}.`
-    );
+  const repositoryView = inspected.payload.repositoryView;
+  if (repositoryView === undefined ||
+      repositoryView.digest !== graph.repositoryView.digest ||
+      repositoryView.treeSha !== graph.repositoryView.treeSha ||
+      repositoryView.resourceCatalogDigest !== graph.repositoryView.resourceCatalogDigest) {
+    throw new Error("Approved graph does not match the exact repository view captured during planning.");
   }
   return { graph, contracts, repositorySnapshot, state, definition: state.definition };
 }
@@ -314,36 +296,6 @@ function withoutJournalIdentity(event: RunEvent): RunEventInput {
   return input as RunEventInput;
 }
 
-function conflictEvidence(graph: LegacyGraphRevisionV2): ConflictConstraintEvidence[] {
-  return graph.conflictConstraints.map((constraint) => createConflictConstraintEvidence({
-    id: constraint.id,
-    leftNodeId: constraint.leftNodeId,
-    rightNodeId: constraint.rightNodeId,
-    reason: constraint.reason,
-    risk: constraint.risk,
-    ...(constraint.mode === undefined ? {} : { mode: constraint.mode }),
-    ...(constraint.resourceId === undefined ? {} : { resourceId: constraint.resourceId }),
-    signals: [{
-      type: "compiled_scope_overlap",
-      detail: constraint.reason,
-      sourceRef: constraint.id
-    }],
-    confidence: 1,
-    observedAt: graph.createdAt
-  }));
-}
-
-function materializableNodeIds(
-  graph: LegacyGraphRevisionV2,
-  contracts: readonly TaskContractBundle[]
-): string[] {
-  const contractByNode = new Map(contracts.map((bundle) => [bundle.task.nodeId, bundle]));
-  return Object.values(graph.nodes)
-    .filter((node) => contractByNode.get(node.id)?.artifacts
-      .some((artifact) => artifact.producerNodeId === node.id) === true)
-    .map((node) => node.id);
-}
-
 async function executorAvailability(executorId: string): Promise<boolean> {
   const descriptor = getExecutorDescriptor(
     executorId as Parameters<typeof getExecutorDescriptor>[0]
@@ -351,6 +303,21 @@ async function executorAvailability(executorId: string): Promise<boolean> {
   if (!descriptor.enabled) return false;
   const configured = process.env[descriptor.binaryEnvVar] ?? descriptor.defaultBinary;
   return existsSync(resolveCliBinaryPath(configured));
+}
+
+function integrationRisk(graph: GraphRevision, candidateNodeId: string, selectedNodeIds: readonly string[]): {
+  score: number;
+  evidenceRefs: string[];
+} {
+  if (selectedNodeIds.length === 0) return { score: 0, evidenceRefs: [] };
+  const related = graph.seamBindings.filter((binding) =>
+    (binding.producerNodeId === candidateNodeId && selectedNodeIds.includes(binding.consumerNodeId)) ||
+    (binding.consumerNodeId === candidateNodeId && selectedNodeIds.includes(binding.producerNodeId))
+  ).slice(0, 8);
+  return {
+    score: related.length * 25,
+    evidenceRefs: related.flatMap((binding) => [binding.id, ...binding.validationObligationIds]).sort()
+  };
 }
 
 function finalCandidatePort(input: {
@@ -424,18 +391,6 @@ function finalCandidatePort(input: {
         }
       };
     }
-  };
-}
-
-function granularityPolicy(state: RunProjection): GranularityPolicyManifest | undefined {
-  const strategy = state.granularityStrategy;
-  const config = strategy?.config;
-  if (strategy === undefined || config?.maxLeafPlannedPaths === undefined) return undefined;
-  return {
-    policyVersion: strategy.policyVersion,
-    maxLeafContextTokens: config.maxLeafContextTokens,
-    maxLeafScopePaths: config.maxLeafScopePaths,
-    maxLeafPlannedPaths: config.maxLeafPlannedPaths
   };
 }
 

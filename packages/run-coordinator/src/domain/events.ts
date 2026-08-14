@@ -259,7 +259,21 @@ export const RunEventSchema = z.discriminatedUnion("type", [
     candidates: z.array(PlanningCandidateEvaluationSchema).min(1),
     selection: PlanningCandidateSelectionSchema
   }).strict()),
-  event("planning.completed", z.object({ breakdownId: EntityIdSchema, breakdown: z.record(z.unknown()) }).strict()),
+  // Historical runs retain their V2 breakdown payload. New productive planning
+  // persists the canonical SemanticPlan directly; readers accept both so replay
+  // never fabricates a second planning representation.
+  event("planning.completed", z.object({
+    breakdownId: EntityIdSchema.optional(),
+    breakdown: z.record(z.unknown()).optional(),
+    semanticPlan: z.record(z.unknown()).optional(),
+    trace: z.record(z.unknown()).optional()
+  }).strict().superRefine((payload, context) => {
+    const legacy = payload.breakdownId !== undefined && payload.breakdown !== undefined;
+    const canonical = payload.semanticPlan !== undefined;
+    if (legacy === canonical) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "planning.completed must contain exactly one planning representation." });
+    }
+  })),
   event("graph.compiled", z.object({ graphId: EntityIdSchema, revision: z.number().int().positive(), graph: z.record(z.unknown()), contracts: z.array(z.record(z.unknown())), review: z.record(z.unknown()), trace: z.record(z.unknown()) }).strict()),
   event("planning.critic_recorded", z.object({ critic: NonEmptyStringSchema, findings: z.array(z.record(z.unknown())) }).strict()),
   event("planning.failed", z.object({ reason: NonEmptyStringSchema }).strict()),
