@@ -58,8 +58,8 @@ describe("B-033 current product documentation", () => {
     expect(cells.match(/\| `not_run` \|/gu)).toHaveLength(20);
   });
 
-  it("records the attributable Stage 5 closure and leaves Stage 6 not started", async () => {
-    const [docsReadme, plan, runbook, stage2, stage3, stage4, stage5, stage5Review, historicalHandoff, stage4Handoff, stage5Handoff, stage6Handoff, study] =
+  it("records the attributable Stage 6 closure and prepares Stage 7 without starting it", async () => {
+    const [docsReadme, plan, runbook, stage2, stage3, stage4, stage5, stage5Review, stage6, historicalHandoff, stage4Handoff, stage5Handoff, stage6Handoff, stage6ToStage7, stage7Plan, study] =
       await Promise.all([
         readFile(path.join(root, "docs", "README.md"), "utf8"),
         readFile(path.join(root, "docs", "plans", "2026-08-12-correctness-first-system-redesign.md"), "utf8"),
@@ -69,10 +69,13 @@ describe("B-033 current product documentation", () => {
         readFile(path.join(root, "docs", "audits", "stage-4", "README.md"), "utf8"),
         readFile(path.join(root, "docs", "audits", "stage-5", "README.md"), "utf8"),
         readFile(path.join(root, "docs", "audits", "stage-5", "evidence", "review-go.md"), "utf8"),
+        readFile(path.join(root, "docs", "audits", "stage-6", "README.md"), "utf8"),
         readFile(path.join(root, "docs", "handoffs", "2026-08-12-stage-2-to-stage-3.md"), "utf8"),
         readFile(path.join(root, "docs", "handoffs", "2026-08-13-stage-3-to-stage-4.md"), "utf8"),
         readFile(path.join(root, "docs", "handoffs", "2026-08-13-stage-4-to-stage-5.md"), "utf8"),
         readFile(path.join(root, "docs", "handoffs", "2026-08-13-stage-5-to-stage-6.md"), "utf8"),
+        readFile(path.join(root, "docs", "handoffs", "2026-08-14-stage-6-to-stage-7.md"), "utf8"),
+        readFile(path.join(root, "docs", "plans", "2026-08-14-stage-7-git-native-artifacts-and-exact-validation.md"), "utf8"),
         readFile(path.join(root, "docs", "plans", "2026-08-13-exploratory-longitudinal-study.md"), "utf8")
       ]);
 
@@ -93,7 +96,8 @@ describe("B-033 current product documentation", () => {
     expect(docsReadme).toContain("[`audits/stage-4/`](audits/stage-4/)");
     expect(plan).toContain("| Stage 4 / GRepo | `pass` |");
     expect(plan).toContain("| Stage 5 / GP0+GP1 | `pass` |");
-    expect(plan).toContain("| Stages 6–11 | `not_started` |");
+    expect(plan).toContain("Stage 6 / GS passed");
+    expect(plan).toContain("| Stages 7–11 | `not_started` |");
     expect(stage4).toContain("**Status:** `pass`");
     expect(stage4).toContain("292daaee3803404cdb473f929c1fbfa36a8b4964");
     expect(stage4).toContain("8cd98afa812d3e7927985d6edf99c1744e4b5f5d");
@@ -117,6 +121,12 @@ describe("B-033 current product documentation", () => {
     expect(stage5Review).toContain("**Verdict:** `GO`");
     expect(stage5Review).toContain("94a3f27d959225643e4e0bdb6f3981c61ef0a7b5");
     expect(stage6Handoff).toContain("**Stage 6:** `not_started`");
+    expect(stage6).toContain("**Status:** `pass`");
+    expect(stage6).toContain("02f05e4cc320a11a0a1c762e2a2faa04d4bc1af0");
+    expect(stage6ToStage7).toContain("**Stage 7 / GA:** not_started");
+    expect(stage6ToStage7).toContain("GitRunner.cherryPick");
+    expect(stage7Plan).toContain("## TDD execution tasks");
+    expect(stage7Plan).toContain("Stage 8 remains not_started");
     expect(plan).toContain("D5.1 — Result taxonomy and canonical-plan boundary");
     expect(plan).toContain("D5.2 — Contract material belongs to the SemanticPlan");
     expect(plan).toContain("D5.3 — Unified budget, revision lineage and no-progress termination");
