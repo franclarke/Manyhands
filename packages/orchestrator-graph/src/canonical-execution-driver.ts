@@ -17,7 +17,13 @@ import {
   type CanonicalReadinessExplanation,
   type IntegrationRiskEstimate
 } from "@manyhands/scheduler";
-import { GraphRevisionSchema, type CanonicalTaskNode, type GraphRevision } from "@manyhands/task-graph";
+import {
+  GraphRevisionSchema,
+  checkResourceAuthority,
+  describeResourceAuthorityViolations,
+  type CanonicalTaskNode,
+  type GraphRevision
+} from "@manyhands/task-graph";
 
 export interface CanonicalExecutorProfile {
   id: string;
@@ -218,6 +224,28 @@ export class CanonicalExecutionDriver {
           ...(outcome.kind === "failure" && outcome.usage !== undefined ? { usage: outcome.usage } : {})
         }),
         decisionFact(attempt, at, outcome.reason)
+      ]);
+    }
+    // Authority is checked before adoption, not inside the executor: adoption is
+    // the act that grants a candidate standing, and a replaceable executor must
+    // not be the thing deciding whether a node may change another node's
+    // resource. The scope enforcer cannot answer this — a composite's scope
+    // legitimately spans the paths of the children it integrates.
+    const authorityViolations = checkResourceAuthority({
+      nodeId: attempt.input.node.id,
+      resourceClaims: run.graph.resourceClaims,
+      artifactContracts: attempt.input.contract.artifacts,
+      changedPaths: outcome.changedFiles
+    });
+    if (authorityViolations.length > 0) {
+      const reason = describeResourceAuthorityViolations(authorityViolations);
+      return this.options.coordinator.record(run.runId, [
+        fact(`${attempt.input.attemptId}:failed`, at, "attempt.failed", {
+          attemptId: attempt.input.attemptId,
+          nodeId: attempt.input.node.id,
+          reason
+        }),
+        decisionFact(attempt, at, reason)
       ]);
     }
     if (outcome.evidenceMatrix.candidateCommit !== outcome.candidateCommit) {

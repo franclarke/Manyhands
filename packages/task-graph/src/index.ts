@@ -13,6 +13,7 @@ export * from "./legacy-adapter.js";
 export * from "./relations.js";
 export * from "./validate-v2.js";
 export * from "./canonical-graph.js";
+export * from "./resource-authority.js";
 export * from "./compatibility-reader.js";
 
 export const TaskNodeStatusSchema = z.union([
