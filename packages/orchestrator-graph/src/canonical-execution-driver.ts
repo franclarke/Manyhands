@@ -18,6 +18,7 @@ import {
   type CanonicalReadinessExplanation,
   type IntegrationRiskEstimate
 } from "@manyhands/scheduler";
+import { assertNoConcurrentResourceConflict } from "./concurrent-resource-invariant.js";
 import {
   GraphRevisionSchema,
   checkResourceAuthority,
@@ -171,10 +172,9 @@ export class CanonicalExecutionDriver {
         reasons: [{ code: reason }] as CanonicalReadinessExplanation["reasons"]
       };
     });
-    return {
-      nodeIds: frontier.selected.map(({ nodeId }) => nodeId),
-      explanations
-    };
+    const nodeIds = frontier.selected.map(({ nodeId }) => nodeId);
+    assertNoConcurrentResourceConflict(run.graph.resourceClaims, nodeIds);
+    return { nodeIds, explanations };
   }
 
   private observe(
