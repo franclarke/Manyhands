@@ -60,8 +60,8 @@ beforeAll(async () => {
 }, 120_000);
 
 afterAll(async () => {
-  await rm(root, { recursive: true, force: true });
-  await rm(bundleRoot, { recursive: true, force: true });
+  await removeTreeAfterWindowsHandlesClose(root);
+  await removeTreeAfterWindowsHandlesClose(bundleRoot);
 });
 
 describe.skipIf(process.platform !== "win32")("Stage 3 daemon restart recovery", () => {
@@ -129,7 +129,7 @@ describe.skipIf(process.platform !== "win32")("Stage 3 daemon restart recovery",
     } finally {
       if (daemon.exitCode === null) await crashDaemon(daemon);
     }
-  }, 60_000);
+  }, 90_000);
 });
 
 async function startDaemon(input: {
@@ -261,6 +261,28 @@ async function waitUntil(predicate: () => boolean): Promise<void> {
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
   throw new Error("Process tree did not reach quiescence.");
+}
+
+/**
+ * A killed daemon closes the helper's stdin first; the helper then terminates
+ * and reaps its Job Object. Windows can keep the helper image mapped for a
+ * short interval after the daemon's exit event, so teardown must wait rather
+ * than leaving a failed physical-test directory behind.
+ */
+async function removeTreeAfterWindowsHandlesClose(target: string): Promise<void> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    try {
+      await rm(target, { recursive: true, force: true });
+      return;
+    } catch (error) {
+      lastError = error;
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code !== "EPERM" && code !== "EBUSY" && code !== "EACCES") throw error;
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+  }
+  throw lastError;
 }
 
 function isAlive(pid: number): boolean {
