@@ -356,7 +356,24 @@ describe("Stage 5 deterministic plan verifier", () => {
 
     const result = verifyPlan({ ...fixture, repositoryView, plan, hasher: stage5Sha256 });
 
-    expect(result.findings.map(({ code }) => code)).toContain("resource_generated_state_unknown");
+    expect(result.ok).toBe(true);
+    expect(result.findings).toContainEqual(expect.objectContaining({
+      code: "resource_generated_state_unknown",
+      severity: "warning",
+      authority: "repository"
+    }));
+  });
+
+  it("allows a composite integration to own seams wholly inside its descendant boundary", () => {
+    const fixture = groundedFixture();
+    const material = withoutDigest(fixture.plan);
+    material.units["unit:root"]!.seamRefs = [];
+    material.seams["seam:a-b"]!.consumerUnitIds = ["unit:b"];
+    const plan = buildSemanticPlan(material, stage5Sha256);
+
+    const result = verifyPlan({ ...fixture, plan, hasher: stage5Sha256 });
+
+    expect(result.ok, result.findings.map(({ code }) => code).join(", ")).toBe(true);
   });
 
   it("requires role, expansion and granularity decisions to be mutually coherent", () => {

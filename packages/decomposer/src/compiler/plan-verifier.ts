@@ -365,7 +365,13 @@ function verifyUnits(plan: SemanticPlan, strategies: readonly ProofStrategy[], o
         }
       }
       for (const seamId of unit.integration.seamIds) {
-        if (plan.seams[seamId] === undefined || !unit.seamRefs.includes(seamId)) {
+        const seam = plan.seams[seamId];
+        const ownsDirectly = seam !== undefined && unit.seamRefs.includes(seamId);
+        const ownsDescendantBoundary = seam !== undefined &&
+          unit.integration.artifactIds.includes(seam.artifactId) &&
+          isStrictDescendant(plan, seam.producerUnitId, unit.id) &&
+          seam.consumerUnitIds.every((consumerId) => isStrictDescendant(plan, consumerId, unit.id));
+        if (!ownsDirectly && !ownsDescendantBoundary) {
           out.push(finding(
             "integration_seam_unresolved",
             `Integration ${unit.integration.obligationId} references seam ${seamId} outside ${unit.id}.`,
@@ -613,10 +619,9 @@ function verifyResources(
       out.push(finding("generated_resource_write", `Unit ${unit.id} writes generated resource ${intent.resourceId}.`, unit.id, resolved.evidenceRefs));
     }
     if (intent.access === "modify" && resolved.resource.generated.state === "unknown") {
-      out.push(finding(
+      out.push(repositoryWarning(
         "resource_generated_state_unknown",
         `Unit ${unit.id} cannot safely write resource ${intent.resourceId} because its generated-file disposition is unknown.`,
-        unit.id,
         resolved.evidenceRefs
       ));
     }
@@ -893,6 +898,17 @@ function rootCriterionFor(plan: SemanticPlan, unit: WorkUnit, criterionId: strin
     current = current.parentId === undefined ? undefined : plan.units[current.parentId];
   }
   return currentCriterion;
+}
+
+function isStrictDescendant(plan: SemanticPlan, unitId: string, ancestorId: string): boolean {
+  const visited = new Set<string>();
+  let current = plan.units[unitId];
+  while (current?.parentId !== undefined && !visited.has(current.id)) {
+    if (current.parentId === ancestorId) return true;
+    visited.add(current.id);
+    current = plan.units[current.parentId];
+  }
+  return false;
 }
 
 function detectCycle(ids: readonly string[], edges: (id: string) => readonly string[], onCycle: () => void): void {

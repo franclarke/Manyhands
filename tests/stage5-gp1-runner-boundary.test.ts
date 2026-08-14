@@ -25,6 +25,9 @@ describe("Stage 5 GP1 runner boundary", () => {
     expect(source).toContain('deterministic_reevaluation');
     expect(source).toContain('sourcePromptDigest');
     expect(source).toContain('harnessPromptDigest');
+    expect(source).toContain('embed_exact_evidence_and_normalize_resource_versions_v2');
+    expect(source).toContain('normalizeResourceVersionInputs');
+    expect(source).toContain('normalizedResourceVersionInputs');
     expect(source).not.toMatch(/exec\s+resume|--dangerously-bypass/iu);
   });
 

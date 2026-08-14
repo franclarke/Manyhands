@@ -124,7 +124,9 @@ const canonicalEvidence = referencedEvidenceIds.map((id) => {
   }
   return structuredClone(evidence);
 });
-const canonicalMaterial = { ...providerMaterial, evidence: canonicalEvidence };
+const canonicalMaterial = structuredClone(providerMaterial);
+canonicalMaterial.evidence = canonicalEvidence;
+const normalizedResourceVersionInputs = normalizeResourceVersionInputs(canonicalMaterial, repositoryView.catalog);
 const currentDraft = JSON.parse(providerEnvelope.currentDraftJson);
 const criticFindings = JSON.parse(providerEnvelope.criticFindingsJson);
 
@@ -269,11 +271,12 @@ const receipt = {
     eventLogDigest: sha256(await readFile(providerLogPath, "utf8"))
   },
   canonicalization: {
-    transformation: "embed_exact_excerpt_evidence_v1",
-    source: "RepositoryQuery.readExcerpts bound to the exact RepositoryView and snapshot",
+    transformation: "embed_exact_evidence_and_normalize_resource_versions_v2",
+    source: "RepositoryQuery.readExcerpts and ResourceCatalog overlap bound to the exact RepositoryView and snapshot",
     providerMaterialDigest: contracts.computeCanonicalDigest(providerMaterial, sha256),
     enrichedMaterialDigest: contracts.computeCanonicalDigest(canonicalMaterial, sha256),
     addedEvidenceIds: canonicalEvidence.map(({ id }) => id),
+    normalizedResourceVersionInputs,
     snapshotId: inspection.model.snapshot.id,
     repositoryViewDigest: repositoryView.digest
   },
@@ -395,6 +398,39 @@ async function replayProviderOutput({ source, prompt, outputPath, logPath }) {
 function assertGitIdentity(root, commit, tree) {
   assertEqual(git(root, ["rev-parse", commit]), commit, "base commit");
   assertEqual(git(root, ["show", "-s", "--format=%T", commit]), tree, "base tree");
+}
+
+function normalizeResourceVersionInputs(material, catalog) {
+  const writerResourcesByArtifact = new Map();
+  for (const unit of Object.values(material.units)) {
+    for (const intent of unit.resourceIntents) {
+      if (intent.access !== "modify") continue;
+      const resources = writerResourcesByArtifact.get(intent.outputArtifactId) ?? [];
+      resources.push(intent.resourceId);
+      writerResourcesByArtifact.set(intent.outputArtifactId, resources);
+    }
+  }
+  const normalized = [];
+  for (const unit of Object.values(material.units)) {
+    for (const intent of unit.resourceIntents) {
+      if (intent.inputArtifactId === undefined) continue;
+      const writerResources = writerResourcesByArtifact.get(intent.inputArtifactId) ?? [];
+      if (
+        writerResources.length === 0 ||
+        writerResources.some((resourceId) => catalog.overlaps(resourceId, intent.resourceId) !== "no")
+      ) continue;
+      normalized.push({
+        unitId: unit.id,
+        resourceId: intent.resourceId,
+        removedInputArtifactId: intent.inputArtifactId,
+        reason: "artifact orders work across disjoint resources; resource version remains repository_view"
+      });
+      delete intent.inputArtifactId;
+    }
+  }
+  return normalized.sort((left, right) =>
+    `${left.unitId}\0${left.resourceId}`.localeCompare(`${right.unitId}\0${right.resourceId}`)
+  );
 }
 
 function git(root, args) {
