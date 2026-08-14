@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "candidate": {
-    "sha": "75f1403e705964051a83fa5be8fc3236cd47d2de",
-    "tree": "06918612e3dd0eeb2dec2a02a825b74677f2aaf9"
+    "sha": "94a3f27d959225643e4e0bdb6f3981c61ef0a7b5",
+    "tree": "6fc75ab60e3f8739e0ad9b9b7c55c040cc8f2eae"
   },
   "tool": {
     "name": "@playwright/cli",
@@ -13,13 +13,15 @@
   "cases": [
     {
       "caseId": "gp1:manyhands-canonical-planning",
-      "preview": "../gp1/manyhands/final-candidate/preview.html",
+      "preview": "../gp1/manyhands/reviewed-candidate-v5/preview.html",
       "status": "pass",
       "visible": [
         "ORACLE PASS",
         "Responsibility hierarchy",
         "Explicit seams",
         "Proof coverage",
+        "Decisions",
+        "Evidence provenance",
         "Advisory findings",
         "daemon",
         "planning",
@@ -31,26 +33,28 @@
         {
           "path": "manyhands-desktop.png",
           "viewport": { "width": 1440, "height": 1000 },
-          "image": { "width": 1440, "height": 3080 },
-          "sha256": "04f83d6212651ea898f3170c56c728de6117e6d76c7dfc9b61eaff7114969a33"
+          "image": { "width": 1440, "height": 3800 },
+          "sha256": "bc7ac5df0529a14f324f968da43780e23df9089732b39fef07ed6ff555750927"
         },
         {
           "path": "manyhands-mobile.png",
           "viewport": { "width": 390, "height": 844 },
-          "image": { "width": 390, "height": 5401 },
-          "sha256": "e011c4b79a33d398da36443f86bb20146269257955361f87b385d0e1e853359b"
+          "image": { "width": 390, "height": 6595 },
+          "sha256": "e90d7959f1c25f169aaee21ea2ec9bb759c8733f8d8da5f24039b52a636de97f"
         }
       ]
     },
     {
       "caseId": "gp1:express-request-correlation",
-      "preview": "../gp1/express/final-candidate/preview.html",
+      "preview": "../gp1/express/reviewed-candidate-v5/preview.html",
       "status": "pass",
       "visible": [
         "ORACLE PASS",
         "Responsibility hierarchy",
         "Explicit seams",
         "Proof coverage",
+        "Decisions",
+        "Evidence provenance",
         "Advisory findings",
         "configuration",
         "request",
@@ -62,14 +66,14 @@
         {
           "path": "express-desktop.png",
           "viewport": { "width": 1440, "height": 1000 },
-          "image": { "width": 1440, "height": 2509 },
-          "sha256": "f35d540a4e28e9220b1020045eafedde3af526efd6cbc29676a19087d83ffbdf"
+          "image": { "width": 1440, "height": 3229 },
+          "sha256": "761968823e22b6e313f3bd50a76b76d54277bf147f770ab7e6dba57f1187e144"
         },
         {
           "path": "express-mobile.png",
           "viewport": { "width": 390, "height": 844 },
-          "image": { "width": 390, "height": 4160 },
-          "sha256": "cc4cdc03ea1b1457c7ef11e577891893b605d7264954efbc410586a86b8af910"
+          "image": { "width": 390, "height": 5446 },
+          "sha256": "2e114262f2714640018701dce7ccf530d255354361fb59ed3f7903daa925326d"
         }
       ]
     }
@@ -79,6 +83,6 @@
     "mobile": "pass",
     "horizontalOverflowObserved": false,
     "privilegedCapabilityPresent": false,
-    "notes": "Both standalone previews remained legible at the pre-registered viewports. The mobile seam table is compact but its headings, producer/consumer names and observable contracts remain visible. A favicon 404 was the only incidental console entry during the first loopback load."
+    "notes": "Both standalone previews remained legible at the pre-registered viewports. Page-level horizontal overflow was absent (document scrollWidth 387 at width 390); the complete seam table remains available through its scoped horizontal scroll container. Decisions and Evidence provenance were visible, evidence records used a legible mobile grid, the console reported zero messages, and no privileged capability was present."
   }
 }
