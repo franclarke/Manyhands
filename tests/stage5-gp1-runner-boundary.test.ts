@@ -31,6 +31,7 @@ describe("Stage 5 GP1 runner boundary", () => {
     expect(source).toContain('normalizedResourceVersionInputs');
     expect(previewSource).toContain('overflow-x:auto');
     expect(previewSource).toContain('min-width:680px');
+    expect(previewSource).toContain('.records li{display:grid}');
     expect(source).not.toMatch(/exec\s+resume|--dangerously-bypass/iu);
   });
 
