@@ -9,6 +9,49 @@
 - **Audit:** [`../audits/stage-5/README.md`](../audits/stage-5/README.md)
 - **Stage 6:** `not_started`
 
+## Perfil de ejecucion para Stage 6
+
+- El proyecto queda configurado para `gpt-5.6-terra` con esfuerzo `high` para
+  el conductor y `medium` para subagentes por defecto.
+- Esta preparacion no inicia Stage 6, no crea un objetivo persistente ni cambia
+  codigo productivo.
+- No autoriza retirar componentes legacy. El retiro sigue siendo condicion del
+  gate GS; no esta permitido durante el preflight ni la primera slice aditiva.
+  Si la restriccion sigue al llegar al cutover, Stage 6 no puede marcarse pass
+  sin una decision explicita.
+
+## Ruta productiva inventariada al cierre de Stage 5
+
+- `apps/daemon/src/current-lifecycle-adapters.ts` compone el planner vivo:
+  consulta un `RepositoryView`, invoca `RecursivePlanner`, crea un
+  `SemanticPlan`, lo proyecta a `WorkBreakdown` y llama a
+  `compileGraphRevision`. Ese es el drift concreto a reemplazar.
+- `apps/daemon/src/transitional-unsafe-worker.ts` carga trabajo aprobado como
+  `LegacyGraphRevisionV2` y pasa `conflictConstraints` a ejecucion.
+- `packages/scheduler/src/readiness-v2.ts` aun consume
+  `LegacyGraphRevisionV2`; `wave-selector-v2.ts` convierte restricciones
+  pairwise en barreras de seleccion.
+- `PlanningEngine` y `compilePlan` de Stage 5 viven en
+  `packages/decomposer/src/planning-engine/planning-engine.ts` y
+  `packages/decomposer/src/compiler/direct-plan-compiler.ts`; ninguna ruta
+  productiva los consume todavia.
+
+## Primera slice despues de iniciar Stage 6 expresamente
+
+1. Agregar REDs de ruta productiva que prueben que el daemon no puede persistir
+   una revision aceptada desde `RecursivePlanner`, `WorkBreakdown`,
+   `projectSemanticPlanForLegacyCompiler` ni `compileGraphRevision`.
+2. Componer `PlanningEngine` y `compilePlan` en el daemon con un
+   `RepositoryView` exacto, y persistir solo su `SemanticPlan` verificado y el
+   `GraphRevision` directo antes de levantar la decision de aprobacion.
+3. Verificar el corte con executor fake y replay del journal. Solo despues
+   separar `ReadinessEvaluator` de `SelectionPolicy` y reemplazar barreras
+   pairwise por claims y leases indexados.
+
+La primera slice es aditiva y conserva readers historicos. No rediseña attempts,
+artifacts, sandbox, validacion, integracion ni delivery: esos limites quedan en
+Stages 7-10.
+
 Este handoff no inicia Stage 6. Sólo registra su frontera de entrada después de
 aprobar offline una representación semántica, verifier y compiler directos.
 
