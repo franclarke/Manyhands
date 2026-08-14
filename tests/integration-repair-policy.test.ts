@@ -19,6 +19,7 @@ describe("integration manifest repair policy", () => {
       createdAt: "2026-07-17T12:00:00.000Z"
     });
     const result = await new IntegrationManifestExecutor({
+      allowCommitTransport: true, // legacy commit-replay characterization; retired from the productive route in Stage 9
       git, repair,
       validate: async () => ({ matrixId: "unused", outcome: "verified" }),
       digestCandidate: async () => "unused"

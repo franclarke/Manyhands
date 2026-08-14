@@ -140,6 +140,7 @@ describe("V2 productive run", () => {
           createdAt: at
         });
         const deps = {
+          allowCommitTransport: true, // legacy commit-replay characterization; retired from the productive route in Stage 9
           git,
           validate: async () => ({ matrixId: `matrix-${rootId}`, outcome: "verified" as const }),
           digestCandidate: async () => "digest-root"

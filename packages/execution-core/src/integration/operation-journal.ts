@@ -7,6 +7,8 @@ import type { IntegrationManifest } from "./manifest";
 export type IntegrationOperationState =
   | "prepared"
   | "child_pending"
+  | "child_started"
+  /** @deprecated Retired in Stage 9 with commit transport; readable, never written. */
   | "cherry_pick_started"
   | "child_applied"
   | "conflict_detected"
@@ -29,6 +31,11 @@ export interface IntegrationOperationChild {
   /** Parent HEAD persisted before the cherry-pick side effect. */
   startedFromSha?: string;
   resultSha?: string;
+  /**
+   * `cherry_picked` and `already_ancestor` are retired with commit transport in
+   * Stage 9. They stay in the union so historical operations still load; the
+   * canonical route never writes them.
+   */
   application?: "already_ancestor" | "already_satisfied" | "cherry_picked" | "manifest_materialized" | "repaired";
 }
 
