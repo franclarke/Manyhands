@@ -14,6 +14,16 @@ export function buildCodexArgs(options: AgentExecutorOptions): string[] {
     options.bypassApprovals ? "danger-full-access" : "workspace-write",
     "--ask-for-approval",
     "never",
+    "-c",
+    "sandbox_workspace_write.network_access=false",
+    // The broker uses an attempt-local CODEX_HOME, so do not rely on a host
+    // config file to choose the native Windows enforcement implementation.
+    "-c",
+    `windows.sandbox="${options.windowsSandbox ?? "elevated"}"`,
+    "--cd",
+    options.cwd,
+    "--add-dir",
+    options.cwd,
     "exec",
     "--model",
     options.model,

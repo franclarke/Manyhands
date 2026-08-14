@@ -35,6 +35,8 @@ export interface CanonicalNodeExecutionInput {
   waveId: string;
   attemptId: string;
   inputFingerprint: string;
+  /** Immutable failure evidence that causally distinguishes a repair attempt. */
+  priorFailure?: { attemptId: string; reason: string };
   graph: GraphRevision;
   node: CanonicalTaskNode;
   contract: TaskContractBundle;
@@ -417,6 +419,12 @@ function createAttempt(run: PreparedRun, state: RunProjection, nodeId: string, w
   });
   const ordinal = Object.values(state.attempts).filter((attempt) => attempt.nodeId === nodeId).length + 1;
   const attemptId = `${run.runId}:attempt:${nodeId}:${ordinal}`;
+  const previousAttempt = Object.values(state.attempts)
+    .filter((attempt) => attempt.nodeId === nodeId && ["failed", "discarded", "stale"].includes(attempt.status))
+    .at(-1);
+  const priorFailure = previousAttempt?.status === "failed" && previousAttempt.failureReason !== undefined
+    ? { attemptId: previousAttempt.attemptId, reason: previousAttempt.failureReason }
+    : undefined;
   const inputFingerprint = computeInputFingerprint({
     graphId: run.graph.graphId,
     nodeId,
@@ -426,12 +434,25 @@ function createAttempt(run: PreparedRun, state: RunProjection, nodeId: string, w
     consumedArtifacts: consumedArtifacts.map((artifact) => ({ id: artifact.artifactId, digest: artifact.digest })),
     repositoryContextDigest: run.repositoryContextDigest,
     executorProfile: run.executorProfile,
-    validationContract: { id: contract.validation.id, revision: contract.validation.revision }
+    validationContract: { id: contract.validation.id, revision: contract.validation.revision },
+    ...(priorFailure === undefined ? {} : {
+      recoveryContextDigest: sha256(JSON.stringify({
+        attemptId: priorFailure.attemptId,
+        inputFingerprint: previousAttempt!.inputFingerprint,
+        reason: priorFailure.reason
+      }))
+    })
   });
-  const common = { attemptId, nodeId, inputFingerprint, executorProfile: run.executorProfile };
+  const common = {
+    attemptId,
+    nodeId,
+    inputFingerprint,
+    ...(previousAttempt === undefined ? {} : { retryOfAttemptId: previousAttempt.attemptId }),
+    executorProfile: run.executorProfile
+  };
   const isIntegration = node.kind === "root" || node.kind === "composite" || node.kind === "integrator";
   return {
-    input: { runId: run.runId, waveId, attemptId, inputFingerprint, graph: run.graph, node, contract, consumedArtifacts, executorProfile: run.executorProfile },
+    input: { runId: run.runId, waveId, attemptId, inputFingerprint, ...(priorFailure === undefined ? {} : { priorFailure }), graph: run.graph, node, contract, consumedArtifacts, executorProfile: run.executorProfile },
     startedEvent: isIntegration && consumedArtifacts.length > 0
       ? fact(`${attemptId}:started`, at, "integration.started", { ...common, requiredArtifactIds: consumedArtifacts.map((artifact) => artifact.artifactId) })
       : fact(`${attemptId}:started`, at, "attempt.started", common)

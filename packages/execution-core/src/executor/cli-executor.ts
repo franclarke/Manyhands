@@ -98,6 +98,7 @@ export class CliAgentExecutor implements AgentExecutor {
       args: invocation.args,
       cwd: options.cwd,
       env: options.env,
+      isolatedEnvironment: options.isolatedEnvironment,
       useShell: invocation.shell,
       windowsVerbatimArguments: invocation.windowsVerbatimArguments,
       timeoutMs: options.timeoutMs,

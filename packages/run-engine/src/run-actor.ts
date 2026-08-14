@@ -663,7 +663,7 @@ function failedEffectInput(
   receipt: PhysicalEffectReceipt,
   options: Pick<RunActorOptions, "hasher">
 ): RunActorJournalInput {
-  const reason = "Physical effect adapter reported a failed observation.";
+  const reason = receipt.reason ?? "Physical effect adapter reported a failed observation.";
   return {
     eventId: computeCanonicalDigest({
       type: "effect.failed",

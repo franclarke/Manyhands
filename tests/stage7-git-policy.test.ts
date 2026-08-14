@@ -6,6 +6,7 @@ import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   deliveryTargetGitPolicy,
+  NativeWorktreeGit,
   SimpleGitRunner,
   gitPolicyConfig,
   safeGitArgs
@@ -52,6 +53,24 @@ describe("Stage 7 Git artifact policy", () => {
       "core.hooksPath=/dev/null"
     ]));
     expect(args).not.toEqual(expect.arrayContaining(["core.autocrlf=false"]));
+  });
+
+  it("materializes an execution worktree under the artifact line-ending policy", async () => {
+    await git(repo, "config", "core.autocrlf", "true");
+    await writeFile(path.join(repo, "windows.txt"), "windows\n", "utf8");
+    await git(repo, "add", "windows.txt");
+    await git(repo, "commit", "-m", "windows baseline");
+    const worktree = path.join(directory, "execution-worktree");
+    const native = new NativeWorktreeGit();
+
+    await native.add({
+      repoRoot: repo,
+      worktreePath: worktree,
+      baseCommit: "HEAD"
+    });
+
+    expect(await git(worktree, ...safeGitArgs(worktree, ["status", "--porcelain"]))).toBe("");
+    await native.remove({ repoRoot: repo, worktreePath: worktree });
   });
 
   it("does not run a repository pre-commit hook while creating an orchestrator commit", async () => {

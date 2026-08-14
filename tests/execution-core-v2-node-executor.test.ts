@@ -376,6 +376,44 @@ describe("V2NodeExecutor", () => {
     ]);
   });
 
+  it("defers a failed exact validation to the canonical retry attempt when configured", async () => {
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
+    const node = compiled.graph.nodes["node-api"]!;
+    const contract = compiled.contracts.find((bundle) => bundle.task.nodeId === node.id)!;
+    const candidate = "7".repeat(40);
+    const git = new FakeGitRunner({
+      commitSha: candidate,
+      diffCached: "diff",
+      diffCachedNameOnly: [contract.scope.allowedPaths[0]!]
+    });
+    const executor = new V2NodeExecutor({
+      git,
+      repoRoot: "C:/repo/booking",
+      traceStore: new InMemoryTraceStore(),
+      executorFactory: new FixedAgentExecutorFactory(successfulAgent()),
+      validator: {
+        validate: async (input) => ({
+          ...matrix(input.contract, input.candidateCommit),
+          outcome: "failed" as const,
+          criteria: matrix(input.contract, input.candidateCommit).criteria.map((criterion) => ({
+            ...criterion,
+            status: "failed" as const,
+            justification: "Focused oracle failed."
+          }))
+        })
+      },
+      deferValidationRepair: true,
+      writeInstructions: async () => undefined,
+      now: () => at
+    });
+
+    await expect(executor.execute(request(compiled, node.id))).resolves.toMatchObject({
+      kind: "failure",
+      reason: expect.stringContaining(`validation_failed: exact candidate ${candidate}`)
+    });
+    expect(git.opsInvoked()).not.toContain("createIntegrationHandoff");
+  });
+
   it("integrates adopted child artifacts bottom-up and prepares only a verified root candidate", async () => {
     const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
     const root = compiled.graph.nodes[compiled.graph.rootId]!;

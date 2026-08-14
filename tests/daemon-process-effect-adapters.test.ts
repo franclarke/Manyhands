@@ -109,7 +109,8 @@ describe("daemon process physical effect adapters", () => {
         observation: "failed",
         observedAt: "2026-08-12T22:00:02.000Z",
         processIdentity: PROCESS_IDENTITY,
-        resultDigest: `sha256:${"b".repeat(64)}`
+        resultDigest: `sha256:${"b".repeat(64)}`,
+        reason: "operator cancelled during supervisor startup"
       }
     ]);
   });
@@ -166,7 +167,8 @@ describe("daemon process physical effect adapters", () => {
       readReceipts: vi.fn<ProcessSupervisorPort["readReceipts"]>().mockResolvedValue([started]),
       terminate: vi.fn<ProcessSupervisorPort["terminate"]>().mockResolvedValue(interrupted)
     });
-    const adapter = createProcessSpawnPhysicalEffectAdapter({ supervisor });
+    const afterTerminal = vi.fn().mockResolvedValue(undefined);
+    const adapter = createProcessSpawnPhysicalEffectAdapter({ supervisor, afterTerminal });
     const observed = recordingContext("process_spawn", spawnPayload(), [physicalStartedReceipt()]);
 
     await adapter.reconcile(intent("process_spawn"), observed.context);
@@ -177,11 +179,16 @@ describe("daemon process physical effect adapters", () => {
       "sha256:effect-process_spawn",
       "reconcile_interrupted_process_spawn"
     );
+    expect(afterTerminal).toHaveBeenCalledWith(
+      expect.objectContaining({ effectId: "sha256:effect-process_spawn" }),
+      expect.objectContaining({ outcome: "terminated" })
+    );
     expect(observed.records).toEqual([{
       observation: "failed",
       observedAt: "2026-08-12T22:00:02.000Z",
       processIdentity: PROCESS_IDENTITY,
-      resultDigest: `sha256:${"b".repeat(64)}`
+      resultDigest: `sha256:${"b".repeat(64)}`,
+      reason: "reconcile_interrupted_process_spawn"
     }]);
   });
 
@@ -244,7 +251,8 @@ describe("daemon process physical effect adapters", () => {
       readReceipts: vi.fn<ProcessSupervisorPort["readReceipts"]>().mockResolvedValue([started]),
       terminate: vi.fn<ProcessSupervisorPort["terminate"]>().mockResolvedValue(terminated)
     });
-    const adapter = createProcessTerminatePhysicalEffectAdapter({ supervisor });
+    const afterTermination = vi.fn().mockResolvedValue(undefined);
+    const adapter = createProcessTerminatePhysicalEffectAdapter({ supervisor, afterTermination });
     const observed = recordingContext("process_terminate", terminatePayload());
 
     await adapter.execute(intent("process_terminate"), observed.context);
@@ -252,6 +260,10 @@ describe("daemon process physical effect adapters", () => {
     expect(supervisor.terminate).toHaveBeenCalledWith(
       "sha256:effect-process_spawn",
       "operator_cancelled"
+    );
+    expect(afterTermination).toHaveBeenCalledWith(
+      "stage3:execution",
+      expect.objectContaining({ outcome: "terminated" })
     );
     expect(observed.records).toEqual([{
       observation: "succeeded",
@@ -356,7 +368,8 @@ function terminatePayload(): EffectInputSpec["payload"] {
   return {
     targetEffectId: "sha256:effect-process_spawn",
     expectedProcessIdentity: PROCESS_IDENTITY,
-    reason: "operator_cancelled"
+    reason: "operator_cancelled",
+    targetAttemptId: "stage3:execution"
   };
 }
 

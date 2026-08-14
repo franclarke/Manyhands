@@ -37,6 +37,7 @@ import { ResultRecorder } from "../result/recorder";
 import type { ExecutionConfig, WorktreeRecord } from "../types";
 import type { PreparedValidationRecipe } from "../validation/recipe-compiler";
 import { WorktreeManager } from "../worktree/manager";
+import type { DeclaredCredential, SandboxProfile, SandboxProvider, SandboxSession } from "../sandbox/types";
 
 export interface V2ExecutionArtifact {
   artifactId: string;
@@ -223,6 +224,17 @@ export interface V2NodeExecutorOptions {
   };
   /** Historical V2 replay may inspect commits; canonical daemon work may not transport them. */
   allowCommitArtifactTransport?: boolean;
+  /** Canonical Stage 8 records validation repair as a new durable attempt. */
+  deferValidationRepair?: boolean;
+  /** Stage 8 injects an explicit capability-checked session. */
+  sandbox?: {
+    provider: SandboxProvider;
+    profile: SandboxProfile;
+    credentials: readonly DeclaredCredential[];
+    credentialScopeId?: string;
+    /** An explicit native Codex Windows mode; default executor behavior remains elevated. */
+    windowsSandbox?: "elevated" | "unelevated";
+  };
 }
 
 /** Executes one V2 node without translating its bundle back to AgentTaskContract. */
@@ -284,7 +296,19 @@ export class V2NodeExecutor {
     }
     const instructionPath = instructionFilePath(input, "execute");
     let candidateToAnchor: string | undefined;
+    let sandboxSession: SandboxSession | undefined;
     try {
+      if (this.options.sandbox !== undefined) {
+        sandboxSession = await this.options.sandbox.provider.create({
+          attemptId: input.attemptId,
+          ...(this.options.sandbox.credentialScopeId === undefined
+            ? {}
+            : { credentialScopeId: this.options.sandbox.credentialScopeId }),
+          workspacePath: base.worktree.path,
+          profile: this.options.sandbox.profile,
+          credentials: this.options.sandbox.credentials
+        });
+      }
       await this.writeInstructions(instructionPath, buildV2NodeInstructions(input, prepared));
       const executor = this.options.executorFactory.create(input.selection);
       const executorOutcome = await executor.execute({
@@ -292,7 +316,14 @@ export class V2NodeExecutor {
         instructionFilePath: instructionPath,
         model: input.selection.model,
         timeoutMs: input.config.leafTimeoutMs,
-        bypassApprovals: true,
+        bypassApprovals: sandboxSession === undefined,
+        ...(sandboxSession === undefined ? {} : {
+          env: { ...sandboxSession.environment },
+          isolatedEnvironment: true,
+          ...(this.options.sandbox?.windowsSandbox === undefined
+            ? {}
+            : { windowsSandbox: this.options.sandbox.windowsSandbox })
+        }),
         processOwnerId: input.runId,
         attemptId: stableUuid(input.attemptId),
         ...(input.selection.effort !== undefined ? { reasoningEffort: input.selection.effort } : {}),
@@ -372,7 +403,21 @@ export class V2NodeExecutor {
       let success: Extract<V2PhysicalNodeExecutionOutcome, { kind: "success" }> =
         { ...successOutcome(candidateCommit, result.changedFiles, evidenceMatrix), usage: usageOf(result) };
       if (evidenceMatrix.outcome === "failed") {
-        const repaired = await this.repairLeaf(input, base.worktree, candidateCommit, evidenceMatrix, prepared);
+        if (this.options.deferValidationRepair === true) {
+          return {
+            kind: "failure",
+            reason: `validation_failed: exact candidate ${candidateCommit} failed matrix ${evidenceMatrix.matrixId}.`,
+            usage: usageOf(result)
+          };
+        }
+        const repaired = await this.repairLeaf(
+          input,
+          base.worktree,
+          candidateCommit,
+          evidenceMatrix,
+          prepared,
+          sandboxSession?.environment
+        );
         if (repaired.kind === "failure") return repaired;
         success = repaired;
         candidateToAnchor = repaired.candidateCommit;
@@ -402,6 +447,7 @@ export class V2NodeExecutor {
       return { kind: "failure", reason: describe(error) };
     } finally {
       await rm(instructionPath, { force: true }).catch(() => undefined);
+      await sandboxSession?.dispose();
       await this.releaseExecutionBase(base, input, candidateToAnchor);
     }
   }
@@ -666,7 +712,8 @@ export class V2NodeExecutor {
     worktree: WorktreeRecord,
     candidateCommit: string,
     failedMatrix: V2ExecutionEvidenceMatrix,
-    prepared?: PreparedValidationRecipe
+    prepared?: PreparedValidationRecipe,
+    sandboxEnvironment?: Readonly<Record<string, string>>
   ): Promise<Extract<V2PhysicalNodeExecutionOutcome, { kind: "success" | "failure" }>> {
     const pass = 1;
     const evidenceRefs = [failedMatrix.matrixId, ...failedMatrix.criteria.flatMap((criterion) => criterion.evidenceRefs)];
@@ -680,7 +727,14 @@ export class V2NodeExecutor {
         instructionFilePath: instructionPath,
         model: input.repairSelection.model,
         timeoutMs: input.config.leafTimeoutMs,
-        bypassApprovals: true,
+        bypassApprovals: sandboxEnvironment === undefined,
+        ...(sandboxEnvironment === undefined ? {} : {
+          env: { ...sandboxEnvironment },
+          isolatedEnvironment: true,
+          ...(this.options.sandbox?.windowsSandbox === undefined
+            ? {}
+            : { windowsSandbox: this.options.sandbox.windowsSandbox })
+        }),
         processOwnerId: input.runId,
         attemptId: stableUuid(`${input.attemptId}:code-repair:${pass}`),
         ...(input.repairSelection.effort !== undefined ? { reasoningEffort: input.repairSelection.effort } : {}),
@@ -769,7 +823,11 @@ export class CanonicalNodeExecutor {
   private readonly artifactBuilder: Pick<GitArtifactBuilder, "build" | "buildCandidateTree">;
 
   constructor(private readonly options: V2NodeExecutorOptions) {
-    this.delegate = new V2NodeExecutor({ ...options, allowCommitArtifactTransport: false });
+    this.delegate = new V2NodeExecutor({
+      ...options,
+      allowCommitArtifactTransport: false,
+      deferValidationRepair: true
+    });
     this.artifactBuilder = options.artifactBuilder ?? new GitArtifactBuilder(options.git);
   }
 

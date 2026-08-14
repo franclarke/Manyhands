@@ -126,6 +126,42 @@ describe("Stage 6 canonical execution driver", () => {
     )).toBe(true);
     expect(Object.values(state.adoptedArtifacts)).toHaveLength(0);
   });
+
+  it("creates a causally distinct retry after an operator resolves a leaf failure", async () => {
+    const fixture = stage5Fixture();
+    const compiled = compilePlan({ ...fixture, hasher: stage5Sha256, idFactory: (kind, parts) => [kind, ...parts].join(":") });
+    if (!compiled.ok) throw new Error(JSON.stringify(compiled.findings));
+    const harness = coordinator(compiled.graph.graphId);
+    const inputs: Array<{ attemptId: string; inputFingerprint: string; priorFailure?: unknown }> = [];
+    const driver = new CanonicalExecutionDriver({
+      coordinator: harness.coordinator,
+      now: () => at,
+      estimateIntegrationRisk: () => ({ score: 0, evidenceRefs: [] }),
+      execute: async (input) => {
+        inputs.push({ attemptId: input.attemptId, inputFingerprint: input.inputFingerprint, priorFailure: input.priorFailure });
+        if (inputs.length === 1) return { kind: "failure", reason: "validation: focused check failed" };
+        const obligation = input.contract.validation.obligations[0]!;
+        return {
+          kind: "success", candidateCommit: oid(input.node.id), outputDigest: `sha256:${input.node.id}`,
+          changedFiles: input.contract.scope.allowedPaths, artifactManifests: manifestsFor(input),
+          evidenceMatrix: { matrixId: `matrix-${input.node.id}`, candidateCommit: oid(input.node.id), validationContract: { id: input.contract.validation.id, revision: input.contract.validation.revision }, criteria: [{ criterionId: obligation.criterionId, obligationId: obligation.id, status: "satisfied", justification: "repaired", evidenceRefs: ["evidence:repair"] }], outcome: "verified", validationRecipeDigest: "sha256:repair", observations: [] },
+          ...(input.node.id === compiled.graph.rootId ? { integrationManifestId: "integration-root", finalManifestId: "final-root", finalManifest: { commitSha: oid(input.node.id), treeSha: "c".repeat(40), graphRevision: input.graph.revision, artifactIds: Object.keys(compiled.contracts.artifacts), evidenceMatrixId: `matrix-${input.node.id}`, validationRecipeDigest: "sha256:repair", deliveryTarget: "main" } } : {})
+        };
+      }
+    });
+    const run = { runId: "run-stage6-canonical", graph: compiled.graph, contracts: compiled.contracts.taskBundles, repositoryContextDigest: fixture.repositoryView.digest, executorProfile: { id: "fake", revision: "1" }, effectiveConfig: { maxParallel: 1 }, availableExecutorNodeIds: Object.keys(compiled.graph.nodes), target: { sourceTargetFingerprint: "sha256:target", targetBranch: "main", targetHead: fixture.repositoryView.model.baseCommit } };
+    const waiting = await driver.run(run);
+    const decision = Object.values(waiting.decisions).find((item) => item.status === "pending");
+    if (decision === undefined) throw new Error("Expected failed leaf decision.");
+    await harness.coordinator.execute(run.runId, { type: "resolve_decision", decisionId: decision.id, optionId: "retry" });
+    await driver.run(run);
+
+    expect(inputs.slice(0, 2)).toEqual([
+      expect.objectContaining({ attemptId: "run-stage6-canonical:attempt:unit:a:1", priorFailure: undefined }),
+      expect.objectContaining({ attemptId: "run-stage6-canonical:attempt:unit:a:2", priorFailure: { attemptId: "run-stage6-canonical:attempt:unit:a:1", reason: "validation: focused check failed" } })
+    ]);
+    expect(inputs[0]!.inputFingerprint).not.toBe(inputs[1]!.inputFingerprint);
+  });
 });
 
 function coordinator(graphId: string): { coordinator: RunCoordinator } {

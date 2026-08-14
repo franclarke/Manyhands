@@ -187,6 +187,10 @@ async function ownerIsLive(
   lockDir: string,
   owner: RepositoryLeaseOwner
 ): Promise<boolean> {
+  // A heartbeat records that the owner was alive when it wrote the file; it
+  // cannot keep a crashed process alive for the full stale window. Check the
+  // physical owner first so restart recovery can reclaim a fresh orphaned lock.
+  if (!await isProcessAlive(owner.pid)) return false;
   try {
     const beat = JSON.parse(await readFile(heartbeatPath(lockDir, owner.token), "utf8")) as {
       token?: unknown;
@@ -194,12 +198,12 @@ async function ownerIsLive(
     };
     if (beat.token === owner.token && typeof beat.at === "string") {
       const age = Date.now() - new Date(beat.at).getTime();
-      if (Number.isFinite(age) && age >= 0) return age < STALE_MS;
+      if (Number.isFinite(age) && age >= 0 && age < STALE_MS) return true;
     }
   } catch {
-    // A pre-heartbeat owner falls back to its process identity.
+    // A pre-heartbeat owner is still live while its physical process exists.
   }
-  return isProcessAlive(owner.pid);
+  return true;
 }
 
 async function lockBase(repoRoot: string): Promise<string> {

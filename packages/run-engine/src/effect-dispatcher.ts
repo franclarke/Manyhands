@@ -34,6 +34,7 @@ export interface PhysicalEffectObservationInput {
   observedAt: string;
   processIdentity?: ProcessIdentity;
   resultDigest?: string;
+  reason?: string;
 }
 
 export interface EffectDispatchInvalidationPort {

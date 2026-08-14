@@ -91,7 +91,7 @@ describe("ResourceCatalog", () => {
     });
     expect(view.catalog.resolve("path:src/other.ts")).toMatchObject({
       state: "known",
-      resource: { generated: { state: "unknown" } }
+      resource: { generated: { state: "source" } }
     });
     expect(view.catalog.resolve("path:pnpm-lock.yaml")).toMatchObject({
       state: "known",

@@ -160,3 +160,14 @@ specifications. See `CONTEXT-MAP.md` and `docs/agents/domain.md`.
   oracles. A minimal standard-library target and source-pattern checks are only
   control-plane smoke evidence, never proof of rich decomposition or usable
   software.
+- For sandboxed live workers, scope brokered credentials to the supervised
+  process identity and remove that scope from the supervisor on every verified
+  terminal outcome. A worker `finally` is not sufficient after timeout,
+  cancellation or daemon crash; qualify the invariant with a live no-auth-file
+  check after each path.
+- In Windows PowerShell automation, never use the reserved `$PID` variable as a
+  loop or task identifier; use a descriptive name such as `$processId` so cleanup
+  commands execute rather than fail before acting.
+- Before a live daemon/worker qualification, rebuild every changed workspace
+  package imported by that worker. Vitest source tests do not prove the
+  compiled `dist` dependency path used by the spawned process.

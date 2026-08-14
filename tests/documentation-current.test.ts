@@ -97,7 +97,8 @@ describe("B-033 current product documentation", () => {
     expect(plan).toContain("| Stage 4 / GRepo | `pass` |");
     expect(plan).toContain("| Stage 5 / GP0+GP1 | `pass` |");
     expect(plan).toContain("Stage 6 / GS passed");
-    expect(plan).toContain("| Stages 7–11 | `not_started` |");
+    expect(plan).toContain("| Stage 7 / GA | `pass` |");
+    expect(plan).toContain("| Stages 8–11 | `not_started` |");
     expect(stage4).toContain("**Status:** `pass`");
     expect(stage4).toContain("292daaee3803404cdb473f929c1fbfa36a8b4964");
     expect(stage4).toContain("8cd98afa812d3e7927985d6edf99c1744e4b5f5d");

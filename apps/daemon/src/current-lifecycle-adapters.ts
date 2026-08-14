@@ -12,6 +12,7 @@ import {
 import {
   buildGoalContract,
   buildProofStrategy,
+  SemanticPlanMaterialSchema,
   type DigestHasher,
   type PlanningResult,
   type SemanticPlanMaterial
@@ -56,6 +57,7 @@ import {
   createTransitionalUnsafeProfile,
   type CreateTransitionalUnsafeProfileOptions
 } from "./transitional-unsafe-profile.js";
+import type { SandboxedLiveExecutionProfile } from "./productive-daemon.js";
 import { withTransitionalRepositoryLease } from "./transitional-repository-lease.js";
 
 const execFileAsync = promisify(execFile);
@@ -65,6 +67,8 @@ export interface CurrentLifecycleAdapterOptions {
   readonly clock?: () => string;
   readonly planningStepTimeoutMs?: number;
   readonly spawnProcess?: typeof spawn;
+  /** Test-only model seam for exercising a downstream execution gate with a canonical plan. */
+  readonly planningProposal?: (input: PlanningModelInput, view: RepositoryView) => Promise<PlanningModelProposal>;
 }
 
 export interface CreateCurrentTransitionalUnsafeProfileOptions
@@ -74,6 +78,7 @@ export interface CreateCurrentTransitionalUnsafeProfileOptions
   > {
   readonly planningStepTimeoutMs?: number;
   readonly spawnProcess?: typeof spawn;
+  readonly planningProposal?: CurrentLifecycleAdapterOptions["planningProposal"];
 }
 
 const PRODUCTIVE_REPOSITORY_QUERY_BUDGET: RepositoryQueryBudget = {
@@ -169,11 +174,51 @@ export function createCurrentTransitionalUnsafeProfile(
       ...(options.planningStepTimeoutMs === undefined
         ? {}
         : { planningStepTimeoutMs: options.planningStepTimeoutMs }),
-      ...(options.spawnProcess === undefined ? {} : { spawnProcess: options.spawnProcess })
+      ...(options.spawnProcess === undefined ? {} : { spawnProcess: options.spawnProcess }),
+      ...(options.planningProposal === undefined ? {} : { planningProposal: options.planningProposal })
     }),
     delivery: createCurrentDeliveryPort(),
     ...(options.clock === undefined ? {} : { clock: options.clock })
   });
+}
+
+/**
+ * Stage 8 composition retains the daemon effect protocol but marks the only
+ * live route as sandboxed. The worker receives an explicit, brokered credential
+ * source; no host HOME/USERPROFILE is passed through the process effect.
+ */
+export function createCurrentSandboxedLiveProfile(
+  options: CreateCurrentTransitionalUnsafeProfileOptions & {
+    readonly codexCredentialPath?: string;
+    readonly claudeCredentialPath?: string;
+    /** Opt-in fallback only when elevated native setup is unavailable. */
+    readonly codexWindowsSandbox?: "elevated" | "unelevated";
+  }
+): SandboxedLiveExecutionProfile {
+  const transitional = createCurrentTransitionalUnsafeProfile(options);
+  return {
+    ...transitional,
+    kind: "sandboxed_live",
+    executionProcess: (definition, context) => {
+      if (context === undefined) throw new Error("Sandboxed live execution requires a process attempt identity.");
+      const process = transitional.executionProcess(definition, context);
+      return {
+        ...process,
+        env: {
+          ...process.env,
+          MANYHANDS_STAGE8_SANDBOX: "workspace",
+          MANYHANDS_STAGE8_SANDBOX_SCOPE: context.attemptId,
+          MANYHANDS_STAGE8_WINDOWS_SANDBOX: options.codexWindowsSandbox ?? "elevated",
+          ...(options.codexCredentialPath === undefined
+            ? {}
+            : { MANYHANDS_CODEX_AUTH_PATH: options.codexCredentialPath }),
+          ...(options.claudeCredentialPath === undefined
+            ? {}
+            : { MANYHANDS_CLAUDE_CREDENTIAL_PATH: options.claudeCredentialPath })
+        }
+      };
+    }
+  };
 }
 
 /** Stage 6 planner composition: the daemon produces only SemanticPlan -> GraphRevision. */
@@ -200,17 +245,26 @@ export function createCurrentPlannerPort(
       } | undefined;
       const planner = new PlanningEngine({
         model: {
-          propose: async (request): Promise<PlanningModelProposal> => canonicalPlanningProposal({
-            cwd: repoPath,
-            selection: definition.planningSelection,
-            request,
-            view: grounding.view,
-            proofStrategies,
-            ...(options.planningStepTimeoutMs === undefined
-              ? {}
-              : { timeoutMs: options.planningStepTimeoutMs }),
-            ...(options.spawnProcess === undefined ? {} : { spawnProcess: options.spawnProcess })
-          })
+          propose: async (request): Promise<PlanningModelProposal> => {
+            const proposal = options.planningProposal === undefined
+              ? await canonicalPlanningProposal({
+                  cwd: repoPath,
+                  selection: definition.planningSelection,
+                  request,
+                  view: grounding.view,
+                  proofStrategies,
+                  ...(options.planningStepTimeoutMs === undefined
+                    ? {}
+                    : { timeoutMs: options.planningStepTimeoutMs }),
+                  ...(options.spawnProcess === undefined ? {} : { spawnProcess: options.spawnProcess })
+                })
+              : await options.planningProposal(request, grounding.view);
+            if (proposal.kind !== "candidate") return proposal;
+            if (!SemanticPlanMaterialSchema.safeParse(proposal.material).success) return proposal;
+            const bound = bindProductProofStrategies(proposal.material, request.goal, grounding.view);
+            proofStrategies.splice(0, proofStrategies.length, ...bound.proofStrategies);
+            return { kind: "candidate", material: bound.material };
+          }
         },
         repository: {
           inspect: async ({ allowance }) => {
@@ -654,6 +708,10 @@ async function canonicalPlanningProposal(input: {
   });
   const proposal = parseCanonicalPlanningProposal(output, input.request, input.view);
   if (proposal.kind === "candidate") {
+    // The PlanningEngine owns schema-invalid proposal repair. Binding proof
+    // strategies first would dereference model-shaped data and turn a normal
+    // repairable finding into a daemon effect crash.
+    if (!SemanticPlanMaterialSchema.safeParse(proposal.material).success) return proposal;
     const bound = bindProductProofStrategies(proposal.material, input.request.goal, input.view);
     input.proofStrategies.splice(0, input.proofStrategies.length, ...bound.proofStrategies);
     return { kind: "candidate", material: bound.material };

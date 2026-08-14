@@ -4,11 +4,14 @@ import path from "node:path";
 import {
   computeCanonicalDigest,
   type DigestHasher,
+  type EffectIntent,
   type EffectKind
 } from "@manyhands/contracts";
 import {
   ProcessSupervisor,
-  ProcessSupervisorStartedReceiptSchema
+  type ProcessSupervisorFinalReceipt,
+  ProcessSupervisorStartedReceiptSchema,
+  discardBrokeredCredentialScope
 } from "@manyhands/execution-core";
 import type {
   DeliveryReceipt,
@@ -60,9 +63,19 @@ export interface TransitionalUnsafeExecutionProfile {
   loadDeliveryResult?(effectId: string): Promise<DeliveryReceipt>;
 }
 
+export interface SandboxedLiveExecutionProfile {
+  readonly kind: "sandboxed_live";
+  readonly adapters: readonly PhysicalEffectAdapter[];
+  executionProcess: TransitionalUnsafeExecutionProfile["executionProcess"];
+  loadPlanningResult: TransitionalUnsafeExecutionProfile["loadPlanningResult"];
+  loadExecutionResult?: TransitionalUnsafeExecutionProfile["loadExecutionResult"];
+  loadDeliveryResult?: TransitionalUnsafeExecutionProfile["loadDeliveryResult"];
+}
+
 export type ProductiveDaemonProfile =
   | DeterministicFakeExecutionProfile
-  | TransitionalUnsafeExecutionProfile;
+  | TransitionalUnsafeExecutionProfile
+  | SandboxedLiveExecutionProfile;
 
 export interface StartProductiveDaemonOptions {
   readonly stateRoot: string;
@@ -93,25 +106,46 @@ export async function startProductiveDaemon(
       : { windowsJobRunnerPath: options.windowsJobRunnerPath })
   });
   const hasher = sha256Digest;
+  const discardSandboxedAttempt = options.profile.kind !== "sandboxed_live"
+    ? undefined
+    : async (attemptId: string) => discardBrokeredCredentialScope(
+      path.join(options.stateRoot, "credential-broker"),
+      attemptId
+    );
   const adapters = options.profile.kind === "deterministic_fake"
     ? deterministicAdapters(processSupervisor, hasher, clock)
-    : transitionalAdapters(options.profile.adapters, processSupervisor);
+    : transitionalAdapters(
+      options.profile.adapters,
+      processSupervisor,
+      discardSandboxedAttempt === undefined
+        ? undefined
+        : async (intent) => {
+          if (intent.attemptId === undefined) throw new Error("Sandboxed live process has no attempt identity.");
+          await discardSandboxedAttempt(intent.attemptId);
+        },
+      discardSandboxedAttempt === undefined
+        ? undefined
+        : async (attemptId) => discardSandboxedAttempt(attemptId)
+    );
   const executionProcess = executionProcessFor(options.profile);
   const application = createProductRunApplication({
     hasher,
     clock,
     executionProcess,
     recoverInterruptedExecution: options.profile.kind === "deterministic_fake",
+    ...(options.profile.kind === "sandboxed_live"
+      ? { recoverInterruptedExecutionReason: "reconcile_interrupted_process_spawn" }
+      : {}),
     ...(options.profile.kind === "deterministic_fake"
       ? { loadPlanningResult: async (effectId: string) => deterministicPlanningResult(effectId, clock) }
       : {}),
-    ...(options.profile.kind === "transitional_unsafe"
+    ...(options.profile.kind !== "deterministic_fake"
       ? { loadPlanningResult: options.profile.loadPlanningResult }
       : {}),
-    ...(options.profile.kind !== "transitional_unsafe" || options.profile.loadExecutionResult === undefined
+    ...(options.profile.kind === "deterministic_fake" || options.profile.loadExecutionResult === undefined
       ? {}
       : { loadExecutionResult: options.profile.loadExecutionResult }),
-    ...(options.profile.kind !== "transitional_unsafe" || options.profile.loadDeliveryResult === undefined
+    ...(options.profile.kind === "deterministic_fake" || options.profile.loadDeliveryResult === undefined
       ? {}
       : { loadDeliveryResult: options.profile.loadDeliveryResult }),
     activeProcesses: async (_runId, projection) => {
@@ -125,7 +159,11 @@ export async function startProductiveDaemon(
           typeof receipt === "object" && receipt !== null && "phase" in receipt && receipt.phase === "final");
         if (startedRaw === undefined || finalRaw !== undefined) continue;
         const started = ProcessSupervisorStartedReceiptSchema.parse(startedRaw);
-        active.push({ effectId: intent.effectId, identity: started.processIdentity });
+        active.push({
+          effectId: intent.effectId,
+          identity: started.processIdentity,
+          ...(intent.attemptId === undefined ? {} : { attemptId: intent.attemptId })
+        });
       }
       return active;
     }
@@ -159,22 +197,30 @@ export async function startProductiveDaemon(
 
 function transitionalAdapters(
   configured: readonly PhysicalEffectAdapter[],
-  processSupervisor: ProcessSupervisor
+  processSupervisor: ProcessSupervisor,
+  afterTerminal?: (intent: EffectIntent, final: ProcessSupervisorFinalReceipt) => Promise<void>,
+  afterTermination?: (attemptId: string, final: ProcessSupervisorFinalReceipt) => Promise<void>
 ): PhysicalEffectAdapter[] {
   const kinds = new Set(configured.map((adapter) => adapter.kind));
   return [
     ...(kinds.has("process_spawn")
       ? []
-      : [createProcessSpawnPhysicalEffectAdapter({ supervisor: processSupervisor })]),
+      : [createProcessSpawnPhysicalEffectAdapter({
+        supervisor: processSupervisor,
+        ...(afterTerminal === undefined ? {} : { afterTerminal })
+      })]),
     ...(kinds.has("process_terminate")
       ? []
-      : [createProcessTerminatePhysicalEffectAdapter({ supervisor: processSupervisor })]),
+      : [createProcessTerminatePhysicalEffectAdapter({
+        supervisor: processSupervisor,
+        ...(afterTermination === undefined ? {} : { afterTermination })
+      })]),
     ...configured
   ];
 }
 
 function executionProcessFor(profile: ProductiveDaemonProfile): TransitionalUnsafeExecutionProfile["executionProcess"] {
-  if (profile.kind === "transitional_unsafe") return profile.executionProcess;
+  if (profile.kind !== "deterministic_fake") return profile.executionProcess;
   const executable = assertAbsolute(profile.nodeExecutable, "fake node executable");
   const worker = assertAbsolute(profile.workerScriptPath, "fake worker script");
   const cwd = assertAbsolute(profile.cwd, "fake worker cwd");

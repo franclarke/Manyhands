@@ -16,7 +16,9 @@ export const InputFingerprintSourceSchema = z.object({
   consumedArtifacts: z.array(ArtifactDigestRefSchema),
   repositoryContextDigest: NonEmptyStringSchema,
   executorProfile: ContractRevisionRefSchema,
-  validationContract: ContractRevisionRefSchema
+  validationContract: ContractRevisionRefSchema,
+  /** Present only for a retry; binds the new attempt to its immutable failure evidence. */
+  recoveryContextDigest: NonEmptyStringSchema.optional()
 }).strict().superRefine((input, context) => {
   for (const [path, values] of [["contractRevisions", input.contractRevisions], ["consumedArtifacts", input.consumedArtifacts]] as const) {
     const ids = values.map((item) => item.id);

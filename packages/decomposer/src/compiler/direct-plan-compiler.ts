@@ -389,7 +389,9 @@ function graphMaterial(
     nodes: Object.fromEntries(Object.values(input.plan.units).map((unit) => [unit.id, {
       id: unit.id,
       parentId: unit.parentId ?? null,
-      kind: unit.id === input.plan.rootUnitId ? "root" as const : unit.role,
+      kind: unit.id === input.plan.rootUnitId && Object.keys(input.plan.units).length > 1
+        ? "root" as const
+        : unit.role,
       title: unit.title,
       goal: unit.objective,
       contractRef: refFor(bundles[unit.id]!.task, input.plan.revision, input.hasher)

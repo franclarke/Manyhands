@@ -28,6 +28,8 @@ export type ProcessSupervisorPort = Pick<
 
 export interface ProcessEffectAdapterOptions {
   supervisor: ProcessSupervisorPort;
+  afterTerminal?(intent: Readonly<EffectIntent>, final: ProcessSupervisorFinalReceipt): Promise<void>;
+  afterTermination?(attemptId: string, final: ProcessSupervisorFinalReceipt): Promise<void>;
 }
 
 interface ProcessSpawnPayload {
@@ -42,6 +44,7 @@ interface ProcessTerminatePayload {
   targetEffectId: string;
   expectedProcessIdentity: ProcessIdentity;
   reason: string;
+  targetAttemptId?: string;
 }
 
 export function createProcessSpawnPhysicalEffectAdapter(
@@ -49,8 +52,8 @@ export function createProcessSpawnPhysicalEffectAdapter(
 ): PhysicalEffectAdapter {
   return {
     kind: "process_spawn",
-    execute: (intent, context) => executeProcessSpawn(intent, context, options.supervisor),
-    reconcile: (intent, context) => reconcileProcessSpawn(intent, context, options.supervisor)
+    execute: (intent, context) => executeProcessSpawn(intent, context, options.supervisor, options.afterTerminal),
+    reconcile: (intent, context) => reconcileProcessSpawn(intent, context, options.supervisor, options.afterTerminal)
   };
 }
 
@@ -59,15 +62,16 @@ export function createProcessTerminatePhysicalEffectAdapter(
 ): PhysicalEffectAdapter {
   return {
     kind: "process_terminate",
-    execute: (intent, context) => convergeProcessTermination(intent, context, options.supervisor),
-    reconcile: (intent, context) => convergeProcessTermination(intent, context, options.supervisor)
+    execute: (intent, context) => convergeProcessTermination(intent, context, options.supervisor, options.afterTermination),
+    reconcile: (intent, context) => convergeProcessTermination(intent, context, options.supervisor, options.afterTermination)
   };
 }
 
 async function executeProcessSpawn(
   intent: Readonly<EffectIntent>,
   context: PhysicalEffectAdapterContext,
-  supervisor: ProcessSupervisorPort
+  supervisor: ProcessSupervisorPort,
+  afterTerminal?: (intent: Readonly<EffectIntent>, final: ProcessSupervisorFinalReceipt) => Promise<void>
 ): Promise<void> {
   assertAdapterBinding("process_spawn", intent, context);
   const payload = parseProcessSpawnPayload(context.inputSpec.payload);
@@ -95,18 +99,19 @@ async function executeProcessSpawn(
       await processHandle.terminate(invalidationReason)
     );
     assertFinalReceiptBinding(terminated, started);
-    await recordSpawnTerminal(context, terminated, "failed");
+    await recordSpawnTerminalAfterCleanup(context, intent, terminated, "failed", afterTerminal);
     return;
   }
   const final = ProcessSupervisorFinalReceiptSchema.parse(await processHandle.completion);
   assertFinalReceiptBinding(final, started);
-  await recordSpawnTerminal(context, final);
+  await recordSpawnTerminalAfterCleanup(context, intent, final, undefined, afterTerminal);
 }
 
 async function reconcileProcessSpawn(
   intent: Readonly<EffectIntent>,
   context: PhysicalEffectAdapterContext,
-  supervisor: ProcessSupervisorPort
+  supervisor: ProcessSupervisorPort,
+  afterTerminal?: (intent: Readonly<EffectIntent>, final: ProcessSupervisorFinalReceipt) => Promise<void>
 ): Promise<void> {
   assertAdapterBinding("process_spawn", intent, context);
   parseProcessSpawnPayload(context.inputSpec.payload);
@@ -118,20 +123,21 @@ async function reconcileProcessSpawn(
   await recordStartedIfMissing(context, started);
   if (final !== undefined) {
     assertFinalReceiptBinding(final, started);
-    await recordSpawnTerminal(context, final);
+    await recordSpawnTerminalAfterCleanup(context, intent, final, undefined, afterTerminal);
     return;
   }
   const interrupted = ProcessSupervisorFinalReceiptSchema.parse(
     await supervisor.terminate(intent.effectId, "reconcile_interrupted_process_spawn")
   );
   assertFinalReceiptBinding(interrupted, started);
-  await recordSpawnTerminal(context, interrupted, "failed");
+  await recordSpawnTerminalAfterCleanup(context, intent, interrupted, "failed", afterTerminal);
 }
 
 async function convergeProcessTermination(
   intent: Readonly<EffectIntent>,
   context: PhysicalEffectAdapterContext,
-  supervisor: ProcessSupervisorPort
+  supervisor: ProcessSupervisorPort,
+  afterTermination?: (attemptId: string, final: ProcessSupervisorFinalReceipt) => Promise<void>
 ): Promise<void> {
   assertAdapterBinding("process_terminate", intent, context);
   const payload = parseProcessTerminatePayload(context.inputSpec.payload);
@@ -144,7 +150,7 @@ async function convergeProcessTermination(
   const existingFinal = receipts.find(isFinalReceipt);
   if (existingFinal !== undefined) {
     assertFinalReceiptBinding(existingFinal, started);
-    await recordTerminationSuccess(context, existingFinal);
+    await recordTerminationAfterCleanup(context, payload, existingFinal, afterTermination);
     return;
   }
 
@@ -153,7 +159,7 @@ async function convergeProcessTermination(
   );
   assertFinalReceiptBinding(terminated, started);
   assertExpectedProcessIdentity(terminated.processIdentity, payload.expectedProcessIdentity);
-  await recordTerminationSuccess(context, terminated);
+  await recordTerminationAfterCleanup(context, payload, terminated, afterTermination);
 }
 
 async function recordStartedIfMissing(
@@ -171,14 +177,42 @@ async function recordStartedIfMissing(
 async function recordSpawnTerminal(
   context: PhysicalEffectAdapterContext,
   final: ProcessSupervisorFinalReceipt,
-  forcedObservation?: "failed"
+  forcedObservation?: "failed",
+  reasonOverride?: string
 ): Promise<void> {
+  const reason = reasonOverride ?? final.reason;
   await context.record({
     observation: forcedObservation ?? (final.outcome === "succeeded" ? "succeeded" : "failed"),
     observedAt: epochMsToIso(final.completedAtEpochMs, "process completedAtEpochMs"),
     processIdentity: final.processIdentity,
-    resultDigest: final.receiptChecksum
+    resultDigest: final.receiptChecksum,
+    ...(reason === undefined ? {} : { reason })
   });
+}
+
+async function recordSpawnTerminalAfterCleanup(
+  context: PhysicalEffectAdapterContext,
+  intent: Readonly<EffectIntent>,
+  final: ProcessSupervisorFinalReceipt,
+  forcedObservation: "failed" | undefined,
+  afterTerminal?: (intent: Readonly<EffectIntent>, final: ProcessSupervisorFinalReceipt) => Promise<void>
+): Promise<void> {
+  try {
+    await afterTerminal?.(intent, final);
+  } catch (error) {
+    await recordSpawnTerminal(
+      context,
+      final,
+      "failed",
+      `${final.reason ?? "process_terminal"}_credential_cleanup_failed: ${describe(error)}`
+    );
+    return;
+  }
+  await recordSpawnTerminal(context, final, forcedObservation);
+}
+
+function describe(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 async function recordTerminationSuccess(
@@ -191,6 +225,27 @@ async function recordTerminationSuccess(
     processIdentity: final.processIdentity,
     resultDigest: final.receiptChecksum
   });
+}
+
+async function recordTerminationAfterCleanup(
+  context: PhysicalEffectAdapterContext,
+  payload: ProcessTerminatePayload,
+  final: ProcessSupervisorFinalReceipt,
+  afterTermination?: (attemptId: string, final: ProcessSupervisorFinalReceipt) => Promise<void>
+): Promise<void> {
+  try {
+    if (payload.targetAttemptId !== undefined) await afterTermination?.(payload.targetAttemptId, final);
+  } catch (error) {
+    await context.record({
+      observation: "failed",
+      observedAt: epochMsToIso(final.completedAtEpochMs, "process completedAtEpochMs"),
+      processIdentity: final.processIdentity,
+      resultDigest: final.receiptChecksum,
+      reason: `${final.reason ?? "process_termination"}_credential_cleanup_failed: ${describe(error)}`
+    });
+    return;
+  }
+  await recordTerminationSuccess(context, final);
 }
 
 function parseProcessSpawnPayload(input: JsonObject): ProcessSpawnPayload {
@@ -221,7 +276,8 @@ function parseProcessTerminatePayload(input: JsonObject): ProcessTerminatePayloa
   const payload = exactRecord(
     input,
     "process_terminate input",
-    ["targetEffectId", "expectedProcessIdentity", "reason"]
+    ["targetEffectId", "expectedProcessIdentity", "reason"],
+    ["targetAttemptId"]
   );
   const targetEffectId = nonEmptyStringWithoutNul(
     payload.targetEffectId,
@@ -229,7 +285,10 @@ function parseProcessTerminatePayload(input: JsonObject): ProcessTerminatePayloa
   );
   const reason = nonEmptyStringWithoutNul(payload.reason, "process_terminate.reason");
   const expectedProcessIdentity = ProcessIdentitySchema.parse(payload.expectedProcessIdentity);
-  return { targetEffectId, expectedProcessIdentity, reason };
+  const targetAttemptId = payload.targetAttemptId === undefined
+    ? undefined
+    : nonEmptyStringWithoutNul(payload.targetAttemptId, "process_terminate.targetAttemptId");
+  return { targetEffectId, expectedProcessIdentity, reason, ...(targetAttemptId === undefined ? {} : { targetAttemptId }) };
 }
 
 function parseSupervisorReceipts(input: readonly unknown[]): ProcessSupervisorReceipt[] {

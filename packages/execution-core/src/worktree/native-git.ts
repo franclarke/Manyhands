@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { mkdir, stat } from "node:fs/promises";
 import path from "node:path";
 
+import { gitPolicyConfig } from "../git/runner.js";
 import type { EphemeralWorkspaceGit } from "./ephemeral-workspace.js";
 
 /**
@@ -57,11 +58,14 @@ function runGit(gitPath: string, cwd: string, args: readonly string[]): Promise<
 }
 
 function runGitOutput(gitPath: string, cwd: string, args: readonly string[]): Promise<string> {
-  const safeDirectory = path.resolve(cwd).replaceAll("\\", "/");
+  // The checkout and later recorder must use the same deterministic filters.
+  // Otherwise a Windows `core.autocrlf=true` host creates CRLF files that the
+  // recorder's artifact policy (`core.autocrlf=false`) stages as false changes.
+  const policy = gitPolicyConfig(cwd).flatMap((entry) => ["-c", entry]);
   return new Promise((resolve, reject) => {
     execFile(
       gitPath,
-      ["-c", `safe.directory=${safeDirectory}`, ...args],
+      [...policy, ...args],
       { cwd, encoding: "utf8", windowsHide: true },
       (error, stdout, stderr) => {
         if (error !== null) {

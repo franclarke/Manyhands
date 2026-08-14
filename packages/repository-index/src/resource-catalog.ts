@@ -342,8 +342,8 @@ function generatedDisposition(
     };
   }
   return {
-    state: "unknown",
-    reason: "No explicit generated-output policy classifies this exact Git entry as source or generated.",
+    state: "source",
+    reason: "The indexed regular Git entry does not match a generated-output convention.",
     evidenceRefs: [...resource.evidenceRefs]
   };
 }

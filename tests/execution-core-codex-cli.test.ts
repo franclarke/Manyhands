@@ -52,6 +52,14 @@ describe("buildCodexArgs", () => {
       "workspace-write",
       "--ask-for-approval",
       "never",
+      "-c",
+      "sandbox_workspace_write.network_access=false",
+      "-c",
+      'windows.sandbox="elevated"',
+      "--cd",
+      "/repo",
+      "--add-dir",
+      "/repo",
       "exec",
       "--model",
       "gpt-5-codex",
@@ -70,6 +78,14 @@ describe("buildCodexArgs", () => {
       "danger-full-access",
       "--ask-for-approval",
       "never",
+      "-c",
+      "sandbox_workspace_write.network_access=false",
+      "-c",
+      'windows.sandbox="elevated"',
+      "--cd",
+      "/repo",
+      "--add-dir",
+      "/repo",
       "exec",
       "--model",
       "gpt-5-codex",
@@ -80,6 +96,13 @@ describe("buildCodexArgs", () => {
       "--skip-git-repo-check",
       "-"
     ]);
+  });
+
+  it("uses the explicitly selected native Windows workspace implementation", () => {
+    expect(buildCodexArgs(optionsFor("/repo", { windowsSandbox: "unelevated" }))).toContain(
+      'windows.sandbox="unelevated"'
+    );
+    expect(buildCodexArgs(optionsFor("/repo"))).toContain('windows.sandbox="elevated"');
   });
 
   it("passes reasoning effort to codex exec when configured", () => {

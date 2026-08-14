@@ -22,6 +22,7 @@ export interface SpawnExecutorParams {
   args: string[];
   cwd: string;
   env?: Record<string, string> | undefined;
+  isolatedEnvironment?: boolean | undefined;
   /** @deprecated Executor argv is always spawned without Node shell interpolation. */
   useShell: boolean;
   windowsVerbatimArguments?: boolean | undefined;
@@ -65,6 +66,7 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
     args,
     cwd,
     env,
+    isolatedEnvironment,
     windowsVerbatimArguments,
     timeoutMs,
     signal,
@@ -110,7 +112,7 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
         cwd,
         // B-006 (CF-28): agents never inherit the whole server environment —
         // only the allowlist plus the caller's explicitly-declared overrides.
-        env: { ...buildAgentEnvironment(), ...(env ?? {}) },
+        env: isolatedEnvironment ? env ?? {} : { ...buildAgentEnvironment(), ...(env ?? {}) },
         stdio: ["pipe", "pipe", "pipe"],
         shell: false,
         ...(windowsVerbatimArguments !== undefined ? { windowsVerbatimArguments } : {}),

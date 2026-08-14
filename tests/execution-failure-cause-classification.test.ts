@@ -73,6 +73,15 @@ describe("leafFailureObservation", () => {
     expect(classifyFailure(leafFailureObservation({ reason: "executor_error: binary_missing: CLI not found" }))).toBe("environment_auth_executor");
   });
 
+  it("fails closed when the declared sandbox capability is unavailable", () => {
+    const observation = leafFailureObservation({
+      reason: "SANDBOX_UNAVAILABLE: profile workspace requires capabilities unavailable from workspace provider."
+    });
+
+    expect(observation).toMatchObject({ source: "executor", code: "sandbox_unavailable" });
+    expect(classifyFailure(observation)).toBe("environment_auth_executor");
+  });
+
   it("keeps the full reason as the message so evidence is not lost", () => {
     const reason = "scope_violation: touched tests/expense.test.ts";
 

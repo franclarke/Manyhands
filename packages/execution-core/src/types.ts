@@ -312,6 +312,10 @@ export const AgentExecutorOptionsSchema = z.object({
   timeoutMs: z.number().int().positive(),
   bypassApprovals: z.boolean(),
   env: z.record(z.string()).optional(),
+  /** A complete sandbox/broker environment replaces the legacy host allowlist. */
+  isolatedEnvironment: z.boolean().optional(),
+  /** Explicit Codex native Windows implementation for a brokered workspace attempt. */
+  windowsSandbox: z.enum(["elevated", "unelevated"]).optional(),
   reasoningEffort: ReasoningEffortSchema.optional(),
   /** Run-level cancellation: aborts the spawned process tree. Not serialized. */
   signal: z.instanceof(AbortSignal).optional(),

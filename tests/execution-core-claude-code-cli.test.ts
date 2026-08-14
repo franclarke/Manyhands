@@ -58,7 +58,7 @@ describe("buildClaudeCodeArgs", () => {
       "--output-format",
       "json",
       "--setting-sources",
-      "project,local",
+      "",
       "--dangerously-skip-permissions"
     ]);
   });
@@ -72,7 +72,7 @@ describe("buildClaudeCodeArgs", () => {
       "--output-format",
       "json",
       "--setting-sources",
-      "project,local",
+      "",
       "--permission-mode",
       "acceptEdits"
     ]);

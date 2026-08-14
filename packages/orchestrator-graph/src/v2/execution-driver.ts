@@ -3,6 +3,7 @@ import {
   type ArtifactContract,
   type TaskContractBundle
 } from "@manyhands/contracts";
+import { createHash } from "node:crypto";
 import type { ConflictConstraintEvidence } from "@manyhands/conflict-risk";
 import type { FinalArtifactManifest, GranularityPolicyManifest } from "@manyhands/shared";
 import {
@@ -566,7 +567,10 @@ export class V2ExecutionDriver {
     if (prepared.graph.nodes[attempt.nodeId] === undefined || !prepared.contractsByNodeId.has(attempt.nodeId)) {
       return `sha256:absent:${prepared.graph.graphId}:${prepared.graph.revision}:${attempt.nodeId}`;
     }
-    return fingerprintForNode(prepared, current, attempt.nodeId);
+    const previousAttempt = Object.values(current.attempts)
+      .filter((candidate) => candidate.nodeId === attempt.nodeId && ["failed", "discarded", "stale"].includes(candidate.status))
+      .at(-1);
+    return fingerprintForNode(prepared, current, attempt.nodeId, previousAttempt);
   }
 }
 
@@ -791,10 +795,10 @@ function createAttempt(
     (artifact.artifactType === "node-result" || artifact.artifactType === "final-candidate")
   );
   if (outputArtifactContract === undefined) throw new Error(`Node ${nodeId} has no compiled output artifact contract.`);
-  const inputFingerprint = fingerprintForNode(run, state, nodeId);
   const previousAttempt = Object.values(state.attempts)
     .filter((attempt) => attempt.nodeId === nodeId && ["failed", "discarded", "stale"].includes(attempt.status))
     .at(-1);
+  const inputFingerprint = fingerprintForNode(run, state, nodeId, previousAttempt);
   const priorFailure = previousAttempt?.status === "failed" && previousAttempt.failureReason !== undefined
     ? { attemptId: previousAttempt.attemptId, reason: previousAttempt.failureReason }
     : undefined;
@@ -831,7 +835,12 @@ function createAttempt(
   };
 }
 
-function fingerprintForNode(run: PreparedExecutionRunInput, state: RunProjection, nodeId: string): string {
+function fingerprintForNode(
+  run: PreparedExecutionRunInput,
+  state: RunProjection,
+  nodeId: string,
+  previousAttempt?: { attemptId: string; inputFingerprint: string; failureReason?: string }
+): string {
   const node = run.graph.nodes[nodeId]!;
   const contract = run.contractsByNodeId.get(nodeId)!;
   const phases = node.kind === "root" || node.kind === "composite"
@@ -854,6 +863,7 @@ function fingerprintForNode(run: PreparedExecutionRunInput, state: RunProjection
   });
   const contractRevisions = [contract.task, contract.scope, contract.validation, ...contract.seams, ...contract.artifacts]
     .map(({ id, revision }) => ({ id, revision }));
+  const priorFailureReason = previousAttempt?.failureReason;
   return computeInputFingerprint({
     graphId: run.graph.graphId,
     nodeId,
@@ -862,8 +872,19 @@ function fingerprintForNode(run: PreparedExecutionRunInput, state: RunProjection
     consumedArtifacts: consumedArtifacts.map((artifact) => ({ id: artifact.artifactId, digest: artifact.digest })),
     repositoryContextDigest: run.repositoryContextDigest,
     executorProfile: run.executorProfile,
-    validationContract: { id: contract.validation.id, revision: contract.validation.revision }
+    validationContract: { id: contract.validation.id, revision: contract.validation.revision },
+    ...(previousAttempt === undefined || priorFailureReason === undefined ? {} : {
+      recoveryContextDigest: recoveryContextDigest({
+        attemptId: previousAttempt.attemptId,
+        inputFingerprint: previousAttempt.inputFingerprint,
+        failureReason: priorFailureReason
+      })
+    })
   });
+}
+
+function recoveryContextDigest(input: { attemptId: string; inputFingerprint: string; failureReason: string }): string {
+  return `sha256:${createHash("sha256").update(JSON.stringify(input)).digest("hex")}`;
 }
 
 /**
@@ -942,7 +963,7 @@ export function leafFailureObservation(outcome: { reason: string; failureCause?:
   if (outcome.reason.includes("artifact_empty")) {
     return { source: "artifact", code: "artifact_empty", message: outcome.reason };
   }
-  const knownCodes = ["scope_violation", "unexpected_commit", "worktree_pool_unavailable", "transient", "network", "timeout", "auth", "binary_missing", "quota", "executor_unavailable", "model_not_found"];
+  const knownCodes = ["scope_violation", "unexpected_commit", "worktree_pool_unavailable", "transient", "network", "timeout", "auth", "binary_missing", "quota", "executor_unavailable", "model_not_found", "sandbox_unavailable"];
   const code = knownCodes.find((candidate) =>
     outcome.reason.trimStart().startsWith(`${candidate}:`) || outcome.reason.includes(`: ${candidate}:`)
   ) ?? outcome.reason.split(":", 1)[0]?.trim();
@@ -960,6 +981,9 @@ export function leafFailureObservation(outcome: { reason: string; failureCause?:
   }
   if (["auth", "binary_missing", "quota", "executor_unavailable", "model_not_found"].includes(code ?? "")) {
     return { source: "executor", code, message: outcome.reason };
+  }
+  if (outcome.reason.includes("SANDBOX_UNAVAILABLE:")) {
+    return { source: "executor", code: "sandbox_unavailable", message: outcome.reason };
   }
   return { source: "executor", code: "execution_failed", message: outcome.reason };
 }

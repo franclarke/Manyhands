@@ -105,6 +105,7 @@ export const PhysicalEffectReceiptMaterialSchema = z.object({
   daemonEpoch: EntityIdSchema,
   processIdentity: ProcessIdentitySchema.optional(),
   resultDigest: CanonicalDigestSchema.optional(),
+  reason: NonEmptyStringSchema.optional(),
   observedAt: StrictIsoTimestampSchema
 }).strict();
 

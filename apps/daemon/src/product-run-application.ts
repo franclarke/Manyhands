@@ -28,6 +28,7 @@ import type {
 export interface ActiveProductProcess {
   readonly effectId: string;
   readonly identity: ProcessIdentity;
+  readonly attemptId?: string;
 }
 
 export interface ProductRunApplicationOptions {
@@ -46,6 +47,8 @@ export interface ProductRunApplicationOptions {
   activeProcesses?(runId: string, projection: RunProjection): Promise<readonly ActiveProductProcess[]>;
   /** Deterministic GR profile only: a verified daemon-loss interruption is rescheduled. */
   recoverInterruptedExecution?: boolean;
+  /** A productive profile may recover only a specific physically observed interruption cause. */
+  recoverInterruptedExecutionReason?: string;
   loadPlanningResult?(effectId: string): Promise<readonly RunEventInput[]>;
   loadExecutionResult?(runId: string, attemptId: string): Promise<readonly RunEventInput[]>;
   loadDeliveryResult?(effectId: string): Promise<DeliveryReceipt>;
@@ -247,7 +250,15 @@ async function react(
   }
 
   if (attempt?.startsWith("stage3:execution") === true && !succeeded) {
-    if (options.recoverInterruptedExecution === true && context.projection.lifecycle === "running") {
+    const reason = observation.terminal.type === "effect.failed"
+      ? observation.terminal.payload.reason
+      : undefined;
+    if (
+      (options.recoverInterruptedExecution === true ||
+        (options.recoverInterruptedExecutionReason !== undefined &&
+          reason === options.recoverInterruptedExecutionReason)) &&
+      context.projection.lifecycle === "running"
+    ) {
       return {
         domainEvents: [],
         effects: [executionEffect(
@@ -350,7 +361,8 @@ async function quiescenceEffects(
       payload: {
         targetEffectId: process.effectId,
         expectedProcessIdentity: process.identity,
-        reason
+        reason,
+        ...(process.attemptId === undefined ? {} : { targetAttemptId: process.attemptId })
       }
     }
   }, options));
@@ -399,6 +411,17 @@ function resolveDecision(
       revision: projection.graphRevision
     }, `${envelope.commandDigest}:approved`));
     effects.push(executionEffect(context, requireDefinition(projection), options));
+  }
+  if (decision.kind === "resolve_conflict" && command.optionId === "retry") {
+    if (hasPendingExecutionAttempt(projection)) {
+      throw new Error(`Run ${context.runId} already has pending execution.`);
+    }
+    effects.push(executionEffect(
+      context,
+      requireDefinition(projection),
+      options,
+      nextExecutionAttempt(projection)
+    ));
   }
   return { eventsAfterAcceptance: events, effects };
 }
@@ -560,6 +583,12 @@ function allEffectsTerminal(projection: RunProjection): boolean {
 function hasPendingAttempt(projection: RunProjection, attemptId: string): boolean {
   return Object.values(projection.effectIntents).some((intent) =>
     intent.attemptId === attemptId && projection.effectTerminals[intent.effectId] === undefined);
+}
+
+function hasPendingExecutionAttempt(projection: RunProjection): boolean {
+  return Object.values(projection.effectIntents).some((intent) =>
+    intent.attemptId?.startsWith("stage3:execution") === true &&
+    projection.effectTerminals[intent.effectId] === undefined);
 }
 
 function requireProjection(context: RunActorDecisionContext): RunProjection {
