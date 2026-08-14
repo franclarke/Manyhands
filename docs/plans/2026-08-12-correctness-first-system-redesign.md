@@ -69,7 +69,8 @@ match the code.
 | Stage 5 / GP0+GP1 | `pass` | [`../audits/stage-5/`](../audits/stage-5/); accepted code candidate `94a3f27d959225643e4e0bdb6f3981c61ef0a7b5`, tree `6fc75ab60e3f8739e0ad9b9b7c55c040cc8f2eae`, focused 8-file/97-test suite, full 255-file/1,760-test suite, two attributable real-repository outputs, browser/topology oracles and bounded independent GO review | Stage 6 / GS passed at [`02f05e4c`](../audits/stage-6/README.md). |
 | Stage 7 / GA | `pass` | [`../audits/stage-7/README.md`](../audits/stage-7/README.md); bounded 48-test artifact/fingerprint matrix, 78-test exact-validation matrix, and real-daemon GA scenario | Stage 8 is now in review for gate closure. |
 | Stage 8 / GLeaf | `in_review` | [`../audits/stage-8/README.md`](../audits/stage-8/README.md); exact implementation candidate `d3c617c4`, tree `df2b0b5e3a5c72da48d7ffea713b3fa517a02aea`, required R0/R10/R14/R17 evidence, and the bounded independent gate review at [`../audits/stage-8/evidence/review-gate.md`](../audits/stage-8/evidence/review-gate.md) | The gate review returned `NO-GO`. B2 is closed by the 2026-08-14 Codex-only scope amendment. B1 remains: one live R0 re-run under the corrected capability record, deferred for Codex quota. Stage 9 is not authorized. |
-| Stages 9–11 | `not_started` | none | Must execute in normative order. |
+| Stage 9 / GI | `in_review` | [`../audits/stage-9/README.md`](../audits/stage-9/README.md); implementation candidate `97b4cea35c8245fce301da11cabfb4ac89e04eac`, tree `05bea272556183d8f8a051e071a5154b0142879b`, R1/R2/R3/R11/R16 and a parallel-sequential convergence property, full 284-file/1,870-test suite | Implemented ahead of the normative order on operator instruction. Cannot close before GLeaf passes, and still needs a bounded independent gate review. |
+| Stages 10–11 | `not_started` | none | Must execute in normative order. |
 
 ### 0.2 Required reading and execution protocol
 

@@ -55,6 +55,8 @@ and budgeted queries. The semantic planner, verifier and compiler have passed
 offline. Stage 8 / GLeaf is `in_review`: it has live R0/R10/R14/R17 evidence,
 but its bounded independent gate review returned `NO-GO`
 ([`audits/stage-8/evidence/review-gate.md`](audits/stage-8/evidence/review-gate.md)).
-Stages 9–11 remain `not_started`. No large live-model benchmark should run. The
-bounded exploratory study runs only after Stage 11 eligibility gates are
-satisfied.
+Stage 9 / GI is `in_review`: its deterministic work is complete on a green tree
+([`audits/stage-9/README.md`](audits/stage-9/README.md)), but it was implemented
+ahead of the normative order and cannot close before GLeaf does. Stages 10–11
+remain `not_started`. No large live-model benchmark should run. The bounded
+exploratory study runs only after Stage 11 eligibility gates are satisfied.

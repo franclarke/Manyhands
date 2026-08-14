@@ -59,7 +59,7 @@ describe("B-033 current product documentation", () => {
   });
 
   it("records the attributable Stage 6 closure and prepares Stage 7 without starting it", async () => {
-    const [docsReadme, plan, runbook, stage2, stage3, stage4, stage5, stage5Review, stage6, historicalHandoff, stage4Handoff, stage5Handoff, stage6Handoff, stage6ToStage7, stage7Plan, study, stage8, stage8Review] =
+    const [docsReadme, plan, runbook, stage2, stage3, stage4, stage5, stage5Review, stage6, historicalHandoff, stage4Handoff, stage5Handoff, stage6Handoff, stage6ToStage7, stage7Plan, study, stage8, stage8Review, stage9] =
       await Promise.all([
         readFile(path.join(root, "docs", "README.md"), "utf8"),
         readFile(path.join(root, "docs", "plans", "2026-08-12-correctness-first-system-redesign.md"), "utf8"),
@@ -78,7 +78,8 @@ describe("B-033 current product documentation", () => {
         readFile(path.join(root, "docs", "plans", "2026-08-14-stage-7-git-native-artifacts-and-exact-validation.md"), "utf8"),
         readFile(path.join(root, "docs", "plans", "2026-08-13-exploratory-longitudinal-study.md"), "utf8"),
         readFile(path.join(root, "docs", "audits", "stage-8", "README.md"), "utf8"),
-        readFile(path.join(root, "docs", "audits", "stage-8", "evidence", "review-gate.md"), "utf8")
+        readFile(path.join(root, "docs", "audits", "stage-8", "evidence", "review-gate.md"), "utf8"),
+        readFile(path.join(root, "docs", "audits", "stage-9", "README.md"), "utf8")
       ]);
 
     expect(docsReadme).toContain("[`audits/stage-2/`](audits/stage-2/)");
@@ -101,7 +102,11 @@ describe("B-033 current product documentation", () => {
     expect(plan).toContain("Stage 6 / GS passed");
     expect(plan).toContain("| Stage 7 / GA | `pass` |");
     expect(plan).toContain("| Stage 8 / GLeaf | `in_review` |");
-    expect(plan).toContain("| Stages 9–11 | `not_started` |");
+    expect(plan).toContain("| Stage 9 / GI | `in_review` |");
+    expect(plan).toContain("| Stages 10–11 | `not_started` |");
+    expect(stage9).toContain("**Status:** `in_review`");
+    expect(stage9).toContain("97b4cea35c8245fce301da11cabfb4ac89e04eac");
+    expect(stage9).toContain("ahead of the plan's normative order");
     expect(stage8).toContain("**Status:** `in_review`");
     expect(stage8Review).toContain("**Verdict:** `NO-GO`");
     expect(stage8Review).toContain("f8d1eed639a15aeb29d93b120423630933a03a85");
