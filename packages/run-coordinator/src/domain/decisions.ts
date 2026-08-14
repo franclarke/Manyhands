@@ -12,7 +12,13 @@ export const DecisionInputSchema = z.object({
   kind: z.enum(["clarify_goal", "approve_plan", "approve_amendment", "resolve_conflict", "approve_delivery"]),
   question: NonEmptyStringSchema,
   options: z.array(DecisionOptionSchema).min(2),
+  // Every node this decision blocks while it is pending.
   affectedNodeIds: z.array(EntityIdSchema).min(1),
+  // The node whose next attempt is expected to resolve the failure. It is a
+  // subset of the blocked scope, not the same thing: a composite failing on a
+  // child's defect blocks both, but only the child can fix it. Absent when no
+  // single node can, which is what makes an amendment necessary.
+  repairTargetNodeId: EntityIdSchema.optional(),
   evidenceRefs: z.array(NonEmptyStringSchema),
   impact: z.enum(["behavior", "architecture", "scope", "risk", "acceptance"]),
   // The graph revision the decision was raised against. When a later revision is
