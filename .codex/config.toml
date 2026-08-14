@@ -1,5 +1,5 @@
-model = "gpt-5.6-terra"
-model_reasoning_effort = "high"
+model = "gpt-5.6-sol"
+model_reasoning_effort = "ultra"
 
 approval_policy = "never"
 sandbox_mode = "workspace-write"
@@ -12,6 +12,6 @@ multi_agent_v2 = false
 [agents]
 enabled = true
 max_concurrent_threads_per_session = 3
-default_subagent_model = "gpt-5.6-terra"
-default_subagent_reasoning_effort = "medium"
+default_subagent_model = "gpt-5.6-sol"
+default_subagent_reasoning_effort = "ultra"
 interrupt_message = true

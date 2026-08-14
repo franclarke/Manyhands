@@ -23,6 +23,13 @@ export interface GitShowOptions {
   maxBytes?: number;
 }
 
+export interface GitTreeEntry {
+  mode: string;
+  objectType: "blob" | "commit" | "tree" | "tag";
+  oid: string;
+  path: string;
+}
+
 /**
  * Thin git abstraction the execution pipeline depends on. Implemented by
  * SimpleGitRunner (real) and a FakeGitRunner in tests, so worktree/result/
@@ -44,6 +51,18 @@ export interface GitRunner {
 
   head(cwd: string): Promise<string>;
   revParse(cwd: string, ref: string): Promise<string>;
+  /** Creates or moves one explicit ref after the caller has verified its object identity. */
+  updateRef(params: { cwd: string; ref: string; target: string; expectedOldOid?: string }): Promise<void>;
+  treeEntry(params: { cwd: string; tree: string; path: string }): Promise<GitTreeEntry | undefined>;
+  objectType(params: { cwd: string; oid: string }): Promise<GitTreeEntry["objectType"]>;
+  readTree(params: { cwd: string; tree: string; indexFile?: string }): Promise<void>;
+  updateIndexEntry(params: { cwd: string; mode: string; oid: string; path: string; indexFile?: string }): Promise<void>;
+  removeIndexEntry(params: { cwd: string; path: string; indexFile?: string }): Promise<void>;
+  writeTree(params: { cwd: string; indexFile?: string }): Promise<string>;
+  commitTree(params: { cwd: string; tree: string; parent: string; message: string }): Promise<string>;
+  resetHard(params: { cwd: string; ref: string }): Promise<void>;
+  /** Raw NUL-delimited diff-tree records for exact artifact construction. */
+  diffTreeRaw(params: { cwd: string; from: string; to: string }): Promise<Buffer>;
   /** True only when `ancestor` is reachable from `descendant` in the real commit graph. */
   isAncestor(params: { cwd: string; ancestor: string; descendant?: string }): Promise<boolean>;
   /** Durable evidence of an interrupted cherry-pick, if one is active. */
@@ -107,8 +126,18 @@ export class SimpleGitRunner implements GitRunner {
   private client(cwd: string): SimpleGit {
     return simpleGit({
       baseDir: cwd,
-      config: [`safe.directory=${gitPath(resolve(cwd))}`]
+      config: gitPolicyConfig(cwd),
+      unsafe: { allowUnsafeHooksPath: true, allowUnsafeCredentialHelper: true, allowUnsafeDiffExternal: true, allowUnsafeProtocolOverride: true }
     });
+  }
+
+  private async plumbing(cwd: string, args: readonly string[], indexFile?: string): Promise<string> {
+    const { stdout } = await execFileAsync("git", safeGitArgs(cwd, args), {
+      cwd,
+      windowsHide: true,
+      ...(indexFile === undefined ? {} : { env: { ...process.env, GIT_INDEX_FILE: indexFile } })
+    });
+    return stdout;
   }
 
   async worktreeAdd(params: {
@@ -161,6 +190,75 @@ export class SimpleGitRunner implements GitRunner {
     return out.trim();
   }
 
+  async updateRef(params: { cwd: string; ref: string; target: string; expectedOldOid?: string }): Promise<void> {
+    await this.client(params.cwd).raw([
+      "update-ref",
+      params.ref,
+      params.target,
+      ...(params.expectedOldOid === undefined ? [] : [params.expectedOldOid])
+    ]);
+  }
+
+  async treeEntry(params: { cwd: string; tree: string; path: string }): Promise<GitTreeEntry | undefined> {
+    const output = await this.client(params.cwd).raw(["ls-tree", params.tree, "--", params.path]);
+    const line = output.trim();
+    if (line.length === 0) return undefined;
+    const match = /^(\d{6})\s+(blob|commit|tree|tag)\s+([0-9a-f]+)\t(.+)$/u.exec(line);
+    if (match === null) throw new Error(`Could not parse Git tree entry for ${params.path}.`);
+    return { mode: match[1]!, objectType: match[2]! as GitTreeEntry["objectType"], oid: match[3]!, path: match[4]! };
+  }
+
+  async objectType(params: { cwd: string; oid: string }): Promise<GitTreeEntry["objectType"]> {
+    const output = await this.client(params.cwd).raw(["cat-file", "-t", params.oid]);
+    const value = output.trim();
+    if (value !== "blob" && value !== "commit" && value !== "tree" && value !== "tag") {
+      throw new Error(`Unsupported Git object type ${value} for ${params.oid}.`);
+    }
+    return value;
+  }
+
+  async readTree(params: { cwd: string; tree: string; indexFile?: string }): Promise<void> {
+    await this.plumbing(params.cwd, ["read-tree", params.tree], params.indexFile);
+  }
+
+  async updateIndexEntry(params: { cwd: string; mode: string; oid: string; path: string; indexFile?: string }): Promise<void> {
+    await this.plumbing(params.cwd, ["update-index", "--add", "--cacheinfo", `${params.mode},${params.oid},${params.path}`], params.indexFile);
+  }
+
+  async removeIndexEntry(params: { cwd: string; path: string; indexFile?: string }): Promise<void> {
+    await this.plumbing(params.cwd, ["update-index", "--force-remove", "--", params.path], params.indexFile);
+  }
+
+  async writeTree(params: { cwd: string; indexFile?: string }): Promise<string> {
+    return (await this.plumbing(params.cwd, ["write-tree"], params.indexFile)).trim();
+  }
+
+  async commitTree(params: { cwd: string; tree: string; parent: string; message: string }): Promise<string> {
+    const { stdout } = await execFileAsync(
+      "git",
+      safeGitArgs(params.cwd, [
+        "-c", "user.name=ManyHands",
+        "-c", "user.email=manyhands@local",
+        "commit-tree", params.tree, "-p", params.parent, "-m", params.message
+      ]),
+      { cwd: params.cwd, windowsHide: true }
+    );
+    return stdout.trim();
+  }
+
+  async resetHard(params: { cwd: string; ref: string }): Promise<void> {
+    await this.client(params.cwd).raw(["reset", "--hard", params.ref]);
+  }
+
+  async diffTreeRaw(params: { cwd: string; from: string; to: string }): Promise<Buffer> {
+    const { stdout } = await execFileAsync(
+      "git",
+      safeGitArgs(params.cwd, ["diff-tree", "-r", "--no-commit-id", "--raw", "-z", params.from, params.to]),
+      { cwd: params.cwd, windowsHide: true, encoding: "buffer" }
+    );
+    return Buffer.from(stdout);
+  }
+
   async isAncestor(params: { cwd: string; ancestor: string; descendant?: string }): Promise<boolean> {
     try {
       // Do not use simple-git.raw() here. `git merge-base --is-ancestor`
@@ -193,7 +291,7 @@ export class SimpleGitRunner implements GitRunner {
   }
 
   async unmergedFiles(cwd: string): Promise<string[]> {
-    return splitLines(await this.client(cwd).diff(["--name-only", "--diff-filter=U"]));
+    return splitLines(await this.client(cwd).diff(["--no-ext-diff", "--name-only", "--diff-filter=U"]));
   }
 
   async statusPorcelain(cwd: string): Promise<string[]> {
@@ -240,10 +338,11 @@ export class SimpleGitRunner implements GitRunner {
       : simpleGit({
           baseDir: params.cwd,
           config: [
-            `safe.directory=${gitPath(resolve(params.cwd))}`,
+            ...gitPolicyConfig(params.cwd),
             "user.name=ManyHands",
             "user.email=manyhands@local"
-          ]
+          ],
+          unsafe: { allowUnsafeHooksPath: true, allowUnsafeCredentialHelper: true, allowUnsafeDiffExternal: true, allowUnsafeProtocolOverride: true }
         });
     await commitGit.commit(params.message);
     const sha = await commitGit.revparse(["HEAD"]);
@@ -255,27 +354,28 @@ export class SimpleGitRunner implements GitRunner {
   }
 
   async diffCached(cwd: string): Promise<string> {
-    return this.client(cwd).diff(["--cached"]);
+    return this.client(cwd).diff(["--no-ext-diff", "--cached"]);
   }
 
   async diffCachedNameOnly(cwd: string): Promise<string[]> {
-    return splitLines(await this.client(cwd).diff(["--cached", "--name-only"]));
+    return splitLines(await this.client(cwd).diff(["--no-ext-diff", "--cached", "--name-only"]));
   }
 
   async diffCachedAddedFiles(cwd: string): Promise<string[]> {
-    return splitLines(await this.client(cwd).diff(["--cached", "--diff-filter=A", "--name-only"]));
+    return splitLines(await this.client(cwd).diff(["--no-ext-diff", "--cached", "--diff-filter=A", "--name-only"]));
   }
 
   async diffCachedNumstat(cwd: string): Promise<number> {
-    return sumNumstat(await this.client(cwd).diff(["--cached", "--numstat"]));
+    return sumNumstat(await this.client(cwd).diff(["--no-ext-diff", "--cached", "--numstat"]));
   }
 
   async diffRange(params: { cwd: string; from: string; to: string }): Promise<string> {
-    return this.client(params.cwd).diff([`${params.from}..${params.to}`]);
+    return this.client(params.cwd).diff(["--no-ext-diff", `${params.from}..${params.to}`]);
   }
 
   async diffRangeNameOnly(params: { cwd: string; from: string; to: string }): Promise<string[]> {
     const out = await this.client(params.cwd).diff([
+      "--no-ext-diff",
       `${params.from}..${params.to}`,
       "--name-only"
     ]);
@@ -284,6 +384,7 @@ export class SimpleGitRunner implements GitRunner {
 
   async diffRangeAddedFiles(params: { cwd: string; from: string; to: string }): Promise<string[]> {
     return splitLines(await this.client(params.cwd).diff([
+      "--no-ext-diff",
       `${params.from}..${params.to}`,
       "--diff-filter=A",
       "--name-only"
@@ -292,7 +393,7 @@ export class SimpleGitRunner implements GitRunner {
 
   async diffRangeNumstat(params: { cwd: string; from: string; to: string }): Promise<number> {
     return sumNumstat(
-      await this.client(params.cwd).diff([`${params.from}..${params.to}`, "--numstat"])
+      await this.client(params.cwd).diff(["--no-ext-diff", `${params.from}..${params.to}`, "--numstat"])
     );
   }
 
@@ -452,8 +553,47 @@ export class SimpleGitRunner implements GitRunner {
  * This keeps cross-Windows-user workspaces usable without mutating the user's
  * global git config or weakening ownership checks for unrelated repositories.
  */
-export function safeGitArgs(cwd: string, args: readonly string[]): string[] {
-  return ["-c", `safe.directory=${gitPath(resolve(cwd))}`, ...args];
+export type GitInvocationRole = "artifact" | "delivery_target";
+
+export function safeGitArgs(
+  cwd: string,
+  args: readonly string[],
+  role: GitInvocationRole = "artifact"
+): string[] {
+  const policy = role === "artifact" ? gitPolicyConfig(cwd) : deliveryTargetGitPolicy(cwd);
+  return policy.flatMap((entry) => ["-c", entry]).concat(args);
+}
+
+/**
+ * Deterministic configuration for all Git subprocesses that inspect or build
+ * ManyHands artifacts.  Artifact plumbing always addresses Git objects by OID,
+ * so it must not inherit user diff drivers, credentials, line-ending conversion
+ * or hooks from the selected repository.
+ */
+export function gitPolicyConfig(cwd: string): string[] {
+  return [
+    `safe.directory=${gitPath(resolve(cwd))}`,
+    "core.hooksPath=/dev/null",
+    "credential.helper=",
+    "core.autocrlf=false",
+    "core.eol=lf",
+    "core.attributesFile=/dev/null",
+    "diff.trustExitCode=false",
+    "protocol.file.allow=never",
+    "protocol.ext.allow=never"
+  ];
+}
+
+/**
+ * Delivery operates on the user's checked-out target, so Git must evaluate its
+ * native line-ending and attribute configuration when deciding whether that
+ * tree is clean.  We still scope trust and suppress repository hooks.
+ */
+export function deliveryTargetGitPolicy(cwd: string): string[] {
+  return [
+    `safe.directory=${gitPath(resolve(cwd))}`,
+    "core.hooksPath=/dev/null"
+  ];
 }
 
 function gitPath(value: string): string {

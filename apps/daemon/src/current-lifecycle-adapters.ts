@@ -280,6 +280,11 @@ export function createCurrentPlannerPort(
             revision: graph.revision,
             graph: asRecord(graph),
             contracts: Object.values(compiled.contracts.taskBundles).map(asRecord),
+            evidenceAuthority: {
+              goal: asRecord(goal),
+              validationObligations: Object.values(compiled.contracts.validationObligations).map(asRecord),
+              proofStrategies: Object.values(compiled.contracts.proofStrategies).map(asRecord)
+            },
             review: { findings: result.trace.advisoryFindings.map(asRecord) },
             trace: asRecord(result.trace)
           }),
@@ -562,12 +567,16 @@ function bindProductProofStrategies(
     }
     return current;
   };
-  const bindings = new Map<string, { criterionId: string; obligationId: string }>();
+  const bindings = new Map<string, { criterionId: string; obligationId: string; selectorDigest?: string }>();
   for (const unit of Object.values(normalized.units)) {
     unit.validation.forEach((validation) => {
       validation.proofStrategyId = `proof:${validation.obligationId}`;
       const criterionId = rootCriterion(validation.criterionId);
-      if (criterionId !== undefined) bindings.set(validation.obligationId, { criterionId, obligationId: validation.obligationId });
+      if (criterionId !== undefined) bindings.set(validation.obligationId, {
+        criterionId,
+        obligationId: validation.obligationId,
+        ...(validation.evidence === undefined ? {} : { selectorDigest: selectorDigestForValidation(validation.evidence.references) })
+      });
     });
     if (unit.integration !== undefined) {
       unit.integration.proofStrategyId = `proof:${unit.integration.obligationId}`;
@@ -577,7 +586,7 @@ function bindProductProofStrategies(
   }
   const proofStrategies = [...bindings.values()]
     .sort((left, right) => left.obligationId.localeCompare(right.obligationId))
-    .map(({ criterionId, obligationId }) => buildProofStrategy({
+    .map(({ criterionId, obligationId, selectorDigest }) => buildProofStrategy({
       id: `proof:${obligationId}`,
       revision: 1,
       goalContractDigest: goal.digest,
@@ -587,10 +596,15 @@ function bindProductProofStrategies(
       authority: "orchestrator_deterministic",
       repositoryViewDigest: view.digest,
       procedureRef: "command:stage6-transitional-validation",
+      ...(selectorDigest === undefined ? {} : { selectorDigest }),
       environmentPolicyDigest: "sha256:stage6-transitional-environment",
       independence: "independent_required"
     }, sha256));
   return { material: normalized, proofStrategies };
+}
+
+function selectorDigestForValidation(references: readonly string[]): string {
+  return sha256(JSON.stringify([...references].sort()));
 }
 
 function inspectProductivePlanningRepository(input: {
@@ -913,7 +927,7 @@ async function terminateTree(child: ChildProcess): Promise<void> {
 }
 
 async function git(repoRoot: string, args: string[]): Promise<string> {
-  const { stdout } = await execFileAsync("git", safeGitArgs(repoRoot, args), {
+  const { stdout } = await execFileAsync("git", safeGitArgs(repoRoot, args, "delivery_target"), {
     cwd: repoRoot,
     windowsHide: true,
     encoding: "utf8"

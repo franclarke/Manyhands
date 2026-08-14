@@ -1,7 +1,9 @@
 import { createHash } from "node:crypto";
+import { ArtifactManifestSchema } from "@manyhands/contracts";
 import { EntityIdSchema, IsoTimestampSchema, NonEmptyStringSchema } from "@manyhands/shared";
 import { z } from "zod";
 import type { GitRunner } from "../git/runner";
+import { ExactGitManifestMaterializer } from "../git/exact-manifest-materializer";
 import type { IntegrationOperationJournal } from "./operation-journal";
 
 const ContractRefSchema = z.object({ id: EntityIdSchema, revision: NonEmptyStringSchema }).strict();
@@ -11,10 +13,20 @@ export const IntegrationChildArtifactSchema = z.object({
   schemaVersion: z.literal(1), artifactId: EntityIdSchema, runId: EntityIdSchema,
   nodeId: EntityIdSchema, digest: NonEmptyStringSchema, producerAttemptId: EntityIdSchema,
   contract: ContractRefSchema, kind: z.enum(["commit", "files", "manifest", "logical"]),
-  location: NonEmptyStringSchema, adoptedAt: IsoTimestampSchema,
+  location: NonEmptyStringSchema, manifest: ArtifactManifestSchema.optional(), adoptedAt: IsoTimestampSchema,
   cherryPickMainline: z.literal(1).optional(),
   evidenceRefs: z.array(NonEmptyStringSchema).optional(), diffRef: NonEmptyStringSchema.optional()
-}).strict();
+}).strict().superRefine((artifact, context) => {
+  if (artifact.kind === "manifest") {
+    if (artifact.manifest === undefined) {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ["manifest"], message: "A manifest child artifact requires immutable manifest material." });
+    } else if (artifact.location !== artifact.manifest.manifestDigest) {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ["location"], message: "A manifest child artifact location must equal its manifest digest." });
+    }
+  } else if (artifact.manifest !== undefined) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["manifest"], message: "Only manifest child artifacts may embed manifest material." });
+  }
+});
 export type IntegrationChildArtifact = z.infer<typeof IntegrationChildArtifactSchema>;
 
 export interface IntegrationRequestManifest {
@@ -88,7 +100,7 @@ export interface IntegrationManifest {
   base: IntegrationRequestManifest["base"];
   childArtifacts: IntegrationChildArtifact[];
   seamRevisions: IntegrationRequestManifest["seamRevisions"];
-  operations: Array<{ artifactId: string; operation: "cherry_pick"; preSha: string; resultSha?: string; outcome: "applied" | "conflict" | "error" }>;
+  operations: Array<{ artifactId: string; operation: "cherry_pick" | "materialize_manifest"; preSha: string; resultSha?: string; outcome: "applied" | "conflict" | "error" }>;
   repairAttempt?: {
     pass: 1;
     cause: "materialization_conflict" | "parent_validation_failed";
@@ -159,7 +171,9 @@ export class IntegrationManifestExecutor {
           baseSha: request.base.resultingCommit,
           children: request.childArtifacts.map((artifact) => ({
             taskId: artifact.artifactId,
-            commitSha: artifact.location,
+            commitSha: artifact.kind === "manifest" && artifact.manifest !== undefined
+              ? artifact.manifest.sourceCandidate.commitOid
+              : artifact.location,
             state: "pending" as const
           })),
           ...(input.integrationOperation.operationId !== undefined ? { operationId: input.integrationOperation.operationId } : {}),
@@ -206,6 +220,52 @@ export class IntegrationManifestExecutor {
     let repairAttempt: IntegrationManifest["repairAttempt"] = journalOperation?.repairAttempt;
     for (const artifact of request.childArtifacts) {
       signal?.throwIfAborted();
+      if (artifact.kind === "manifest" && artifact.manifest !== undefined) {
+        if (artifact.manifest.kind !== "change_set") {
+          return { ...base, operations, disposition: "failed", errors: [{ code: "unsupported_artifact", artifactId: artifact.artifactId, message: `Artifact ${artifact.artifactId} has unsupported manifest kind ${artifact.manifest.kind}.` }] };
+        }
+        const preSha = await this.deps.git.head(worktreePath);
+        const recordedChild = journalOperation?.children.find((child) => child.taskId === artifact.artifactId);
+        if ((recordedChild?.state === "applied" || recordedChild?.state === "repaired") && recordedChild.resultSha !== undefined) {
+          if (preSha !== recordedChild.resultSha) {
+            return { ...base, operations, disposition: "failed", errors: [{ code: "base_mismatch", artifactId: artifact.artifactId, message: `Recovered child ${artifact.artifactId} expected HEAD ${recordedChild.resultSha}, found ${preSha}.` }] };
+          }
+          operations.push({ artifactId: artifact.artifactId, operation: "materialize_manifest", preSha: recordedChild.startedFromSha ?? request.base.resultingCommit, resultSha: recordedChild.resultSha, outcome: "applied" });
+          continue;
+        }
+        if (journalOperation !== undefined) {
+          journalOperation = await input.integrationOperation!.journal.update(journalOperation, {
+            state: "cherry_pick_started",
+            currentChildId: artifact.artifactId,
+            children: journalOperation.children.map((child) => child.taskId === artifact.artifactId
+              ? { ...child, state: "started" as const, startedFromSha: preSha }
+              : child)
+          });
+        }
+        try {
+          const allowedPaths = artifact.manifest.entries.flatMap((entry) => [entry.oldPath, entry.newPath].filter((path): path is string => path !== undefined));
+          const materialized = await new ExactGitManifestMaterializer(this.deps.git).materialize({
+            cwd: worktreePath,
+            baseCommit: preSha,
+            manifest: artifact.manifest,
+            allowedPaths
+          });
+          operations.push({ artifactId: artifact.artifactId, operation: "materialize_manifest", preSha, resultSha: materialized.executionBaseCommit, outcome: "applied" });
+          if (journalOperation !== undefined) {
+            journalOperation = await input.integrationOperation!.journal.update(journalOperation, {
+              state: "child_applied",
+              currentChildId: artifact.artifactId,
+              children: journalOperation.children.map((child) => child.taskId === artifact.artifactId
+                ? { ...child, state: "applied" as const, startedFromSha: preSha, resultSha: materialized.executionBaseCommit, application: "manifest_materialized" as const }
+                : child)
+            });
+          }
+          continue;
+        } catch (error) {
+          operations.push({ artifactId: artifact.artifactId, operation: "materialize_manifest", preSha, outcome: "conflict" });
+          return { ...base, operations, disposition: "decision_required", errors: [{ code: "materialization_failed", artifactId: artifact.artifactId, message: error instanceof Error ? error.message : String(error) }] };
+        }
+      }
       if (artifact.kind !== "commit") return { ...base, operations, disposition: "failed", errors: [{ code: "unsupported_artifact", artifactId: artifact.artifactId, message: `Artifact ${artifact.artifactId} requires a ${artifact.kind} materializer.` }] };
       const preSha = await this.deps.git.head(worktreePath);
       const recordedChild = journalOperation?.children.find((child) => child.taskId === artifact.artifactId);

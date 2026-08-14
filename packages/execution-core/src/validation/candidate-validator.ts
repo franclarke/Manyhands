@@ -102,7 +102,7 @@ export async function validateExactCandidate(
 ): Promise<ExactCandidateValidationResult> {
   const cacheKey = evidenceCacheKey(input.recipe.recipeId, input.integrityFindings ?? []);
   const cached = await dependencies.cache?.get(cacheKey);
-  if (cached !== undefined) return cached;
+  if (cached?.candidateCommit === input.recipe.candidateCommit) return cached;
   const sandbox = await dependencies.sandbox.create({ candidateCommit: input.recipe.candidateCommit });
   // Opened lazily on the first baseline obligation and reused for the rest, then
   // disposed once — never one worktree per obligation.

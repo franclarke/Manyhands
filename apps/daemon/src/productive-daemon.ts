@@ -54,7 +54,8 @@ export interface TransitionalUnsafeExecutionProfile {
     env: Record<string, string>;
     timeoutMs?: number;
   };
-  loadPlanningResult?(effectId: string): Promise<readonly RunEventInput[]>;
+  /** Every transitional model effect must expose the durable facts the actor appends. */
+  loadPlanningResult(effectId: string): Promise<readonly RunEventInput[]>;
   loadExecutionResult?(runId: string, attemptId: string): Promise<readonly RunEventInput[]>;
   loadDeliveryResult?(effectId: string): Promise<DeliveryReceipt>;
 }
@@ -101,9 +102,12 @@ export async function startProductiveDaemon(
     clock,
     executionProcess,
     recoverInterruptedExecution: options.profile.kind === "deterministic_fake",
-    ...(options.profile.kind !== "transitional_unsafe" || options.profile.loadPlanningResult === undefined
-      ? {}
-      : { loadPlanningResult: options.profile.loadPlanningResult }),
+    ...(options.profile.kind === "deterministic_fake"
+      ? { loadPlanningResult: async (effectId: string) => deterministicPlanningResult(effectId, clock) }
+      : {}),
+    ...(options.profile.kind === "transitional_unsafe"
+      ? { loadPlanningResult: options.profile.loadPlanningResult }
+      : {}),
     ...(options.profile.kind !== "transitional_unsafe" || options.profile.loadExecutionResult === undefined
       ? {}
       : { loadExecutionResult: options.profile.loadExecutionResult }),
@@ -231,6 +235,60 @@ function deterministicAdapters(
         });
       }
     }))
+  ];
+}
+
+/**
+ * The deterministic GR profile has no model provider, but it must still return
+ * canonical planning facts for the actor to append after the model-call receipt.
+ * Keeping this result deterministic makes restart/replay observe the same plan
+ * without granting the physical adapter lifecycle-writing authority.
+ */
+function deterministicPlanningResult(effectId: string, clock: () => string): readonly RunEventInput[] {
+  const suffix = createHash("sha256").update(effectId).digest("hex").slice(0, 16);
+  const graphId = `graph:deterministic:${suffix}`;
+  const decisionId = `approve-plan:${graphId}:r1`;
+  const at = clock();
+  const eventId = (kind: string) => `deterministic:${suffix}:${kind}`;
+  return [
+    {
+      eventId: eventId("planning-completed"),
+      occurredAt: at,
+      type: "planning.completed",
+      payload: { semanticPlan: { id: `plan:deterministic:${suffix}`, revision: 1 }, trace: {} }
+    },
+    {
+      eventId: eventId("graph-compiled"),
+      occurredAt: at,
+      type: "graph.compiled",
+      payload: { graphId, revision: 1, graph: {}, contracts: [], review: {}, trace: {} }
+    },
+    {
+      eventId: eventId("graph-proposed"),
+      occurredAt: at,
+      type: "graph.revision.proposed",
+      payload: { graphId, revision: 1 }
+    },
+    {
+      eventId: decisionId,
+      occurredAt: at,
+      type: "decision.raised",
+      payload: {
+        decision: {
+          id: decisionId,
+          kind: "approve_plan",
+          question: "Approve deterministic planning result?",
+          options: [
+            { id: "approve", label: "Approve" },
+            { id: "reject", label: "Reject" }
+          ],
+          affectedNodeIds: ["node:deterministic"],
+          evidenceRefs: [],
+          impact: "architecture",
+          raisedAtGraphRevision: 1
+        }
+      }
+    }
   ];
 }
 

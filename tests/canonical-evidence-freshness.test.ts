@@ -25,6 +25,17 @@ describe("canonical evidence freshness", () => {
     expect(validateEvidenceFreshness(evidence, expectation(), sha256)).toEqual({ ok: true, issues: [] });
   });
 
+  it("rejects evidence observed against a different baseline tree", () => {
+    const evidence = buildEvidenceBinding(evidenceMaterial(), sha256);
+    const expected: EvidenceFreshnessExpectation = {
+      ...expectation(),
+      baseline: { commitOid: "e".repeat(40), treeOid: "f".repeat(40) }
+    };
+
+    expect(validateEvidenceFreshness(evidence, expected, sha256).issues)
+      .toContainEqual(expect.objectContaining({ code: "stale_baseline_tree" }));
+  });
+
   it("rejects evidence whose material changed without recomputing its canonical digest", () => {
     const evidence = buildEvidenceBinding({ ...evidenceMaterial(), outcome: "failed" }, sha256);
     const tampered = { ...evidence, outcome: "satisfied" };
@@ -68,6 +79,7 @@ function evidenceMaterial() {
       commitOid: "c".repeat(40),
       treeOid: "d".repeat(40)
     },
+    baseline: { commitOid: "a".repeat(40), treeOid: "b".repeat(40) },
     proofStrategyDigest: "sha256:strategy",
     mode: "executable" as const,
     authority: "orchestrator_deterministic" as const,
@@ -88,6 +100,7 @@ function expectation(): EvidenceFreshnessExpectation {
     mode: evidence.mode,
     authority: evidence.authority,
     candidate: evidence.candidate,
+    baseline: evidence.baseline,
     proofStrategyDigest: evidence.proofStrategyDigest,
     recipeDigest: evidence.recipeDigest,
     environmentDigest: evidence.environmentDigest,

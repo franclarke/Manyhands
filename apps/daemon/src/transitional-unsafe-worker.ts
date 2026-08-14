@@ -4,7 +4,16 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { promisify } from "node:util";
 
-import { TaskContractBundleSchema, type TaskContractBundle } from "@manyhands/contracts";
+import {
+  CanonicalValidationObligationSchema,
+  GoalContractSchema,
+  ProofStrategySchema,
+  TaskContractBundleSchema,
+  type CanonicalValidationObligation,
+  type GoalContract,
+  type ProofStrategy,
+  type TaskContractBundle
+} from "@manyhands/contracts";
 import {
   CanonicalNodeExecutor,
   DefaultAgentExecutorFactory,
@@ -66,6 +75,11 @@ interface ApprovedExecutionPlan {
   repositorySnapshot: RepositorySnapshot;
   state: RunProjection;
   definition: ProductRunDefinition;
+  evidenceAuthority: {
+    goal: GoalContract;
+    validationObligations: Record<string, CanonicalValidationObligation>;
+    proofStrategies: Record<string, ProofStrategy>;
+  };
 }
 
 void main().catch((error: unknown) => {
@@ -98,6 +112,7 @@ async function main(): Promise<void> {
     const executorReady = await executorAvailability(execution.executorId);
     const git = new SimpleGitRunner();
     await git.revParse(repoRoot, `${targetField(prepared.definition, "sourceBaseCommit")}^{commit}`);
+    const baselineTree = await git.revParse(repoRoot, `${targetField(prepared.definition, "sourceBaseCommit")}^{tree}`);
     worktrees = new WorktreeManager({ git, repoRoot });
     const workspaces = new EphemeralExecutionWorkspaceProvider({
       repoRoot,
@@ -124,6 +139,7 @@ async function main(): Promise<void> {
         operationId: input.attemptId,
         traceStore
       }),
+      evidenceAuthority: prepared.evidenceAuthority,
       finalCandidate: finalCandidatePort({
         git,
         repoRoot,
@@ -189,6 +205,13 @@ async function main(): Promise<void> {
         sourceTargetFingerprint: targetField(prepared.definition, "fingerprint"),
         targetBranch: targetField(prepared.definition, "sourceBranch"),
         targetHead: targetField(prepared.definition, "sourceBaseCommit")
+      },
+      evidenceAuthority: {
+        ...prepared.evidenceAuthority,
+        baseline: {
+          commitOid: targetField(prepared.definition, "sourceBaseCommit"),
+          treeOid: baselineTree
+        }
       }
     });
       } finally {
@@ -247,6 +270,23 @@ function loadApprovedExecutionPlan(events: readonly RunEvent[]): ApprovedExecuti
     const bundle = TaskContractBundleSchema.parse(contract);
     return [bundle.task.nodeId, bundle];
   }));
+  if (compiled.payload.evidenceAuthority === undefined) {
+    throw new Error("Approved graph has no immutable validation authority; re-plan before execution.");
+  }
+  const authority = compiled.payload.evidenceAuthority;
+  const goal = GoalContractSchema.parse(authority.goal);
+  const validationObligations = Object.fromEntries(
+    authority.validationObligations.map((obligation) => {
+      const parsed = CanonicalValidationObligationSchema.parse(obligation);
+      return [parsed.id, parsed];
+    })
+  );
+  const proofStrategies = Object.fromEntries(
+    authority.proofStrategies.map((strategy) => {
+      const parsed = ProofStrategySchema.parse(strategy);
+      return [parsed.id, parsed];
+    })
+  );
   const repositorySnapshot = RepositorySnapshotSchema.parse(
     inspected.payload.snapshot
   ) as RepositorySnapshot;
@@ -257,7 +297,14 @@ function loadApprovedExecutionPlan(events: readonly RunEvent[]): ApprovedExecuti
       repositoryView.resourceCatalogDigest !== graph.repositoryView.resourceCatalogDigest) {
     throw new Error("Approved graph does not match the exact repository view captured during planning.");
   }
-  return { graph, contracts, repositorySnapshot, state, definition: state.definition };
+  return {
+    graph,
+    contracts,
+    repositorySnapshot,
+    state,
+    definition: state.definition,
+    evidenceAuthority: { goal, validationObligations, proofStrategies }
+  };
 }
 
 function memoryJournal(initialEvents: readonly RunEvent[]): RunEventJournalPort & {

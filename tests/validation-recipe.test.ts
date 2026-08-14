@@ -148,4 +148,25 @@ describe("compileValidationRecipe", () => {
     expect(recipe.steps[0]?.attributions?.[0]?.evidenceKind).toBe("test_result");
   });
 
+  it("rejects a selector that could escape the candidate worktree or alter command parsing", () => {
+    const unsafeContract = {
+      ...contract,
+      obligations: [{
+        ...contract.obligations[1]!,
+        evidence: {
+          kind: "focused_command" as const,
+          selectors: ["../outside.test.ts"],
+          references: ["tests/booking.test.ts"]
+        }
+      }]
+    } as ValidationContract;
+
+    expect(() => compileValidationRecipe({
+      contract: unsafeContract,
+      capabilities,
+      repositorySnapshotId: "snapshot-1",
+      candidateCommit: "abc"
+    })).toThrow(/unsafe validation selector/i);
+  });
+
 });

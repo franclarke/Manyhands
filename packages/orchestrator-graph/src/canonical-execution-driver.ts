@@ -1,4 +1,5 @@
-import type { ArtifactContract, TaskContractBundle } from "@manyhands/contracts";
+import { validateEvidenceFreshness, type ArtifactContract, type ArtifactManifest, type CanonicalValidationObligation, type CandidateTreeManifest, type GoalContract, type ProofStrategy, type TaskContractBundle } from "@manyhands/contracts";
+import { createHash } from "node:crypto";
 import type { FinalArtifactManifest } from "@manyhands/shared";
 import {
   computeInputFingerprint,
@@ -49,12 +50,13 @@ export type CanonicalNodeExecutionOutcome =
       outputDigest: string;
       changedFiles: string[];
       evidenceMatrix: EvidenceMatrixRecord;
-      artifactLocation: string;
-      artifactCherryPickMainline?: 1;
+      candidateManifest?: CandidateTreeManifest;
+      artifactManifests?: Readonly<Record<string, ArtifactManifest>>;
       integrationManifestId?: string;
       finalManifestId?: string;
       finalManifest?: FinalArtifactManifest;
     }
+  | { kind: "needs_input"; reason: string; unmaterializedObligationIds: string[] }
   | { kind: "failure"; reason: string; usage?: AttemptUsage };
 
 export interface CanonicalExecutionDriverOptions {
@@ -76,7 +78,15 @@ export interface CanonicalExecutionRunInput {
   effectiveConfig: { maxParallel: number; maxTokensTotal?: number; maxCostUsd?: number };
   availableExecutorNodeIds: string[];
   target: CanonicalExecutionTarget;
+  evidenceAuthority?: CanonicalEvidenceAuthority;
   maxWaves?: number;
+}
+
+export interface CanonicalEvidenceAuthority {
+  goal: GoalContract;
+  baseline: { commitOid: string; treeOid: string };
+  validationObligations: Readonly<Record<string, CanonicalValidationObligation>>;
+  proofStrategies: Readonly<Record<string, ProofStrategy>>;
 }
 
 /**
@@ -197,13 +207,13 @@ export class CanonicalExecutionDriver {
     outcome: CanonicalNodeExecutionOutcome
   ): Promise<RunProjection> {
     const at = this.options.now();
-    if (outcome.kind === "failure") {
+    if (outcome.kind === "failure" || outcome.kind === "needs_input") {
       return this.options.coordinator.record(run.runId, [
         fact(`${attempt.input.attemptId}:failed`, at, "attempt.failed", {
           attemptId: attempt.input.attemptId,
           nodeId: attempt.input.node.id,
           reason: outcome.reason,
-          ...(outcome.usage === undefined ? {} : { usage: outcome.usage })
+          ...(outcome.kind === "failure" && outcome.usage !== undefined ? { usage: outcome.usage } : {})
         }),
         decisionFact(attempt, at, outcome.reason)
       ]);
@@ -216,6 +226,9 @@ export class CanonicalExecutionDriver {
         outcome.evidenceMatrix.validationContract.revision !== expectedValidation.revision) {
       throw new Error(`Evidence matrix ${outcome.evidenceMatrix.matrixId} does not match ${attempt.input.node.id}'s validation contract.`);
     }
+    if (run.evidenceAuthority !== undefined && outcome.evidenceMatrix.outcome === "verified") {
+      verifyExactEvidenceAuthority(run.evidenceAuthority, outcome);
+    }
     const integration = attempt.input.node.kind !== "leaf";
     const facts: RunEventInput[] = integration
       ? [fact(`${attempt.input.attemptId}:integrated`, at, "integration.completed", {
@@ -223,12 +236,26 @@ export class CanonicalExecutionDriver {
         nodeId: attempt.input.node.id,
         manifestId: outcome.integrationManifestId ?? `${attempt.input.attemptId}:integration`,
         candidateCommit: outcome.candidateCommit,
+        ...(outcome.candidateManifest === undefined ? {} : {
+          candidate: {
+            manifestDigest: outcome.candidateManifest.manifestDigest,
+            commitOid: outcome.candidateManifest.commitOid,
+            treeOid: outcome.candidateManifest.treeOid
+          }
+        }),
         matrix: outcome.evidenceMatrix
       })]
       : [fact(`${attempt.input.attemptId}:candidate`, at, "attempt.candidate_created", {
         attemptId: attempt.input.attemptId,
         nodeId: attempt.input.node.id,
         candidateCommit: outcome.candidateCommit,
+        ...(outcome.candidateManifest === undefined ? {} : {
+          candidate: {
+            manifestDigest: outcome.candidateManifest.manifestDigest,
+            commitOid: outcome.candidateManifest.commitOid,
+            treeOid: outcome.candidateManifest.treeOid
+          }
+        }),
         outputDigest: outcome.outputDigest,
         changedFiles: outcome.changedFiles,
         ...(outcome.usage === undefined ? {} : { usage: outcome.usage })
@@ -244,18 +271,36 @@ export class CanonicalExecutionDriver {
       return this.options.coordinator.record(run.runId, facts);
     }
     for (const artifact of producedArtifacts(attempt.input.contract, attempt.input.node.id)) {
+      const manifest = outcome.artifactManifests?.[artifact.id];
+      const contractRef = attempt.input.graph.contractRefs.find((ref) =>
+        ref.id === artifact.id && ref.revision === Number(artifact.revision)
+      );
+      if (manifest === undefined) {
+        throw new Error(`Verified attempt ${attempt.input.attemptId} did not produce manifest ${artifact.id}.`);
+      }
+      if (contractRef === undefined ||
+          manifest.id !== artifact.id ||
+          manifest.contract.id !== contractRef.id ||
+          manifest.contract.revision !== contractRef.revision ||
+          manifest.contract.digest !== contractRef.digest ||
+          manifest.producerNodeId !== attempt.input.node.id ||
+          manifest.producerAttemptId !== attempt.input.attemptId ||
+          manifest.inputFingerprint !== attempt.input.inputFingerprint ||
+          manifest.sourceCandidate.commitOid !== outcome.candidateCommit) {
+        throw new Error(`Manifest ${manifest.id} does not bind the exact verified attempt ${attempt.input.attemptId}.`);
+      }
       facts.push(fact(`${attempt.input.attemptId}:artifact:${artifact.id}`, at, "artifact.adopted", {
         artifact: {
           schemaVersion: 1,
           artifactId: `${artifact.id}:${attempt.input.attemptId}`,
           runId: run.runId,
           nodeId: attempt.input.node.id,
-          digest: outcome.outputDigest,
+          digest: manifest.manifestDigest,
           producerAttemptId: attempt.input.attemptId,
           contract: { id: artifact.id, revision: artifact.revision },
-          kind: "commit",
-          location: outcome.artifactLocation,
-          ...(outcome.artifactCherryPickMainline === undefined ? {} : { cherryPickMainline: outcome.artifactCherryPickMainline }),
+          kind: "manifest",
+          location: manifest.manifestDigest,
+          manifest,
           adoptedAt: at
         }
       }));
@@ -300,6 +345,64 @@ function prepare(input: CanonicalExecutionRunInput): PreparedRun {
   }
   return { ...input, graph };
 }
+
+function verifyExactEvidenceAuthority(
+  authority: CanonicalEvidenceAuthority,
+  outcome: Extract<CanonicalNodeExecutionOutcome, { kind: "success" }>
+): void {
+  const candidate = outcome.candidateManifest;
+  if (candidate === undefined) {
+    throw new Error(`Verified evidence matrix ${outcome.evidenceMatrix.matrixId} has no retained candidate-tree manifest.`);
+  }
+  if (
+    candidate.commitOid !== outcome.candidateCommit ||
+    candidate.sourceCandidate.commitOid !== outcome.candidateCommit ||
+    candidate.sourceCandidate.treeOid !== candidate.treeOid
+  ) {
+    throw new Error(`Candidate manifest ${candidate.id} does not identify the verified candidate.`);
+  }
+  const bindings = outcome.evidenceMatrix.evidenceBindings;
+  if (bindings.length !== outcome.evidenceMatrix.criteria.length) {
+    throw new Error(`Evidence matrix ${outcome.evidenceMatrix.matrixId} does not bind every validation criterion.`);
+  }
+  for (const criterion of outcome.evidenceMatrix.criteria) {
+    const binding = bindings.find((item) => item.obligationId === criterion.obligationId);
+    if (binding === undefined) throw new Error(`Evidence matrix ${outcome.evidenceMatrix.matrixId} is missing ${criterion.obligationId}.`);
+    const obligation = authority.validationObligations[criterion.obligationId];
+    const strategy = obligation === undefined ? undefined : authority.proofStrategies[obligation.proofStrategy.id];
+    if (
+      obligation === undefined ||
+      strategy === undefined ||
+      strategy.selectorDigest === undefined ||
+      strategy.revision !== obligation.proofStrategy.revision ||
+      strategy.digest !== obligation.proofStrategy.digest
+    ) {
+      throw new Error(`Evidence criterion ${criterion.obligationId} has no materialized proof authority.`);
+    }
+    const freshness = validateEvidenceFreshness(binding, {
+      goalContractDigest: authority.goal.digest,
+      criterionId: strategy.criterionId,
+      obligationId: criterion.obligationId,
+      mode: strategy.mode,
+      authority: strategy.authority,
+      candidate: { manifestDigest: candidate.manifestDigest, commitOid: candidate.commitOid, treeOid: candidate.treeOid },
+      baseline: authority.baseline,
+      proofStrategyDigest: strategy.digest,
+      recipeDigest: requiredRecipeDigest(outcome.evidenceMatrix),
+      environmentDigest: strategy.environmentPolicyDigest,
+      selectorDigest: strategy.selectorDigest,
+      outputDigest: binding.outputDigest
+    }, sha256);
+    if (!freshness.ok) throw new Error(`Evidence binding ${binding.id} is stale: ${freshness.issues.map(({ code }) => code).join(", ")}.`);
+  }
+}
+
+function requiredRecipeDigest(matrix: EvidenceMatrixRecord): string {
+  if (matrix.validationRecipeDigest === undefined) throw new Error(`Evidence matrix ${matrix.matrixId} has no validation recipe digest.`);
+  return matrix.validationRecipeDigest;
+}
+
+const sha256 = (value: string) => `sha256:${createHash("sha256").update(value).digest("hex")}`;
 
 function createAttempt(run: PreparedRun, state: RunProjection, nodeId: string, waveId: string, at: string): PreparedAttempt {
   const node = run.graph.nodes[nodeId]!;

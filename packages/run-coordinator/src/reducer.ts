@@ -1,10 +1,11 @@
-import type { EffectIntent, PhysicalEffectReceipt } from "@manyhands/contracts";
+import type { EffectIntent, ExactCandidate, PhysicalEffectReceipt } from "@manyhands/contracts";
 import type { CommandReceipt } from "./command-envelope.js";
 import { DecisionSchema, type Decision } from "./domain/decisions.js";
 import { RunEventSchema, type RunEvent } from "./domain/events.js";
 import { assertLifecycleTransition, type RunLifecycle } from "./domain/lifecycle.js";
 import { INITIAL_RUN_OUTCOMES, type DeliveryApproval, type DeliveryReceipt, type FinalCandidate, type RunOutcomes } from "./domain/outcomes.js";
 import type { AdoptedArtifact } from "./domain/artifacts.js";
+import type { HumanReview } from "./domain/human-review.js";
 import type { AttemptUsage, PlanningCandidateEvaluation, PlanningCandidateSelection } from "./domain/events.js";
 import type { FailureClass } from "./domain/failures.js";
 import type { ProductRunDefinition } from "./product-lifecycle.js";
@@ -18,6 +19,7 @@ export interface AttemptProjection {
   kind: "execution" | "integration";
   status: "running" | "candidate" | "validated" | "adopted" | "failed" | "discarded" | "stale";
   candidateCommit?: string;
+  candidate?: ExactCandidate;
   outputDigest?: string;
   repairPasses: number;
   failureReason?: string;
@@ -112,6 +114,7 @@ export interface RunProjection {
   readiness: { readyNodeIds: string[]; pendingDecisionIds: string[]; explanations?: Array<Record<string, unknown>>; effectiveConfig?: Record<string, unknown>; schedulerState?: Record<string, unknown>; budgetAvailable?: boolean; conflictEvidence?: Array<Record<string, unknown>>; evaluatedAt?: string };
   selectedWaves: Array<{ waveId: string; nodeIds: string[]; maxParallel: number; blocked?: Array<Record<string, unknown>>; effectiveConfig?: Record<string, unknown>; conflictEvidence?: Array<Record<string, unknown>>; evaluatedAt?: string }>;
   attempts: Record<string, AttemptProjection>;
+  humanReviews: Record<string, HumanReview>;
   adoptedArtifacts: Record<string, AdoptedArtifact>;
   nodeEvidenceMatrixIds: Record<string, string>;
   integrations: Record<string, IntegrationProjection>;
@@ -157,6 +160,7 @@ export function foldRun(rawEvents: readonly RunEvent[]): RunProjection {
         readiness: { readyNodeIds: [], pendingDecisionIds: [] },
         selectedWaves: [],
         attempts: {},
+        humanReviews: {},
         adoptedArtifacts: {},
         nodeEvidenceMatrixIds: {},
         integrations: {},
@@ -344,8 +348,17 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       if (attempt.status !== "running") throw new Error(`Attempt ${attempt.attemptId} cannot create a candidate while ${attempt.status}.`);
       attempt.status = "candidate";
       attempt.candidateCommit = event.payload.candidateCommit;
+      if (event.payload.candidate !== undefined) {
+        if (event.payload.candidate.commitOid !== attempt.candidateCommit) throw new Error(`Attempt ${attempt.attemptId} candidate manifest does not match its candidate commit.`);
+        attempt.candidate = { ...event.payload.candidate };
+      }
       attempt.outputDigest = event.payload.outputDigest;
       if (event.payload.usage !== undefined) attempt.usage = { ...event.payload.usage };
+      for (const review of Object.values(next.humanReviews)) {
+        if (review.status === "active" && review.nodeId === attempt.nodeId && !sameCandidate(review.candidate, attempt.candidate)) {
+          review.status = "stale";
+        }
+      }
       break;
     }
     case "attempt.failed": {
@@ -383,6 +396,20 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       };
       break;
     }
+    case "human_review.recorded": {
+      if (next.lifecycle !== "running" && next.lifecycle !== "waiting_for_input") throw new Error(`Cannot record a human review while ${next.lifecycle}.`);
+      const review = event.payload.review;
+      if (next.humanReviews[review.reviewId] !== undefined) throw new Error(`Human review ${review.reviewId} already exists.`);
+      const attempt = requireAttempt(next, review.attemptId, review.nodeId);
+      if (attempt.status !== "candidate" && attempt.status !== "validated") throw new Error(`Attempt ${attempt.attemptId} cannot be reviewed while ${attempt.status}.`);
+      if (!sameCandidate(attempt.candidate, review.candidate)) throw new Error(`Human review ${review.reviewId} is not bound to attempt ${attempt.attemptId}'s exact candidate.`);
+      const latestCandidate = latestCandidateAttempt(next, review.nodeId);
+      if (latestCandidate?.attemptId !== attempt.attemptId || !sameCandidate(latestCandidate.candidate, review.candidate)) {
+        throw new Error(`Human review ${review.reviewId} is stale for node ${review.nodeId}.`);
+      }
+      next.humanReviews[review.reviewId] = { ...review, candidate: { ...review.candidate }, status: "active" };
+      break;
+    }
     case "artifact.adopted": {
       if (next.lifecycle !== "running" && next.lifecycle !== "waiting_for_input") throw new Error(`Cannot record execution artifacts while ${next.lifecycle}.`);
       const artifact = event.payload.artifact;
@@ -412,6 +439,10 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       const attempt = requireAttempt(next, event.payload.attemptId, event.payload.nodeId);
       attempt.status = "validated";
       attempt.candidateCommit = event.payload.candidateCommit;
+      if (event.payload.candidate !== undefined) {
+        if (event.payload.candidate.commitOid !== attempt.candidateCommit) throw new Error(`Integration ${attempt.attemptId} candidate manifest does not match its candidate commit.`);
+        attempt.candidate = { ...event.payload.candidate };
+      }
       next.nodeEvidenceMatrixIds[event.payload.nodeId] = event.payload.matrix.matrixId;
       if (!next.evidenceMatrices.includes(event.payload.matrix.matrixId)) next.evidenceMatrices.push(event.payload.matrix.matrixId);
       next.evidenceMatrixSummaries[event.payload.matrix.matrixId] = {
@@ -659,6 +690,19 @@ function requireAttempt(state: RunProjection, attemptId: string, nodeId: string)
   const attempt = state.attempts[attemptId];
   if (attempt === undefined || attempt.nodeId !== nodeId) throw new Error(`Attempt ${attemptId} does not belong to node ${nodeId}.`);
   return attempt;
+}
+
+function latestCandidateAttempt(state: RunProjection, nodeId: string): AttemptProjection | undefined {
+  return Object.values(state.attempts)
+    .filter((attempt) => attempt.nodeId === nodeId && attempt.candidateCommit !== undefined)
+    .at(-1);
+}
+
+function sameCandidate(left: ExactCandidate | undefined, right: ExactCandidate | undefined): boolean {
+  return left !== undefined && right !== undefined &&
+    left.manifestDigest === right.manifestDigest &&
+    left.commitOid === right.commitOid &&
+    left.treeOid === right.treeOid;
 }
 
 function requireIntegration(state: RunProjection, attemptId: string, nodeId: string): IntegrationProjection {

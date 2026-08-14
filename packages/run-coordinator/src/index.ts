@@ -14,6 +14,7 @@ export * from "./domain/attempts.js";
 export * from "./domain/fingerprint.js";
 export * from "./domain/failures.js";
 export * from "./domain/evidence.js";
+export * from "./domain/human-review.js";
 export * from "./domain/events.js";
 export * from "./domain/lifecycle.js";
 export * from "./domain/outcomes.js";

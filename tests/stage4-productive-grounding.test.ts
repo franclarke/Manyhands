@@ -106,6 +106,8 @@ describe("Stage 4 productive repository grounding", () => {
       .toMatchObject({ status: "ready", rootUnitId: "unit:root" });
     expect(result.events.find((event) => event.type === "graph.compiled")?.payload.graph)
       .toMatchObject({ semanticPlan: expect.objectContaining({ id: expect.stringMatching(/^plan:/u) }) });
+    expect(result.events.find((event) => event.type === "graph.compiled")?.payload.evidenceAuthority)
+      .toMatchObject({ goal: expect.objectContaining({ digest: expect.stringMatching(/^sha256:/u) }) });
   });
 });
 

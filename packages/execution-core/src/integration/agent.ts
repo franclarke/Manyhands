@@ -943,6 +943,9 @@ export class IntegrationAgent {
     ) {
       return false;
     }
+    if (recorded.application === "manifest_materialized") {
+      return await this.hasFirstParent(cwd, recorded.resultSha, recorded.startedFromSha);
+    }
     return await this.hasFirstParent(cwd, recorded.resultSha, recorded.startedFromSha) &&
       await this.hasExpectedSourceProvenance(cwd, recorded.resultSha, sourceCommitSha, recorded.application);
   }

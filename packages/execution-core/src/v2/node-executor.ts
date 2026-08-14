@@ -3,7 +3,16 @@ import { rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import type { ArtifactContract, TaskContractBundle } from "@manyhands/contracts";
+import type {
+  ArtifactContract,
+  ArtifactManifest,
+  CanonicalValidationObligation,
+  CandidateTreeManifest,
+  EvidenceBinding,
+  GoalContract,
+  ProofStrategy,
+  TaskContractBundle
+} from "@manyhands/contracts";
 import type { CriterionEvidenceObservation, GranularityPolicyManifest } from "@manyhands/shared";
 import type { CanonicalTaskNode, GraphRevision } from "@manyhands/task-graph";
 import type { TraceStore } from "@manyhands/trace-store";
@@ -15,6 +24,8 @@ import type { AgentExecutorFactory } from "../executor/factory";
 import type { StageSelection } from "../executor/registry";
 import { usageSourceForSelection } from "../executor/registry";
 import type { GitRunner } from "../git/runner";
+import { GitArtifactBuilder } from "../git/artifact-builder";
+import { bindExactEvidence } from "../validation/exact-evidence-binding";
 import {
   createIntegrationRequestManifest,
   IntegrationManifestExecutor,
@@ -36,6 +47,7 @@ export interface V2ExecutionArtifact {
   contract: { id: string; revision: string };
   kind: "commit" | "files" | "manifest" | "logical";
   location: string;
+  manifest?: ArtifactManifest | undefined;
   cherryPickMainline?: 1 | undefined;
   adoptedAt: string;
 }
@@ -53,6 +65,7 @@ export interface V2ExecutionEvidenceMatrix {
   }>;
   outcome: "verified" | "unverified" | "failed";
   validationRecipeDigest?: string;
+  evidenceBindings: EvidenceBinding[];
   observations: CriterionEvidenceObservation[];
   integrityFindings?: Array<{
     findingId: string;
@@ -159,12 +172,18 @@ export type V2PhysicalNodeExecutionOutcome =
       outputDigest: string;
       changedFiles: string[];
       evidenceMatrix: V2ExecutionEvidenceMatrix;
+      artifactBaseCommit?: string;
       artifactLocation: string;
       artifactCherryPickMainline?: 1;
       integrationManifestId?: string;
       repairObservations?: Array<{ kind: "code" | "integration"; pass: number; evidenceRefs: string[] }>;
       finalManifestId?: string;
       finalManifest?: FinalArtifactManifest;
+    }
+  | {
+      kind: "needs_input";
+      reason: string;
+      unmaterializedObligationIds: string[];
     }
   | {
       kind: "failure";
@@ -189,6 +208,12 @@ export interface V2NodeExecutorOptions {
   recorder?: ResultRecorder;
   writeInstructions?(path: string, content: string): Promise<void>;
   now?(): string;
+  artifactBuilder?: Pick<GitArtifactBuilder, "build" | "buildCandidateTree">;
+  evidenceAuthority?: {
+    goal: GoalContract;
+    validationObligations: Readonly<Record<string, CanonicalValidationObligation>>;
+    proofStrategies: Readonly<Record<string, ProofStrategy>>;
+  };
   integrationOperation?: {
     journal: IntegrationOperationJournal;
     runId: string;
@@ -220,8 +245,9 @@ export class V2NodeExecutor {
       const unmaterialized = requiredUnmaterializedObligations(input.contract, prepared);
       if (unmaterialized.length > 0) {
         return {
-          kind: "failure",
-          reason: `Required validation obligations cannot be materialized: ${unmaterialized.join(", ")}.`
+          kind: "needs_input",
+          reason: `Required validation obligations cannot be materialized: ${unmaterialized.join(", ")}.`,
+          unmaterializedObligationIds: unmaterialized
         };
       }
       const hasChildren = Object.values(input.graph.nodes).some((node) => node.parentId === input.node.id);
@@ -346,6 +372,7 @@ export class V2NodeExecutor {
         success = repaired;
         candidateToAnchor = repaired.candidateCommit;
       }
+      success = { ...success, artifactBaseCommit: base.manifest.resultingCommit };
       if (input.node.id !== input.graph.rootId || success.evidenceMatrix.outcome !== "verified") return success;
       if (this.options.finalCandidate === undefined) {
         return { kind: "failure", reason: "Root execution has no final-candidate preparer." };
@@ -517,6 +544,7 @@ export class V2NodeExecutor {
       }
       return {
         ...successOutcome(manifest.candidateSha, changedFiles, evidenceMatrix),
+        artifactBaseCommit: base.manifest.resultingCommit,
         integrationManifestId: manifest.manifestId,
         ...(repairObservations !== undefined ? { repairObservations } : {}),
         ...(finalManifestId !== undefined ? { finalManifestId } : {}),
@@ -733,13 +761,19 @@ export interface CanonicalPhysicalNodeExecutionInput extends Omit<
  */
 export class CanonicalNodeExecutor {
   private readonly delegate: V2NodeExecutor;
+  private readonly artifactBuilder: Pick<GitArtifactBuilder, "build" | "buildCandidateTree">;
 
-  constructor(options: V2NodeExecutorOptions) {
+  constructor(private readonly options: V2NodeExecutorOptions) {
     this.delegate = new V2NodeExecutor(options);
+    this.artifactBuilder = options.artifactBuilder ?? new GitArtifactBuilder(options.git);
   }
 
-  execute(input: CanonicalPhysicalNodeExecutionInput): Promise<V2PhysicalNodeExecutionOutcome> {
-    const outputArtifactContract = input.contract.artifacts.find((artifact) => artifact.producerNodeId === input.node.id)
+  async execute(input: CanonicalPhysicalNodeExecutionInput): Promise<V2PhysicalNodeExecutionOutcome & {
+    artifactManifests?: Readonly<Record<string, ArtifactManifest>>;
+    candidateManifest?: CandidateTreeManifest;
+  }> {
+    const outputArtifacts = input.contract.artifacts.filter((artifact) => artifact.producerNodeId === input.node.id);
+    const outputArtifactContract = outputArtifacts[0]
       ?? {
         schemaVersion: 2 as const,
         id: `artifact:integration:${input.node.id}`,
@@ -748,10 +782,10 @@ export class CanonicalNodeExecutor {
         producerNodeId: input.node.id,
         consumerNodeIds: [],
         artifactType: "integrated_candidate",
-        materialization: "commit" as const,
+        materialization: "manifest" as const,
         expectedPaths: []
       };
-    return this.delegate.execute({
+    const outcome = await this.delegate.execute({
       ...input,
       graph: {
         graphId: input.graph.graphId,
@@ -763,6 +797,76 @@ export class CanonicalNodeExecutor {
       node: input.node,
       outputArtifactContract
     });
+    if (outcome.kind !== "success") return outcome;
+    try {
+      const taskContract = input.graph.contractRefs.find((ref) =>
+        ref.id === input.contract.task.id && ref.revision === Number(input.contract.task.revision)
+      );
+      if (taskContract === undefined) throw new Error(`Missing canonical task contract ref for ${input.node.id}.`);
+      const candidateManifest = await this.artifactBuilder.buildCandidateTree({
+        cwd: this.options.repoRoot,
+        runId: input.runId,
+        nodeId: input.node.id,
+        attemptId: input.attemptId,
+        contract: taskContract,
+        inputFingerprint: input.inputFingerprint,
+        repositoryObjectStoreId: `object-store:${input.target.sourceTargetFingerprint}`,
+        baseCommit: input.target.targetHead,
+        candidateCommit: outcome.candidateCommit
+      });
+      if (outcome.evidenceMatrix.outcome !== "verified") return { ...outcome, candidateManifest };
+      const baseCommit = outcome.artifactBaseCommit;
+      if (baseCommit === undefined && outputArtifacts.length > 0) {
+        return {
+          kind: "failure",
+          reason: `Verified attempt ${input.attemptId} did not retain its materialized execution base.`,
+          ...(outcome.usage === undefined ? {} : { usage: outcome.usage })
+        };
+      }
+      const evidenceMatrix = this.options.evidenceAuthority === undefined
+        ? outcome.evidenceMatrix
+        : {
+            ...outcome.evidenceMatrix,
+            evidenceBindings: bindExactEvidence({
+              goal: this.options.evidenceAuthority.goal,
+              candidate: candidateManifest,
+              baseline: {
+                commitOid: input.target.targetHead,
+                treeOid: await this.options.git.revParse(this.options.repoRoot, `${input.target.targetHead}^{tree}`)
+              },
+              validationObligations: this.options.evidenceAuthority.validationObligations,
+              proofStrategies: this.options.evidenceAuthority.proofStrategies,
+              matrix: outcome.evidenceMatrix
+            })
+          };
+      const manifests = await Promise.all(outputArtifacts.map(async (artifact) => {
+        const contract = input.graph.contractRefs.find((ref) =>
+          ref.id === artifact.id && ref.revision === Number(artifact.revision)
+        );
+        if (contract === undefined) throw new Error(`Missing canonical artifact contract ref for ${artifact.id}.`);
+        const manifest = await this.artifactBuilder.build({
+          cwd: this.options.repoRoot,
+          runId: input.runId,
+          nodeId: input.node.id,
+          attemptId: input.attemptId,
+          artifactId: artifact.id,
+          contract,
+          inputFingerprint: input.inputFingerprint,
+          repositoryObjectStoreId: `object-store:${input.target.sourceTargetFingerprint}`,
+          baseCommit: baseCommit!,
+          candidateCommit: outcome.candidateCommit,
+          allowedPaths: artifact.expectedPaths
+        });
+        return [artifact.id, manifest] as const;
+      }));
+      return { ...outcome, evidenceMatrix, candidateManifest, artifactManifests: Object.fromEntries(manifests) };
+    } catch (error) {
+      return {
+        kind: "failure",
+        reason: describe(error),
+        ...(outcome.usage === undefined ? {} : { usage: outcome.usage })
+      };
+    }
   }
 }
 
@@ -961,7 +1065,15 @@ function validationProgramInstructions(prepared: PreparedValidationRecipe | unde
 }
 
 function executionArtifactInput(artifact: V2ExecutionArtifact) {
-  return { artifactId: artifact.artifactId, digest: artifact.digest, contract: { ...artifact.contract }, kind: artifact.kind, location: artifact.location, ...(artifact.cherryPickMainline === undefined ? {} : { cherryPickMainline: artifact.cherryPickMainline }) };
+  return {
+    artifactId: artifact.artifactId,
+    digest: artifact.digest,
+    contract: { ...artifact.contract },
+    kind: artifact.kind,
+    location: artifact.location,
+    ...(artifact.manifest === undefined ? {} : { manifest: artifact.manifest }),
+    ...(artifact.cherryPickMainline === undefined ? {} : { cherryPickMainline: artifact.cherryPickMainline })
+  };
 }
 
 function integrationArtifact(artifact: V2ExecutionArtifact): IntegrationChildArtifact {

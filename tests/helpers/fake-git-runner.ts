@@ -1,4 +1,4 @@
-import type { CherryPickOutcome, GitRunner, GitShowOptions } from "@manyhands/execution-core";
+import type { CherryPickOutcome, GitRunner, GitShowOptions, GitTreeEntry } from "@manyhands/execution-core";
 import { EphemeralExecutionWorkspaceProvider } from "@manyhands/execution-core";
 
 export interface FakeGitCall {
@@ -130,6 +130,52 @@ export class FakeGitRunner implements GitRunner {
     }
     if (commitRef === "HEAD") return this.heads[cwd] ?? "BASE";
     return commitRef;
+  }
+
+  async updateRef(params: { cwd: string; ref: string; target: string; expectedOldOid?: string }): Promise<void> {
+    this.record("updateRef", params);
+  }
+
+  async treeEntry(params: { cwd: string; tree: string; path: string }): Promise<GitTreeEntry | undefined> {
+    this.record("treeEntry", params);
+    return undefined;
+  }
+
+  async objectType(params: { cwd: string; oid: string }): Promise<GitTreeEntry["objectType"]> {
+    this.record("objectType", params);
+    return "blob";
+  }
+
+  async readTree(params: { cwd: string; tree: string; indexFile?: string }): Promise<void> {
+    this.record("readTree", params);
+  }
+
+  async updateIndexEntry(params: { cwd: string; mode: string; oid: string; path: string; indexFile?: string }): Promise<void> {
+    this.record("updateIndexEntry", params);
+  }
+
+  async removeIndexEntry(params: { cwd: string; path: string; indexFile?: string }): Promise<void> {
+    this.record("removeIndexEntry", params);
+  }
+
+  async writeTree(params: { cwd: string; indexFile?: string }): Promise<string> {
+    this.record("writeTree", params);
+    return "TREE";
+  }
+
+  async commitTree(params: { cwd: string; tree: string; parent: string; message: string }): Promise<string> {
+    this.record("commitTree", params);
+    return "MATERIALIZED";
+  }
+
+  async resetHard(params: { cwd: string; ref: string }): Promise<void> {
+    this.record("resetHard", params);
+    this.heads[params.cwd] = params.ref;
+  }
+
+  async diffTreeRaw(params: { cwd: string; from: string; to: string }): Promise<Buffer> {
+    this.record("diffTreeRaw", params);
+    return Buffer.alloc(0);
   }
 
   async isAncestor(params: { cwd: string; ancestor: string; descendant?: string }): Promise<boolean> {

@@ -44,6 +44,15 @@ export class JsonlAttemptStore {
         if (JSON.stringify(existing) === JSON.stringify(attempt)) return existing;
         throw new ImmutableAttemptConflictError(`Attempt ${attempt.attemptId} already exists with different evidence.`);
       }
+      const active = current.find((item) =>
+        item.inputFingerprint === attempt.inputFingerprint &&
+        isActiveAttempt(item)
+      );
+      if (active !== undefined) {
+        throw new ImmutableAttemptConflictError(
+          `Attempt ${attempt.attemptId} already has an active attempt for InputFingerprint ${attempt.inputFingerprint}: ${active.attemptId}.`
+        );
+      }
       if (attempt.retryOfAttemptId !== undefined && !current.some((item) => item.attemptId === attempt.retryOfAttemptId)) throw new ImmutableAttemptConflictError(`Retry predecessor ${attempt.retryOfAttemptId} does not exist.`);
       await this.write(attempt.runId, [...current, attempt]);
       return attempt;
@@ -136,6 +145,10 @@ export class JsonlAttemptStore {
     this.chains.set(key, current);
     return current.finally(() => { if (this.chains.get(key) === current) this.chains.delete(key); });
   }
+}
+
+function isActiveAttempt(attempt: AttemptRecord): boolean {
+  return attempt.status === "created" || attempt.status === "running" || attempt.status === "finished";
 }
 
 function assertImmutableIdentity(previous: AttemptRecord, candidate: AttemptRecord): void {

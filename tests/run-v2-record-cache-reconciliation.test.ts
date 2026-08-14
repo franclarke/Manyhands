@@ -8,7 +8,8 @@ import type { DigestHasher, EffectKind } from "@manyhands/contracts";
 import {
   buildRunCommandEnvelope,
   type ProductRunDefinition,
-  type RunCommandPayload
+  type RunCommandPayload,
+  type RunEventInput
 } from "@manyhands/run-coordinator";
 import type { PhysicalEffectAdapter } from "@manyhands/run-engine";
 import { startProductiveDaemon, type DaemonKernel } from "../apps/daemon/src/index.js";
@@ -40,6 +41,7 @@ beforeEach(async () => {
     profile: {
       kind: "transitional_unsafe",
       adapters: adapters(),
+      loadPlanningResult: async (effectId) => deterministicPlanningResult(effectId),
       executionProcess: () => ({ executable: process.execPath, argv: ["-e", ""], cwd: process.cwd(), env: {} })
     }
   });
@@ -134,6 +136,49 @@ function adapters(): PhysicalEffectAdapter[] {
       });
     }
   }));
+}
+
+function deterministicPlanningResult(effectId: string): RunEventInput[] {
+  const suffix = createHash("sha256").update(effectId).digest("hex").slice(0, 16);
+  const graphId = `graph:pure-get:${suffix}`;
+  const decisionId = `approve-plan:${graphId}:r1`;
+  return [
+    {
+      eventId: `planning:${suffix}`,
+      occurredAt: at,
+      type: "planning.completed",
+      payload: { semanticPlan: { id: `plan:pure-get:${suffix}`, revision: 1 }, trace: {} }
+    },
+    {
+      eventId: `compiled:${suffix}`,
+      occurredAt: at,
+      type: "graph.compiled",
+      payload: { graphId, revision: 1, graph: {}, contracts: [], review: {}, trace: {} }
+    },
+    {
+      eventId: `proposed:${suffix}`,
+      occurredAt: at,
+      type: "graph.revision.proposed",
+      payload: { graphId, revision: 1 }
+    },
+    {
+      eventId: decisionId,
+      occurredAt: at,
+      type: "decision.raised",
+      payload: {
+        decision: {
+          id: decisionId,
+          kind: "approve_plan",
+          question: "Approve deterministic planning result?",
+          options: [{ id: "approve", label: "Approve" }, { id: "reject", label: "Reject" }],
+          affectedNodeIds: ["node:pure-get"],
+          evidenceRefs: [],
+          impact: "architecture",
+          raisedAtGraphRevision: 1
+        }
+      }
+    }
+  ];
 }
 
 function endpoint(): string {

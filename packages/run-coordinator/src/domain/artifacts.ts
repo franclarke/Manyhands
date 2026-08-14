@@ -1,7 +1,8 @@
+import { ArtifactManifestSchema } from "@manyhands/contracts";
 import { EntityIdSchema, IsoTimestampSchema, NonEmptyStringSchema } from "@manyhands/shared";
 import { z } from "zod";
 
-export const AdoptedArtifactSchema = z.object({
+const AdoptedArtifactObjectSchema = z.object({
   schemaVersion: z.literal(1),
   artifactId: EntityIdSchema,
   runId: EntityIdSchema,
@@ -11,8 +12,21 @@ export const AdoptedArtifactSchema = z.object({
   contract: z.object({ id: EntityIdSchema, revision: NonEmptyStringSchema }).strict(),
   kind: z.enum(["commit", "files", "manifest", "logical"]),
   location: NonEmptyStringSchema,
+  manifest: ArtifactManifestSchema.optional(),
   cherryPickMainline: z.literal(1).optional(),
   adoptedAt: IsoTimestampSchema
 }).strict();
+
+export const AdoptedArtifactSchema = AdoptedArtifactObjectSchema.superRefine((artifact, context) => {
+  if (artifact.kind === "manifest") {
+    if (artifact.manifest === undefined) {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ["manifest"], message: "A manifest artifact requires its immutable manifest material." });
+    } else if (artifact.location !== artifact.manifest.manifestDigest) {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ["location"], message: "A manifest artifact location must equal its manifest digest." });
+    }
+  } else if (artifact.manifest !== undefined) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["manifest"], message: "Only manifest artifacts may embed manifest material." });
+  }
+});
 
 export type AdoptedArtifact = z.infer<typeof AdoptedArtifactSchema>;

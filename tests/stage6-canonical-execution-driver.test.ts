@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { describe, expect, it } from "vitest";
 
 import { compilePlan } from "@manyhands/decomposer";
@@ -28,13 +30,13 @@ describe("Stage 6 canonical execution driver", () => {
         const obligation = input.contract.validation.obligations[0]!;
         return {
           kind: "success",
-          candidateCommit: `commit-${input.node.id}`,
+          candidateCommit: oid(input.node.id),
           outputDigest: `sha256:${input.node.id}`,
           changedFiles: input.contract.scope.allowedPaths,
-          artifactLocation: `commit-${input.node.id}`,
+          artifactManifests: manifestsFor(input),
           evidenceMatrix: {
             matrixId: `matrix-${input.node.id}`,
-            candidateCommit: `commit-${input.node.id}`,
+            candidateCommit: oid(input.node.id),
             validationContract: { id: input.contract.validation.id, revision: input.contract.validation.revision },
             criteria: [{
               criterionId: obligation.criterionId,
@@ -51,7 +53,7 @@ describe("Stage 6 canonical execution driver", () => {
             integrationManifestId: "integration-root",
             finalManifestId: "final-root",
             finalManifest: {
-              commitSha: `commit-${input.node.id}`,
+              commitSha: oid(input.node.id),
               treeSha: "c".repeat(40),
               graphRevision: input.graph.revision,
               artifactIds: Object.keys(compiled.contracts.artifacts),
@@ -77,6 +79,13 @@ describe("Stage 6 canonical execution driver", () => {
 
     expect(executed).toEqual(expect.arrayContaining(Object.keys(compiled.graph.nodes)));
     expect(Object.values(state.adoptedArtifacts)).toHaveLength(Object.keys(compiled.contracts.artifacts).length);
+    expect(Object.values(state.adoptedArtifacts)).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        kind: "manifest",
+        location: expect.stringMatching(/^sha256:/u),
+        manifest: expect.objectContaining({ kind: "change_set" })
+      })
+    ]));
     expect(state.lifecycle).not.toBe("running");
   });
 
@@ -144,4 +153,43 @@ function coordinator(graphId: string): { coordinator: RunCoordinator } {
       eventId: (type, sequence) => `${type}:${sequence}`
     })
   };
+}
+
+function manifestsFor(input: {
+  graph: { contractRefs: Array<{ id: string; revision: number; digest: string }> };
+  node: { id: string };
+  attemptId: string;
+  inputFingerprint: string;
+  contract: { artifacts: Array<{ id: string; revision: string; producerNodeId: string }> };
+}): Record<string, object> {
+  return Object.fromEntries(input.contract.artifacts
+    .filter((artifact) => artifact.producerNodeId === input.node.id)
+    .map((artifact) => {
+      const contract = input.graph.contractRefs.find((ref) =>
+        ref.id === artifact.id && ref.revision === Number(artifact.revision)
+      );
+      if (contract === undefined) throw new Error(`Missing canonical ref for ${artifact.id}.`);
+      const candidate = oid(input.node.id);
+      const tree = oid(`${input.node.id}:tree`);
+      return [artifact.id, {
+        id: artifact.id,
+        contract,
+        producerNodeId: input.node.id,
+        producerAttemptId: input.attemptId,
+        inputFingerprint: input.inputFingerprint,
+        repositoryObjectStoreId: "object-store:fake",
+        objectFormat: "sha1",
+        sourceCandidate: { commitOid: candidate, treeOid: tree },
+        retainedByRef: `refs/manyhands/test/${artifact.id}`,
+        kind: "change_set",
+        baseTreeSha: oid("base"),
+        resultTreeSha: tree,
+        entries: [],
+        manifestDigest: `sha256:${oid(`${artifact.id}:manifest`)}${oid(`${artifact.id}:manifest:tail`).slice(0, 24)}`
+      }];
+    }));
+}
+
+function oid(value: string): string {
+  return createHash("sha1").update(value).digest("hex");
 }

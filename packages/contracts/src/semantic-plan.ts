@@ -9,7 +9,11 @@ import {
   RepositoryViewRefSchema
 } from "./canonical-reference.js";
 import { SeamCompatibilitySchema, SeamContractKindSchema } from "./seam-contract.js";
-import { AcceptableEvidenceKindSchema, ValidationLayerSchema } from "./validation-contract.js";
+import {
+  AcceptableEvidenceKindSchema,
+  ValidationEvidenceBindingSchema,
+  ValidationLayerSchema
+} from "./validation-contract.js";
 
 export { EpistemicAssessmentSchema } from "@manyhands/shared";
 export type { EpistemicAssessment } from "@manyhands/shared";
@@ -89,7 +93,8 @@ export const PlannedValidationObligationSchema = z.object({
   acceptableEvidence: z.array(AcceptableEvidenceKindSchema).min(1),
   baselinePolicy: z.enum(["required", "optional", "not_required"]),
   negativeControl: z.enum(["required", "when_feasible", "not_required"]),
-  flakyPolicy: z.enum(["forbid", "allow_with_warning"])
+  flakyPolicy: z.enum(["forbid", "allow_with_warning"]),
+  evidence: ValidationEvidenceBindingSchema.optional()
 }).strict();
 export type PlannedValidationObligation = z.infer<typeof PlannedValidationObligationSchema>;
 

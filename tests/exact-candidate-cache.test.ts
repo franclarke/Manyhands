@@ -70,6 +70,32 @@ describe("validateExactCandidate evidence cache", () => {
     expect(second.matrix.outcome).toBe("failed");
     expect(create).toHaveBeenCalledTimes(2);
   });
+
+  it("ignores a cache entry bound to a different candidate commit", async () => {
+    const { create, run } = fakes();
+    const stale = {
+      candidateCommit: "other-candidate",
+      evidence: [],
+      matrix: {
+        criteria: [],
+        outcome: "verified" as const,
+        observations: [],
+        integrityFindings: [],
+        negativeControls: []
+      }
+    };
+    const cache = {
+      get: vi.fn(async () => stale),
+      set: vi.fn(async () => undefined)
+    };
+
+    const result = await validateExactCandidate({ recipe, obligations }, { sandbox: { create }, run, cache });
+
+    expect(result.candidateCommit).toBe(recipe.candidateCommit);
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(cache.set).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("validateExactCandidate baseline sandbox reuse", () => {

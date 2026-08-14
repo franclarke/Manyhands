@@ -882,7 +882,7 @@ describe("ExactCandidateValidatorV2", () => {
     })).rejects.toThrow(/prepared validation recipe.*contract/i);
   });
 
-  it("fails closed before agent creation when a required obligation is unmaterialized", async () => {
+  it("derives needs_input before agent creation when a required obligation is unmaterialized", async () => {
     const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
     const node = compiled.graph.nodes["node-api"]!;
     const contract = compiled.contracts.find((bundle) => bundle.task.nodeId === node.id)!;
@@ -911,7 +911,11 @@ describe("ExactCandidateValidatorV2", () => {
 
     const outcome = await executor.execute(request(compiled, node.id));
 
-    expect(outcome).toMatchObject({ kind: "failure", reason: expect.stringContaining("cannot be materialized") });
+    expect(outcome).toMatchObject({
+      kind: "needs_input",
+      reason: expect.stringContaining("cannot be materialized"),
+      unmaterializedObligationIds: [contract.validation.obligations[0]!.id]
+    });
     expect(agent.calls).toHaveLength(0);
   });
 

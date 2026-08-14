@@ -199,7 +199,8 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
         references: [...observation.references]
       })),
       integrityFindings: validated.matrix.integrityFindings.map((finding) => ({ ...finding })),
-      negativeControls: validated.matrix.negativeControls.map((control) => ({ ...control }))
+      negativeControls: validated.matrix.negativeControls.map((control) => ({ ...control })),
+      evidenceBindings: []
     };
   }
 

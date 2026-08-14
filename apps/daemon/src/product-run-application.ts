@@ -135,6 +135,14 @@ async function decide(
       return cancelEffects(envelope, context, command.reason, options);
     case "resolve_decision":
       return resolveDecision(envelope, context, command, options);
+    case "record_human_review":
+      requireProjection(context);
+      return {
+        eventsAfterAcceptance: [event(options, context.runId, "human_review.recorded", {
+          review: command.review
+        }, envelope.commandDigest)],
+        effects: []
+      };
     case "deliver_run":
       return deliveryEffects(envelope, context, command, options);
     case "rename_run":

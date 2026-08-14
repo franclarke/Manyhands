@@ -85,6 +85,7 @@ export function prepareValidationRecipe(input: ValidationRecipePreparationInput)
       : obligation.evidence.kind === "shared_command"
         ? obligation.evidence.references
         : [];
+    assertSafeSelectors(selectors);
     const command = { command: capability.command, args: [...capability.args, ...selectors], timeoutMs: 60_000, cwd: "worktree" as const };
     const commandDigest = createHash("sha256").update(JSON.stringify(command)).digest("hex");
     const evidenceKind = evidenceKindForBinding(obligation.evidence);
@@ -217,4 +218,21 @@ function capabilityFor(obligation: ValidationObligation, capabilities: Repositor
     ? ["typecheck", "lint", "build"]
     : ["test"];
   return preferred.map((kind) => capabilities.baselineCommands.find((command) => command.kind === kind)).find((command) => command !== undefined);
+}
+
+/** Selectors become subprocess arguments, so they must name candidates inside the worktree. */
+function assertSafeSelectors(selectors: readonly string[]): void {
+  for (const selector of selectors) {
+    const normalized = selector.replaceAll("\\", "/");
+    if (
+      selector.trim() !== selector ||
+      normalized.startsWith("/") ||
+      normalized.startsWith("-") ||
+      /^[A-Za-z]:/u.test(normalized) ||
+      normalized.split("/").includes("..") ||
+      /[\u0000-\u001f]/u.test(selector)
+    ) {
+      throw new Error(`Unsafe validation selector: ${JSON.stringify(selector)}.`);
+    }
+  }
 }

@@ -1,4 +1,4 @@
-import { EffectIntentSchema, PhysicalEffectReceiptSchema, RepositoryViewRefSchema } from "@manyhands/contracts";
+import { EffectIntentSchema, ExactCandidateSchema, PhysicalEffectReceiptSchema, RepositoryViewRefSchema } from "@manyhands/contracts";
 import { EntityIdSchema, FinalArtifactManifestSchema, IsoTimestampSchema, NonEmptyStringSchema } from "@manyhands/shared";
 import { z } from "zod";
 import { CommandReceiptSchema, RunCommandEnvelopeSchema } from "../command-envelope.js";
@@ -7,6 +7,7 @@ import { DeliveryApprovalSchema, DeliveryReceiptSchema } from "./outcomes.js";
 import { AdoptedArtifactSchema } from "./artifacts.js";
 import { FailureClassSchema, FailureObservationSchema } from "./failures.js";
 import { EvidenceMatrixRecordSchema } from "./evidence.js";
+import { HumanReviewInputSchema } from "./human-review.js";
 import { ProductRunDefinitionSchema } from "../product-lifecycle.js";
 
 /**
@@ -274,7 +275,19 @@ export const RunEventSchema = z.discriminatedUnion("type", [
       context.addIssue({ code: z.ZodIssueCode.custom, message: "planning.completed must contain exactly one planning representation." });
     }
   })),
-  event("graph.compiled", z.object({ graphId: EntityIdSchema, revision: z.number().int().positive(), graph: z.record(z.unknown()), contracts: z.array(z.record(z.unknown())), review: z.record(z.unknown()), trace: z.record(z.unknown()) }).strict()),
+  event("graph.compiled", z.object({
+    graphId: EntityIdSchema,
+    revision: z.number().int().positive(),
+    graph: z.record(z.unknown()),
+    contracts: z.array(z.record(z.unknown())),
+    evidenceAuthority: z.object({
+      goal: z.record(z.unknown()),
+      validationObligations: z.array(z.record(z.unknown())),
+      proofStrategies: z.array(z.record(z.unknown()))
+    }).strict().optional(),
+    review: z.record(z.unknown()),
+    trace: z.record(z.unknown())
+  }).strict()),
   event("planning.critic_recorded", z.object({ critic: NonEmptyStringSchema, findings: z.array(z.record(z.unknown())) }).strict()),
   event("planning.failed", z.object({ reason: NonEmptyStringSchema }).strict()),
   event("attempt.started", z.object({
@@ -288,6 +301,7 @@ export const RunEventSchema = z.discriminatedUnion("type", [
     attemptId: EntityIdSchema,
     nodeId: EntityIdSchema,
     candidateCommit: NonEmptyStringSchema,
+    candidate: ExactCandidateSchema.optional(),
     outputDigest: NonEmptyStringSchema,
     changedFiles: z.array(NonEmptyStringSchema),
     usage: AttemptUsageSchema.optional()
@@ -302,6 +316,7 @@ export const RunEventSchema = z.discriminatedUnion("type", [
   event("validation.started", z.object({ attemptId: EntityIdSchema, nodeId: EntityIdSchema, validationContract: z.object({ id: EntityIdSchema, revision: NonEmptyStringSchema }).strict(), candidateCommit: NonEmptyStringSchema }).strict()),
   event("validation.evidence_recorded", z.object({ attemptId: EntityIdSchema, nodeId: EntityIdSchema, evidenceId: EntityIdSchema, obligationId: EntityIdSchema, kind: NonEmptyStringSchema, passed: z.boolean() }).strict()),
   event("validation.completed", z.object({ attemptId: EntityIdSchema, nodeId: EntityIdSchema, matrix: EvidenceMatrixRecordSchema }).strict()),
+  event("human_review.recorded", z.object({ review: HumanReviewInputSchema }).strict()),
   event("artifact.adopted", z.object({ artifact: AdoptedArtifactSchema }).strict()),
   event("integration.started", z.object({
     attemptId: EntityIdSchema,
@@ -312,7 +327,7 @@ export const RunEventSchema = z.discriminatedUnion("type", [
     requiredArtifactIds: z.array(EntityIdSchema).min(1)
   }).strict()),
   event("integration.repair_attempted", z.object({ attemptId: EntityIdSchema, nodeId: EntityIdSchema, pass: z.number().int().positive(), evidenceRefs: z.array(NonEmptyStringSchema) }).strict()),
-  event("integration.completed", z.object({ attemptId: EntityIdSchema, nodeId: EntityIdSchema, manifestId: EntityIdSchema, candidateCommit: NonEmptyStringSchema, matrix: EvidenceMatrixRecordSchema }).strict()),
+  event("integration.completed", z.object({ attemptId: EntityIdSchema, nodeId: EntityIdSchema, manifestId: EntityIdSchema, candidateCommit: NonEmptyStringSchema, candidate: ExactCandidateSchema.optional(), matrix: EvidenceMatrixRecordSchema }).strict()),
   event("integration.failed", z.object({ attemptId: EntityIdSchema, nodeId: EntityIdSchema, manifestId: EntityIdSchema.optional(), candidateCommit: NonEmptyStringSchema.optional(), matrix: EvidenceMatrixRecordSchema.optional(), reason: NonEmptyStringSchema, decisionRequired: z.boolean() }).strict()),
   event("graph.revision.proposed", z.object({ graphId: EntityIdSchema, revision: z.number().int().positive() }).strict()),
   event("graph.revision.approved", z.object({ graphId: EntityIdSchema, revision: z.number().int().positive() }).strict()),

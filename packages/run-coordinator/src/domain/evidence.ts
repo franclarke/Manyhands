@@ -1,3 +1,4 @@
+import { EvidenceBindingSchema } from "@manyhands/contracts";
 import { CriterionEvidenceObservationSchema, EntityIdSchema, NonEmptyStringSchema } from "@manyhands/shared";
 import { z } from "zod";
 
@@ -18,6 +19,7 @@ export const EvidenceMatrixRecordSchema = z.object({
   outcome: z.enum(["verified", "unverified", "failed"]),
   validationRecipeDigest: NonEmptyStringSchema.optional(),
   observations: z.array(CriterionEvidenceObservationSchema).default([]),
+  evidenceBindings: z.array(EvidenceBindingSchema).default([]),
   integrityFindings: z.array(z.object({
     findingId: EntityIdSchema,
     code: z.enum(["test_removed", "test_script_weakened", "test_configuration_changed", "test_skipped", "test_only", "assertion_removed", "required_public_surface_unchanged", "required_public_surface_unrepresented"]),

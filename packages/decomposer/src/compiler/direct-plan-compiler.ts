@@ -93,6 +93,7 @@ function compileVerifiedPlan(input: CompilePlanInput): CompilePlanResult {
     proof.id,
     { id: proof.id, revision: proof.revision, digest: proof.digest }
   ]));
+  const rootCriterionId = goalCriterionResolver(input.plan, input.goal);
   const validationObligations: Record<string, CanonicalValidationObligation> = {};
   for (const unit of Object.values(input.plan.units)) {
     const scope = compileScope(input, unit, revision);
@@ -118,7 +119,7 @@ function compileVerifiedPlan(input: CompilePlanInput): CompilePlanResult {
       const material = {
         id: obligation.obligationId,
         revision: input.plan.revision,
-        criterionId: obligation.criterionId,
+        criterionId: rootCriterionId(obligation.criterionId),
         ownerNodeId: unit.id,
         required: obligation.severity === "required",
         proofStrategy: proofRef
@@ -202,6 +203,26 @@ function compileVerifiedPlan(input: CompilePlanInput): CompilePlanResult {
   };
 }
 
+function goalCriterionResolver(plan: SemanticPlan, goal: GoalContract): (criterionId: string) => string {
+  const rootIds = new Set(goal.acceptanceCriteria.map(({ id }) => id));
+  const sources = new Map<string, string>();
+  for (const unit of Object.values(plan.units)) {
+    for (const criterion of unit.criteria) sources.set(criterion.criterionId, criterion.sourceCriterionId);
+  }
+  return (criterionId: string) => {
+    const visited = new Set<string>();
+    let current = criterionId;
+    while (!rootIds.has(current)) {
+      if (visited.has(current)) throw new Error(`Criterion refinement ${criterionId} has a cycle.`);
+      visited.add(current);
+      const source = sources.get(current);
+      if (source === undefined) throw new Error(`Criterion refinement ${criterionId} has no GoalContract root.`);
+      current = source;
+    }
+    return current;
+  };
+}
+
 function compileArtifacts(plan: SemanticPlan, revision: string): Record<string, ArtifactContract> {
   return Object.fromEntries(Object.values(plan.artifacts).map((artifact) => [artifact.id, {
     schemaVersion: 2 as const,
@@ -277,7 +298,8 @@ function compileValidation(unit: WorkUnit, revision: string): ValidationContract
       acceptableEvidence: [...item.acceptableEvidence],
       baselinePolicy: item.baselinePolicy,
       negativeControl: item.negativeControl,
-      flakyPolicy: item.flakyPolicy
+      flakyPolicy: item.flakyPolicy,
+      ...(item.evidence === undefined ? {} : { evidence: item.evidence })
     }))
   };
 }

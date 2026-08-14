@@ -12,8 +12,13 @@ export const EvidenceOutcomeSchema = z.enum([
   "not_applicable"
 ]);
 
-const ExactCandidateSchema = z.object({
+export const ExactCandidateSchema = z.object({
   manifestDigest: CanonicalDigestSchema,
+  commitOid: NonEmptyStringSchema,
+  treeOid: NonEmptyStringSchema
+}).strict();
+export type ExactCandidate = z.infer<typeof ExactCandidateSchema>;
+export const ExactBaselineSchema = z.object({
   commitOid: NonEmptyStringSchema,
   treeOid: NonEmptyStringSchema
 }).strict();
@@ -25,6 +30,7 @@ export const EvidenceBindingMaterialSchema = z.object({
   criterionId: EntityIdSchema,
   obligationId: EntityIdSchema,
   candidate: ExactCandidateSchema,
+  baseline: ExactBaselineSchema,
   proofStrategyDigest: CanonicalDigestSchema,
   mode: ProofModeSchema,
   authority: ProofAuthoritySchema,
@@ -51,6 +57,7 @@ export interface EvidenceFreshnessExpectation {
   mode: z.infer<typeof ProofModeSchema>;
   authority: z.infer<typeof ProofAuthoritySchema>;
   candidate: z.infer<typeof ExactCandidateSchema>;
+  baseline: z.infer<typeof ExactBaselineSchema>;
   proofStrategyDigest: string;
   recipeDigest: string;
   environmentDigest: string;
@@ -64,6 +71,7 @@ export type EvidenceFreshnessIssueCode =
   | "stale_contract_binding"
   | "stale_proof_pair"
   | "stale_candidate_tree"
+  | "stale_baseline_tree"
   | "stale_proof_strategy"
   | "stale_recipe"
   | "stale_environment"
@@ -107,6 +115,12 @@ export function validateEvidenceFreshness(
     evidence.candidate.treeOid !== expected.candidate.treeOid
   ) {
     issues.push({ code: "stale_candidate_tree", message: "evidence was observed on a different candidate manifest/commit/tree" });
+  }
+  if (
+    evidence.baseline.commitOid !== expected.baseline.commitOid ||
+    evidence.baseline.treeOid !== expected.baseline.treeOid
+  ) {
+    issues.push({ code: "stale_baseline_tree", message: "evidence was observed against a different baseline commit/tree" });
   }
   compareDigest(issues, "stale_proof_strategy", "proof strategy", evidence.proofStrategyDigest, expected.proofStrategyDigest);
   compareDigest(issues, "stale_recipe", "recipe", evidence.recipeDigest, expected.recipeDigest);

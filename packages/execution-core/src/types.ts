@@ -233,7 +233,7 @@ export const AppliedChildCommitSchema = z.object({
   /** Physical commit created/adopted on the parent integration lineage. */
   resultSha: NonEmptyStringSchema.optional(),
   preSha: NonEmptyStringSchema.optional(),
-  application: z.enum(["already_ancestor", "already_satisfied", "cherry_picked", "repaired"]).optional(),
+  application: z.enum(["already_ancestor", "already_satisfied", "cherry_picked", "manifest_materialized", "repaired"]).optional(),
   order: z.number().int().nonnegative()
 });
 

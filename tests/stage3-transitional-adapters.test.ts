@@ -630,6 +630,10 @@ async function deliveryRepository(): Promise<{
   await git(root, "init", "-b", "main");
   await git(root, "config", "user.email", "stage3@example.test");
   await git(root, "config", "user.name", "Stage 3 Test");
+  // Delivery must inspect the target under its native line-ending policy.  The
+  // artifact policy deliberately fixes autocrlf=false, which would otherwise
+  // misclassify this clean checkout as dirty on Windows.
+  await git(root, "config", "core.autocrlf", "true");
   await writeFile(path.join(root, "result.txt"), "base\n", "utf8");
   await git(root, "add", "result.txt");
   await git(root, "commit", "-m", "base");

@@ -36,6 +36,28 @@ describe("Stage 5 direct compiler", () => {
     expect(compiled.graph.resourceClaims.find(({ nodeId }) => nodeId === "unit:b")?.inputVersion.kind).toBe("repository_view");
   });
 
+  it("preserves a planned validation evidence binding in the executable contract", () => {
+    const fixture = groundedFixture();
+    const material = structuredClone(fixture.plan);
+    Reflect.deleteProperty(material, "digest");
+    material.units["unit:a"]!.validation[0]!.evidence = {
+      kind: "focused_command",
+      selectors: ["tests/module-a.test.ts"],
+      references: ["tests/module-a.test.ts"]
+    };
+    const plan = buildSemanticPlan(material, stage5Sha256);
+
+    const compiled = compilePlan({ ...fixture, plan, hasher: stage5Sha256, idFactory: ids });
+
+    if (!compiled.ok) throw new Error(JSON.stringify(compiled.findings));
+    expect(compiled.ok).toBe(true);
+    expect(compiled.contracts.taskBundles["unit:a"]?.validation.obligations[0]?.evidence).toEqual({
+      kind: "focused_command",
+      selectors: ["tests/module-a.test.ts"],
+      references: ["tests/module-a.test.ts"]
+    });
+  });
+
   it("is deterministic across semantically equivalent set order", () => {
     const fixture = groundedFixture();
     const material = structuredClone(fixture.plan);
@@ -127,6 +149,8 @@ describe("Stage 5 direct compiler", () => {
       expect.objectContaining({ id: "criterion:feature", required: true }),
       expect.objectContaining({ id: "criterion-ref:delegated", required: false })
     ]);
+    expect(compiled.contracts.validationObligations["validation:delegated"]?.criterionId)
+      .toBe("criterion:delegated");
   });
 
   it("does not promote an advisory-only validation obligation to a required task criterion", () => {

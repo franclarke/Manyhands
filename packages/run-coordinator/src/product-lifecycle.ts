@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { RunCommandJsonValueSchema } from "./command-envelope.js";
 import { DeliveryApprovalSchema } from "./domain/outcomes.js";
+import { HumanReviewInputSchema } from "./domain/human-review.js";
 
 const StageSelectionSchema = z.object({
   executorId: EntityIdSchema,
@@ -49,6 +50,7 @@ export const ProductRunCommandSchema = z.discriminatedUnion("type", [
     optionId: EntityIdSchema.optional(),
     answer: NonEmptyStringSchema.optional()
   }).strict(),
+  z.object({ type: z.literal("record_human_review"), review: HumanReviewInputSchema }).strict(),
   z.object({ type: z.literal("deliver_run"), approval: DeliveryApprovalSchema }).strict(),
   z.object({ type: z.literal("rename_run"), title: NonEmptyStringSchema }).strict(),
   z.object({ type: z.literal("archive_run") }).strict()

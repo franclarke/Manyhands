@@ -29,7 +29,7 @@ export interface IntegrationOperationChild {
   /** Parent HEAD persisted before the cherry-pick side effect. */
   startedFromSha?: string;
   resultSha?: string;
-  application?: "already_ancestor" | "already_satisfied" | "cherry_picked" | "repaired";
+  application?: "already_ancestor" | "already_satisfied" | "cherry_picked" | "manifest_materialized" | "repaired";
 }
 
 export interface IntegrationOperation {
