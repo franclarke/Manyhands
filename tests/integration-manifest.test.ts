@@ -56,6 +56,7 @@ describe("IntegrationManifestExecutor", () => {
       const journal = new JsonIntegrationOperationJournal(journalDirectory);
       const built = request(undefined, ["a", "b"]);
       const deps = {
+        allowCommitTransport: true, // legacy commit-replay characterization; retired from the productive route in Stage 9
         git,
         validate: async () => ({ matrixId: "matrix-1", outcome: "verified" as const }),
         digestCandidate: async () => "digest-parent"
@@ -102,6 +103,7 @@ describe("IntegrationManifestExecutor", () => {
     const git = new FakeGitRunner({ heads: { "/wt": "BASE" }, cherryPickResultShas: ["PICK_A"] });
 
     await expect(new IntegrationManifestExecutor({
+      allowCommitTransport: true, // legacy commit-replay characterization; retired from the productive route in Stage 9
       git,
       validate: async () => ({ matrixId: "matrix-1", outcome: "verified" }),
       digestCandidate: async () => "digest-parent"
@@ -114,6 +116,7 @@ describe("IntegrationManifestExecutor", () => {
     const git = new FakeGitRunner({ heads: { "/wt": "BASE" }, cherryPickResultShas: ["PICK_A"] });
     const built = request();
     const result = await new IntegrationManifestExecutor({
+      allowCommitTransport: true, // legacy commit-replay characterization; retired from the productive route in Stage 9
       git,
       validate: async () => ({ matrixId: "matrix-1", outcome: "verified" }),
       digestCandidate: async () => "digest-parent"
@@ -137,6 +140,7 @@ describe("IntegrationManifestExecutor", () => {
     const built = request([artifact("a", "node-a", "SHA_A")], ["a"]);
     let validated = false;
     const result = await new IntegrationManifestExecutor({
+      allowCommitTransport: true, // legacy commit-replay characterization; retired from the productive route in Stage 9
       git,
       validate: async () => {
         validated = true;
@@ -158,6 +162,7 @@ describe("IntegrationManifestExecutor", () => {
     const built = request([artifact("a", "node-a", "SHA_A")], ["a"]);
     let validated = false;
     const result = await new IntegrationManifestExecutor({
+      allowCommitTransport: true, // legacy commit-replay characterization; retired from the productive route in Stage 9
       git,
       validate: async () => {
         validated = true;
@@ -189,6 +194,7 @@ describe("IntegrationManifestExecutor", () => {
       return { success: true, candidateSha, evidenceRefs: ["repair:semantic"] };
     };
     const result = await new IntegrationManifestExecutor({
+      allowCommitTransport: true, // legacy commit-replay characterization; retired from the productive route in Stage 9
       git,
       repair,
       validate: async ({ candidateSha }) => {
@@ -221,6 +227,7 @@ describe("IntegrationManifestExecutor", () => {
       const built = request([artifact("a", "node-a", "SHA_A")], ["a"]);
       let repairs = 0;
       const deps = {
+        allowCommitTransport: true, // legacy commit-replay characterization; retired from the productive route in Stage 9
         git,
         repair: async (input: { worktreePath: string }) => {
           repairs += 1;
@@ -251,6 +258,7 @@ describe("IntegrationManifestExecutor", () => {
   it("fails before Git mutation when a required artifact is omitted", async () => {
     const git = new FakeGitRunner();
     const result = await new IntegrationManifestExecutor({
+      allowCommitTransport: true, // legacy commit-replay characterization; retired from the productive route in Stage 9
       git,
       validate: async () => ({ matrixId: "unused", outcome: "verified" }),
       digestCandidate: async () => "unused"

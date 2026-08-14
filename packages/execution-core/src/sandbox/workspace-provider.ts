@@ -13,11 +13,21 @@ import {
   type SandboxSession
 } from "./types.js";
 
+/**
+ * What the Codex/Claude native workspace mode actually delivers, as observed by
+ * the Stage 8 qualifying runs — not what was requested of it. The R0 and R17
+ * traces record the attempt reading a host path outside the worktree and the
+ * brokered home, and the executor reporting that every host-installed skill was
+ * still in its context. Reads and host tooling are therefore unconfined, and the
+ * executor's own model API egress means the network is never `none`.
+ */
 const WORKSPACE_CAPABILITIES: SandboxCapabilities = Object.freeze({
-  filesystem: "declared_mounts",
+  filesystemWrite: "workspace_only",
+  filesystemRead: "host_visible",
   process: "supervised_only",
-  network: "none",
+  network: "provider_only",
   hostIdentity: "brokered",
+  tooling: "host_visible",
   enforcement: "executor_native"
 });
 

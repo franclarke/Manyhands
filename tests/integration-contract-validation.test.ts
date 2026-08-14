@@ -15,6 +15,7 @@ describe("integration contract validation", () => {
       createdAt: "2026-07-17T12:00:00.000Z"
     });
     const result = await new IntegrationManifestExecutor({
+      allowCommitTransport: true, // legacy commit-replay characterization; retired from the productive route in Stage 9
       git,
       validate: async () => ({ matrixId: "matrix-failed", outcome: "failed" }),
       digestCandidate: async () => "must-not-be-used"

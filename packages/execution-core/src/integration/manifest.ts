@@ -137,6 +137,20 @@ export interface IntegrationManifestExecutorDeps {
     parentValidation?: { matrixId: string; outcome: "unverified" | "failed"; failedCriteria: Array<{ criterionId: string; obligationId: string; justification: string }> };
   }): Promise<{ success: boolean; candidateSha?: string; evidenceRefs: string[] }>;
   digestCandidate(input: { candidateSha: string; worktreePath: string }): Promise<string>;
+  /**
+   * Replays a child by cherry-picking its commit instead of materializing its
+   * exact change set.
+   *
+   * Retired from the productive route in Stage 9: commit replay re-introduces
+   * ancestry the candidate never had, and its conflict path is the unbounded
+   * parent repair loop this stage removes. It stays reachable only for the
+   * historical V2 replay path, whose named consumer is `V2NodeExecutor` with
+   * `allowCommitArtifactTransport` left unset. Delete both together in
+   * Stage 11.
+   *
+   * @deprecated
+   */
+  allowCommitTransport?: boolean;
 }
 
 export class IntegrationManifestExecutor {
@@ -202,7 +216,7 @@ export class IntegrationManifestExecutor {
             state: "child_applied",
             currentChildId: startedChild.taskId,
             children: journalOperation.children.map((child) => child.taskId === startedChild.taskId
-              ? { ...child, state: "applied" as const, resultSha: initialHead, application: "cherry_picked" as const }
+              ? { ...child, state: "applied" as const, resultSha: initialHead, application: "manifest_materialized" as const }
               : child)
           });
         }
@@ -235,7 +249,7 @@ export class IntegrationManifestExecutor {
         }
         if (journalOperation !== undefined) {
           journalOperation = await input.integrationOperation!.journal.update(journalOperation, {
-            state: "cherry_pick_started",
+            state: "child_started",
             currentChildId: artifact.artifactId,
             children: journalOperation.children.map((child) => child.taskId === artifact.artifactId
               ? { ...child, state: "started" as const, startedFromSha: preSha }
@@ -267,6 +281,18 @@ export class IntegrationManifestExecutor {
         }
       }
       if (artifact.kind !== "commit") return { ...base, operations, disposition: "failed", errors: [{ code: "unsupported_artifact", artifactId: artifact.artifactId, message: `Artifact ${artifact.artifactId} requires a ${artifact.kind} materializer.` }] };
+      if (this.deps.allowCommitTransport !== true) {
+        return {
+          ...base,
+          operations,
+          disposition: "failed",
+          errors: [{
+            code: "unsupported_artifact",
+            artifactId: artifact.artifactId,
+            message: `Artifact ${artifact.artifactId} is a commit artifact; integration accepts only exact change-set manifests.`
+          }]
+        };
+      }
       const preSha = await this.deps.git.head(worktreePath);
       const recordedChild = journalOperation?.children.find((child) => child.taskId === artifact.artifactId);
       if ((recordedChild?.state === "applied" || recordedChild?.state === "repaired") && recordedChild.resultSha !== undefined) {

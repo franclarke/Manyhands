@@ -497,6 +497,10 @@ export class V2NodeExecutor {
       let evidenceMatrix: V2ExecutionEvidenceMatrix | undefined;
       const integrator = new IntegrationManifestExecutor({
         git: this.options.git,
+        // The canonical route sets allowCommitArtifactTransport: false and gets
+        // exact manifests only. Historical V2 replay leaves it unset and keeps
+        // commit transport until Stage 11 deletes both.
+        allowCommitTransport: this.options.allowCommitArtifactTransport !== false,
         validate: async ({ candidateSha }) => {
           evidenceMatrix = await this.options.validator.validate({
             runId: input.runId,
