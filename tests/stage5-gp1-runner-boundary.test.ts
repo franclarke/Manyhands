@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 describe("Stage 5 GP1 runner boundary", () => {
   const source = readFileSync("scripts/stage5-gp1-run.mjs", "utf8");
+  const previewSource = readFileSync("packages/decomposer/src/evaluation/planning-evaluation.ts", "utf8");
 
   it("pins the exact single-session offline profile and emits both comparator shapes", () => {
     expect(source).toContain('"--sandbox", "read-only"');
@@ -28,6 +29,8 @@ describe("Stage 5 GP1 runner boundary", () => {
     expect(source).toContain('embed_exact_evidence_and_normalize_resource_versions_v2');
     expect(source).toContain('normalizeResourceVersionInputs');
     expect(source).toContain('normalizedResourceVersionInputs');
+    expect(previewSource).toContain('overflow-x:auto');
+    expect(previewSource).toContain('min-width:680px');
     expect(source).not.toMatch(/exec\s+resume|--dangerously-bypass/iu);
   });
 
