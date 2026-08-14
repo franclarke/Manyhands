@@ -130,8 +130,11 @@ describe("Stage 9 productive boundary", () => {
 
     const pending = Object.values(state.decisions).filter((decision) => decision.status === "pending");
     expect(pending).toHaveLength(1);
-    // The lowest authority that can fix a defective child artifact is the child.
-    expect(pending[0]!.affectedNodeIds).toEqual(["unit:a"]);
+    // The lowest authority that can fix a defective child artifact is the child,
+    // so the child is the repair target. The blocked scope is a different
+    // question and covers both: the composite's result cannot stand either.
+    expect(pending[0]!.repairTargetNodeId).toBe("unit:a");
+    expect(pending[0]!.affectedNodeIds).toEqual(["unit:a", "unit:root"]);
   });
 });
 

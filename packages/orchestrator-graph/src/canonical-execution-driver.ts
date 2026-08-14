@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import type { FinalArtifactManifest } from "@manyhands/shared";
 import {
   computeInputFingerprint,
+  routeRepair,
   type AdoptedArtifact,
   type AttemptUsage,
   type EvidenceMatrixRecord,
@@ -509,17 +510,53 @@ function fact<T extends RunEventInput["type"]>(
   return { eventId, occurredAt, type, payload } as Extract<RunEventInput, { type: T }>;
 }
 
+/**
+ * The decision is addressed to whoever can fix the failure, which for a
+ * composite is usually one of its children rather than the composite itself.
+ */
 function decisionFact(attempt: PreparedAttempt, at: string, reason: string): RunEventInput {
+  const route = routeRepair({
+    failedNodeId: attempt.input.node.id,
+    failureReason: reason,
+    graph: attempt.input.graph,
+    consumedArtifacts: attempt.input.consumedArtifacts.map((artifact) => ({
+      artifactId: artifact.contract.id,
+      producerNodeId: artifact.nodeId
+    }))
+  });
+  // The blocked scope always includes the node that failed, because its result
+  // cannot stand. When the repair belongs to another node, that node is blocked
+  // too: it is about to be attempted again. Blocking only the repair target
+  // would leave the failed composite free to be re-selected immediately, which
+  // spins the wave loop instead of waiting for the operator.
+  const affectedNodeIds = [...new Set([
+    attempt.input.node.id,
+    ...(route.kind === "retry_node" ? [route.nodeId] : [])
+  ])].sort();
+  const repairTargetNodeId = route.kind === "retry_node" ? route.nodeId : undefined;
+  const kind = route.kind === "amend_plan" ? "approve_amendment" as const : "resolve_conflict" as const;
+  const options = route.kind === "amend_plan"
+    ? [
+      { id: "amend", label: "Amend the plan" },
+      { id: "stop", label: "Stop this work" }
+    ]
+    : route.kind === "effect_policy"
+      ? [
+        { id: "retry", label: "Retry after fixing the environment" },
+        { id: "stop", label: "Stop this work" }
+      ]
+      : [
+        { id: "retry", label: "Retry with guidance" },
+        { id: "stop", label: "Stop this work" }
+      ];
   return fact(`${attempt.input.attemptId}:decision`, at, "decision.raised", {
     decision: {
       id: `${attempt.input.attemptId}:decision`,
-      kind: "resolve_conflict",
+      kind,
       question: `Execution for ${attempt.input.node.title} requires guidance: ${reason}`,
-      options: [
-        { id: "retry", label: "Retry with guidance" },
-        { id: "stop", label: "Stop this work" }
-      ],
-      affectedNodeIds: [attempt.input.node.id],
+      options,
+      affectedNodeIds,
+      ...(repairTargetNodeId === undefined ? {} : { repairTargetNodeId }),
       evidenceRefs: [attempt.input.attemptId, `input-fingerprint:${attempt.input.inputFingerprint}`],
       impact: "behavior",
       raisedAtGraphRevision: attempt.input.graph.revision
