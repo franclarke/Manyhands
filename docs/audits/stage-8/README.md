@@ -4,8 +4,7 @@
 
 `in_review` — this record deliberately does **not** close GLeaf or update the
 canonical stage table. R0, R14, R17 and all required R10 live slices now have
-attributable evidence. The remaining gate is a bounded independent review and
-the final full-suite candidate qualification.
+attributable evidence. The remaining gate is a bounded independent review.
 
 ## Implemented boundary under qualification
 
@@ -36,6 +35,11 @@ Executed with serial Vitest (`--retry=0 --minWorkers=1 --maxWorkers=1`):
 - `git -c core.whitespace=cr-at-eol diff --check`: passed.
 - Current-tree `pnpm test` on 2026-08-14: **274 files / 1,819 tests passed**
   (one opt-in live suite and ten tests skipped by design).
+- Exact implementation candidate `d3c617c4` ran `corepack pnpm test` on
+  2026-08-14: **274 files / 1,819 tests passed** (one opt-in live suite and
+  ten tests skipped by design). The prior Windows Stage 3 restart test was
+  stabilized to wait for the supervised helper image to close before deleting
+  its temporary directory; its focused physical regression also passed.
 - Workspace package typechecks: passed (13 packages); web TypeScript check:
   passed; package builds and production web build: passed. These build commands
   were invoked through `corepack pnpm` because the host's global `pnpm` is an
@@ -68,9 +72,9 @@ This is a recorded runtime exception, not a claim that Node 22 was exercised.
 
 ## Required evidence still missing
 
-- a bounded independent gate review, an exact candidate SHA/tree and full
-  `pnpm test` on that candidate. The current tree is green, but it is not yet
-  an immutable candidate qualification.
+- a bounded independent gate review. The exact implementation candidate
+  `d3c617c4` has a passing full suite, but this session cannot supply a review
+  independent from its implementation.
 
 ## Live R0 observations
 
