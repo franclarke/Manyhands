@@ -1,0 +1,147 @@
+import { describe, expect, it } from "vitest";
+
+import { compilePlan } from "@manyhands/decomposer";
+import { CanonicalExecutionDriver } from "@manyhands/orchestrator-graph";
+import { RunCoordinator, RunEventSchema, type RunEvent, type RunEventInput } from "@manyhands/run-coordinator";
+
+import { stage5Fixture, stage5Sha256 } from "./helpers/stage5-fixture.js";
+
+const at = "2026-08-13T12:00:00.000Z";
+
+describe("Stage 6 canonical execution driver", () => {
+  it("executes the direct GraphRevision without a legacy graph projection or pairwise constraints", async () => {
+    const fixture = stage5Fixture();
+    const compiled = compilePlan({
+      ...fixture,
+      hasher: stage5Sha256,
+      idFactory: (kind, parts) => [kind, ...parts].join(":")
+    });
+    if (!compiled.ok) throw new Error(JSON.stringify(compiled.findings));
+    const harness = coordinator(compiled.graph.graphId);
+    const executed: string[] = [];
+    const driver = new CanonicalExecutionDriver({
+      coordinator: harness.coordinator,
+      now: () => at,
+      estimateIntegrationRisk: () => ({ score: 0, evidenceRefs: [] }),
+      execute: async (input) => {
+        executed.push(input.node.id);
+        const obligation = input.contract.validation.obligations[0]!;
+        return {
+          kind: "success",
+          candidateCommit: `commit-${input.node.id}`,
+          outputDigest: `sha256:${input.node.id}`,
+          changedFiles: input.contract.scope.allowedPaths,
+          artifactLocation: `commit-${input.node.id}`,
+          evidenceMatrix: {
+            matrixId: `matrix-${input.node.id}`,
+            candidateCommit: `commit-${input.node.id}`,
+            validationContract: { id: input.contract.validation.id, revision: input.contract.validation.revision },
+            criteria: [{
+              criterionId: obligation.criterionId,
+              obligationId: obligation.id,
+              status: "satisfied",
+              justification: "Fake executor verified the exact candidate.",
+              evidenceRefs: ["evidence:fake"]
+            }],
+            outcome: "verified",
+            validationRecipeDigest: "sha256:fake",
+            observations: []
+          },
+          ...(input.node.id === compiled.graph.rootId ? {
+            integrationManifestId: "integration-root",
+            finalManifestId: "final-root",
+            finalManifest: {
+              commitSha: `commit-${input.node.id}`,
+              treeSha: "c".repeat(40),
+              graphRevision: input.graph.revision,
+              artifactIds: Object.keys(compiled.contracts.artifacts),
+              evidenceMatrixId: `matrix-${input.node.id}`,
+              validationRecipeDigest: "sha256:fake",
+              deliveryTarget: "main"
+            }
+          } : {})
+        };
+      }
+    });
+
+    const state = await driver.run({
+      runId: "run-stage6-canonical",
+      graph: compiled.graph,
+      contracts: compiled.contracts.taskBundles,
+      repositoryContextDigest: fixture.repositoryView.digest,
+      executorProfile: { id: "fake", revision: "1" },
+      effectiveConfig: { maxParallel: 1 },
+      availableExecutorNodeIds: Object.keys(compiled.graph.nodes),
+      target: { sourceTargetFingerprint: "sha256:target", targetBranch: "main", targetHead: fixture.repositoryView.model.baseCommit }
+    });
+
+    expect(executed).toEqual(expect.arrayContaining(Object.keys(compiled.graph.nodes)));
+    expect(Object.values(state.adoptedArtifacts)).toHaveLength(Object.keys(compiled.contracts.artifacts).length);
+    expect(state.lifecycle).not.toBe("running");
+  });
+
+  it("records a failed physical attempt once and blocks only that node behind a decision", async () => {
+    const fixture = stage5Fixture();
+    const compiled = compilePlan({
+      ...fixture,
+      hasher: stage5Sha256,
+      idFactory: (kind, parts) => [kind, ...parts].join(":")
+    });
+    if (!compiled.ok) throw new Error(JSON.stringify(compiled.findings));
+    const harness = coordinator(compiled.graph.graphId);
+    const calls: string[] = [];
+    const driver = new CanonicalExecutionDriver({
+      coordinator: harness.coordinator,
+      now: () => at,
+      estimateIntegrationRisk: () => ({ score: 0, evidenceRefs: [] }),
+      execute: async (input) => {
+        calls.push(input.node.id);
+        return { kind: "failure", reason: "fake executor failed safely" };
+      }
+    });
+
+    const state = await driver.run({
+      runId: "run-stage6-canonical",
+      graph: compiled.graph,
+      contracts: compiled.contracts.taskBundles,
+      repositoryContextDigest: fixture.repositoryView.digest,
+      executorProfile: { id: "fake", revision: "1" },
+      effectiveConfig: { maxParallel: 1 },
+      availableExecutorNodeIds: Object.keys(compiled.graph.nodes),
+      target: { sourceTargetFingerprint: "sha256:target", targetBranch: "main", targetHead: fixture.repositoryView.model.baseCommit }
+    });
+
+    expect(calls).toEqual(["unit:a"]);
+    expect(Object.values(state.decisions).some((decision) =>
+      decision.status === "pending" && decision.affectedNodeIds.includes("unit:a")
+    )).toBe(true);
+    expect(Object.values(state.adoptedArtifacts)).toHaveLength(0);
+  });
+});
+
+function coordinator(graphId: string): { coordinator: RunCoordinator } {
+  let events: RunEvent[] = [
+    RunEventSchema.parse({ eventId: "created", runId: "run-stage6-canonical", sequence: 1, occurredAt: at, type: "run.created", payload: { goal: "Stage 6 fake run" } }),
+    RunEventSchema.parse({ eventId: "proposed", runId: "run-stage6-canonical", sequence: 2, occurredAt: at, type: "graph.revision.proposed", payload: { graphId, revision: 1 } }),
+    RunEventSchema.parse({ eventId: "approved", runId: "run-stage6-canonical", sequence: 3, occurredAt: at, type: "graph.revision.approved", payload: { graphId, revision: 1 } })
+  ];
+  return {
+    coordinator: new RunCoordinator({
+      events: {
+        load: async () => structuredClone(events),
+        append: async (runId: string, expectedSequence: number, inputs: RunEventInput[]) => {
+          const appended = inputs.map((input, index) => RunEventSchema.parse({
+            ...input,
+            runId,
+            sequence: expectedSequence + index + 1
+          }));
+          events = [...events, ...appended];
+          return appended;
+        }
+      },
+      delivery: { publish: async () => { throw new Error("unused"); } },
+      clock: () => at,
+      eventId: (type, sequence) => `${type}:${sequence}`
+    })
+  };
+}

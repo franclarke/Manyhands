@@ -167,7 +167,9 @@ async function react(
     return {
       domainEvents: succeeded
         ? options.loadPlanningResult === undefined
-          ? planningCompletedEvents(context, options)
+          ? [event(options, context.runId, "planning.failed", {
+            reason: "A productive planning effect completed without a durable canonical planning result."
+          }, observation.intent.effectId)]
           : [...await options.loadPlanningResult(observation.intent.effectId)]
         : [event(options, context.runId, "planning.failed", {
           reason: "The transitional planning adapter did not produce a successful physical receipt."
@@ -502,71 +504,6 @@ function effectRequest(input: {
       requestedAt: input.requestedAt
     }, options.hasher)
   };
-}
-
-function planningCompletedEvents(
-  context: RunActorReactionContext,
-  options: ProductRunApplicationOptions
-): RunEventInput[] {
-  const definition = requireDefinition(context.projection);
-  const graphId = `graph:${context.runId}`;
-  const rootId = `node:${context.runId}:root`;
-  const graph = {
-    schemaVersion: 2,
-    graphId,
-    revision: 1,
-    rootId,
-    baseCommit: stringField(definition.targetContext, "sourceBaseCommit"),
-    repositorySnapshotId: stringField(definition.targetContext, "fingerprint"),
-    nodes: {
-      [rootId]: {
-        id: rootId,
-        parentId: null,
-        kind: "root",
-        title: definition.title,
-        goal: definition.userPrompt,
-        topologicalLevel: 0
-      }
-    },
-    artifactRequirements: [],
-    seamBindings: [],
-    conflictConstraints: [],
-    legacyOrderingConstraints: [],
-    createdAt: options.clock()
-  };
-  const decisionId = `approve-plan:${graphId}:r1`;
-  return [
-    event(options, context.runId, "planning.completed", {
-      breakdownId: `plan:${context.runId}`,
-      breakdown: { schemaVersion: 1, rootId, mode: "stage3_transitional_adapter" }
-    }, graphId),
-    event(options, context.runId, "graph.compiled", {
-      graphId,
-      revision: 1,
-      graph,
-      contracts: [],
-      review: { findings: [] },
-      trace: { adapter: "stage3_transitional" }
-    }, `${graphId}:compiled`),
-    event(options, context.runId, "graph.revision.proposed", {
-      graphId,
-      revision: 1
-    }, `${graphId}:proposed`),
-    event(options, context.runId, "decision.raised", {
-      decision: {
-        id: decisionId,
-        kind: "approve_plan",
-        question: "Approve the transitional Stage 3 graph?",
-        options: [
-          { id: "approve", label: "Approve plan" },
-          { id: "request_changes", label: "Request changes" }
-        ],
-        affectedNodeIds: [rootId],
-        evidenceRefs: [`graph:${graphId}:r1`],
-        impact: "acceptance"
-      }
-    }, decisionId)
-  ];
 }
 
 function latestCommand<T extends ProductRunCommand["type"]>(

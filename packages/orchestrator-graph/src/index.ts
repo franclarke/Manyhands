@@ -1,4 +1,14 @@
-/** Canonical V2 execution driver. Lifecycle and facts belong to RunCoordinator. */
+/** Productive canonical driver. Lifecycle facts remain owned by RunCoordinator. */
+export { CanonicalExecutionDriver } from "./canonical-execution-driver.js";
+export type {
+  CanonicalExecutionDriverOptions,
+  CanonicalExecutionRunInput,
+  CanonicalExecutionTarget,
+  CanonicalExecutorProfile,
+  CanonicalNodeExecutionInput,
+  CanonicalNodeExecutionOutcome
+} from "./canonical-execution-driver.js";
+/** Historical V2 reader retained only for old-journal compatibility tests. */
 export { V2ExecutionDriver, leafFailureObservation, orderArtifactRequirementsForMaterialization, retryBudgetFor } from "./v2/execution-driver.js";
 export type {
   V2ExecutionDriverOptions,

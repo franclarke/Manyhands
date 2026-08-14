@@ -24,6 +24,8 @@ export const TaskNodeSchema = z.object({
   contractRef: CanonicalContractRefSchema
 }).strict();
 export type TaskNode = z.infer<typeof TaskNodeSchema>;
+/** Explicit export avoids collision with the historical mutable TaskNode type. */
+export type CanonicalTaskNode = TaskNode;
 
 const SemanticPlanRefSchema = z.object({
   id: EntityIdSchema,

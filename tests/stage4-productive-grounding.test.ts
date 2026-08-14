@@ -10,6 +10,7 @@ import { promisify } from "node:util";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { ProductRunDefinition } from "@manyhands/run-coordinator";
+import { stage5Fixture } from "./helpers/stage5-fixture.js";
 
 import {
   buildProductiveRepositoryGrounding,
@@ -82,27 +83,7 @@ describe("Stage 4 productive repository grounding", () => {
     const baseCommit = await commitAll(root, "initial");
     let prompt = "";
     const planner = createCurrentPlannerPort({
-      spawnProcess: fakePlanningSpawn(() => {
-        return JSON.stringify({
-          rationale: "The board behavior and visual theme are separately verifiable.",
-          children: [
-            {
-              key: "todo-board",
-              objective: "Implement the todo board behavior",
-              criterion: "The board shows todo items",
-              reads: ["src/todo-board.ts"],
-              writes: ["tests/todo-board.test.ts"]
-            },
-            {
-              key: "visual-theme",
-              objective: "Apply the visual theme",
-              criterion: "The board uses a visible accent",
-              reads: ["src/theme.ts"],
-              writes: ["tests/theme.test.ts"]
-            }
-          ]
-        });
-      }, (value) => { prompt = value; })
+      spawnProcess: fakePlanningSpawn(() => canonicalResponse(prompt), (value) => { prompt = value; })
     });
 
     const result = await planner.plan({
@@ -121,15 +102,41 @@ describe("Stage 4 productive repository grounding", () => {
     });
     expect(prompt).toContain("src/todo-board.ts");
     expect(prompt).toContain("vitest run");
+    expect(result.events.find((event) => event.type === "planning.completed")?.payload.semanticPlan)
+      .toMatchObject({ status: "ready", rootUnitId: "unit:root" });
+    expect(result.events.find((event) => event.type === "graph.compiled")?.payload.graph)
+      .toMatchObject({ semanticPlan: expect.objectContaining({ id: expect.stringMatching(/^plan:/u) }) });
   });
 });
+
+function canonicalResponse(prompt: string): string {
+  const criteria = [...prompt.matchAll(/^(criterion:[^:]+:[^:]+:\d+):/gmu)].map((match) => match[1]!);
+  const resources = [...prompt.matchAll(/^(catalog-resource:[^\s]+) path:([^\r\n]+)$/gmu)];
+  const evidence = [...prompt.matchAll(/^(evidence:[^\r\n]+)$/gmu)].map((match) => match[1]!);
+  if (criteria.length !== 1 || resources.length < 2 || evidence.length === 0) {
+    throw new Error(`Test prompt did not contain the canonical planning context: ${prompt}`);
+  }
+  const material = structuredClone(stage5Fixture().plan) as unknown as Record<string, unknown>;
+  delete material.digest;
+  const rendered = JSON.stringify(material)
+    .replaceAll("criterion:feature", criteria[0]!)
+    .replaceAll("proof:feature", `proof:${criteria[0]!}`)
+    .replaceAll("proof:a", `proof:${criteria[0]!}`)
+    .replaceAll("proof:b", `proof:${criteria[0]!}`)
+    .replaceAll("resource:a", resources[0]![1])
+    .replaceAll("resource:b", resources[1]![1])
+    .replaceAll("src/a.ts", resources[0]![2])
+    .replaceAll("src/b.ts", resources[1]![2])
+    .replace(/evidence:[^"\]]+/gu, evidence[0]!);
+  return rendered;
+}
 
 function definition(root: string, baseCommit: string): ProductRunDefinition {
   return {
     schemaVersion: 1,
     workspaceId: "workspace:stage4",
     userPrompt: "Build a visual todo board",
-    acceptanceCriteria: ["The board shows todo items", "The board uses a visible accent"],
+    acceptanceCriteria: ["The todo board has an automated test"],
     title: "Visual todo board",
     planningSelection: { executorId: "codex-cli", model: "deterministic-test" },
     executionSelection: { executorId: "codex-cli", model: "deterministic-test" },

@@ -4,22 +4,21 @@ import path from "node:path";
 import { promisify } from "node:util";
 
 import {
-  DEFAULT_GRANULARITY_POLICY,
-  PLAN_CRITIC_KINDS,
+  PlanningEngine,
+  compilePlan,
   PlanningCapacityError,
-  RecursivePlanner,
-  applyGranularitySelection,
-  compileGraphRevision,
-  createSemanticPlan,
-  projectPlannedTree,
-  projectSemanticPlanForLegacyCompiler,
-  resolveGranularityCondition,
-  selectGranularityStrategy,
-  type CutRequest,
-  type GoalCriterion,
-  type RepositoryEvidence,
-  type WorkBreakdown,
-  type WorkUnit
+  type RepositoryEvidence
+} from "@manyhands/decomposer";
+import {
+  buildGoalContract,
+  buildProofStrategy,
+  type DigestHasher,
+  type PlanningResult,
+  type SemanticPlanMaterial
+} from "@manyhands/contracts";
+import type {
+  PlanningModelInput,
+  PlanningModelProposal
 } from "@manyhands/decomposer";
 import {
   buildAgentEnvironment,
@@ -83,6 +82,18 @@ const PRODUCTIVE_REPOSITORY_QUERY_BUDGET: RepositoryQueryBudget = {
   maxDepth: 1
 };
 
+const PRODUCTIVE_PLANNING_BUDGET = {
+  modelCalls: 3,
+  repositoryQueries: 3,
+  queryBytes: PRODUCTIVE_REPOSITORY_QUERY_BUDGET.maxBytes,
+  revisions: 3,
+  repairs: 2,
+  expansions: 0
+} as const;
+
+const sha256: DigestHasher = (value) =>
+  `sha256:${createHash("sha256").update(value).digest("hex")}`;
+
 export interface ProductiveRepositoryGrounding {
   snapshot: RepositorySnapshot;
   view: RepositoryView;
@@ -91,14 +102,16 @@ export interface ProductiveRepositoryGrounding {
   budget: RepositoryQueryBudget;
 }
 
-/** Stage 4 boundary: exact Git facts and bounded queries consumed by the transitional planner. */
-export async function buildProductiveRepositoryGrounding(input: {
+export interface ProductiveRepositoryView {
+  snapshot: RepositorySnapshot;
+  view: RepositoryView;
+}
+
+export async function buildProductiveRepositoryView(input: {
   rootPath: string;
   targetFingerprint: string;
   baseCommit: string;
-  goal: string;
-  acceptanceCriteria: readonly string[];
-}): Promise<ProductiveRepositoryGrounding> {
+}): Promise<ProductiveRepositoryView> {
   const inspection = await inspectRepositoryModelWithSnapshot({
     rootPath: input.rootPath,
     targetFingerprint: input.targetFingerprint,
@@ -109,6 +122,18 @@ export async function buildProductiveRepositoryGrounding(input: {
     inspection,
     overlays: []
   });
+  return { snapshot: inspection.snapshot, view };
+}
+
+/** Stage 4 boundary: exact Git facts and bounded queries consumed by the transitional planner. */
+export async function buildProductiveRepositoryGrounding(input: {
+  rootPath: string;
+  targetFingerprint: string;
+  baseCommit: string;
+  goal: string;
+  acceptanceCriteria: readonly string[];
+}): Promise<ProductiveRepositoryGrounding> {
+  const { snapshot, view } = await buildProductiveRepositoryView(input);
   const query = createRepositoryQuery({ rootPath: input.rootPath, view });
   const budget = { ...PRODUCTIVE_REPOSITORY_QUERY_BUDGET };
   const terms = repositoryGoalTerms([input.goal, ...input.acceptanceCriteria]);
@@ -122,7 +147,7 @@ export async function buildProductiveRepositoryGrounding(input: {
     query.validationCapabilities(budget)
   ];
   return {
-    snapshot: inspection.snapshot,
+    snapshot,
     view,
     evidence: legacyRepositoryEvidence(answers),
     queryDigests: answers.map((answer) => answer.digest),
@@ -151,7 +176,7 @@ export function createCurrentTransitionalUnsafeProfile(
   });
 }
 
-/** Current Stage 3 planner composition, moved out of Next and behind the daemon effect seam. */
+/** Stage 6 planner composition: the daemon produces only SemanticPlan -> GraphRevision. */
 export function createCurrentPlannerPort(
   options: CurrentLifecycleAdapterOptions = {}
 ): TransitionalPlannerPort {
@@ -160,127 +185,104 @@ export function createCurrentPlannerPort(
     async plan({ runId, definition }): Promise<TransitionalLifecycleResult> {
       const repoPath = absoluteTargetPath(definition);
       return withTransitionalRepositoryLease({ repoRoot: repoPath, runId }, async () => {
-      const grounding = await buildProductiveRepositoryGrounding({
+      const grounding = await buildProductiveRepositoryView({
         rootPath: repoPath,
         targetFingerprint: stringField(definition.targetContext, "fingerprint"),
-        baseCommit: stringField(definition.targetContext, "sourceBaseCommit"),
-        goal: definition.userPrompt,
-        acceptanceCriteria: definition.acceptanceCriteria
+        baseCommit: stringField(definition.targetContext, "sourceBaseCommit")
       });
-      const { snapshot } = grounding;
-      const criteria = goalCriteria(definition);
-      const { evidence } = grounding;
-      const planner = new RecursivePlanner({
+      const goal = productGoal(runId, definition, grounding.view);
+      const proofStrategies: ReturnType<typeof productProofStrategies> = [];
+      let inspection: {
+        queryReceipts: readonly string[];
+        evidenceRefs: readonly string[];
+        repositoryQueries: number;
+        queryBytes: number;
+      } | undefined;
+      const planner = new PlanningEngine({
         model: {
-          proposeCut: (request) => invokeCurrentPlanningCli({
-            runId,
+          propose: async (request): Promise<PlanningModelProposal> => canonicalPlanningProposal({
             cwd: repoPath,
             selection: definition.planningSelection,
             request,
+            view: grounding.view,
+            proofStrategies,
             ...(options.planningStepTimeoutMs === undefined
               ? {}
               : { timeoutMs: options.planningStepTimeoutMs }),
             ...(options.spawnProcess === undefined ? {} : { spawnProcess: options.spawnProcess })
           })
         },
-        budget: { maxScopePaths: DEFAULT_GRANULARITY_POLICY.maxLeafScopePaths },
-        maxAttemptsPerUnit: positiveIntegerField(definition.executionConfig, "maxPlanningAttempts") ?? 2
-      });
-      const plan = await planner.plan({
-        root: {
-          key: "root",
-          objective: definition.userPrompt,
-          criteria,
-          reads: evidence.filter((item) => item.kind === "path").map((item) => item.reference),
-          writes: []
+        repository: {
+          inspect: async ({ allowance }) => {
+            inspection = inspectProductivePlanningRepository({
+              rootPath: repoPath,
+              view: grounding.view,
+              goal: definition.userPrompt,
+              acceptanceCriteria: definition.acceptanceCriteria,
+              allowance
+            });
+            return { ...inspection, missingCapabilities: [] };
+          }
         },
-        criteria,
-        evidence
+        hasher: sha256
       });
-      if (plan.unresolved.length > 0) {
-        throw new Error(`no_safe_cut: ${plan.unresolved
-          .map((unit) => `${unit.unit.key}: ${unit.diagnostics.join("; ")}`)
-          .join(" | ")}`);
+      const result = await planner.plan({
+        goal,
+        repositoryView: grounding.view,
+        proofStrategies,
+        budget: PRODUCTIVE_PLANNING_BUDGET
+      }, new AbortController().signal);
+      const baseEvents: RunEventInput[] = [
+        fact(`repository:${grounding.snapshot.snapshotId}:inspection`, now(), "repository.inspected", {
+          snapshotId: grounding.snapshot.snapshotId,
+          disposition: grounding.snapshot.inspectionDisposition,
+          snapshot: asRecord(grounding.snapshot),
+          repositoryModelDigest: grounding.view.model.digest,
+          repositoryView: {
+            digest: grounding.view.digest,
+            treeSha: grounding.view.treeSha,
+            resourceCatalogDigest: grounding.view.resourceCatalogDigest
+          },
+          queryDigests: [...(inspection?.queryReceipts ?? [])]
+        })
+      ];
+      if (result.kind !== "ready") {
+        return {
+          events: [...baseEvents, ...nonReadyPlanningEvents(runId, result, now)]
+        };
       }
-      const projected = projectPlannedTree({
-        tree: plan.root,
-        goal: definition.userPrompt,
-        criteria,
-        evidence,
-        repositorySnapshotId: snapshot.snapshotId
+      const compiled = compilePlan({
+        plan: result.plan,
+        goal,
+        proofStrategies,
+        repositoryView: grounding.view,
+        hasher: sha256,
+        idFactory: (kind, parts) => stableId(kind, parts.join(":"))
       });
-      const semanticPlan = createSemanticPlan({
-        goal: definition.userPrompt,
-        repositorySnapshotId: snapshot.snapshotId,
-        criteria: [...projected.criteria],
-        draft: projected.draft
-      });
-      const candidateBreakdown = projectSemanticPlanForLegacyCompiler(semanticPlan).breakdown;
-      const strategy = selectGranularityStrategy({
-        condition: resolveGranularityCondition(definition.granularityCondition),
-        breakdown: candidateBreakdown,
-        repositorySnapshot: snapshot,
-        config: DEFAULT_GRANULARITY_POLICY
-      });
-      if (strategy.requiresSemanticReplan) {
-        throw new Error(
-          "no_executable_frontier: the current granularity policy requires a semantic replan."
-        );
+      if (!compiled.ok) {
+        return {
+          events: [...baseEvents, fact(`planning:${runId}:failed`, now(), "planning.failed", {
+            reason: compiled.findings.map(({ code, message }) => `${code}: ${message}`).join(" | ")
+          })]
+        };
       }
-      const selected = applyGranularitySelection({
-        plan: semanticPlan,
-        assessments: strategy.assessments
-      });
-      const selectedBreakdown = projectSemanticPlanForLegacyCompiler(selected.plan).breakdown;
-      const compiled = compileGraphRevision({
-        semanticPlan: selected.plan,
-        repositorySnapshot: snapshot,
-        sourceContract: {
-          goal: definition.userPrompt,
-          acceptanceCriteria: criteria.map((criterion) => criterion.description),
-          constraints: []
-        }
-      }, { idFor: stableId, now });
       const graph = compiled.graph;
       const decisionId = `approve-plan:${graph.graphId}:r${graph.revision}`;
       return {
         events: [
-          fact(`repository:${snapshot.snapshotId}:inspection`, now(), "repository.inspected", {
-            snapshotId: snapshot.snapshotId,
-            disposition: snapshot.inspectionDisposition,
-            snapshot: asRecord(snapshot),
-            repositoryModelDigest: grounding.view.model.digest,
-            repositoryView: {
-              digest: grounding.view.digest,
-              treeSha: grounding.view.treeSha,
-              resourceCatalogDigest: grounding.view.resourceCatalogDigest
-            },
-            queryDigests: grounding.queryDigests
-          }),
-          fact(`planning:${selected.plan.planId}:completed:${runId}`, now(), "planning.completed", {
-            breakdownId: selected.plan.planId,
-            breakdown: asRecord(selected.plan)
+          ...baseEvents,
+          fact(`planning:${result.plan.id}:completed:${runId}`, now(), "planning.completed", {
+            semanticPlan: asRecord(result.plan),
+            trace: asRecord(result.trace)
           }),
           fact(`graph:${graph.graphId}:r${graph.revision}:compiled`, now(), "graph.compiled", {
             graphId: graph.graphId,
             revision: graph.revision,
             graph: asRecord(graph),
-            contracts: compiled.contracts.map(asRecord),
-            review: asRecord(compiled.review),
-            trace: asRecord(compiled.trace)
+            contracts: Object.values(compiled.contracts.taskBundles).map(asRecord),
+            review: { findings: result.trace.advisoryFindings.map(asRecord) },
+            trace: asRecord(result.trace)
           }),
-          ...PLAN_CRITIC_KINDS.map((critic) => fact(
-            `graph:${graph.graphId}:r${graph.revision}:critic:${critic}`,
-            now(),
-            "planning.critic_recorded",
-            {
-              critic,
-              findings: compiled.review.findings
-                .filter((finding) => finding.critic === critic)
-                .map(asRecord)
-            }
-          )),
-          strategyEvent(runId, strategy, candidateBreakdown, selectedBreakdown, now),
           fact(`graph:${graph.graphId}:r${graph.revision}:proposed`, now(), "graph.revision.proposed", {
             graphId: graph.graphId,
             revision: graph.revision
@@ -481,6 +483,270 @@ function transactionalReceipt(receipt: DeliveryReceipt): TransactionalDeliveryRe
   };
 }
 
+function productGoal(
+  runId: string,
+  definition: ProductRunDefinition,
+  view: RepositoryView
+) {
+  const criteria = definition.acceptanceCriteria.length > 0
+    ? definition.acceptanceCriteria
+    : [definition.userPrompt];
+  return buildGoalContract({
+    id: `goal:${runId}`,
+    revision: 1,
+    goal: definition.userPrompt,
+    acceptanceCriteria: criteria.map((statement, index) => ({
+      id: `criterion:${runId}:${index + 1}`,
+      statement,
+      required: true,
+      level: "product" as const,
+      protectedReferences: [],
+      verification: {
+        allowedProofs: [{ mode: "executable" as const, authority: "orchestrator_deterministic" as const }],
+        independence: "independent_required" as const
+      }
+    })),
+    constraints: [],
+    qualityAttributes: [],
+    target: {
+      repositoryId: view.model.repositoryId,
+      baseCommit: view.model.baseCommit,
+      treeSha: view.treeSha
+    }
+  }, sha256);
+}
+
+function productProofStrategies(
+  goal: ReturnType<typeof productGoal>,
+  view: RepositoryView
+) {
+  return goal.acceptanceCriteria.map((criterion) => buildProofStrategy({
+    id: `proof:${criterion.id}`,
+    revision: 1,
+    goalContractDigest: goal.digest,
+    criterionId: criterion.id,
+    obligationId: `validation:${criterion.id}`,
+    mode: "executable",
+    authority: "orchestrator_deterministic",
+    repositoryViewDigest: view.digest,
+    procedureRef: "command:stage6-transitional-validation",
+    environmentPolicyDigest: "sha256:stage6-transitional-environment",
+    independence: "independent_required"
+  }, sha256));
+}
+
+/**
+ * The provider may propose responsibility boundaries, never proof authority.
+ * This adapter derives the exact allowed executable strategy for each declared
+ * validation obligation before the PlanningEngine verifies the candidate.
+ */
+function bindProductProofStrategies(
+  material: SemanticPlanMaterial,
+  goal: ReturnType<typeof productGoal>,
+  view: RepositoryView
+): { material: SemanticPlanMaterial; proofStrategies: ReturnType<typeof productProofStrategies> } {
+  const normalized = structuredClone(material) as SemanticPlanMaterial;
+  const criteria = new Map<string, string>();
+  for (const unit of Object.values(normalized.units)) {
+    for (const criterion of unit.criteria) criteria.set(criterion.criterionId, criterion.sourceCriterionId);
+  }
+  const rootCriterion = (criterionId: string): string | undefined => {
+    const visited = new Set<string>();
+    let current = criterionId;
+    while (!goal.acceptanceCriteria.some(({ id }) => id === current)) {
+      if (visited.has(current)) return undefined;
+      visited.add(current);
+      const source = criteria.get(current);
+      if (source === undefined) return undefined;
+      current = source;
+    }
+    return current;
+  };
+  const bindings = new Map<string, { criterionId: string; obligationId: string }>();
+  for (const unit of Object.values(normalized.units)) {
+    unit.validation.forEach((validation) => {
+      validation.proofStrategyId = `proof:${validation.obligationId}`;
+      const criterionId = rootCriterion(validation.criterionId);
+      if (criterionId !== undefined) bindings.set(validation.obligationId, { criterionId, obligationId: validation.obligationId });
+    });
+    if (unit.integration !== undefined) {
+      unit.integration.proofStrategyId = `proof:${unit.integration.obligationId}`;
+      const criterionId = unit.integration.criterionIds.map(rootCriterion).find((value) => value !== undefined);
+      if (criterionId !== undefined) bindings.set(unit.integration.obligationId, { criterionId, obligationId: unit.integration.obligationId });
+    }
+  }
+  const proofStrategies = [...bindings.values()]
+    .sort((left, right) => left.obligationId.localeCompare(right.obligationId))
+    .map(({ criterionId, obligationId }) => buildProofStrategy({
+      id: `proof:${obligationId}`,
+      revision: 1,
+      goalContractDigest: goal.digest,
+      criterionId,
+      obligationId,
+      mode: "executable",
+      authority: "orchestrator_deterministic",
+      repositoryViewDigest: view.digest,
+      procedureRef: "command:stage6-transitional-validation",
+      environmentPolicyDigest: "sha256:stage6-transitional-environment",
+      independence: "independent_required"
+    }, sha256));
+  return { material: normalized, proofStrategies };
+}
+
+function inspectProductivePlanningRepository(input: {
+  rootPath: string;
+  view: RepositoryView;
+  goal: string;
+  acceptanceCriteria: readonly string[];
+  allowance: { repositoryQueries: number; queryBytes: number };
+}) {
+  const query = createRepositoryQuery({ rootPath: input.rootPath, view: input.view });
+  const count = Math.min(3, input.allowance.repositoryQueries);
+  const budget: RepositoryQueryBudget = {
+    maxResults: PRODUCTIVE_REPOSITORY_QUERY_BUDGET.maxResults,
+    maxBytes: Math.max(1, Math.floor(input.allowance.queryBytes / count)),
+    maxDepth: PRODUCTIVE_REPOSITORY_QUERY_BUDGET.maxDepth
+  };
+  const anchor = input.view.model.packages.find(({ rootPath }) => rootPath === "")
+    ?? input.view.model.packages[0];
+  const answers = [
+    query.searchGoalTerms(repositoryGoalTerms([input.goal, ...input.acceptanceCriteria]), budget),
+    ...(count < 2 || anchor === undefined ? [] : [query.inspectBoundary(`package:${anchor.rootPath || "."}`, budget)]),
+    ...(count < 3 ? [] : [query.validationCapabilities(budget)])
+  ];
+  return {
+    queryReceipts: answers.map(({ digest }) => digest),
+    evidenceRefs: [...new Set(answers.flatMap(({ evidenceRefs }) => evidenceRefs))].sort(),
+    repositoryQueries: answers.length,
+    queryBytes: answers.reduce((total, answer) => total + answer.cost.bytes, 0)
+  };
+}
+
+async function canonicalPlanningProposal(input: {
+  cwd: string;
+  selection: ProductRunDefinition["planningSelection"];
+  request: PlanningModelInput;
+  view: RepositoryView;
+  proofStrategies: ReturnType<typeof productProofStrategies>;
+  timeoutMs?: number;
+  spawnProcess?: typeof spawn;
+}): Promise<PlanningModelProposal> {
+  const output = await invokePlanningCli({
+    cwd: input.cwd,
+    selection: input.selection,
+    prompt: canonicalPlanningPrompt(input.request, input.view),
+    ...(input.timeoutMs === undefined ? {} : { timeoutMs: input.timeoutMs }),
+    ...(input.spawnProcess === undefined ? {} : { spawnProcess: input.spawnProcess })
+  });
+  const proposal = parseCanonicalPlanningProposal(output, input.request, input.view);
+  if (proposal.kind === "candidate") {
+    const bound = bindProductProofStrategies(proposal.material, input.request.goal, input.view);
+    input.proofStrategies.splice(0, input.proofStrategies.length, ...bound.proofStrategies);
+    return { kind: "candidate", material: bound.material };
+  }
+  return proposal;
+}
+
+function parseCanonicalPlanningProposal(
+  output: string,
+  request: PlanningModelInput,
+  view: RepositoryView
+): PlanningModelProposal {
+  const parsed = JSON.parse(output) as unknown;
+  const envelope = objectRecord(parsed);
+  const proposal = envelope.kind === "candidate" && "material" in envelope
+    ? envelope.material
+    : envelope.canonicalMaterialJson !== undefined && typeof envelope.canonicalMaterialJson === "string"
+      ? JSON.parse(envelope.canonicalMaterialJson) as unknown
+      : parsed;
+  if (envelope.kind === "needs_input" && Array.isArray(envelope.decisions)) {
+    return { kind: "needs_input", decisions: envelope.decisions as never };
+  }
+  if (envelope.kind === "ambiguous" && Array.isArray(envelope.decisions) && Array.isArray(envelope.alternatives)) {
+    return {
+      kind: "ambiguous",
+      decisions: envelope.decisions as never,
+      alternatives: envelope.alternatives as never
+    };
+  }
+  const material = objectRecord(proposal);
+  return {
+    kind: "candidate",
+    material: {
+      ...material,
+      id: `plan:${request.goal.id}`,
+      revision: 1,
+      goalContract: { id: request.goal.id, revision: request.goal.revision, digest: request.goal.digest },
+      repositorySnapshot: { ...view.model.snapshot },
+      repositoryView: {
+        digest: view.digest,
+        treeSha: view.treeSha,
+        resourceCatalogDigest: view.catalog.digest
+      },
+      evidence: structuredClone(view.model.evidence)
+    } as SemanticPlanMaterial
+  };
+}
+
+function canonicalPlanningPrompt(request: PlanningModelInput, view: RepositoryView): string {
+  const resources = Object.values(view.catalog.resources)
+    .sort((left, right) => left.id.localeCompare(right.id))
+    .slice(0, 64)
+    .map((resource) => `${resource.id} ${resource.canonicalLocator}`)
+    .join("\n");
+  const validationCommands = view.model.commands
+    .filter(({ name }) => /^(?:test|typecheck|lint|build|check|verify)(?::|$)/u.test(name))
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .map(({ name, command }) => `${name}: ${command}`)
+    .join("\n");
+  const criteria = request.goal.acceptanceCriteria.map((criterion) =>
+    `${criterion.id}: ${criterion.statement}`
+  ).join("\n");
+  return [
+    "Return one JSON object only. It must be a SemanticPlanMaterial candidate.",
+    "Do not emit WorkBreakdown, CandidatePlan, legacy graph projections, pairwise conflicts, or prose.",
+    "The system will bind goal, repository snapshot/view and evidence exactly; use only the supplied criterion, resource, artifact and seam identifiers.",
+    "Each leaf needs explicit resource intents, produced artifacts and validation. Composite units need explicit integration.",
+    `Goal:\n${request.goal.goal}`,
+    `Criteria:\n${criteria}`,
+    `Resources:\n${resources}`,
+    `Validation commands:\n${validationCommands}`,
+    `Evidence references:\n${request.evidenceRefs.join("\n")}`,
+    request.previousFindings.length === 0 ? "" : `Repair findings:\n${request.previousFindings.map(({ code, message }) => `${code}: ${message}`).join("\n")}`
+  ].filter(Boolean).join("\n\n");
+}
+
+function nonReadyPlanningEvents(
+  runId: string,
+  result: Exclude<PlanningResult, { kind: "ready" }>,
+  now: () => string
+): RunEventInput[] {
+  if (result.kind === "needs_input" || result.kind === "ambiguous") {
+    return result.decisions.map((decision) => fact(`planning:${runId}:decision:${decision.id}`, now(), "decision.raised", {
+      decision: {
+        id: decision.id,
+        kind: "resolve_conflict",
+        question: decision.question,
+        options: decision.options.map((option) => ({ id: option.id, label: option.label })),
+        affectedNodeIds: [],
+        evidenceRefs: [...decision.evidenceRefs],
+        impact: "acceptance"
+      }
+    }));
+  }
+  const findings = result.kind === "unsupported" || result.kind === "rejected" ? result.findings : [];
+  return [fact(`planning:${runId}:failed`, now(), "planning.failed", {
+    reason: findings.map(({ code, message }) => `${code}: ${message}`).join(" | ") || result.kind
+  })];
+}
+
+function objectRecord(value: unknown): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("Planning model must return a JSON object.");
+  }
+  return value as Record<string, unknown>;
+}
+
 function sameApproval(
   left: RunProjection["deliveryApproval"],
   right: TransactionalDeliveryApproval
@@ -495,18 +761,13 @@ function sameApproval(
     && left.idempotencyKey === right.idempotencyKey;
 }
 
-async function invokeCurrentPlanningCli(input: {
-  runId: string;
+async function invokePlanningCli(input: {
   cwd: string;
   selection: ProductRunDefinition["planningSelection"];
-  request: Pick<CutRequest, "system" | "user" | "attempt" | "repairIssues">;
+  prompt: string;
   timeoutMs?: number;
   spawnProcess?: typeof spawn;
 }): Promise<string> {
-  const repair = input.request.repairIssues.length === 0
-    ? ""
-    : `\n\nRepair every issue from the previous invalid response:\n- ${input.request.repairIssues.join("\n- ")}`;
-  const prompt = `${input.request.system}\n\n${input.request.user}${repair}`;
   const isCodex = input.selection.executorId === "codex-cli";
   if (!isCodex && input.selection.executorId !== "claude-code-cli") {
     throw new Error(`Current planning does not support executor ${input.selection.executorId}.`);
@@ -562,42 +823,7 @@ async function invokeCurrentPlanningCli(input: {
         reject(error);
       }
     }));
-    child.stdin?.end(prompt);
-  });
-}
-
-function strategyEvent(
-  runId: string,
-  strategy: ReturnType<typeof selectGranularityStrategy>,
-  candidate: WorkBreakdown,
-  selected: WorkBreakdown,
-  now: () => string
-): RunEventInput {
-  return fact(`planning:${candidate.breakdownId}:strategy:${runId}`, now(), "planning.granularity_strategy_selected", {
-    policyVersion: strategy.policyVersion,
-    condition: strategy.condition,
-    candidateTreeHash: strategy.candidateTreeHash,
-    candidateTree: {
-      root: asRecord(candidate.root),
-      candidateArtifacts: candidate.candidateArtifacts.map(asRecord),
-      candidateSeams: candidate.candidateSeams.map(asRecord)
-    },
-    config: {
-      maxLeafContextTokens: strategy.config.maxLeafContextTokens,
-      maxLeafScopePaths: strategy.config.maxLeafScopePaths,
-      maxLeafPlannedPaths: strategy.config.maxLeafPlannedPaths
-    },
-    assessments: Object.values(strategy.assessments).map((assessment) => ({
-      unitKey: assessment.unitKey,
-      nodeId: stableId("node", assessment.unitKey),
-      selected: assessment.selected,
-      leafFeasible: assessment.leafFeasible,
-      splitViable: assessment.splitViable,
-      reasons: { ...assessment.reasons },
-      evidenceRefs: assessment.evidenceRefs,
-      rationale: assessment.rationale
-    })),
-    metrics: structuralMetrics(selected.root)
+    child.stdin?.end(input.prompt);
   });
 }
 
@@ -652,37 +878,6 @@ function legacyEvidenceReference(item: RepositoryQueryAnswer["items"][number]): 
 function repositoryGoalTerms(values: readonly string[]): string[] {
   return [...new Set(values.flatMap((value) => value.toLocaleLowerCase("en-US").match(/[a-z0-9][a-z0-9_-]{2,}/gu) ?? []))]
     .sort();
-}
-
-function goalCriteria(definition: ProductRunDefinition): GoalCriterion[] {
-  const source = definition.acceptanceCriteria.length > 0
-    ? definition.acceptanceCriteria
-    : [definition.userPrompt];
-  return source.map((description, index) => ({
-    id: `criterion-${index + 1}`,
-    description,
-    required: true
-  }));
-}
-
-function structuralMetrics(root: WorkUnit) {
-  const units = flatten(root);
-  const composites = units.filter((unit): unit is Extract<WorkUnit, { kind: "composite" }> =>
-    unit.kind === "composite");
-  const depth = (unit: WorkUnit): number => unit.kind === "leaf"
-    ? 0
-    : 1 + Math.max(...unit.children.map(depth));
-  return {
-    maxGraphDepth: depth(root),
-    totalLeafCount: units.filter((unit) => unit.kind === "leaf").length,
-    averageBranchingFactor: composites.length === 0
-      ? 0
-      : composites.reduce((sum, unit) => sum + unit.children.length, 0) / composites.length
-  };
-}
-
-function flatten(root: WorkUnit): WorkUnit[] {
-  return root.kind === "leaf" ? [root] : [root, ...root.children.flatMap(flatten)];
 }
 
 function codexPlanningArgs(selection: ProductRunDefinition["planningSelection"]): string[] {
