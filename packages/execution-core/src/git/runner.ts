@@ -1,6 +1,14 @@
 import { execFile } from "node:child_process";
-import { resolve } from "node:path";
+import { createHash } from "node:crypto";
+import { chmod, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join, relative, resolve } from "node:path";
 import { promisify } from "node:util";
+import {
+  validateManifestIdentity,
+  type ArtifactManifest,
+  type ChangeSetManifest
+} from "@manyhands/contracts";
 import { simpleGit, type SimpleGit } from "simple-git";
 
 const execFileAsync = promisify(execFile);
@@ -75,6 +83,15 @@ export interface GitRunner {
 
   cherryPick(params: { cwd: string; commitSha: string; mainline?: 1 }): Promise<CherryPickOutcome>;
   cherryPickAbort(cwd: string): Promise<void>;
+
+  /**
+   * Applies one immutable artifact manifest from its declared Git objects. It
+   * never traverses or applies the source commit history.
+   */
+  materializeArtifactManifest(params: {
+    cwd: string;
+    manifest: ArtifactManifest;
+  }): Promise<{ resultingTree: string }>;
 
   /**
    * Materialize a composite handoff commit whose first-parent diff is the
@@ -348,6 +365,66 @@ export class SimpleGitRunner implements GitRunner {
     await this.client(cwd).raw(["cherry-pick", "--abort"]);
   }
 
+  async materializeArtifactManifest(params: {
+    cwd: string;
+    manifest: ArtifactManifest;
+  }): Promise<{ resultingTree: string }> {
+    const identity = validateManifestIdentity(params.manifest, canonicalSha256);
+    if (!identity.ok) {
+      throw new Error(`Artifact manifest is invalid: ${identity.issues.map((issue) => issue.code).join(", ")}.`);
+    }
+    const manifest = params.manifest;
+    const currentTree = await this.revParse(params.cwd, "HEAD^{tree}");
+    const expectedBaseTree = manifest.kind === "change_set" ? manifest.baseTreeSha : await this.revParse(params.cwd, `${manifest.baseCommitOid}^{tree}`);
+    if (currentTree !== expectedBaseTree) {
+      throw new Error(`Artifact manifest ${manifest.id} requires base tree ${expectedBaseTree}, found ${currentTree}.`);
+    }
+
+    if (manifest.kind === "candidate_tree") {
+      const candidateTree = await this.revParse(params.cwd, `${manifest.commitOid}^{tree}`);
+      if (candidateTree !== manifest.treeOid) {
+        throw new Error(`Candidate manifest ${manifest.id} commit/tree identity is inconsistent.`);
+      }
+      await runGit(params.cwd, ["read-tree", "--reset", manifest.treeOid], process.env);
+      await materializeTree(params.cwd, currentTree, manifest.treeOid, process.env, manifest.id);
+      return { resultingTree: manifest.treeOid };
+    }
+
+    return this.materializeChangeSet(params.cwd, manifest);
+  }
+
+  private async materializeChangeSet(cwd: string, manifest: ChangeSetManifest): Promise<{ resultingTree: string }> {
+    const temporaryDirectory = await mkdtemp(join(tmpdir(), "mh-stage7-index-"));
+    const indexFile = join(temporaryDirectory, "index");
+    const environment = { ...process.env, GIT_INDEX_FILE: indexFile };
+    try {
+      await runGit(cwd, ["read-tree", manifest.baseTreeSha], environment);
+      for (const entry of manifest.entries) {
+        if (entry.oldPath !== undefined && entry.oldOid !== undefined && entry.oldMode !== undefined) {
+          const observed = await treeEntry(cwd, manifest.baseTreeSha, entry.oldPath, environment);
+          if (observed === undefined || observed.oid !== entry.oldOid || observed.mode !== entry.oldMode) {
+            throw new Error(`Artifact manifest ${manifest.id} preimage mismatch at ${entry.oldPath}.`);
+          }
+        }
+        if (entry.newPath !== undefined && entry.newOid !== undefined && entry.newMode !== undefined) {
+          await assertObjectForMode(cwd, entry.newOid, entry.newMode, environment);
+          await runGit(cwd, ["update-index", "--add", "--cacheinfo", `${entry.newMode},${entry.newOid},${entry.newPath}`], environment);
+        } else if (entry.oldPath !== undefined) {
+          await runGit(cwd, ["update-index", "--remove", "--", entry.oldPath], environment);
+        }
+      }
+      const resultingTree = (await runGit(cwd, ["write-tree"], environment)).trim();
+      if (resultingTree !== manifest.resultTreeSha) {
+        throw new Error(`Artifact manifest ${manifest.id} produced tree ${resultingTree}, expected ${manifest.resultTreeSha}.`);
+      }
+      await runGit(cwd, ["read-tree", "--reset", resultingTree], process.env);
+      await materializeDeclaredFiles(cwd, manifest, environment);
+      return { resultingTree };
+    } finally {
+      await rm(temporaryDirectory, { recursive: true, force: true });
+    }
+  }
+
   async createIntegrationHandoff(params: {
     cwd: string;
     baseCommit: string;
@@ -458,6 +535,142 @@ export function safeGitArgs(cwd: string, args: readonly string[]): string[] {
 
 function gitPath(value: string): string {
   return value.replaceAll("\\", "/");
+}
+
+const canonicalSha256 = (value: string): string =>
+  `sha256:${createHash("sha256").update(value).digest("hex")}`;
+
+async function runGit(cwd: string, args: readonly string[], env: NodeJS.ProcessEnv): Promise<string> {
+  const { stdout } = await execFileAsync("git", safeGitArgs(cwd, args), {
+    cwd,
+    env,
+    windowsHide: true,
+    encoding: "utf8"
+  });
+  return stdout;
+}
+
+async function treeEntry(
+  cwd: string,
+  tree: string,
+  entryPath: string,
+  env: NodeJS.ProcessEnv
+): Promise<{ mode: string; oid: string } | undefined> {
+  const output = (await runGit(cwd, ["ls-tree", tree, "--", entryPath], env)).trim();
+  if (output === "") return undefined;
+  const match = /^(?<mode>[0-7]{6})\s+\S+\s+(?<oid>[0-9a-f]+)\t/u.exec(output);
+  if (match?.groups?.mode === undefined || match.groups.oid === undefined) {
+    throw new Error(`Git returned an unparseable tree entry for ${entryPath}.`);
+  }
+  return { mode: match.groups.mode, oid: match.groups.oid };
+}
+
+async function assertObjectForMode(
+  cwd: string,
+  oid: string,
+  mode: string,
+  env: NodeJS.ProcessEnv
+): Promise<void> {
+  const suffix = mode.startsWith("160") ? "^{commit}" : "^{blob}";
+  await runGit(cwd, ["cat-file", "-e", `${oid}${suffix}`], env);
+}
+
+async function materializeDeclaredFiles(
+  worktreePath: string,
+  manifest: ChangeSetManifest,
+  env: NodeJS.ProcessEnv
+): Promise<void> {
+  for (const entry of manifest.entries) {
+    if (entry.newPath === undefined) {
+      if (entry.oldPath !== undefined) await rm(safeWorktreePath(worktreePath, entry.oldPath), { recursive: true, force: true });
+      continue;
+    }
+    if (entry.newOid === undefined || entry.newMode === undefined) {
+      throw new Error(`Artifact manifest ${manifest.id} has no postimage for ${entry.newPath}.`);
+    }
+    if (entry.newMode.startsWith("160")) {
+      throw new Error(`Artifact manifest ${manifest.id} contains unsupported gitlink ${entry.newPath}.`);
+    }
+    const target = safeWorktreePath(worktreePath, entry.newPath);
+    await mkdir(dirname(target), { recursive: true });
+    const blob = await runGitBuffer(worktreePath, ["cat-file", "blob", entry.newOid], env);
+    if (entry.newMode.startsWith("120")) {
+      await rm(target, { recursive: true, force: true });
+      await symlink(blob.toString("utf8"), target);
+      continue;
+    }
+    await writeFile(target, blob);
+    await chmod(target, entry.newMode.endsWith("755") ? 0o755 : 0o644);
+  }
+}
+
+interface GitTreeEntry {
+  mode: string;
+  oid: string;
+  path: string;
+}
+
+async function materializeTree(
+  worktreePath: string,
+  previousTree: string,
+  nextTree: string,
+  env: NodeJS.ProcessEnv,
+  manifestId: string
+): Promise<void> {
+  const [previousEntries, nextEntries] = await Promise.all([
+    treeEntries(worktreePath, previousTree, env),
+    treeEntries(worktreePath, nextTree, env)
+  ]);
+  const nextByPath = new Map(nextEntries.map((entry) => [entry.path, entry]));
+  for (const entry of previousEntries) {
+    if (!nextByPath.has(entry.path)) await rm(safeWorktreePath(worktreePath, entry.path), { recursive: true, force: true });
+  }
+  for (const entry of nextEntries) {
+    if (entry.mode.startsWith("160")) {
+      throw new Error(`Candidate-tree manifest ${manifestId} contains unsupported gitlink ${entry.path}.`);
+    }
+    const target = safeWorktreePath(worktreePath, entry.path);
+    await mkdir(dirname(target), { recursive: true });
+    const blob = await runGitBuffer(worktreePath, ["cat-file", "blob", entry.oid], env);
+    if (entry.mode.startsWith("120")) {
+      await rm(target, { recursive: true, force: true });
+      await symlink(blob.toString("utf8"), target);
+      continue;
+    }
+    await writeFile(target, blob);
+    await chmod(target, entry.mode.endsWith("755") ? 0o755 : 0o644);
+  }
+}
+
+async function treeEntries(cwd: string, tree: string, env: NodeJS.ProcessEnv): Promise<GitTreeEntry[]> {
+  const output = await runGitBuffer(cwd, ["ls-tree", "-r", "-z", tree], env);
+  return output.toString("utf8").split("\0").filter(Boolean).map((record) => {
+    const match = /^(?<mode>[0-7]{6})\s+\S+\s+(?<oid>[0-9a-f]+)\t(?<path>.+)$/u.exec(record);
+    if (match?.groups?.mode === undefined || match.groups.oid === undefined || match.groups.path === undefined) {
+      throw new Error(`Git returned an unparseable tree entry for ${tree}.`);
+    }
+    return { mode: match.groups.mode, oid: match.groups.oid, path: match.groups.path };
+  });
+}
+
+function safeWorktreePath(root: string, repoPath: string): string {
+  const rootPath = resolve(root);
+  const target = resolve(rootPath, repoPath);
+  const pathFromRoot = relative(rootPath, target);
+  if (pathFromRoot === "" || pathFromRoot.startsWith("..") || pathFromRoot.includes(`..${process.platform === "win32" ? "\\" : "/"}`)) {
+    throw new Error(`Artifact path escapes worktree: ${repoPath}.`);
+  }
+  return target;
+}
+
+async function runGitBuffer(cwd: string, args: readonly string[], env: NodeJS.ProcessEnv): Promise<Buffer> {
+  const { stdout } = await execFileAsync("git", safeGitArgs(cwd, args), {
+    cwd,
+    env,
+    windowsHide: true,
+    encoding: "buffer"
+  });
+  return Buffer.from(stdout);
 }
 
 function gitExitCode(error: unknown): number | undefined {

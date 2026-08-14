@@ -1,3 +1,4 @@
+import type { ArtifactManifest } from "@manyhands/contracts";
 import type { CherryPickOutcome, GitRunner, GitShowOptions } from "@manyhands/execution-core";
 import { EphemeralExecutionWorkspaceProvider } from "@manyhands/execution-core";
 
@@ -42,6 +43,8 @@ export interface FakeGitRunnerConfig {
   mergeParents?: Record<string, [string, string]>;
   /** Explicit SHA returned when production creates a transportable handoff. */
   integrationHandoffSha?: string;
+  /** Tree identity returned by exact manifest materialization. */
+  materializedManifestTree?: string;
   /** Commit messages used by crash-recovery provenance checks. */
   commitMessages?: Record<string, string>;
 }
@@ -251,6 +254,16 @@ export class FakeGitRunner implements GitRunner {
   async cherryPickAbort(cwd: string): Promise<void> {
     this.record("cherryPickAbort", { cwd });
     this.activeCherryPickHead = undefined;
+  }
+
+  async materializeArtifactManifest(params: {
+    cwd: string;
+    manifest: ArtifactManifest;
+  }): Promise<{ resultingTree: string }> {
+    this.record("materializeArtifactManifest", { ...params });
+    const resultingTree = this.config.materializedManifestTree
+      ?? (params.manifest.kind === "change_set" ? params.manifest.resultTreeSha : params.manifest.treeOid);
+    return { resultingTree };
   }
 
   async createIntegrationHandoff(params: {
