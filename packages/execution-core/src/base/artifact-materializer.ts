@@ -23,27 +23,6 @@ export class ArtifactMaterializer {
 
   async materialize(worktreePath: string, artifact: ExecutionArtifactInput): Promise<void> {
     if (artifact.kind === "logical") return;
-    if (artifact.kind === "manifest") {
-      if (artifact.manifest === undefined) {
-        throw new ExecutionBaseMaterializationError({
-          code: "unsupported_artifact_kind",
-          artifactId: artifact.artifactId,
-          conflictFiles: [],
-          output: "Manifest artifacts require immutable manifest content."
-        });
-      }
-      try {
-        await this.git.materializeArtifactManifest({ cwd: worktreePath, manifest: artifact.manifest });
-        return;
-      } catch (error) {
-        throw new ExecutionBaseMaterializationError({
-          code: "artifact_error",
-          artifactId: artifact.artifactId,
-          conflictFiles: [],
-          output: error instanceof Error ? error.message : String(error)
-        });
-      }
-    }
     if (artifact.kind !== "commit") {
       throw new ExecutionBaseMaterializationError({
         code: "unsupported_artifact_kind",

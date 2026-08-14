@@ -1,36 +1,23 @@
 import { EntityIdSchema, IsoTimestampSchema, NonEmptyStringSchema } from "@manyhands/shared";
-import { ArtifactManifestSchema } from "@manyhands/contracts";
 import { z } from "zod";
 
 export const InputFingerprintSchema = z.string().regex(/^sha256:[0-9a-f]{64}$/u);
 
-const ExecutionArtifactInputObjectSchema = z.object({
+export const ExecutionArtifactInputSchema = z.object({
   artifactId: EntityIdSchema,
   digest: NonEmptyStringSchema,
   contract: z.object({ id: EntityIdSchema, revision: NonEmptyStringSchema }).strict(),
   kind: z.enum(["commit", "files", "manifest", "logical"]),
   location: NonEmptyStringSchema,
-  cherryPickMainline: z.literal(1).optional(),
-  manifest: ArtifactManifestSchema.optional()
+  cherryPickMainline: z.literal(1).optional()
 }).strict();
-
-function validateManifestArtifact(artifact: z.infer<typeof ExecutionArtifactInputObjectSchema>, context: z.RefinementCtx): void {
-  if (artifact.kind === "manifest" && artifact.manifest === undefined) {
-    context.addIssue({ code: z.ZodIssueCode.custom, path: ["manifest"], message: "Manifest artifacts require immutable manifest content." });
-  }
-  if (artifact.kind !== "manifest" && artifact.manifest !== undefined) {
-    context.addIssue({ code: z.ZodIssueCode.custom, path: ["manifest"], message: "Only manifest artifacts may carry immutable manifest content." });
-  }
-}
-
-export const ExecutionArtifactInputSchema = ExecutionArtifactInputObjectSchema.superRefine(validateManifestArtifact);
 
 export type ExecutionArtifactInput = z.infer<typeof ExecutionArtifactInputSchema>;
 
-export const MaterializedArtifactSchema = ExecutionArtifactInputObjectSchema.extend({
+export const MaterializedArtifactSchema = ExecutionArtifactInputSchema.extend({
   beforeCommit: NonEmptyStringSchema,
   resultingCommit: NonEmptyStringSchema
-}).strict().superRefine(validateManifestArtifact);
+}).strict();
 
 export const ExecutionBaseManifestSchema = z.object({
   schemaVersion: z.literal(1),
