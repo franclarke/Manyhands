@@ -541,7 +541,7 @@ const canonicalSha256 = (value: string): string =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`;
 
 async function runGit(cwd: string, args: readonly string[], env: NodeJS.ProcessEnv): Promise<string> {
-  const { stdout } = await execFileAsync("git", safeGitArgs(cwd, args), {
+  const { stdout } = await execFileAsync("git", artifactGitArgs(cwd, args), {
     cwd,
     env,
     windowsHide: true,
@@ -664,13 +664,26 @@ function safeWorktreePath(root: string, repoPath: string): string {
 }
 
 async function runGitBuffer(cwd: string, args: readonly string[], env: NodeJS.ProcessEnv): Promise<Buffer> {
-  const { stdout } = await execFileAsync("git", safeGitArgs(cwd, args), {
+  const { stdout } = await execFileAsync("git", artifactGitArgs(cwd, args), {
     cwd,
     env,
     windowsHide: true,
     encoding: "buffer"
   });
   return Buffer.from(stdout);
+}
+
+/** Git plumbing policy for immutable artifact objects: no repository hook, diff, or CRLF policy may transform content. */
+function artifactGitArgs(cwd: string, args: readonly string[]): string[] {
+  return safeGitArgs(cwd, [
+    "-c", "core.hooksPath=NUL",
+    "-c", "core.autocrlf=false",
+    "-c", "core.eol=lf",
+    "-c", "diff.external=",
+    "-c", "core.fsmonitor=false",
+    "--no-optional-locks",
+    ...args
+  ]);
 }
 
 function gitExitCode(error: unknown): number | undefined {
