@@ -127,11 +127,8 @@ export class CanonicalExecutionDriver {
       });
       const attempts = selection.nodeIds.map((nodeId) => createAttempt(run, state, nodeId, waveId, this.options.now()));
       state = await this.options.coordinator.record(run.runId, attempts.map((attempt) => attempt.startedEvent));
-      for (const attempt of attempts) {
-        const outcome = await this.options.execute(attempt.input);
-        state = await this.recordOutcome(run, attempt, outcome);
-        if (state.lifecycle !== "running") return state;
-      }
+      state = await this.executeWave(run, attempts, state);
+      if (state.lifecycle !== "running") return state;
     }
     throw new Error(`Canonical execution exceeded ${maxWaves} waves without a terminal state.`);
   }
@@ -208,6 +205,64 @@ export class CanonicalExecutionDriver {
       budgetAvailable: budgetAvailable(run, state),
       evaluatedAt: this.options.now()
     });
+  }
+
+  /**
+   * Runs one wave with at most `maxParallel` attempts in flight.
+   *
+   * Two things are deliberately asymmetric. Execution is concurrent, because
+   * that is the point of the wave. Journal appends are serialized through one
+   * chain, because the journal is a single writer with a strict
+   * expected-sequence contract and concurrency must not become its problem.
+   *
+   * Every started attempt settles before this returns, including when one
+   * executor throws. An abandoned in-flight attempt is an unjournaled result,
+   * which is the failure mode the gate exists to prevent, so the first throw is
+   * held and re-raised only after the rest have been recorded.
+   */
+  private async executeWave(
+    run: PreparedRun,
+    attempts: readonly PreparedAttempt[],
+    initialState: RunProjection
+  ): Promise<RunProjection> {
+    let state = initialState;
+    const limit = Math.max(1, Math.trunc(run.effectiveConfig.maxParallel));
+    const queue = [...attempts];
+    let appendChain: Promise<unknown> = Promise.resolve();
+    let firstError: unknown;
+
+    const recordSerially = async (
+      attempt: PreparedAttempt,
+      outcome: CanonicalNodeExecutionOutcome
+    ): Promise<void> => {
+      const chained = appendChain.then(async () => {
+        state = await this.recordOutcome(run, attempt, outcome);
+      });
+      appendChain = chained.catch(() => undefined);
+      await chained;
+    };
+
+    const worker = async (): Promise<void> => {
+      for (;;) {
+        const attempt = queue.shift();
+        if (attempt === undefined) return;
+        let outcome: CanonicalNodeExecutionOutcome;
+        try {
+          outcome = await this.options.execute(attempt.input);
+        } catch (error) {
+          // Hold the throw instead of propagating now: siblings are still in
+          // flight and their results have to reach the journal.
+          if (firstError === undefined) firstError = error;
+          return;
+        }
+        await recordSerially(attempt, outcome);
+      }
+    };
+
+    await Promise.all(Array.from({ length: Math.min(limit, attempts.length) }, worker));
+    await appendChain;
+    if (firstError !== undefined) throw firstError;
+    return state;
   }
 
   private async recordOutcome(
