@@ -62,7 +62,7 @@ afterEach(async () => {
 });
 
 describe("durable daemon composition root", () => {
-  it("reconciles journals with pending effects before startup succeeds", async () => {
+  it("reconciles journals with pending effects on startup", async () => {
     const root = await temporaryRoot();
     const runId = "run:startup-recovery";
     const intent = await seedPendingEffect(root, runId);
@@ -74,6 +74,9 @@ describe("durable daemon composition root", () => {
       })
     });
     try {
+      // The endpoint binds before recovery finishes, so the guarantee is
+      // awaited explicitly rather than inferred from startup returning.
+      await kernel.startupRecovery;
       expect(reconciled).toEqual([{
         effectId: intent.effectId,
         inputSpec: {
@@ -127,6 +130,41 @@ describe("durable daemon composition root", () => {
     await expect(startKernel(root, "daemon:bounded", {
       startupRecoveryRunLimit: 1
     })).rejects.toThrow(/more than the configured limit of 1 runs/i);
+  });
+
+  it("serves IPC while startup recovery is still running", async () => {
+    // Startup awaited every pending effect of every run before binding the
+    // endpoint, so a daemon recovering one slow effect was indistinguishable
+    // from a dead one: the UI only saw connect ENOENT for as long as it took.
+    const root = await temporaryRoot();
+    await seedPendingEffect(root, "run:slow-recovery");
+    let released: () => void = () => undefined;
+    const blocked = new Promise<void>((resolve) => { released = resolve; });
+    const adapters = noEffectAdapters().map((adapter) => adapter.kind === "cleanup"
+      ? { kind: adapter.kind, execute: async () => blocked, reconcile: async () => blocked }
+      : adapter);
+
+    const kernel = await Promise.race([
+      startKernel(root, "daemon:slow-recovery", { adapters }),
+      new Promise<never>((_, reject) => setTimeout(
+        () => reject(new Error("startup blocked on recovery")),
+        5_000
+      ))
+    ]);
+    try {
+      const client = createLocalIpcClient({
+        endpoint: kernel.endpoint,
+        capabilityFilePath: kernel.capabilityFilePath,
+        production: false
+      });
+      // Reachable and answering while the effect is still in flight.
+      await expect(client.query({ runId: "run:slow-recovery", query: "projection" }))
+        .resolves.toMatchObject({ runId: "run:slow-recovery" });
+    } finally {
+      released();
+      await kernel.startupRecovery;
+      await kernel.close().catch(() => undefined);
+    }
   });
 
   it("fails startup closed when a discovered journal is corrupt", async () => {
