@@ -604,7 +604,7 @@ function productProofStrategies(
  * This adapter derives the exact allowed executable strategy for each declared
  * validation obligation before the PlanningEngine verifies the candidate.
  */
-function bindProductProofStrategies(
+export function bindProductProofStrategies(
   material: SemanticPlanMaterial,
   goal: ReturnType<typeof productGoal>,
   view: RepositoryView
@@ -640,7 +640,14 @@ function bindProductProofStrategies(
     if (unit.integration !== undefined) {
       unit.integration.proofStrategyId = `proof:${unit.integration.obligationId}`;
       const criterionId = unit.integration.criterionIds.map(rootCriterion).find((value) => value !== undefined);
-      if (criterionId !== undefined) bindings.set(unit.integration.obligationId, { criterionId, obligationId: unit.integration.obligationId });
+      // The verifier requires the integration obligation to also be one of the
+      // unit's validation obligations, so the loop above has already bound it
+      // together with the evidence selectors that make its proof exact.
+      // Rebinding it here dropped that selector digest and left the composite
+      // unable to bind exact evidence.
+      if (criterionId !== undefined && !bindings.has(unit.integration.obligationId)) {
+        bindings.set(unit.integration.obligationId, { criterionId, obligationId: unit.integration.obligationId });
+      }
     }
   }
   const proofStrategies = [...bindings.values()]
