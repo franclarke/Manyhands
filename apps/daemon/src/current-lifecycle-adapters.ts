@@ -48,6 +48,8 @@ import type {
 } from "@manyhands/run-coordinator";
 import { resolveCliProcessInvocation } from "@manyhands/shared/node-cli-process";
 
+import { canonicalPlanningContract } from "./canonical-planning-contract.js";
+
 import type {
   TransitionalDeliveryPort,
   TransitionalLifecycleResult,
@@ -760,7 +762,7 @@ export function parseCanonicalPlanningProposal(
       alternatives: envelope.alternatives as never
     };
   }
-  const material = objectRecord(proposal);
+  const material = bindSystemOwnedProofStrategies(objectRecord(proposal));
   return {
     kind: "candidate",
     material: {
@@ -779,7 +781,36 @@ export function parseCanonicalPlanningProposal(
   };
 }
 
-function canonicalPlanningPrompt(request: PlanningModelInput, view: RepositoryView): string {
+/**
+ * Exported for `tests/planning-prompt-canonical-contract.test.ts`, which proves
+ * the embedded example is a plan the schema accepts.
+ */
+/**
+ * `bindProductProofStrategies` rewrites every `proofStrategyId` to
+ * `proof:<obligationId>` regardless of what the model proposed, so the field is
+ * the system's, not the model's. Demanding it only adds an invented identifier
+ * that the schema can reject before the binding ever runs.
+ */
+function bindSystemOwnedProofStrategies(material: Record<string, unknown>): Record<string, unknown> {
+  const units = material.units;
+  if (typeof units !== "object" || units === null) return material;
+  for (const unit of Object.values(units as Record<string, unknown>)) {
+    if (typeof unit !== "object" || unit === null) continue;
+    const record = unit as Record<string, unknown>;
+    if (Array.isArray(record.validation)) for (const obligation of record.validation) bindProofStrategyId(obligation);
+    bindProofStrategyId(record.integration);
+  }
+  return material;
+}
+
+function bindProofStrategyId(value: unknown): void {
+  if (typeof value !== "object" || value === null) return;
+  const record = value as Record<string, unknown>;
+  if (typeof record.obligationId !== "string") return;
+  record.proofStrategyId = `proof:${record.obligationId}`;
+}
+
+export function canonicalPlanningPrompt(request: PlanningModelInput, view: RepositoryView): string {
   const resources = Object.values(view.catalog.resources)
     .sort((left, right) => left.id.localeCompare(right.id))
     .slice(0, 64)
@@ -794,10 +825,8 @@ function canonicalPlanningPrompt(request: PlanningModelInput, view: RepositoryVi
     `${criterion.id}: ${criterion.statement}`
   ).join("\n");
   return [
-    "Return one JSON object only. It must be a SemanticPlanMaterial candidate.",
-    "Do not emit WorkBreakdown, CandidatePlan, legacy graph projections, pairwise conflicts, or prose.",
-    "The system will bind goal, repository snapshot/view and evidence exactly; use only the supplied criterion, resource, artifact and seam identifiers.",
-    "Each leaf needs explicit resource intents, produced artifacts and validation. Composite units need explicit integration.",
+    "Decompose the goal into a canonical plan. Answer with JSON only, no prose and no code fence.",
+    canonicalPlanningContract(),
     `Goal:\n${request.goal.goal}`,
     `Criteria:\n${criteria}`,
     `Resources:\n${resources}`,

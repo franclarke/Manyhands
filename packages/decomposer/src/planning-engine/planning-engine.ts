@@ -5,6 +5,7 @@ import {
   buildPlanningRevision,
   buildSemanticPlan,
   computeCanonicalDigest,
+  SemanticPlanMaterialSchema,
   verifyCanonicalDigest,
   type DecisionDraft,
   type DigestHasher,
@@ -298,7 +299,7 @@ export class PlanningEngine {
         proposalDigest = plan.digest;
       } catch (error) {
         proposalDigest = computeCanonicalDigest(proposal.material, this.hasher);
-        previousFindings = [terminalFinding("schema_invalid", error instanceof Error ? error.message : String(error), [])];
+        previousFindings = schemaFindings(proposal.material, error);
         const causalDigest = planningCausalStateDigest(proposalDigest, request, inspection, previousFindings, this.hasher);
         if (seenCausalStates.has(causalDigest)) return rejected([noProgressFinding()], trace(budget, consumed, revisions, advisoryFindings));
         seenCausalStates.add(causalDigest);
@@ -474,6 +475,36 @@ function trace(
 
 function rejected(findings: readonly PlanningFinding[], planningTrace: PlanningTrace): PlanningResult {
   return { kind: "rejected", findings: [...findings], trace: planningTrace };
+}
+
+/**
+ * A rejected candidate is repaired by the model, and the repair prompt renders
+ * findings as `code: message`. One finding carrying a whole pretty-printed
+ * ZodError asks the model to locate its own mistakes inside a JSON blob; the
+ * verifier already addresses each issue by path, and so does this.
+ */
+const MAX_SCHEMA_FINDINGS = 50;
+
+function schemaFindings(material: SemanticPlanMaterial, error: unknown): PlanningFinding[] {
+  const parsed = SemanticPlanMaterialSchema.safeParse(material);
+  if (parsed.success) {
+    // buildSemanticPlan failed for a reason the schema does not describe.
+    return [terminalFinding("schema_invalid", error instanceof Error ? error.message : String(error), [])];
+  }
+  const issues = parsed.error.issues.slice(0, MAX_SCHEMA_FINDINGS).map((issue) => terminalFinding(
+    "schema_invalid",
+    `${issue.path.join(".")}: ${issue.message}`,
+    []
+  ));
+  const dropped = parsed.error.issues.length - issues.length;
+  if (dropped > 0) {
+    issues.push(terminalFinding(
+      "schema_invalid",
+      `${dropped} further schema issues were withheld; fix the reported ones first.`,
+      []
+    ));
+  }
+  return issues;
 }
 
 function terminalFinding(code: string, message: string, evidenceRefs: readonly string[]): PlanningFinding {
