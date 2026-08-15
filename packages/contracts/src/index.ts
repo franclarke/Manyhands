@@ -20,6 +20,7 @@ export * from "./legacy-adapter.js";
 export * from "./goal-contract.js";
 export * from "./input-fingerprint.js";
 export * from "./proof-strategy.js";
+export * from "./recovery-diagnostic.js";
 export * from "./planning.js";
 export * from "./relations.js";
 export * from "./scope-contract.js";
