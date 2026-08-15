@@ -32,6 +32,13 @@ arquitectura y cierre GProd.
 - Worktree y sandbox como garantías distintas y visibles.
 - Recovery causal y selectivo.
 
+Cuando un modelo tiene que devolver material canónico, el contrato viaja con el
+request: claves aceptadas, enumeraciones, invariantes del verifier y un ejemplo
+completo. Nombrar el tipo no alcanza. El ejemplo se fija con tests que lo pasan
+por el schema real, por `verifyPlan`, por `compilePlan` y por la preparación de
+la receta de validación, así una deriva del contrato falla offline en lugar de
+gastar una corrida viva.
+
 ## Cómo trabajar sobre la transición
 
 1. Confirmar root, rama, `git status --short` y `git diff HEAD`.
@@ -67,6 +74,14 @@ arquitectura y cierre GProd.
 - Usar fixtures, stubs, replay, real Git temporal y procesos controlados.
 - Una prueba live siempre es opt-in y posterior a sus gates offline.
 - No cerrar una etapa sin `pnpm test` completo sobre el árbol exacto.
+- Bajar el stack de desarrollo antes de la suite completa. Un daemon vivo toma
+  el installation lease del checkout y hace fallar por contención a
+  `daemon-kernel`, `daemon-installation-lease`, `process-supervisor-physical` y
+  `stage3-restart-recovery`. Un fallo ahí se confirma re-ejecutando el archivo
+  en aislamiento antes de tratarlo como regresión.
+- `pnpm typecheck` incluye `tests/` y resuelve `@manyhands/*` por `dist`, que no
+  está versionado. Reconstruir los paquetes antes de typechequear: un `dist`
+  viejo esconde deriva de tipos en los dobles de prueba.
 
 ```bash
 pnpm test
