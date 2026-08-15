@@ -25,6 +25,10 @@ export const DeliveryReceiptSchema = z.object({
   targetHeadAfter: z.string().min(1).optional(),
   disposition: z.enum(["delivered", "conflict", "failed"]).optional(),
   destination: z.string().min(1).optional(),
+  // Optional because journals delivered before Stage 10 carry neither, and a
+  // journal that no longer replays is worse than one missing a field.
+  deliveredTreeSha: z.string().min(1).optional(),
+  cleanlinessPolicyId: z.string().min(1).optional(),
   confirmed: z.boolean()
 }).strict();
 
@@ -48,6 +52,7 @@ export const DeliveryApprovalSchema = z.object({
   targetHead: z.string().min(1),
   targetFingerprint: z.string().min(1),
   actor: z.string().min(1),
-  idempotencyKey: z.string().min(1)
+  idempotencyKey: z.string().min(1),
+  cleanlinessPolicyId: z.string().min(1).optional()
 }).strict();
 export type DeliveryApproval = z.infer<typeof DeliveryApprovalSchema>;

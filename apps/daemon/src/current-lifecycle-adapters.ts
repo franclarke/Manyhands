@@ -24,6 +24,7 @@ import type {
 import {
   buildAgentEnvironment,
   DeliveryRecoveryError,
+  TARGET_CLEANLINESS_POLICY_ID,
   deliveryRequestFingerprint,
   resolveCliBinaryPath,
   safeGitArgs,
@@ -430,7 +431,7 @@ export function createCurrentDeliveryPort(): TransitionalDeliveryPort {
               }
               if (head === request.finalSha) {
                 await reconcileDeliveredWorkingTree(repoRoot, request);
-                return deliveryReceipt(request, head);
+                return deliveryReceipt(repoRoot, request, head);
               }
               if (head === request.targetHead) return undefined;
               throw new DeliveryRecoveryError({
@@ -480,7 +481,7 @@ export function createCurrentDeliveryPort(): TransitionalDeliveryPort {
               if (deliveredHead !== request.finalSha) {
                 throw new Error("Delivery did not publish the approved final SHA.");
               }
-              return deliveryReceipt(request, deliveredHead);
+              return deliveryReceipt(repoRoot, request, deliveredHead);
             }
           }
         });
@@ -561,10 +562,16 @@ async function validateCanonicalDelivery(
   }
 }
 
-function deliveryReceipt(
+/**
+ * The receipt names what the target holds, not only which SHA was published.
+ * The tree is read from the repository after the write rather than copied from
+ * the approval, so the receipt attests an observation instead of an intention.
+ */
+async function deliveryReceipt(
+  repoRoot: string,
   approval: TransactionalDeliveryApproval,
   targetHeadAfter: string
-): TransactionalDeliveryReceipt {
+): Promise<TransactionalDeliveryReceipt> {
   return {
     receiptId: `delivery:${approval.idempotencyKey}`,
     requestFingerprint: deliveryRequestFingerprint(approval),
@@ -573,6 +580,8 @@ function deliveryReceipt(
     targetBranch: approval.targetBranch,
     targetHeadBefore: approval.targetHead,
     targetHeadAfter,
+    deliveredTreeSha: await git(repoRoot, ["rev-parse", `${targetHeadAfter}^{tree}`]),
+    cleanlinessPolicyId: TARGET_CLEANLINESS_POLICY_ID,
     disposition: "delivered",
     confirmed: true
   };
@@ -585,6 +594,8 @@ function transactionalReceipt(receipt: DeliveryReceipt): TransactionalDeliveryRe
     || receipt.targetBranch === undefined
     || receipt.targetHeadBefore === undefined
     || receipt.targetHeadAfter === undefined
+    || receipt.deliveredTreeSha === undefined
+    || receipt.cleanlinessPolicyId === undefined
     || receipt.disposition !== "delivered"
     || receipt.confirmed !== true
   ) {
@@ -598,6 +609,8 @@ function transactionalReceipt(receipt: DeliveryReceipt): TransactionalDeliveryRe
     targetBranch: receipt.targetBranch,
     targetHeadBefore: receipt.targetHeadBefore,
     targetHeadAfter: receipt.targetHeadAfter,
+    deliveredTreeSha: receipt.deliveredTreeSha,
+    cleanlinessPolicyId: receipt.cleanlinessPolicyId,
     disposition: "delivered",
     confirmed: true
   };

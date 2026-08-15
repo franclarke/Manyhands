@@ -2,6 +2,16 @@
 export const MANYHANDS_RUNTIME_DIRECTORY = ".manyhands";
 
 /**
+ * Identity of the cleanliness rule below, recorded in every delivery receipt.
+ *
+ * A reader months later cannot tell whether `.manyhands/` was exempt when a
+ * delivery was judged unless the receipt says which rule judged it. Changing
+ * the rule changes this identity, so old receipts stay interpretable instead of
+ * silently acquiring today's meaning.
+ */
+export const TARGET_CLEANLINESS_POLICY_ID = "manyhands-runtime-exempt.v1";
+
+/**
  * Decides whether the delivery target's working tree is clean from the USER's
  * point of view, given `git status --porcelain` output.
  *

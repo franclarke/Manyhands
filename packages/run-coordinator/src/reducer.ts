@@ -667,6 +667,11 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       if (event.payload.receipt.finalSha !== undefined && event.payload.receipt.finalSha !== next.deliveryApproval?.finalSha) throw new Error("Delivery receipt final SHA does not match the approved candidate.");
       if (event.payload.receipt.targetBranch !== undefined && event.payload.receipt.targetBranch !== next.deliveryApproval?.targetBranch) throw new Error("Delivery receipt target branch does not match the approval.");
       if (event.payload.receipt.targetHeadBefore !== undefined && event.payload.receipt.targetHeadBefore !== next.deliveryApproval?.targetHead) throw new Error("Delivery receipt target head does not match the approval.");
+      // Two commits can carry the same tree and a commit can be rewritten under
+      // a ref, so naming the SHA is not the same claim as naming what the
+      // target holds. The manifest's tree is what the evidence was gathered
+      // against.
+      if (event.payload.receipt.deliveredTreeSha !== undefined && event.payload.receipt.deliveredTreeSha !== next.finalCandidate?.finalManifest?.treeSha) throw new Error("Delivery receipt delivered tree does not match the verified final manifest tree.");
       next.deliveryReceipt = event.payload.receipt;
       next.outcomes.delivery = "published";
       delete next.failureReason;

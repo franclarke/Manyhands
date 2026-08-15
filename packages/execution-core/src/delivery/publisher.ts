@@ -42,6 +42,10 @@ export interface TransactionalDeliveryReceipt {
   targetBranch: string;
   targetHeadBefore: string;
   targetHeadAfter: string;
+  /** The tree the target actually holds, which is the claim delivery makes. */
+  deliveredTreeSha: string;
+  /** Which cleanliness rule judged the target before the write. */
+  cleanlinessPolicyId: string;
   disposition: "delivered";
   confirmed: true;
 }
