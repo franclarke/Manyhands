@@ -14,7 +14,7 @@ describe("Stage 7 legacy transport reachability", () => {
     const executor = new CanonicalNodeExecutor({
       git,
       repoRoot: "/repo",
-      traceStore: { append: async () => ({}) as never },
+      traceStore: { append: async () => ({}) } as never,
       executorFactory: { create: () => { throw new Error("The commit guard must run before an executor is created."); } },
       validator: { validate: async () => { throw new Error("The commit guard must run before validation."); } }
     });

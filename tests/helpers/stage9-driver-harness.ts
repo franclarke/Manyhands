@@ -110,7 +110,8 @@ export function stage9SuccessOutcome(
       }],
       outcome: "verified" as const,
       validationRecipeDigest: "sha256:fake",
-      observations: []
+      observations: [],
+      evidenceBindings: []
     },
     ...(input.node.id === options.rootId ? {
       integrationManifestId: "integration-root",
@@ -128,7 +129,7 @@ export function stage9SuccessOutcome(
   };
 }
 
-export function stage9ManifestsFor(input: Stage9ExecuteInput): Record<string, object> {
+export function stage9ManifestsFor(input: Stage9ExecuteInput) {
   return Object.fromEntries(input.contract.artifacts
     .filter((artifact) => artifact.producerNodeId === input.node.id)
     .map((artifact) => {
@@ -144,13 +145,13 @@ export function stage9ManifestsFor(input: Stage9ExecuteInput): Record<string, ob
         producerAttemptId: input.attemptId,
         inputFingerprint: input.inputFingerprint,
         repositoryObjectStoreId: "object-store:fake",
-        objectFormat: "sha1",
+        objectFormat: "sha1" as const,
         sourceCandidate: { commitOid: stage9Oid(input.node.id), treeOid: tree },
         retainedByRef: `refs/manyhands/test/${artifact.id}`,
-        kind: "change_set",
+        kind: "change_set" as const,
         baseTreeSha: stage9Oid("base"),
         resultTreeSha: tree,
-        entries: [],
+        entries: [] as Array<{ operation: "add" | "modify" | "delete" | "type_change" }>,
         manifestDigest: `sha256:${stage9Oid(`${artifact.id}:manifest`)}${stage9Oid(`${artifact.id}:manifest:tail`).slice(0, 24)}`
       }];
     }));

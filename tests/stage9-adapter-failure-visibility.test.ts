@@ -102,8 +102,8 @@ describe("Physical effect adapter failure visibility", () => {
       observerDaemonEpoch: "epoch-1",
       inputSpec: { payload: {} } as never,
       priorReceipts: [],
-      record: async (observation) => {
-        recorded.push(observation as { observation: string; reason?: string });
+      record: async (observation: { observation: string; reason?: string }) => {
+        recorded.push(observation);
         return {} as never;
       }
     } as never)).resolves.toBeUndefined();
@@ -152,7 +152,7 @@ describe("Physical effect adapter failure visibility", () => {
       inputSpec: { payload: {} } as never,
       priorReceipts: [],
       invalidationReason: async () => "cancelled by operator",
-      record: async (observation) => {
+      record: async (observation: unknown) => {
         recorded.push(observation);
         return {} as never;
       }

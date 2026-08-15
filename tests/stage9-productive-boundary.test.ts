@@ -89,7 +89,7 @@ describe("Stage 9 productive boundary", () => {
 
     const rootAttempts = Object.values(state.attempts).filter((attempt) => attempt.nodeId === compiled.graph.rootId);
     expect(rootAttempts).not.toHaveLength(0);
-    expect(rootAttempts.every((attempt) => attempt.status !== "succeeded")).toBe(true);
+    expect(rootAttempts.every((attempt) => !["validated", "adopted"].includes(attempt.status))).toBe(true);
     expect(rootAttempts.some((attempt) => (attempt.failureReason ?? "").includes("ownership_violation"))).toBe(true);
     expect(Object.values(state.adoptedArtifacts).map((artifact) => artifact.contract.id)).not.toContain("artifact:root");
   });

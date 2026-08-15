@@ -49,7 +49,7 @@ describe("Stage 7 exact evidence binding", () => {
       proofStrategies: { [strategy.id]: strategy },
       matrix: {
         matrixId: "matrix:stage7", candidateCommit: "c".repeat(40), validationContract: { id: "validation:stage7", revision: "1" },
-        criteria: [{ criterionId: "criterion:stage7", obligationId: "obligation:stage7", status: "satisfied", justification: "Passed.", evidenceRefs: ["evidence:1"] }],
+        criteria: [{ criterionId: "criterion:stage7", obligationId: "obligation:stage7", status: "satisfied" }],
         outcome: "verified", validationRecipeDigest: "sha256:recipe",
         observations: [{ evidenceId: "evidence:1", kind: "test_result", commandDigest: "command", durationMs: 1, passed: true, attempt: 1, outputDigest: "e".repeat(64), criterionIds: ["criterion:stage7"], obligationIds: ["obligation:stage7"], references: ["tests/stage7.test.ts"] }]
       }

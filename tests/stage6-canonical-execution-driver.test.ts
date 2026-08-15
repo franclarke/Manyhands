@@ -144,7 +144,7 @@ describe("Stage 6 canonical execution driver", () => {
         return {
           kind: "success", candidateCommit: oid(input.node.id), outputDigest: `sha256:${input.node.id}`,
           changedFiles: input.contract.scope.allowedPaths, artifactManifests: manifestsFor(input),
-          evidenceMatrix: { matrixId: `matrix-${input.node.id}`, candidateCommit: oid(input.node.id), validationContract: { id: input.contract.validation.id, revision: input.contract.validation.revision }, criteria: [{ criterionId: obligation.criterionId, obligationId: obligation.id, status: "satisfied", justification: "repaired", evidenceRefs: ["evidence:repair"] }], outcome: "verified", validationRecipeDigest: "sha256:repair", observations: [] },
+          evidenceMatrix: { matrixId: `matrix-${input.node.id}`, candidateCommit: oid(input.node.id), validationContract: { id: input.contract.validation.id, revision: input.contract.validation.revision }, criteria: [{ criterionId: obligation.criterionId, obligationId: obligation.id, status: "satisfied", justification: "repaired", evidenceRefs: ["evidence:repair"] }], outcome: "verified", validationRecipeDigest: "sha256:repair", observations: [], evidenceBindings: [] },
           ...(input.node.id === compiled.graph.rootId ? { integrationManifestId: "integration-root", finalManifestId: "final-root", finalManifest: { commitSha: oid(input.node.id), treeSha: "c".repeat(40), graphRevision: input.graph.revision, artifactIds: Object.keys(compiled.contracts.artifacts), evidenceMatrixId: `matrix-${input.node.id}`, validationRecipeDigest: "sha256:repair", deliveryTarget: "main" } } : {})
         };
       }
