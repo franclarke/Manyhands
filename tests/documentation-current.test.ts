@@ -59,7 +59,7 @@ describe("B-033 current product documentation", () => {
   });
 
   it("records the attributable Stage 6 closure and prepares Stage 7 without starting it", async () => {
-    const [docsReadme, plan, runbook, stage2, stage3, stage4, stage5, stage5Review, stage6, historicalHandoff, stage4Handoff, stage5Handoff, stage6Handoff, stage6ToStage7, stage7Plan, study, stage8, stage8Review, stage9] =
+    const [docsReadme, plan, runbook, stage2, stage3, stage4, stage5, stage5Review, stage6, historicalHandoff, stage4Handoff, stage5Handoff, stage6Handoff, stage6ToStage7, stage7Plan, study, stage8, stage8Review, stage9, stage10] =
       await Promise.all([
         readFile(path.join(root, "docs", "README.md"), "utf8"),
         readFile(path.join(root, "docs", "plans", "2026-08-12-correctness-first-system-redesign.md"), "utf8"),
@@ -79,7 +79,8 @@ describe("B-033 current product documentation", () => {
         readFile(path.join(root, "docs", "plans", "2026-08-13-exploratory-longitudinal-study.md"), "utf8"),
         readFile(path.join(root, "docs", "audits", "stage-8", "README.md"), "utf8"),
         readFile(path.join(root, "docs", "audits", "stage-8", "evidence", "review-gate.md"), "utf8"),
-        readFile(path.join(root, "docs", "audits", "stage-9", "README.md"), "utf8")
+        readFile(path.join(root, "docs", "audits", "stage-9", "README.md"), "utf8"),
+        readFile(path.join(root, "docs", "audits", "stage-10", "README.md"), "utf8")
       ]);
 
     expect(docsReadme).toContain("[`audits/stage-2/`](audits/stage-2/)");
@@ -103,7 +104,15 @@ describe("B-033 current product documentation", () => {
     expect(plan).toContain("| Stage 7 / GA | `pass` |");
     expect(plan).toContain("| Stage 8 / GLeaf | `in_review` |");
     expect(plan).toContain("| Stage 9 / GI | `in_review` |");
-    expect(plan).toContain("| Stages 10–11 | `not_started` |");
+    expect(plan).toContain("| Stage 10 / GDel | `in_review` |");
+    expect(plan).toContain("| Stage 11 | `not_started` |");
+    expect(stage10).toContain("**Status:** `in_review`");
+    expect(stage10).toContain("f9ddecc1625c1f687f562ac37148b9d20e22651e");
+    expect(stage10).toContain("e7a0990bea99e7af58427f2cb8b3fa45da69af28");
+    // The sequencing deviation must stay visible in the audit, not only in the
+    // commit that made it.
+    expect(stage10).toContain("cannot close before Stages 8");
+    expect(docsReadme).toContain("[`audits/stage-10/README.md`](audits/stage-10/README.md)");
     expect(stage9).toContain("**Status:** `in_review`");
     expect(stage9).toContain("97b4cea35c8245fce301da11cabfb4ac89e04eac");
     expect(stage9).toContain("ahead of the plan's normative order");

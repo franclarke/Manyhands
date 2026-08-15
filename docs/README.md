@@ -57,6 +57,9 @@ but its bounded independent gate review returned `NO-GO`
 ([`audits/stage-8/evidence/review-gate.md`](audits/stage-8/evidence/review-gate.md)).
 Stage 9 / GI is `in_review`: its deterministic work is complete on a green tree
 ([`audits/stage-9/README.md`](audits/stage-9/README.md)), but it was implemented
-ahead of the normative order and cannot close before GLeaf does. Stages 10–11
-remain `not_started`. No large live-model benchmark should run. The bounded
+ahead of the normative order and cannot close before GLeaf does. Stage 10 / GDel
+is `in_review` for the same reason ([`audits/stage-10/README.md`](audits/stage-10/README.md)):
+publication is now one conditional ref update with a receipt for the exact
+delivered tree, proven on a green tree after the first live end-to-end delivery,
+but it cannot close before GLeaf and GI do. Stage 11 remains `not_started`. No large live-model benchmark should run. The bounded
 exploratory study runs only after Stage 11 eligibility gates are satisfied.
