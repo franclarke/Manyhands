@@ -9,15 +9,15 @@ import {
   type DigestHasher,
   type SemanticPlanMaterial
 } from "@manyhands/contracts";
-import { verifyPlan } from "@manyhands/decomposer";
+import { compilePlan, verifyPlan } from "@manyhands/decomposer";
+import { prepareValidationRecipe } from "@manyhands/execution-core";
 import { ResourceCatalog, type RepositoryView } from "@manyhands/repository-index";
 
 import { CANONICAL_PLAN_EXAMPLE } from "../apps/daemon/src/canonical-planning-contract.js";
 
 const sha256: DigestHasher = (value) => `sha256:${createHash("sha256").update(value).digest("hex")}`;
 
-const RESOURCE_A = "resource:replace-with-a-supplied-resource-a";
-const RESOURCE_B = "resource:replace-with-a-supplied-resource-b";
+const PACKAGE = "resource:replace-with-a-supplied-package";
 const EVIDENCE = "evidence:replace-with-a-supplied-reference";
 const CRITERION = "criterion:replace-with-a-supplied-criterion";
 
@@ -35,20 +35,7 @@ describe("The prompt example under the real plan verifier", () => {
     const view = repositoryView();
     const goal = goalContract(view);
     const plan = buildSemanticPlan(material(goal, view), sha256);
-    const proofStrategies = ["validation:integration", "validation:producer", "validation:consumer"]
-      .map((obligationId) => buildProofStrategy({
-        id: `proof:${obligationId}`,
-        revision: 1,
-        goalContractDigest: goal.digest,
-        criterionId: CRITERION,
-        obligationId,
-        mode: "executable",
-        authority: "orchestrator_deterministic",
-        repositoryViewDigest: view.digest,
-        procedureRef: "command:pnpm-test",
-        environmentPolicyDigest: "sha256:environment",
-        independence: "independent_required"
-      }, sha256));
+    const proofStrategies = proofStrategiesFor(goal, view);
 
     const verification = verifyPlan({ plan, goal, proofStrategies, repositoryView: view, hasher: sha256 });
 
@@ -57,7 +44,66 @@ describe("The prompt example under the real plan verifier", () => {
     )).toEqual([]);
     expect(verification.ok).toBe(true);
   });
+
+  it("materializes a validation command for every required obligation", () => {
+    // A live run reached execution and refused every leaf with "Required
+    // validation obligations cannot be materialized". The obligations carried
+    // no evidence binding, so the recipe compiler had no command to build and
+    // the node could never be validated. Verifying the plan does not catch it:
+    // `evidence` is optional in the schema and unchecked by the verifier.
+    const view = repositoryView();
+    const goal = goalContract(view);
+    const compiled = compilePlan({
+      goal,
+      plan: buildSemanticPlan(material(goal, view), sha256),
+      proofStrategies: proofStrategiesFor(goal, view),
+      repositoryView: view,
+      hasher: sha256,
+      idFactory: (kind, parts) => [kind, ...parts].join(":")
+    });
+    if (!compiled.ok) throw new Error(JSON.stringify(compiled.findings, null, 2));
+
+    const capabilities = {
+      scripts: { test: "node --test" },
+      baselineCommands: [{ kind: "test" as const, command: "npm", args: ["test"], sourceScript: "test" }],
+      languages: [],
+      stack: []
+    };
+
+    const prepared = Object.values(compiled.contracts.taskBundles).map((bundle) => ({
+      nodeId: bundle.task.nodeId,
+      recipe: prepareValidationRecipe({
+        contract: bundle.validation,
+        capabilities,
+        repositorySnapshotId: view.model.snapshot.id
+      })
+    }));
+
+    expect(prepared.length).toBeGreaterThan(0);
+    for (const { nodeId, recipe } of prepared) {
+      expect(recipe.unmaterializedObligationIds, `${nodeId} has an obligation with no command`).toEqual([]);
+      expect(recipe.steps.length, `${nodeId} produced no validation step`).toBeGreaterThan(0);
+    }
+  });
 });
+
+function proofStrategiesFor(goal: ReturnType<typeof goalContract>, view: RepositoryView) {
+  return ["validation:integration", "validation:producer", "validation:consumer"].map((obligationId) =>
+    buildProofStrategy({
+      id: `proof:${obligationId}`,
+      revision: 1,
+      goalContractDigest: goal.digest,
+      criterionId: CRITERION,
+      obligationId,
+      mode: "executable",
+      authority: "orchestrator_deterministic",
+      repositoryViewDigest: view.digest,
+      procedureRef: "command:pnpm-test",
+      environmentPolicyDigest: "sha256:environment",
+      independence: "independent_required"
+    }, sha256)
+  );
+}
 
 /** The example, plus the six fields the daemon binds before the engine sees it. */
 function material(
@@ -112,18 +158,13 @@ function goalContract(view: RepositoryView) {
 }
 
 function repositoryView(): RepositoryView {
-  const evidence = [
-    evidenceEntry(EVIDENCE, "relationship", "path:src"),
-    evidenceEntry(`evidence:${RESOURCE_A}`, "file", "path:src/producer.ts"),
-    evidenceEntry(`evidence:${RESOURCE_B}`, "file", "path:src/consumer.ts")
-  ];
+  const evidence = [evidenceEntry(EVIDENCE, "relationship", "path:src")];
   const catalog = new ResourceCatalog({
     schemaVersion: 1,
     repositoryContentDigest: "sha256:content",
-    resources: {
-      [RESOURCE_A]: resource(RESOURCE_A, "src/producer.ts"),
-      [RESOURCE_B]: resource(RESOURCE_B, "src/consumer.ts")
-    },
+    // The files in the example do not exist yet, so the only resource that can
+    // authorize writing them is the package that contains them.
+    resources: { [PACKAGE]: rootPackage(PACKAGE) },
     contains: [],
     aliases: [],
     coverage: { state: "known", evidenceRefs: [EVIDENCE] }
@@ -166,15 +207,14 @@ function evidenceEntry(id: string, kind: "file" | "relationship", locator: strin
   };
 }
 
-function resource(id: string, filePath: string) {
+function rootPackage(id: string) {
   return {
     id,
-    kind: "path" as const,
-    canonicalLocator: `path:${filePath}`,
-    path: filePath,
-    gitEntryKind: "file" as const,
-    evidenceRefs: [`evidence:${id}`],
-    epistemic: { state: "known" as const, confidence: "high" as const, evidenceRefs: [`evidence:${id}`] },
-    generated: { state: "source" as const, reason: "Example source file.", evidenceRefs: [`evidence:${id}`] }
+    kind: "package" as const,
+    canonicalLocator: "package:.",
+    path: "",
+    evidenceRefs: [EVIDENCE],
+    epistemic: { state: "known" as const, confidence: "high" as const, evidenceRefs: [EVIDENCE] },
+    generated: { state: "source" as const, reason: "Package boundary.", evidenceRefs: [EVIDENCE] }
   };
 }

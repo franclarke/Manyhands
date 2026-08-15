@@ -29,8 +29,10 @@ export interface PlanProposalExample {
 }
 
 const EVIDENCE_PLACEHOLDER = "evidence:replace-with-a-supplied-reference";
-const RESOURCE_A = "resource:replace-with-a-supplied-resource-a";
-const RESOURCE_B = "resource:replace-with-a-supplied-resource-b";
+// New files have no resource of their own, so the write authority is the
+// package that contains them. Both leaves therefore write the same resource and
+// have to be ordered by an artifact.
+const PACKAGE = "resource:replace-with-a-supplied-package";
 
 const EPISTEMIC = {
   state: "known",
@@ -62,8 +64,8 @@ export const CANONICAL_PLAN_EXAMPLE: PlanProposalExample = {
         sourceCriterionId: "criterion:replace-with-a-supplied-criterion"
       }],
       repositorySurface: {
-        resourceRefs: [RESOURCE_A, RESOURCE_B],
-        pathHints: ["src/producer.ts", "src/consumer.ts"]
+        resourceRefs: [PACKAGE],
+        pathHints: ["src/producer.ts", "src/producer.test.ts", "src/consumer.ts", "src/consumer.test.ts"]
       },
       resourceIntents: [],
       consumes: ["artifact:producer-change", "artifact:consumer-change"],
@@ -77,7 +79,12 @@ export const CANONICAL_PLAN_EXAMPLE: PlanProposalExample = {
         acceptableEvidence: ["test_result"],
         baselinePolicy: "required",
         negativeControl: "when_feasible",
-        flakyPolicy: "forbid"
+        flakyPolicy: "forbid",
+        evidence: {
+          kind: "focused_command",
+          selectors: ["src/producer.test.ts", "src/consumer.test.ts"],
+          references: ["src/producer.test.ts", "src/consumer.test.ts"]
+        }
       }],
       uncertainty: [],
       granularity: {
@@ -112,9 +119,12 @@ export const CANONICAL_PLAN_EXAMPLE: PlanProposalExample = {
         statement: "The producer supports the integrated behaviour.",
         sourceCriterionId: "criterion:root-refinement"
       }],
-      repositorySurface: { resourceRefs: [RESOURCE_A], pathHints: ["src/producer.ts"] },
+      repositorySurface: {
+        resourceRefs: [PACKAGE],
+        pathHints: ["src/producer.ts", "src/producer.test.ts"]
+      },
       resourceIntents: [{
-        resourceId: RESOURCE_A,
+        resourceId: PACKAGE,
         access: "modify",
         ownerPhase: "implementation",
         outputArtifactId: "artifact:producer-change",
@@ -132,7 +142,12 @@ export const CANONICAL_PLAN_EXAMPLE: PlanProposalExample = {
         acceptableEvidence: ["test_result"],
         baselinePolicy: "required",
         negativeControl: "when_feasible",
-        flakyPolicy: "forbid"
+        flakyPolicy: "forbid",
+        evidence: {
+          kind: "focused_command",
+          selectors: ["src/producer.test.ts"],
+          references: ["src/producer.test.ts"]
+        }
       }],
       uncertainty: [],
       granularity: {
@@ -159,11 +174,15 @@ export const CANONICAL_PLAN_EXAMPLE: PlanProposalExample = {
         statement: "The consumer supports the integrated behaviour.",
         sourceCriterionId: "criterion:root-refinement"
       }],
-      repositorySurface: { resourceRefs: [RESOURCE_B], pathHints: ["src/consumer.ts"] },
+      repositorySurface: {
+        resourceRefs: [PACKAGE],
+        pathHints: ["src/consumer.ts", "src/consumer.test.ts"]
+      },
       resourceIntents: [{
-        resourceId: RESOURCE_B,
+        resourceId: PACKAGE,
         access: "modify",
         ownerPhase: "implementation",
+        inputArtifactId: "artifact:producer-change",
         outputArtifactId: "artifact:consumer-change",
         evidenceRefs: [EVIDENCE_PLACEHOLDER],
         epistemic: EPISTEMIC
@@ -179,7 +198,12 @@ export const CANONICAL_PLAN_EXAMPLE: PlanProposalExample = {
         acceptableEvidence: ["test_result"],
         baselinePolicy: "required",
         negativeControl: "when_feasible",
-        flakyPolicy: "forbid"
+        flakyPolicy: "forbid",
+        evidence: {
+          kind: "focused_command",
+          selectors: ["src/consumer.test.ts"],
+          references: ["src/consumer.test.ts"]
+        }
       }],
       uncertainty: [],
       granularity: {
@@ -214,7 +238,7 @@ export const CANONICAL_PLAN_EXAMPLE: PlanProposalExample = {
       consumerUnitIds: ["unit:consumer", "unit:root"],
       artifactType: "source_change",
       materialization: "patch",
-      expectedPaths: ["src/producer.ts"]
+      expectedPaths: ["src/producer.ts", "src/producer.test.ts"]
     },
     "artifact:consumer-change": {
       id: "artifact:consumer-change",
@@ -222,7 +246,7 @@ export const CANONICAL_PLAN_EXAMPLE: PlanProposalExample = {
       consumerUnitIds: ["unit:root"],
       artifactType: "source_change",
       materialization: "patch",
-      expectedPaths: ["src/consumer.ts"]
+      expectedPaths: ["src/consumer.ts", "src/consumer.test.ts"]
     }
   },
   decisions: [],
@@ -248,6 +272,8 @@ export const CANONICAL_PLAN_RULES: readonly string[] = [
   "artifacts[].expectedPaths stay inside the write surface of their producer. A file resource authorises only its own exact path, so to create a file that does not exist yet the modify intent must name the package or directory resource that contains it, and repositorySurface.pathHints must list the new paths.",
   "Two units may modify overlapping resources only when they are ordered by an artifact: the later unit consumes the artifact of the earlier one and its modify intent carries inputArtifactId set to that artifact. Two units creating files under the same package resource overlap, so they need that ordering.",
   "A seam is declared in seamRefs by its producer and by every consumer, every consumer also consumes the artifactId of the seam, semanticFacts and compatibility.rules are both non-empty, and the artifact of the seam has the same producer.",
+  "Every required validation obligation carries an evidence binding, or execution refuses the node because no command can be materialized. Use {kind: focused_command, selectors, references} for a test or check layer, {kind: static_proof, references} only when layer is static, or {kind: shared_command, criterionIds, references, rationale} when one command covers several criteria.",
+  "evidence selectors are repository-relative paths passed to the validation command as arguments. They may not be absolute, start with a hyphen, or contain a .. segment, and the files they name must be produced by the same unit.",
   "Replace every criterion:, resource: and evidence: identifier taken from the example with ids from the supplied lists. Invented ids are rejected."
 ];
 
