@@ -105,7 +105,11 @@ describe("B-033 current product documentation", () => {
     expect(plan).toContain("| Stage 8 / GLeaf | `in_review` |");
     expect(plan).toContain("| Stage 9 / GI | `in_review` |");
     expect(plan).toContain("| Stage 10 / GDel | `in_review` |");
-    expect(plan).toContain("| Stage 11 | `not_started` |");
+    expect(plan).toContain("| Stages 11–13 | `not_started` |");
+    // The old single Stage 11 is superseded rather than deleted, and the
+    // reorganization has to be reachable from the plan that points at it.
+    expect(plan).toContain("2026-08-15-remaining-stages-to-gprod.md");
+    expect(plan).toContain("**Superseded on 2026-08-15**");
     expect(stage10).toContain("**Status:** `in_review`");
     expect(stage10).toContain("f9ddecc1625c1f687f562ac37148b9d20e22651e");
     expect(stage10).toContain("e7a0990bea99e7af58427f2cb8b3fa45da69af28");

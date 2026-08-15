@@ -71,7 +71,7 @@ match the code.
 | Stage 8 / GLeaf | `in_review` | [`../audits/stage-8/README.md`](../audits/stage-8/README.md); exact implementation candidate `d3c617c4`, tree `df2b0b5e3a5c72da48d7ffea713b3fa517a02aea`, required R0/R10/R14/R17 evidence, and the bounded independent gate review at [`../audits/stage-8/evidence/review-gate.md`](../audits/stage-8/evidence/review-gate.md) | The gate review returned `NO-GO`. B2 is closed by the 2026-08-14 Codex-only scope amendment. B1 remains: one live R0 re-run under the corrected capability record, deferred for Codex quota. Stage 9 is not authorized. |
 | Stage 9 / GI | `in_review` | [`../audits/stage-9/README.md`](../audits/stage-9/README.md); implementation candidate `97b4cea35c8245fce301da11cabfb4ac89e04eac`, tree `05bea272556183d8f8a051e071a5154b0142879b`, R1/R2/R3/R11/R16 and a parallel-sequential convergence property, full 284-file/1,870-test suite | Implemented ahead of the normative order on operator instruction. Cannot close before GLeaf passes, and still needs a bounded independent gate review. |
 | Stage 10 / GDel | `in_review` | [`../audits/stage-10/README.md`](../audits/stage-10/README.md); implementation candidate `f9ddecc1625c1f687f562ac37148b9d20e22651e`, tree `e7a0990bea99e7af58427f2cb8b3fa45da69af28`, the seven delivery invariants, a five-cell restart matrix and R12/R13 | Implemented ahead of the normative order on operator instruction after the first live end-to-end delivery. Cannot close before GLeaf and GI pass, and still needs a bounded independent gate review. |
-| Stage 11 | `not_started` | none | Must execute in normative order. |
+| Stages 11–13 | `not_started` | [`../plans/2026-08-15-remaining-stages-to-gprod.md`](2026-08-15-remaining-stages-to-gprod.md) | The old Stage 11 is superseded: its six deliverables are reorganized into Stage 11 / GObs, Stage 12 / GArch and Stage 13 / GProd. Must execute in that order. |
 
 ### 0.2 Required reading and execution protocol
 
@@ -2964,6 +2964,12 @@ and executor remain behind adapters.
 **Retirement:** remove delivery without intent, CAS and reconciliation.
 
 ### Stage 11 — Close the architecture and qualify the product
+
+> **Superseded on 2026-08-15** by
+> [`the remaining stages to GProd`](2026-08-15-remaining-stages-to-gprod.md),
+> which splits this stage into Stage 11 / GObs, Stage 12 / GArch and Stage 13 /
+> GProd. The deliverables and the GProd criteria below are preserved there; the
+> single gate is not. Kept for provenance.
 
 **Purpose:** remove compatibility debt and judge actual product quality.
 
