@@ -185,11 +185,25 @@ function createPlanningAdapter(input: {
         throw new Error(`Run ${intent.runId} has no immutable definition for planning.`);
       }
       if (await context.invalidationReason?.() !== undefined) return;
-      result = normalizedResult(await input.planner.plan({
-        runId: intent.runId,
-        definition: projection.definition,
-        events
-      }));
+      try {
+        result = normalizedResult(await input.planner.plan({
+          runId: intent.runId,
+          definition: projection.definition,
+          events
+        }));
+      } catch (error) {
+        // A planning failure is this attempt's outcome, so it has to become a
+        // durable observation. Rethrowing instead leaves the run at
+        // effect.requested with no event, no diagnostic and no way back: the
+        // run actor only surfaces a thrown adapter error through
+        // drainEffects(), which a daemon serving IPC never calls.
+        await context.record({
+          observation: "failed",
+          reason: error instanceof Error ? error.message : String(error),
+          observedAt: input.clock()
+        });
+        return;
+      }
       await input.results.writePlanning(intent.effectId, result);
     }
     await context.record({

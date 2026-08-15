@@ -722,12 +722,28 @@ async function canonicalPlanningProposal(input: {
   return proposal;
 }
 
-function parseCanonicalPlanningProposal(
+/**
+ * Exported for the regression that pins non-JSON handling.
+ *
+ * A model that answers in prose is a protocol violation, not a crash. The
+ * PlanningEngine already rejects a non-conforming proposal as
+ * `model_protocol_invalid` and records it as a terminal finding; throwing here
+ * skipped that path entirely and escaped as an effect-adapter exception.
+ */
+export function parseCanonicalPlanningProposal(
   output: string,
   request: PlanningModelInput,
   view: RepositoryView
 ): PlanningModelProposal {
-  const parsed = JSON.parse(output) as unknown;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(output) as unknown;
+  } catch {
+    // Deliberately not a PlanningModelProposal: the engine turns an
+    // unsupported result kind into `model_protocol_invalid` with the model's
+    // own output preserved in the trace.
+    return { kind: "model_protocol_invalid", output: output.slice(0, 2_000) } as unknown as PlanningModelProposal;
+  }
   const envelope = objectRecord(parsed);
   const proposal = envelope.kind === "candidate" && "material" in envelope
     ? envelope.material
