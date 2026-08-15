@@ -731,7 +731,16 @@ function resourcePaths(resource: { path?: string; canonicalLocator: string }): s
   if (locator.startsWith("module:")) paths.push(locator.slice("module:".length));
   if (locator.startsWith("symbol:")) paths.push(locator.slice("symbol:".length).split("#", 1)[0]!);
   if (locator.startsWith("package:")) paths.push(locator.slice("package:".length));
-  return [...new Set(paths.map(normalizePath).filter((path) => path !== ""))];
+  const normalized = [...new Set(paths.map(normalizePath))];
+  const named = normalized.filter((path) => path !== "" && path !== ".");
+  if (named.length > 0) return named;
+  // A package rooted at the repository is catalogued as `package:.` with an
+  // empty path, and "." is a prefix of nothing. Dropping both left such a
+  // package owning no path at all, so in a single-package repository no
+  // resource could authorize writing a file that does not exist yet. The
+  // repository root is the empty path, which `pathIsWithin` reads as containing
+  // everything.
+  return normalized.length > 0 ? [""] : [];
 }
 
 function pathsOverlap(left: string, right: string): boolean {
@@ -745,6 +754,7 @@ function pathsOverlap(left: string, right: string): boolean {
 function pathIsWithin(candidate: string, surface: string): boolean {
   const normalizedCandidate = normalizePath(candidate);
   const normalizedSurface = normalizePath(surface);
+  if (normalizedSurface === "") return true;
   return normalizedCandidate === normalizedSurface || normalizedCandidate.startsWith(`${normalizedSurface}/`);
 }
 

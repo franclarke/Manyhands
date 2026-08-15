@@ -245,7 +245,8 @@ export const CANONICAL_PLAN_RULES: readonly string[] = [
   "Every artifact has one producer unit that lists it in produces and owns a modify intent whose outputArtifactId is that artifact. Every consumer lists it in consumes, and the artifact lists every consumer.",
   "Every modify intent carries ownerPhase and outputArtifactId. An observe intent carries neither.",
   "resourceIntents[].resourceId also appears in repositorySurface.resourceRefs of the same unit, and both use supplied resource ids.",
-  "artifacts[].expectedPaths stay inside the write surface of their producer, and two units may modify overlapping resources only when one consumes the artifact of the other.",
+  "artifacts[].expectedPaths stay inside the write surface of their producer. A file resource authorises only its own exact path, so to create a file that does not exist yet the modify intent must name the package or directory resource that contains it, and repositorySurface.pathHints must list the new paths.",
+  "Two units may modify overlapping resources only when they are ordered by an artifact: the later unit consumes the artifact of the earlier one and its modify intent carries inputArtifactId set to that artifact. Two units creating files under the same package resource overlap, so they need that ordering.",
   "A seam is declared in seamRefs by its producer and by every consumer, every consumer also consumes the artifactId of the seam, semanticFacts and compatibility.rules are both non-empty, and the artifact of the seam has the same producer.",
   "Replace every criterion:, resource: and evidence: identifier taken from the example with ids from the supplied lists. Invented ids are rejected."
 ];
