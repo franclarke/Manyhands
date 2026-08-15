@@ -1,5 +1,22 @@
 import { createHash } from "node:crypto";
 
+import { describeRecoveryDiagnostic, type RecoveryDiagnostic } from "@manyhands/contracts";
+
+/**
+ * A delivery that could not proceed, carrying the evidence an operator needs.
+ *
+ * The transaction used to reject with prose, so a refusal reached the journal
+ * as "the delivery target changed" — a sentence naming neither the ref nor
+ * either OID. The message still reads as one line, but the diagnostic travels
+ * with it so a caller can branch on the situation instead of matching strings.
+ */
+export class DeliveryRecoveryError extends Error {
+  constructor(readonly diagnostic: RecoveryDiagnostic) {
+    super(describeRecoveryDiagnostic(diagnostic));
+    this.name = "DeliveryRecoveryError";
+  }
+}
+
 export interface TransactionalDeliveryApproval {
   manifestId: string;
   finalSha: string;

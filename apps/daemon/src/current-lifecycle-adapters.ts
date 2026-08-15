@@ -23,6 +23,7 @@ import type {
 } from "@manyhands/decomposer";
 import {
   buildAgentEnvironment,
+  DeliveryRecoveryError,
   deliveryRequestFingerprint,
   resolveCliBinaryPath,
   safeGitArgs,
@@ -412,21 +413,32 @@ export function createCurrentDeliveryPort(): TransitionalDeliveryPort {
                 ["status", "--porcelain=v1", "--untracked-files=all"]
               ))
             }),
+            // Recovery runs before the pre-flight inspection, so it is where a
+            // target that is neither the approved head nor the delivered
+            // candidate is named. Returning `undefined` there would fall
+            // through to a publish attempt and report the divergence as prose.
             recover: async (request) => {
-              const [branch, head, status] = await Promise.all([
+              const [branch, head] = await Promise.all([
                 git(repoRoot, ["symbolic-ref", "--short", "HEAD"]),
-                git(repoRoot, ["rev-parse", "HEAD"]),
-                git(repoRoot, ["status", "--porcelain=v1", "--untracked-files=all"])
+                git(repoRoot, ["rev-parse", "HEAD"])
               ]);
               if (
                 branch !== request.targetBranch
-                || head !== request.finalSha
-                || !targetWorkingTreeIsClean(status)
                 || request.targetFingerprint !== stringField(definition.targetContext, "fingerprint")
               ) {
                 return undefined;
               }
-              return deliveryReceipt(request, head);
+              if (head === request.finalSha) {
+                await reconcileDeliveredWorkingTree(repoRoot, request);
+                return deliveryReceipt(request, head);
+              }
+              if (head === request.targetHead) return undefined;
+              throw new DeliveryRecoveryError({
+                kind: "target_divergence",
+                ref: `refs/heads/${request.targetBranch}`,
+                expectedOid: request.targetHead,
+                actualOid: head
+              });
             },
             publish: async (request) => {
               const [branch, head, status] = await Promise.all([
@@ -436,15 +448,34 @@ export function createCurrentDeliveryPort(): TransitionalDeliveryPort {
               ]);
               if (
                 branch !== request.targetBranch
-                || head !== request.targetHead
-                || !targetWorkingTreeIsClean(status)
                 || request.targetFingerprint !== stringField(definition.targetContext, "fingerprint")
               ) {
                 throw new Error(
                   "The delivery target changed immediately before publication; nothing was published."
                 );
               }
-              await git(repoRoot, ["merge", "--ff-only", request.finalSha]);
+              if (!targetWorkingTreeIsClean(status)) {
+                throw new Error("The delivery target is dirty; nothing was published.");
+              }
+              if (head !== request.targetHead) {
+                throw new DeliveryRecoveryError({
+                  kind: "target_divergence",
+                  ref: `refs/heads/${request.targetBranch}`,
+                  expectedOid: request.targetHead,
+                  actualOid: head
+                });
+              }
+              // One conditional write. `merge --ff-only` accepted any head the
+              // candidate was reachable from, so a branch that advanced to an
+              // ancestor nobody approved was delivered onto and the receipt
+              // still claimed the approved head.
+              await git(repoRoot, [
+                "update-ref",
+                `refs/heads/${request.targetBranch}`,
+                request.finalSha,
+                request.targetHead
+              ]);
+              await reconcileDeliveredWorkingTree(repoRoot, request);
               const deliveredHead = await git(repoRoot, ["rev-parse", "HEAD"]);
               if (deliveredHead !== request.finalSha) {
                 throw new Error("Delivery did not publish the approved final SHA.");
@@ -458,6 +489,31 @@ export function createCurrentDeliveryPort(): TransitionalDeliveryPort {
       });
     }
   };
+}
+
+/**
+ * Bring the checked-out target to the delivered commit.
+ *
+ * The ref update moves the branch without touching the index or the working
+ * tree, so between the two the checkout still holds the approved head. Only
+ * that state may be absorbed: a tree carrying anything else is work this
+ * delivery cannot describe, and resetting would destroy it.
+ */
+async function reconcileDeliveredWorkingTree(
+  repoRoot: string,
+  request: TransactionalDeliveryApproval
+): Promise<void> {
+  const status = await git(repoRoot, ["status", "--porcelain=v1", "--untracked-files=all"]);
+  if (targetWorkingTreeIsClean(status)) return;
+  const drift = await git(repoRoot, ["diff", "--name-only", request.targetHead]);
+  if (drift !== "") {
+    throw new DeliveryRecoveryError({
+      kind: "unrecoverable_external_effect",
+      effectId: request.idempotencyKey,
+      detail: `the working tree of ${repoRoot} holds changes that are neither the approved head nor the delivered candidate`
+    });
+  }
+  await git(repoRoot, ["reset", "--hard", request.finalSha]);
 }
 
 async function validateCanonicalDelivery(
