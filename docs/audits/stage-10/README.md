@@ -4,8 +4,15 @@
 
 **Implementation candidate:** `f9ddecc1625c1f687f562ac37148b9d20e22651e`
 **Tree:** `e7a0990bea99e7af58427f2cb8b3fa45da69af28`
+**Verified handoff candidate:** `86966a226cca3efc8378c8930c338d8d6535178a`
+**Verified handoff tree:** `fa7bd73909654eecb266dbbfa4373b18b0578b6f`
+
 **Plan:** [`../../plans/2026-08-15-stage-10-crash-safe-exact-delivery.md`](../../plans/2026-08-15-stage-10-crash-safe-exact-delivery.md)
 **Design:** [`../../superpowers/specs/2026-08-14-stage-10-exact-delivery-design.md`](../../superpowers/specs/2026-08-14-stage-10-exact-delivery-design.md)
+
+The implementation candidate is where the Stage 10 production and test code
+landed. The handoff candidate adds this audit and one teardown fix in
+`tests/daemon-kernel.test.ts`, and is the tree the verification below ran on.
 
 ## What this stage was for
 
@@ -124,6 +131,12 @@ git -c core.whitespace=cr-at-eol diff --check           clean
 
 The dev stack was stopped before the suite: a live daemon holds the installation
 lease and fails four suites by contention.
+
+Two runs before the handoff candidate showed `daemon-kernel` failing on
+`ENOTEMPTY`/`EPERM` while removing its temporary root — a teardown fault, not an
+assertion, and unrelated to delivery. It is fixed in the handoff candidate
+rather than explained away, because a red daemon suite in a delivery-recovery
+stage is indistinguishable at a glance from a real defect.
 
 ## What remains before GDel closes
 

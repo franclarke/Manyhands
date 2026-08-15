@@ -109,6 +109,8 @@ describe("B-033 current product documentation", () => {
     expect(stage10).toContain("**Status:** `in_review`");
     expect(stage10).toContain("f9ddecc1625c1f687f562ac37148b9d20e22651e");
     expect(stage10).toContain("e7a0990bea99e7af58427f2cb8b3fa45da69af28");
+    expect(stage10).toContain("86966a226cca3efc8378c8930c338d8d6535178a");
+    expect(stage10).toContain("fa7bd73909654eecb266dbbfa4373b18b0578b6f");
     // The sequencing deviation must stay visible in the audit, not only in the
     // commit that made it.
     expect(stage10).toContain("cannot close before Stages 8");
