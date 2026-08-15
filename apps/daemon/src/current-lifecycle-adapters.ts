@@ -737,7 +737,7 @@ export function parseCanonicalPlanningProposal(
 ): PlanningModelProposal {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(output) as unknown;
+    parsed = JSON.parse(unfence(output)) as unknown;
   } catch {
     // Deliberately not a PlanningModelProposal: the engine turns an
     // unsupported result kind into `model_protocol_invalid` with the model's
@@ -979,6 +979,19 @@ function codexPlanningArgs(selection: ProductRunDefinition["planningSelection"])
     ...(selection.effort === undefined ? [] : ["-c", `model_reasoning_effort="${selection.effort}"`]),
     "-"
   ];
+}
+
+/**
+ * The object inside a markdown code fence, when the model formatted its answer.
+ *
+ * Claude Code answers with fenced JSON often enough that rejecting a fence made
+ * planning fail intermittently against an otherwise correct proposal. Only the
+ * first fenced block is considered, and unfenced output is returned untouched
+ * so a genuine protocol violation still reads as one.
+ */
+function unfence(output: string): string {
+  const fenced = /```[a-zA-Z0-9_-]*([\s\S]*?)```/u.exec(output);
+  return fenced?.[1]?.trim() ?? output;
 }
 
 function claudeResult(stdout: string): string {
