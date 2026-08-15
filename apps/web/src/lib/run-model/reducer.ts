@@ -1,6 +1,11 @@
 import { TaskContractBundleSchema, type TaskContractBundle } from "@manyhands/contracts";
 import { foldRun, type RunEvent as CoordinatorRunEvent, type RunProjection } from "@manyhands/run-coordinator";
-import { LegacyGraphRevisionV2Schema, type LegacyGraphRevisionV2, type LegacyTaskNodeV2 } from "@manyhands/task-graph";
+import {
+  canonicalGraphView,
+  legacyGraphView,
+  type RunGraphNodeView,
+  type RunGraphView
+} from "@/lib/run-model/graph-view";
 
 import type { NodeExecutionStatus, RunEvent, RunModel, RunNodeView, RunSeed } from "./types";
 
@@ -8,7 +13,11 @@ export function buildRunModel(seed: RunSeed, inputEvents: readonly RunEvent[]): 
   const events = uniqueOrderedEvents(inputEvents);
   const projection = foldProjection(events);
   const compiled = latestEvent(events, "graph.compiled");
-  const compiledGraph = parseGraph(compiled?.payload.graph);
+  // Canonical first, then the historical revision. A journal recorded before
+  // the canonical graph still has to replay, and one recorded after must not
+  // fall back to a placeholder because the newer shape was not recognised.
+  const compiledGraph = canonicalGraphView(compiled?.payload.graph)
+    ?? legacyGraphView(compiled?.payload.graph);
   const provisional = compiledGraph === null ? buildProvisionalGraph(seed, events) : null;
   const graph = compiledGraph ?? provisional?.graph ?? null;
   const contracts = parseContracts(compiled?.payload.contracts);
@@ -53,11 +62,6 @@ function foldProjection(events: readonly RunEvent[]): RunProjection | null {
   })) as CoordinatorRunEvent[]);
 }
 
-function parseGraph(value: unknown): LegacyGraphRevisionV2 | null {
-  const parsed = LegacyGraphRevisionV2Schema.safeParse(value);
-  return parsed.success ? parsed.data : null;
-}
-
 function parseContracts(value: unknown): TaskContractBundle[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((candidate) => {
@@ -66,7 +70,7 @@ function parseContracts(value: unknown): TaskContractBundle[] {
   });
 }
 
-function buildNodeViews(graph: LegacyGraphRevisionV2, projection: RunProjection | null, layoutByNodeId?: ReadonlyMap<string, RunNodeView["layout"]>, provisional = false): RunNodeView[] {
+function buildNodeViews(graph: RunGraphView, projection: RunProjection | null, layoutByNodeId?: ReadonlyMap<string, RunNodeView["layout"]>, provisional = false): RunNodeView[] {
   const own = Object.values(graph.nodes).map((node) => ({
     ...nodeView(node, projection),
     ...(provisional && node.id === graph.rootId ? { status: "running" as const } : {}),
@@ -102,7 +106,7 @@ function buildNodeViews(graph: LegacyGraphRevisionV2, projection: RunProjection 
   return own;
 }
 
-function buildProvisionalGraph(seed: RunSeed, events: readonly RunEvent[]): { graph: LegacyGraphRevisionV2; layoutByNodeId: Map<string, RunNodeView["layout"]> } | null {
+function buildProvisionalGraph(seed: RunSeed, events: readonly RunEvent[]): { graph: RunGraphView; layoutByNodeId: Map<string, RunNodeView["layout"]> } | null {
   let startedIndex = -1;
   for (let index = events.length - 1; index >= 0; index -= 1) {
     if (events[index]?.type === "planning.attempt_started") {
@@ -121,7 +125,7 @@ function buildProvisionalGraph(seed: RunSeed, events: readonly RunEvent[]): { gr
     : events.filter((event) => event.type === "planning.node_discovered" && event.payload.attempt === previousAttempt);
   if (events.length === 0) return null;
   const layoutByNodeId = new Map<string, RunNodeView["layout"]>();
-  const nodes: LegacyGraphRevisionV2["nodes"] = {};
+  const nodes: RunGraphView["nodes"] = {};
   for (const event of discoveries) {
     const candidate = event.payload.node;
     if (!isRecord(candidate) || typeof candidate.nodeId !== "string" || typeof candidate.title !== "string" || typeof candidate.objective !== "string") continue;
@@ -147,22 +151,18 @@ function buildProvisionalGraph(seed: RunSeed, events: readonly RunEvent[]): { gr
     nodes[rootId] = { id: rootId, parentId: null, kind: "root", title: "Diseñando la solución", goal: seed.goal };
     layoutByNodeId.set(rootId, { depth: 0, siblingIndex: 0, siblingCount: 1 });
   }
-  const inspected = latestEvent(events, "repository.inspected");
-  const snapshotId = typeof inspected?.payload.snapshotId === "string" ? inspected.payload.snapshotId : "planning";
   return {
     graph: {
-      schemaVersion: 2,
+      // Named as provisional so nothing downstream can mistake a graph the UI
+      // assembled from planning progress for one the daemon compiled.
+      source: "provisional",
       graphId: `planning:${seed.id}`,
       revision: 1,
       rootId,
-      baseCommit: "planning",
-      repositorySnapshotId: snapshotId,
       nodes,
-      artifactRequirements: [],
-      seamBindings: [],
-      conflictConstraints: [],
-      legacyOrderingConstraints: [],
-      createdAt: events[0]?.at ?? new Date(0).toISOString()
+      artifactEdges: [],
+      seamEdges: [],
+      conflictEdges: []
     },
     layoutByNodeId
   };
@@ -185,7 +185,7 @@ function provisionalDepth(nodeId: string, discoveries: readonly RunEvent[]): num
   return depth;
 }
 
-function nodeView(node: LegacyTaskNodeV2, projection: RunProjection | null): RunNodeView {
+function nodeView(node: RunGraphNodeView, projection: RunProjection | null): RunNodeView {
   const attempts = projection === null ? [] : Object.values(projection.attempts).filter((attempt) => attempt.nodeId === node.id);
   const latestAttempt = attempts.at(-1);
   const integration = projection === null ? undefined : Object.values(projection.integrations).find((entry) => entry.nodeId === node.id);

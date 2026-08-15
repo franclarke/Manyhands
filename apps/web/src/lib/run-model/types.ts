@@ -1,6 +1,7 @@
 import type { TaskContractBundle } from "@manyhands/contracts";
 import type { RunLifecycle, RunProjection } from "@manyhands/run-coordinator";
-import type { LegacyGraphRevisionV2, LegacyTaskNodeV2 } from "@manyhands/task-graph";
+
+import type { RunGraphNodeView, RunGraphView } from "@/lib/run-model/graph-view";
 
 export interface RunEvent {
   eventId: string;
@@ -22,7 +23,7 @@ export interface RunSeed {
 
 export type NodeExecutionStatus = "pending" | "ready" | "running" | "waiting" | "succeeded" | "failed" | "stale";
 
-export interface RunNodeView extends LegacyTaskNodeV2 {
+export interface RunNodeView extends RunGraphNodeView {
   status: NodeExecutionStatus;
   integrationStatus?: "running" | "completed" | "failed" | "decision_required" | undefined;
   attemptId?: string;
@@ -34,7 +35,7 @@ export interface RunNodeView extends LegacyTaskNodeV2 {
 export interface RunModel {
   run: RunSeed;
   projection: RunProjection | null;
-  graph: LegacyGraphRevisionV2 | null;
+  graph: RunGraphView | null;
   graphPhase: "provisional" | "compiled" | null;
   contracts: TaskContractBundle[];
   nodes: RunNodeView[];

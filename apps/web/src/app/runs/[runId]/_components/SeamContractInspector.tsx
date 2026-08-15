@@ -55,18 +55,26 @@ export function SeamContractInspector({
           const seams = seamContracts.filter((seam) => seam.id === detail.contractId);
           return (
             <ContractCard key={detail.id} title={`${detail.contractId}@${detail.contractRevision}`}>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Detail label="Revisión exportada" value={detail.producerRevision} />
-                <Detail label="Revisión importada" value={detail.consumerRevision} />
-              </div>
+              {/* A canonical seam binding names its validation obligations
+                  instead of a revision per side. Showing a blank revision
+                  would read as "none" rather than "not recorded". */}
+              {detail.producerRevision !== undefined && detail.consumerRevision !== undefined ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Detail label="Revisión exportada" value={detail.producerRevision} />
+                  <Detail label="Revisión importada" value={detail.consumerRevision} />
+                </div>
+              ) : null}
+              {detail.validationObligationIds !== undefined && detail.validationObligationIds.length > 0 ? (
+                <Detail label="Obligaciones que lo prueban" value={detail.validationObligationIds.join(", ")} />
+              ) : null}
               {seams.length > 0 ? seams.map((seam) => (
                 <div key={`${seam.id}:${seam.revision}`} className="mt-3 rounded-lg bg-slate-950 p-3 text-slate-100">
                   <span className="text-micro font-semibold uppercase tracking-[0.12em] text-slate-400">
                     Seam {seam.kind} · compatibilidad {seam.compatibility.mode}
                   </span>
                   <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                    <SignatureBlock label="Firma exportada" revision={detail.producerRevision} specification={seam.specification} />
-                    <SignatureBlock label="Firma importada" revision={detail.consumerRevision} specification={seam.specification} />
+                    <SignatureBlock label="Firma exportada" revision={detail.producerRevision ?? detail.contractRevision} specification={seam.specification} />
+                    <SignatureBlock label="Firma importada" revision={detail.consumerRevision ?? detail.contractRevision} specification={seam.specification} />
                   </div>
                   {Object.keys(seam.semanticFacts).length > 0 ? (
                     <dl className="mt-3 grid gap-1 border-t border-slate-700 pt-3 text-micro">

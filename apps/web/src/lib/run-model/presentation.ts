@@ -1,6 +1,5 @@
 import type { GranularityStrategyProjection } from "@manyhands/run-coordinator";
-import type { LegacyGraphRevisionV2 } from "@manyhands/task-graph";
-
+import type { RunGraphView } from "@/lib/run-model/graph-view";
 import type { RunNodeView } from "@/lib/run-model/types";
 
 export type GraphLens = "execution" | "artifact" | "contract" | "conflict" | "all";
@@ -12,15 +11,19 @@ export type GraphRelationDetail =
       kind: "artifact";
       contractId: string;
       contractRevision: string;
-      requiredFor: "execution" | "validation" | "integration";
+      // Present on historical revisions only; a canonical graph binds the
+      // artifact to a named consumer input instead of a phase.
+      requiredFor?: "execution" | "validation" | "integration" | undefined;
+      consumerInputName?: string | undefined;
     }
   | {
       id: string;
       kind: "contract";
       contractId: string;
       contractRevision: string;
-      producerRevision: string;
-      consumerRevision: string;
+      producerRevision?: string | undefined;
+      consumerRevision?: string | undefined;
+      validationObligationIds?: readonly string[] | undefined;
     }
   | {
       id: string;
@@ -47,7 +50,7 @@ interface SecondaryRelation {
 }
 
 export function buildRelationViews(
-  graph: LegacyGraphRevisionV2,
+  graph: RunGraphView,
   lens: GraphLens,
   selectedNodeId: string | null
 ): GraphRelationView[] {
@@ -91,8 +94,8 @@ export function relationLaneOffset(kind: GraphRelationKind): number {
   }
 }
 
-export function bundledArtifactDeliveries(graph: LegacyGraphRevisionV2, nodeId: string): number {
-  return graph.artifactRequirements.filter((relation) => (
+export function bundledArtifactDeliveries(graph: RunGraphView, nodeId: string): number {
+  return graph.artifactEdges.filter((relation) => (
     relation.consumerNodeId === nodeId && isAncestorOf(graph, nodeId, relation.producerNodeId)
   )).length;
 }
@@ -159,9 +162,9 @@ export function eventPresentation(type: string): { label: string; diagnostic: bo
   };
 }
 
-function secondaryRelations(graph: LegacyGraphRevisionV2): SecondaryRelation[] {
+function secondaryRelations(graph: RunGraphView): SecondaryRelation[] {
   return [
-    ...graph.artifactRequirements
+    ...graph.artifactEdges
       .filter((relation) => !isAncestorOf(graph, relation.consumerNodeId, relation.producerNodeId))
       .map((relation) => ({
       id: relation.id,
@@ -171,12 +174,13 @@ function secondaryRelations(graph: LegacyGraphRevisionV2): SecondaryRelation[] {
       detail: {
         id: relation.id,
         kind: "artifact" as const,
-        contractId: relation.artifactContract.id,
-        contractRevision: relation.artifactContract.revision,
-        requiredFor: relation.requiredFor
+        contractId: relation.contractId,
+        contractRevision: relation.contractRevision,
+        ...(relation.requiredFor === undefined ? {} : { requiredFor: relation.requiredFor }),
+        ...(relation.consumerInputName === undefined ? {} : { consumerInputName: relation.consumerInputName })
       }
       })),
-    ...graph.seamBindings.map((relation) => ({
+    ...graph.seamEdges.map((relation) => ({
       id: relation.id,
       source: relation.producerNodeId,
       target: relation.consumerNodeId,
@@ -184,13 +188,14 @@ function secondaryRelations(graph: LegacyGraphRevisionV2): SecondaryRelation[] {
       detail: {
         id: relation.id,
         kind: "contract" as const,
-        contractId: relation.seamContract.id,
-        contractRevision: relation.seamContract.revision,
-        producerRevision: relation.producerRevision,
-        consumerRevision: relation.consumerRevision
+        contractId: relation.contractId,
+        contractRevision: relation.contractRevision,
+        ...(relation.producerRevision === undefined ? {} : { producerRevision: relation.producerRevision }),
+        ...(relation.consumerRevision === undefined ? {} : { consumerRevision: relation.consumerRevision }),
+        ...(relation.validationObligationIds === undefined ? {} : { validationObligationIds: relation.validationObligationIds })
       }
     })),
-    ...graph.conflictConstraints.map((relation) => ({
+    ...graph.conflictEdges.map((relation) => ({
       id: relation.id,
       source: relation.leftNodeId,
       target: relation.rightNodeId,
@@ -205,7 +210,7 @@ function secondaryRelations(graph: LegacyGraphRevisionV2): SecondaryRelation[] {
   ];
 }
 
-function isAncestorOf(graph: LegacyGraphRevisionV2, ancestorId: string, nodeId: string): boolean {
+function isAncestorOf(graph: RunGraphView, ancestorId: string, nodeId: string): boolean {
   let current = graph.nodes[nodeId]?.parentId ?? null;
   const visited = new Set<string>();
   while (current !== null && !visited.has(current)) {

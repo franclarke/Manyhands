@@ -56,9 +56,11 @@ describe("canonical V2 presentation fixture", () => {
     const model = buildRunModel(fixture.seed, fixture.events);
 
     expect(model.run.lifecycle).toBe("completed");
-    expect(model.graph?.artifactRequirements).toHaveLength(2);
-    expect(model.graph?.seamBindings).toHaveLength(2);
-    expect(model.graph?.conflictConstraints).toHaveLength(1);
+    expect(model.graph?.artifactEdges).toHaveLength(2);
+    expect(model.graph?.seamEdges).toHaveLength(2);
+    expect(model.graph?.conflictEdges).toHaveLength(1);
+    // The demo fixture is a historical revision, and it still has to render.
+    expect(model.graph?.source).toBe("legacy");
     expect(Object.values(model.projection?.decisions ?? {}).every((decision) => decision.status === "resolved")).toBe(true);
     expect(model.projection?.attempts["attempt-token-1"]?.status).toBe("failed");
     expect(model.projection?.attempts["attempt-token-2"]?.status).toBe("adopted");

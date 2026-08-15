@@ -19,7 +19,7 @@ import "@xyflow/react/dist/style.css";
 import type { RunModel } from "@/lib/run-model/types";
 import { layoutRunTree } from "@/lib/run-model/tree-layout";
 import { layoutRunFlow, nextLayoutOffset, offsetPositions, type FlowBand } from "@/lib/run-model/flow-layout";
-import { computeLegacyGraphRevisionV2TopologicalLevels, type LegacyGraphRevisionV2 } from "@manyhands/task-graph";
+import type { RunGraphView } from "@/lib/run-model/graph-view";
 import {
   buildRelationViews,
   relationNeighborhood,
@@ -182,13 +182,30 @@ function CockpitRunGraphInner({
  * A cycle yields nothing rather than throwing: the plan critics own that
  * diagnosis, and a layout must never be what takes the workspace down.
  */
-function levelResolver(graph: LegacyGraphRevisionV2): (nodeId: string) => number | undefined {
-  try {
-    const levels = computeLegacyGraphRevisionV2TopologicalLevels(graph);
-    return (nodeId) => levels[nodeId];
-  } catch {
-    return () => undefined;
+/**
+ * Bands come from the artifact dependencies the graph declares: a node sits one
+ * level below the last artifact it consumes. A canonical revision carries no
+ * `topologicalLevel`, and banding every node together under "no dependencies"
+ * would state something false about a graph that plainly has them.
+ */
+function levelResolver(graph: RunGraphView): (nodeId: string) => number | undefined {
+  const producers = new Map<string, string[]>();
+  for (const edge of graph.artifactEdges) {
+    producers.set(edge.consumerNodeId, [...(producers.get(edge.consumerNodeId) ?? []), edge.producerNodeId]);
   }
+  const levels = new Map<string, number>();
+  const levelOf = (nodeId: string, seen: ReadonlySet<string>): number => {
+    const cached = levels.get(nodeId);
+    if (cached !== undefined) return cached;
+    if (seen.has(nodeId)) return 0;
+    const upstream = producers.get(nodeId) ?? [];
+    const level = upstream.length === 0
+      ? 0
+      : Math.max(...upstream.map((producer) => levelOf(producer, new Set([...seen, nodeId])) + 1));
+    levels.set(nodeId, level);
+    return level;
+  };
+  return (nodeId) => (graph.nodes[nodeId] === undefined ? undefined : levelOf(nodeId, new Set()));
 }
 
 /** Positions alone, so the anchor can be measured before committing a switch. */

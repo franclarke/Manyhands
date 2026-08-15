@@ -38,7 +38,7 @@ describe("run graph presentation", () => {
 
   it("bundles duplicates only when both their node pair and relation kind match", () => {
     const duplicated = graph();
-    duplicated.conflictConstraints.push({
+    duplicated.conflictEdges.push({
       id: "conflict-storage-ui-2",
       leftNodeId: "storage",
       rightNodeId: "ui",
@@ -150,12 +150,13 @@ function node(id: string, kind: RunNodeView["kind"], status: RunNodeView["status
 
 function graph() {
   return {
-    schemaVersion: 2 as const,
+    // The workspace renders its own graph view, fed from either the canonical
+    // revision or a historical one. These relations are the historical shape,
+    // which is what keeps a legacy journal covered.
+    source: "legacy" as const,
     graphId: "graph-1",
     revision: 1,
     rootId: "root",
-    baseCommit: "base",
-    repositorySnapshotId: "snapshot",
     nodes: {
       root: { id: "root", parentId: null, kind: "root" as const, title: "Root", goal: "Root" },
       foundation: { id: "foundation", parentId: "root", kind: "leaf" as const, title: "Foundation", goal: "Foundation" },
@@ -163,27 +164,26 @@ function graph() {
       ui: { id: "ui", parentId: "root", kind: "leaf" as const, title: "UI", goal: "UI" },
       storage: { id: "storage", parentId: "root", kind: "leaf" as const, title: "Storage", goal: "Storage" }
     },
-    artifactRequirements: [
+    artifactEdges: [
       artifact("artifact-domain-ui", "domain", "ui"),
       artifact("artifact-storage-ui", "storage", "ui"),
       artifact("artifact-foundation-root", "foundation", "root")
     ],
-    seamBindings: [
+    seamEdges: [
       seam("seam-domain-ui", "domain", "ui"),
       seam("seam-storage-ui", "storage", "ui")
     ],
-    conflictConstraints: [
+    conflictEdges: [
       { id: "conflict-storage-ui", leftNodeId: "ui", rightNodeId: "storage", reason: "Shared files", risk: "medium" as ConflictConstraint["risk"] }
-    ],
-    legacyOrderingConstraints: [],
-    createdAt: "2026-07-18T00:00:00.000Z"
+    ]
   };
 }
 
 function artifact(id: string, producerNodeId: string, consumerNodeId: string) {
   return {
     id,
-    artifactContract: { id: `${id}-contract`, revision: "v1" },
+    contractId: `${id}-contract`,
+    contractRevision: "v1",
     producerNodeId,
     consumerNodeId,
     requiredFor: "execution" as const
@@ -193,7 +193,8 @@ function artifact(id: string, producerNodeId: string, consumerNodeId: string) {
 function seam(id: string, producerNodeId: string, consumerNodeId: string) {
   return {
     id,
-    seamContract: { id: `${id}-contract`, revision: "v1" },
+    contractId: `${id}-contract`,
+    contractRevision: "v1",
     producerNodeId,
     consumerNodeId,
     producerRevision: "v1",
