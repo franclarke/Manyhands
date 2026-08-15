@@ -57,7 +57,7 @@ describe("Stage 9 productive boundary", () => {
     expect(second!.enteredAt).toBeLessThan(first!.exitedAt);
   });
 
-  it("refuses a composite candidate that writes a child-owned resource", async () => {
+  it("refuses a candidate that writes a sibling-owned resource", async () => {
     const { fixture, compiled } = compileStage9Graph();
     const runId = "run-stage9-ownership";
     const harness = stage9Coordinator({ runId, graphId: compiled.graph.graphId });
@@ -69,9 +69,48 @@ describe("Stage 9 productive boundary", () => {
       execute: async (input) => stage9SuccessOutcome(input as unknown as Stage9ExecuteInput, {
         rootId: compiled.graph.rootId,
         artifactIds: Object.keys(compiled.contracts.artifacts),
-        // The composite reaches into a resource `unit:a` owns with `modify`.
+        // `unit:b` reaches into the resource `unit:a` owns with `modify`. It
+        // consumes nothing, so no composition can account for the path.
+        ...(input.node.id === "unit:b" ? { changedFiles: ["src/b.ts", "src/a.ts"] } : {})
+      })
+    });
+
+    const state = await driver.run({
+      runId,
+      graph: compiled.graph,
+      contracts: compiled.contracts.taskBundles,
+      repositoryContextDigest: fixture.repositoryView.digest,
+      executorProfile: { id: "fake", revision: "1" },
+      effectiveConfig: { maxParallel: 2 },
+      availableExecutorNodeIds: Object.keys(compiled.graph.nodes),
+      target: { sourceTargetFingerprint: "sha256:target", targetBranch: "main", targetHead: fixture.repositoryView.model.baseCommit }
+    });
+
+    const attempts = Object.values(state.attempts).filter((attempt) => attempt.nodeId === "unit:b");
+    expect(attempts).not.toHaveLength(0);
+    expect(attempts.every((attempt) => !["validated", "adopted"].includes(attempt.status))).toBe(true);
+    expect(attempts.some((attempt) => (attempt.failureReason ?? "").includes("ownership_violation"))).toBe(true);
+    expect(Object.values(state.adoptedArtifacts).map((artifact) => artifact.contract.id)).not.toContain("artifact:b");
+  });
+
+  it("adopts a composite that composes exactly the child artifacts it consumed", async () => {
+    // An integration diffs its candidate against the target base, so every path
+    // in every child artifact it composes is in changedFiles by construction. A
+    // live run reached integration with both children verified and adopted and
+    // was refused for "writing" the four files it existed to compose.
+    const { fixture, compiled } = compileStage9Graph();
+    const runId = "run-stage9-composition";
+    const harness = stage9Coordinator({ runId, graphId: compiled.graph.graphId });
+
+    const driver = new CanonicalExecutionDriver({
+      coordinator: harness.coordinator,
+      now: () => stage9At,
+      estimateIntegrationRisk: () => ({ score: 0, evidenceRefs: [] }),
+      execute: async (input) => stage9SuccessOutcome(input as unknown as Stage9ExecuteInput, {
+        rootId: compiled.graph.rootId,
+        artifactIds: Object.keys(compiled.contracts.artifacts),
         ...(input.node.id === compiled.graph.rootId
-          ? { changedFiles: ["src/app/wire.ts", "src/a.ts"] }
+          ? { changedFiles: ["src/app/wire.ts", "src/a.ts", "src/b.ts"] }
           : {})
       })
     });
@@ -88,10 +127,8 @@ describe("Stage 9 productive boundary", () => {
     });
 
     const rootAttempts = Object.values(state.attempts).filter((attempt) => attempt.nodeId === compiled.graph.rootId);
-    expect(rootAttempts).not.toHaveLength(0);
-    expect(rootAttempts.every((attempt) => !["validated", "adopted"].includes(attempt.status))).toBe(true);
-    expect(rootAttempts.some((attempt) => (attempt.failureReason ?? "").includes("ownership_violation"))).toBe(true);
-    expect(Object.values(state.adoptedArtifacts).map((artifact) => artifact.contract.id)).not.toContain("artifact:root");
+    expect(rootAttempts.some((attempt) => (attempt.failureReason ?? "").includes("ownership_violation"))).toBe(false);
+    expect(Object.values(state.adoptedArtifacts).map((artifact) => artifact.contract.id)).toContain("artifact:root");
   });
 
   it("routes a child defect to that child instead of raising a conflict on the composite", async () => {

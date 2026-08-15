@@ -118,6 +118,36 @@ describe("Stage 9 resource authority", () => {
     })).toEqual([]);
   });
 
+  it("does not read a composed child artifact as the composite writing it", () => {
+    // A composite integration diffs against the target base, so every path in
+    // every child artifact it composes appears in changedFiles by construction.
+    // A live run reached integration with both children verified and adopted
+    // and was refused for "writing" exactly the four files it was there to
+    // compose. Composing an artifact this node consumes is not a write.
+    expect(checkResourceAuthority({
+      nodeId: "unit:root",
+      resourceClaims: claims,
+      artifactContracts,
+      changedPaths: ["src/a.ts", "src/b.ts", "src/app/wire.ts"],
+      composedArtifactIds: ["artifact:a", "artifact:b"]
+    })).toEqual([]);
+  });
+
+  it("still reports a child-owned path that arrived through no composed artifact", () => {
+    expect(checkResourceAuthority({
+      nodeId: "unit:root",
+      resourceClaims: claims,
+      artifactContracts,
+      changedPaths: ["src/a.ts", "src/b.ts"],
+      composedArtifactIds: ["artifact:a"]
+    })).toEqual([{
+      kind: "ownership_violation",
+      path: "src/b.ts",
+      ownedByNodeId: "unit:b",
+      attemptedByNodeId: "unit:root"
+    }]);
+  });
+
   it("lets a leaf write the path it owns", () => {
     expect(checkResourceAuthority({
       nodeId: "unit:a",

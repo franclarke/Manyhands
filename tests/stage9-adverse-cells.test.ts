@@ -119,10 +119,13 @@ describe("Stage 9 required adverse cells", () => {
       .filter((claim) => claim.nodeId === "unit:a" || claim.nodeId === "unit:b")
       .map((claim) => claim.resourceId);
     expect(new Set(leafResources).size).toBe(leafResources.length);
-    // The root's own output travels as the final manifest, not as an adopted
-    // artifact, so both leaf artifacts are what adoption should show here.
+    // The root used to be missing here, and the reason was a defect rather than
+    // a design: a composite's compiled scope spans the paths of the children it
+    // integrates, so its candidate was read as writing resources it does not
+    // own and refused. Composing a consumed child artifact is not a write, and
+    // the integration artifact is adopted like any other.
     expect(Object.values(state.adoptedArtifacts).map((artifact) => artifact.contract.id).sort())
-      .toEqual(["artifact:a", "artifact:b"]);
+      .toEqual(["artifact:a", "artifact:b", "artifact:root"]);
   });
 
   it("R3: a sequential rewrite carries an explicit artifact and version chain", async () => {

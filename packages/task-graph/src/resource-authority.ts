@@ -48,16 +48,30 @@ function writeTitles(
  *
  * A path no one claims is not reported here. That is the scope enforcer's
  * business, and reporting it twice would blur which invariant failed.
+ *
+ * `composedArtifactIds` names the artifacts this attempt composed rather than
+ * authored. An integration diffs its candidate against the target base, so
+ * every path in every child artifact it composes appears in `changedPaths` by
+ * construction; reading those as writes refuses the composite for doing the one
+ * thing it exists to do. Only the paths those artifacts actually carry are
+ * excused, so a composite that reaches a sibling path outside them is still
+ * reported.
  */
 export function checkResourceAuthority(input: {
   readonly nodeId: string;
   readonly resourceClaims: readonly ResourceClaim[];
   readonly artifactContracts: readonly ArtifactPathOwnership[];
   readonly changedPaths: readonly string[];
+  readonly composedArtifactIds?: readonly string[];
 }): ResourceAuthorityViolation[] {
   const titles = writeTitles(input.resourceClaims, input.artifactContracts);
+  const composed = new Set(input.composedArtifactIds ?? []);
+  const composedPaths = new Set(input.artifactContracts
+    .filter((contract) => composed.has(contract.id))
+    .flatMap((contract) => contract.expectedPaths));
   const violations: ResourceAuthorityViolation[] = [];
   for (const path of [...new Set(input.changedPaths)].sort()) {
+    if (composedPaths.has(path)) continue;
     const owners = titles.get(path);
     if (owners === undefined) continue;
     // A parent claiming the same resource does not dilute the child's title.

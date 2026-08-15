@@ -290,8 +290,17 @@ export class CanonicalExecutionDriver {
     const authorityViolations = checkResourceAuthority({
       nodeId: attempt.input.node.id,
       resourceClaims: run.graph.resourceClaims,
-      artifactContracts: attempt.input.contract.artifacts,
-      changedPaths: outcome.changedFiles
+      // Every artifact contract in the run, not just the ones this node's own
+      // bundle happens to carry: a node cannot be measured against a title it
+      // was never handed, which let a leaf write a sibling's file unreported.
+      artifactContracts: Object.values(run.contracts).flatMap((bundle) => bundle.artifacts),
+      changedPaths: outcome.changedFiles,
+      // An integration composes the artifacts it consumed, and its candidate is
+      // diffed against the target base, so those paths are present without the
+      // composite having authored them.
+      composedArtifactIds: attempt.input.node.kind === "leaf"
+        ? []
+        : attempt.input.consumedArtifacts.map((artifact) => artifact.contract.id)
     });
     if (authorityViolations.length > 0) {
       const reason = describeResourceAuthorityViolations(authorityViolations);
