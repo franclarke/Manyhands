@@ -56,8 +56,13 @@ afterAll(async () => {
 });
 
 afterEach(async () => {
+  // These roots hold a daemon lease, its guard directory and a named pipe, and
+  // Windows keeps handles on all three for a moment after the daemon exits.
+  // An impatient teardown fails the test that just passed, which under full
+  // suite load reads as a delivery or recovery defect rather than a stuck
+  // rmdir.
   await Promise.all(temporaryRoots.splice(0).map((root) =>
-    rm(root, { recursive: true, force: true })
+    rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
   ));
 });
 
