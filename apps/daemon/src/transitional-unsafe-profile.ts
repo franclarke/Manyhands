@@ -228,20 +228,33 @@ function createDeliveryAdapter(input: {
     if (terminalRecorded(context)) return;
     let receipt = await input.results.readDelivery(intent.effectId);
     if (receipt === undefined) {
-      const runEvents = await input.events.load(intent.runId);
-      const projection = foldRun(runEvents);
-      if (projection.definition === undefined || projection.deliveryApproval === undefined) {
-        throw new Error(`Run ${intent.runId} has no approved delivery input.`);
+      // A refused publication is the adapter's own deterministic outcome, and
+      // it has to become an observation. Throwing leaves the run parked at
+      // `effect.requested` with nothing an operator can act on, because the
+      // thrown error only reaches a queue the IPC-serving daemon never drains.
+      try {
+        const runEvents = await input.events.load(intent.runId);
+        const projection = foldRun(runEvents);
+        if (projection.definition === undefined || projection.deliveryApproval === undefined) {
+          throw new Error(`Run ${intent.runId} has no approved delivery input.`);
+        }
+        if (await context.invalidationReason?.() !== undefined) return;
+        receipt = DeliveryReceiptSchema.parse(await input.delivery.publish({
+          runId: intent.runId,
+          definition: projection.definition,
+          approval: projection.deliveryApproval,
+          projection,
+          events: runEvents
+        }));
+        await input.results.writeDelivery(intent.effectId, receipt);
+      } catch (error) {
+        await context.record({
+          observation: "failed",
+          reason: error instanceof Error ? error.message : String(error),
+          observedAt: input.clock()
+        });
+        return;
       }
-      if (await context.invalidationReason?.() !== undefined) return;
-      receipt = DeliveryReceiptSchema.parse(await input.delivery.publish({
-        runId: intent.runId,
-        definition: projection.definition,
-        approval: projection.deliveryApproval,
-        projection,
-        events: runEvents
-      }));
-      await input.results.writeDelivery(intent.effectId, receipt);
     }
     await context.record({
       observation: "succeeded",

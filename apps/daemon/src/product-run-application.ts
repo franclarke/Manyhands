@@ -203,24 +203,22 @@ async function react(
     const receipt = succeeded && options.loadDeliveryResult !== undefined
       ? await options.loadDeliveryResult(observation.intent.effectId)
       : undefined;
+    // A completed effect whose durable receipt is missing is the crash window
+    // between the physical publish and the write that records it. Synthesizing
+    // one from the approval claimed `confirmed: true` for a head nobody
+    // observed, which is the false success this stage exists to prevent; the
+    // planning branch above already fails closed for the same reason.
+    const provenReceipt = succeeded && receipt === undefined ? undefined : receipt;
     return {
-      domainEvents: succeeded
+      domainEvents: succeeded && provenReceipt !== undefined
         ? [event(options, context.runId, "delivery.published", {
-          receipt: receipt ?? {
-            receiptId: terminalReceiptId(observation),
-            manifestId: delivery.approval.manifestId,
-            finalSha: delivery.approval.finalSha,
-            targetBranch: delivery.approval.targetBranch,
-            targetHeadBefore: delivery.approval.targetHead,
-            targetHeadAfter: delivery.approval.finalSha,
-            disposition: "delivered",
-            destination: delivery.approval.targetBranch,
-            confirmed: true
-          }
+          receipt: provenReceipt
         }, observation.intent.effectId)]
         : [event(options, context.runId, "delivery.failed", {
           manifestId: delivery.approval.manifestId,
-          reason: "The delivery adapter did not prove publication.",
+          reason: succeeded
+            ? "A delivery effect completed without a durable receipt; nothing proves the target moved."
+            : "The delivery adapter did not prove publication.",
           retryable: true
         }, observation.intent.effectId)],
       effects: []
