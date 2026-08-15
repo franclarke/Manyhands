@@ -11,6 +11,24 @@ const execFileAsync = promisify(execFile);
 export const stage10At = "2026-08-15T00:00:00.000Z";
 export const STAGE10_FINGERPRINT = "target:stage10-delivery";
 
+const PACKAGE_JSON = `${JSON.stringify(
+  { name: "stage10-delivery-target", private: true, type: "module", scripts: { test: "node --test" } },
+  null,
+  2
+)}\n`;
+
+/** The delivered claim, expressed as a command a clone can run. */
+const RESULT_TEST = [
+  'import { readFileSync } from "node:fs";',
+  'import test from "node:test";',
+  'import assert from "node:assert/strict";',
+  "",
+  'test("the delivered result is the candidate", () => {',
+  '  assert.equal(readFileSync("result.txt", "utf8").trim(), "candidate");',
+  "});",
+  ""
+].join("\n");
+
 export interface Stage10DeliveryTarget {
   /** Repository root, checked out on `main` at `baseSha`. */
   root: string;
@@ -47,12 +65,16 @@ export async function buildDeliveryTargetFixture(): Promise<Stage10DeliveryTarge
   // line-ending policy rather than the artifact policy.
   await git(root, "config", "core.autocrlf", "true");
 
+  // A runnable package, so a clone of the delivered ref can execute the same
+  // validation command the run recorded rather than a stub of it.
+  await write(root, "package.json", PACKAGE_JSON);
   await commit(root, "result.txt", "base\n", "base");
   const baseSha = await git(root, "rev-parse", "HEAD");
 
   await git(root, "checkout", "-b", "candidate");
   await commit(root, "result.txt", "mid\n", "mid");
   const midSha = await git(root, "rev-parse", "HEAD");
+  await write(root, "result.test.js", RESULT_TEST);
   await commit(root, "result.txt", "candidate\n", "candidate");
   const candidateSha = await git(root, "rev-parse", "HEAD");
   const treeSha = await git(root, "rev-parse", `${candidateSha}^{tree}`);
@@ -144,6 +166,10 @@ export async function git(cwd: string, ...args: string[]): Promise<string> {
 
 async function commit(root: string, file: string, content: string, message: string): Promise<void> {
   await writeFile(path.join(root, file), content, "utf8");
-  await git(root, "add", file);
+  await git(root, "add", ".");
   await git(root, "commit", "-m", message);
+}
+
+async function write(root: string, file: string, content: string): Promise<void> {
+  await writeFile(path.join(root, file), content, "utf8");
 }
