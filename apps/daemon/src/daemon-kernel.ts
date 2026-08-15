@@ -52,10 +52,22 @@ export interface StartDaemonKernelOptions {
   windowsPipeAclHelperPath?: string;
   ipcNow?: () => number;
   onIpcError?: (error: Error) => void;
+  /**
+   * Startup recovery no longer blocks the endpoint, so its failures need a
+   * reported channel of their own instead of surfacing as a rejected start.
+   */
+  onStartupRecoveryError?: (error: Error) => void;
 }
 
 export interface DaemonKernel {
   readonly endpoint: string;
+  /**
+   * Settles when every run discovered at startup has been reconciled. The
+   * endpoint accepts commands before this resolves, so a caller that needs the
+   * guarantee - a crash-recovery test, an operator check - awaits it explicitly
+   * rather than inferring it from the fact that startup returned.
+   */
+  readonly startupRecovery: Promise<void>;
   readonly capabilityFilePath: string;
   readonly daemonEpoch: string;
   readonly transportSecurity: LocalIpcTransportSecurity;
@@ -145,10 +157,24 @@ export async function startDaemonKernel(
     const runIds = await eventStore.listRunIds({
       limit: options.startupRecoveryRunLimit ?? 10_000
     });
-    for (const runId of runIds) {
-      await registry.getOrCreate(runId);
-    }
     await lease.assertCurrent();
+
+    // Recovery re-runs the physical effects a crashed daemon left pending, so
+    // awaiting it here made the endpoint unavailable for as long as the slowest
+    // effect took - a model call is minutes, and the caller cannot tell that
+    // apart from a daemon that never started.
+    //
+    // It still starts before the endpoint accepts anything, and it stays
+    // sequential so a restart does not stampede every pending effect at once.
+    // A command that arrives for a run already recovering joins the same actor
+    // through the registry's in-flight promise rather than racing it.
+    const startupRecovery = (async () => {
+      for (const runId of runIds) await registry.getOrCreate(runId);
+    })();
+    startupRecovery.catch((error: unknown) => {
+      options.onStartupRecoveryError?.(error instanceof Error ? error : new Error(String(error)));
+    });
+    const startupRecoverySettled = startupRecovery.catch(() => undefined);
 
     server = await startLocalIpcServer({
       endpoint: options.endpoint,
@@ -190,7 +216,8 @@ export async function startDaemonKernel(
       actors,
       eventStore,
       engine,
-      capabilityFilePath: capability.filePath
+      capabilityFilePath: capability.filePath,
+      startupRecovery: startupRecoverySettled
     });
   } catch (error) {
     await server?.close().catch(() => undefined);
@@ -206,10 +233,12 @@ function createKernelHandle(input: {
   eventStore: JsonlRunEventStore;
   engine: DurableRunEngine;
   capabilityFilePath: string;
+  startupRecovery: Promise<void>;
 }): DaemonKernel {
   let closed = false;
   return Object.freeze({
     endpoint: input.server.endpoint,
+    startupRecovery: input.startupRecovery,
     capabilityFilePath: input.capabilityFilePath,
     daemonEpoch: input.lease.owner.daemonEpoch,
     transportSecurity: input.server.transportSecurity,

@@ -14,6 +14,12 @@ import { startSingleFlightPoller } from "./manyhands-dev-poller.mjs";
 import { resolveDefaultDevSpawn } from "./manyhands-dev-command.mjs";
 
 const DEFAULT_URL = "http://localhost:3000";
+// `pnpm --filter @manyhands/web dev` runs Next from apps/web while the daemon
+// runs from the repository root, and both resolve ".manyhands/daemon" against
+// their own cwd. Without an explicit anchor they look for the same daemon in
+// two different directories and the UI never finds it.
+const DAEMON_STATE_ROOT = process.env.MANYHANDS_DAEMON_STATE_ROOT
+  ?? path.resolve(process.cwd(), ".manyhands/daemon");
 const RENDER_INTERVAL_MS = 350;
 const RUN_POLL_INTERVAL_MS = 2_000;
 const RUN_POLL_MAX_BACKOFF_MS = 30_000;
@@ -175,6 +181,7 @@ function startDaemonProcess() {
     env: {
       ...process.env,
       MANYHANDS_DAEMON_PROFILE: process.env.MANYHANDS_DAEMON_PROFILE ?? "deterministic_fake",
+      MANYHANDS_DAEMON_STATE_ROOT: DAEMON_STATE_ROOT,
       FORCE_COLOR: process.env.FORCE_COLOR ?? (visual ? "1" : "0")
     },
     shell: false,
@@ -241,6 +248,7 @@ function startDevServer(parsedOptions, usesDefaultCommand = parsedOptions.comman
     cwd: process.cwd(),
     env: {
       ...process.env,
+      MANYHANDS_DAEMON_STATE_ROOT: DAEMON_STATE_ROOT,
       FORCE_COLOR: process.env.FORCE_COLOR ?? (visual ? "1" : "0")
     },
     shell: false,
