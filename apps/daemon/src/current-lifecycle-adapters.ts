@@ -321,9 +321,24 @@ export function createCurrentPlannerPort(
         idFactory: (kind, parts) => stableId(kind, parts.join(":"))
       });
       if (!compiled.ok) {
+        // The compiler's findings are a list; joining them into one sentence is
+        // what Stage 11 stopped doing for the planning engine's own findings and
+        // never stopped doing here. A rejected plan with six reasons reached the
+        // operator as a paragraph they had to parse.
         return {
           events: [...baseEvents, fact(`planning:${runId}:failed`, now(), "planning.failed", {
-            reason: compiled.findings.map(({ code, message }) => `${code}: ${message}`).join(" | ")
+            reason: compiled.findings.map(({ code, message }) => `${code}: ${message}`).join(" | "),
+            // The compiler already says which subject each finding is about;
+            // an operator reading "writers A and B are not ordered" needs that,
+            // and rebuilding it here would be a second, weaker opinion.
+            findings: compiled.findings.map((finding) => ({
+              code: finding.code,
+              message: finding.message,
+              severity: finding.severity,
+              evidenceRefs: finding.subjectId === undefined
+                ? [...finding.evidenceRefs]
+                : [...finding.evidenceRefs, finding.subjectId]
+            }))
           })]
         };
       }
