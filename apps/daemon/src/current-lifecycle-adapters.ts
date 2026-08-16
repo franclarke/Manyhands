@@ -1167,11 +1167,6 @@ function stringField(record: Record<string, unknown>, key: string): string {
   return value;
 }
 
-function positiveIntegerField(record: Record<string, unknown>, key: string): number | undefined {
-  const value = record[key];
-  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : undefined;
-}
-
 function positive(value: number): number {
   return Number.isFinite(value) && value > 0 ? value : 600_000;
 }

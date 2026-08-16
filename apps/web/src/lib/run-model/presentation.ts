@@ -1,3 +1,4 @@
+import type { RecoveryDiagnostic } from "@manyhands/contracts";
 import type { AutonomyLevel, GranularityStrategyProjection, RunLifecycle } from "@manyhands/run-coordinator";
 import type { RunGraphView } from "@/lib/run-model/graph-view";
 import type { RunNodeView } from "@/lib/run-model/types";
@@ -143,6 +144,85 @@ function isAutonomyLevel(value: unknown): value is AutonomyLevel {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+export interface RecoveryDiagnosticView {
+  headline: string;
+  evidence: Array<{ label: string; value: string }>;
+}
+
+/**
+ * A recovery failure with the identifiers that make it actionable.
+ *
+ * "The delivery target changed" cannot distinguish a branch that advanced to an
+ * ancestor of the candidate from one that moved to an unrelated commit, and
+ * those have different answers. The diagnostic carries the ref and both OIDs;
+ * this is what stops them being flattened back into a sentence on the way to
+ * the screen.
+ *
+ * Returns nothing when the run recorded no diagnostic. A journal written before
+ * they travelled structured carries only its reason, which the failure block
+ * already renders — recovering labelled fields by parsing that sentence would
+ * be reading tea leaves.
+ */
+export function recoveryDiagnosticView(projection: {
+  recoveryDiagnostic?: RecoveryDiagnostic | undefined;
+}): RecoveryDiagnosticView | null {
+  const diagnostic = projection.recoveryDiagnostic;
+  if (diagnostic === undefined) return null;
+  switch (diagnostic.kind) {
+    case "target_divergence":
+      return {
+        headline: "La rama objetivo se movió; no se publicó nada.",
+        evidence: [
+          { label: "Referencia", value: diagnostic.ref },
+          { label: "Se esperaba", value: diagnostic.expectedOid },
+          { label: "Contiene", value: diagnostic.actualOid }
+        ]
+      };
+    case "stale_decision":
+      return {
+        headline: "La decisión quedó vieja frente al grafo vigente.",
+        evidence: [
+          { label: "Decisión", value: diagnostic.decisionId },
+          { label: "Planteada en revisión", value: String(diagnostic.raisedAtGraphRevision) },
+          { label: "Revisión actual", value: String(diagnostic.currentGraphRevision) }
+        ]
+      };
+    case "corrupt_journal":
+      return {
+        headline: "El journal del run no se puede leer completo.",
+        evidence: [
+          { label: "Run", value: diagnostic.runId },
+          { label: "Registro", value: String(diagnostic.sequence) },
+          { label: "Detalle", value: diagnostic.detail }
+        ]
+      };
+    case "missing_object":
+      return {
+        headline: "Falta en el repositorio un objeto que la recuperación necesita.",
+        evidence: [
+          { label: "Objeto", value: diagnostic.oid },
+          { label: "Requerido por", value: diagnostic.expectedBy }
+        ]
+      };
+    case "unresolved_process":
+      return {
+        headline: "Un proceso quedó sin desenlace observado.",
+        evidence: [
+          { label: "Proceso", value: diagnostic.processId },
+          { label: "Último recibo", value: diagnostic.lastReceiptId }
+        ]
+      };
+    case "unrecoverable_external_effect":
+      return {
+        headline: "Un efecto externo no se puede reconciliar.",
+        evidence: [
+          { label: "Efecto", value: diagnostic.effectId },
+          { label: "Detalle", value: diagnostic.detail }
+        ]
+      };
+  }
 }
 
 export type GraphLens = "execution" | "artifact" | "contract" | "conflict" | "all";

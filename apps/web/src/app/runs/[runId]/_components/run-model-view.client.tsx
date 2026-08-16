@@ -9,7 +9,7 @@ import { useLiveRunModel } from "@/components/run-model/use-live-run-model";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { StatusPill } from "@/components/ui/status-pill";
-import { autonomyDisclosure, eventDetail, eventPresentation, granularityStrategyExplanation, objectiveHeadline, planningFailureFindings, showsExecutionCounters, summarizeRunNodes, type GranularityExplanationView } from "@/lib/run-model/presentation";
+import { autonomyDisclosure, eventDetail, eventPresentation, granularityStrategyExplanation, objectiveHeadline, planningFailureFindings, recoveryDiagnosticView, showsExecutionCounters, summarizeRunNodes, type GranularityExplanationView } from "@/lib/run-model/presentation";
 import type { RunEvent, RunSeed } from "@/lib/run-model/types";
 import { runUiStatus, statusMeta } from "@/lib/status";
 import { CockpitRunGraph } from "./cockpit-run-graph";
@@ -253,6 +253,7 @@ function RunSummary({ model, canDeliver }: { model: ReturnType<typeof useLiveRun
       {canDeliver ? <div className="mt-4 rounded-lg border border-[var(--status-completed-border)] bg-[var(--status-completed-bg)] p-3 text-xs text-[var(--status-completed-fg)]"><CheckCircle2 className="mr-2 inline h-4 w-4" />Resultado verificado listo para publicar.</div> : null}
       {model.run.lifecycle === "result_ready" && model.projection?.finalCandidate !== undefined && !canDeliver ? <div className="mt-4 rounded-lg border border-[var(--status-review-border)] bg-[var(--status-review-bg)] p-3 text-xs text-[var(--status-review-fg)]">La entrega está bloqueada hasta verificar la matriz exacta del candidato.</div> : null}
       <EvidenceDetails matrices={model.evidenceMatrices} matrixId={model.projection?.finalCandidate?.evidenceMatrixId} candidateCommit={model.projection?.finalCandidate?.commit} />
+      <RecoveryFailure projection={model.projection} />
       <FailureFindings projection={model.projection} />
     </section>
   );
@@ -263,7 +264,37 @@ function RunSummary({ model, canDeliver }: { model: ReturnType<typeof useLiveRun
  * with " | " inside a single red block, so the operator read a paragraph to
  * learn which of seven things went wrong.
  */
+/**
+ * A recovery failure with its own evidence, in place of the sentence.
+ *
+ * The diagnostic's headline says what the reason said, and the identifiers sit
+ * beside it as fields — a diverged ref reads as three values a person can act
+ * on rather than one line they have to parse. `FailureFindings` steps aside
+ * when this renders so the same sentence is not printed twice.
+ */
+function RecoveryFailure({ projection }: { projection: ReturnType<typeof useLiveRunModel>["model"]["projection"] }): React.ReactElement | null {
+  const view = recoveryDiagnosticView({
+    ...(projection?.recoveryDiagnostic === undefined ? {} : { recoveryDiagnostic: projection.recoveryDiagnostic })
+  });
+  if (view === null) return null;
+  return (
+    <section className="mt-4 rounded-lg border border-[var(--status-failed-border)] bg-[var(--status-failed-bg)] p-3">
+      <h3 className="text-pretty text-xs font-semibold text-[var(--status-failed-fg)]">{view.headline}</h3>
+      <dl className="mt-2 grid gap-1.5 text-xs text-[var(--status-failed-fg)]">
+        {view.evidence.map((item) => (
+          <div key={item.label} className="flex flex-wrap items-baseline gap-x-2">
+            <dt className="shrink-0 opacity-80">{item.label}</dt>
+            <dd className="mh-mono min-w-0 break-all">{item.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
 function FailureFindings({ projection }: { projection: ReturnType<typeof useLiveRunModel>["model"]["projection"] }): React.ReactElement | null {
+  // The diagnostic block already carries this run's reason, field by field.
+  if (projection?.recoveryDiagnostic !== undefined) return null;
   const findings = planningFailureFindings({
     ...(projection?.failureReason === undefined ? {} : { failureReason: projection.failureReason }),
     ...(projection?.planningFindings === undefined ? {} : { planningFindings: projection.planningFindings })

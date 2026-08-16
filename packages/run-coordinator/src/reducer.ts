@@ -1,4 +1,4 @@
-import type { EffectIntent, ExactCandidate, PhysicalEffectReceipt } from "@manyhands/contracts";
+import type { EffectIntent, ExactCandidate, PhysicalEffectReceipt, RecoveryDiagnostic } from "@manyhands/contracts";
 import type { CommandReceipt } from "./command-envelope.js";
 import { DecisionSchema, type Decision } from "./domain/decisions.js";
 import { RunEventSchema, type RunEvent } from "./domain/events.js";
@@ -130,6 +130,12 @@ export interface RunProjection {
   failureReason?: string;
   /** Absent on journals recorded before findings travelled structured. */
   planningFindings?: PlanningFailureFinding[];
+  /**
+   * Why recovery could not continue, with the identifiers that make it
+   * actionable. Absent when the run has no such failure, and on journals
+   * recorded before the diagnostic travelled beside the reason.
+   */
+  recoveryDiagnostic?: RecoveryDiagnostic;
 }
 
 export interface PlanningFailureFinding {
@@ -694,6 +700,11 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       if (next.deliveryApproval?.manifestId !== event.payload.manifestId) throw new Error(`Delivery failure does not match the active approval for ${event.payload.manifestId}.`);
       next.outcomes.delivery = "failed";
       next.failureReason = event.payload.reason;
+      // Kept beside the sentence rather than instead of it: the sentence is
+      // what a journal from before this carries, and the diagnostic is what
+      // makes the failure actionable.
+      if (event.payload.diagnostic === undefined) delete next.recoveryDiagnostic;
+      else next.recoveryDiagnostic = event.payload.diagnostic;
       transition(next, "result_ready");
       break;
     case "run.failed":

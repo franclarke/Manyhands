@@ -2,9 +2,11 @@ import {
   buildEffectInput,
   buildEffectIntent,
   computeCanonicalDigest,
+  describeRecoveryDiagnostic,
   type DigestHasher,
   type EffectInputSpec,
-  type ProcessIdentity
+  type ProcessIdentity,
+  type RecoveryDiagnostic
 } from "@manyhands/contracts";
 import {
   ProductRunCommandSchema,
@@ -58,6 +60,13 @@ export interface ProductRunApplicationOptions {
   loadPlanningResult?(effectId: string): Promise<readonly RunEventInput[]>;
   loadExecutionResult?(runId: string, attemptId: string): Promise<readonly RunEventInput[]>;
   loadDeliveryResult?(effectId: string): Promise<DeliveryReceipt>;
+  /**
+   * Why recovery refused, when the adapter produced a structured reason. The
+   * receipt cannot carry it — a physical effect receipt knows nothing about
+   * refs or graph revisions — so it travels through the same durable side
+   * store the planning and execution results already use.
+   */
+  loadRecoveryDiagnostic?(effectId: string): Promise<RecoveryDiagnostic | undefined>;
 }
 
 export interface ProductRunApplication {
@@ -226,18 +235,28 @@ async function react(
     // observed, which is the false success this stage exists to prevent; the
     // planning branch above already fails closed for the same reason.
     const provenReceipt = succeeded && receipt === undefined ? undefined : receipt;
-    return {
-      domainEvents: succeeded && provenReceipt !== undefined
-        ? [event(options, context.runId, "delivery.published", {
+    if (succeeded && provenReceipt !== undefined) {
+      return {
+        domainEvents: [event(options, context.runId, "delivery.published", {
           receipt: provenReceipt
-        }, observation.intent.effectId)]
-        : [event(options, context.runId, "delivery.failed", {
-          manifestId: approval.manifestId,
-          reason: succeeded
-            ? "A delivery effect completed without a durable receipt; nothing proves the target moved."
-            : "The delivery adapter did not prove publication.",
-          retryable: true
         }, observation.intent.effectId)],
+        effects: []
+      };
+    }
+    const diagnostic = options.loadRecoveryDiagnostic === undefined
+      ? undefined
+      : await options.loadRecoveryDiagnostic(observation.intent.effectId);
+    return {
+      domainEvents: [event(options, context.runId, "delivery.failed", {
+        manifestId: approval.manifestId,
+        reason: succeeded
+          ? "A delivery effect completed without a durable receipt; nothing proves the target moved."
+          : diagnostic === undefined
+            ? "The delivery adapter did not prove publication."
+            : describeRecoveryDiagnostic(diagnostic),
+        retryable: true,
+        ...(diagnostic === undefined ? {} : { diagnostic })
+      }, observation.intent.effectId)],
       effects: []
     };
   }

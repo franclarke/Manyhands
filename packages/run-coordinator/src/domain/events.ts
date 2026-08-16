@@ -1,4 +1,4 @@
-import { EffectIntentSchema, ExactCandidateSchema, PhysicalEffectReceiptSchema, RepositoryViewRefSchema } from "@manyhands/contracts";
+import { EffectIntentSchema, ExactCandidateSchema, PhysicalEffectReceiptSchema, RecoveryDiagnosticSchema, RepositoryViewRefSchema } from "@manyhands/contracts";
 import { EntityIdSchema, FinalArtifactManifestSchema, IsoTimestampSchema, NonEmptyStringSchema } from "@manyhands/shared";
 import { z } from "zod";
 import { CommandReceiptSchema, RunCommandEnvelopeSchema } from "../command-envelope.js";
@@ -386,7 +386,10 @@ export const RunEventSchema = z.discriminatedUnion("type", [
   }).strict()),
   event("delivery.started", z.object({ approval: DeliveryApprovalSchema }).strict()),
   event("delivery.published", z.object({ receipt: DeliveryReceiptSchema }).strict()),
-  event("delivery.failed", z.object({ manifestId: EntityIdSchema, reason: NonEmptyStringSchema, retryable: z.boolean() }).strict()),
+  // The reason stays: journals written before diagnostics travelled
+  // structured carry only that, and one that no longer replays is worse than
+  // one missing a field.
+  event("delivery.failed", z.object({ manifestId: EntityIdSchema, reason: NonEmptyStringSchema, retryable: z.boolean(), diagnostic: RecoveryDiagnosticSchema.optional() }).strict()),
   event("run.failed", z.object({ reason: NonEmptyStringSchema, area: z.enum(["execution", "artifact", "delivery", "domain"]) }).strict())
 ]);
 

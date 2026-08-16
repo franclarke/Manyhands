@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { RecoveryDiagnosticSchema, type RecoveryDiagnostic } from "@manyhands/contracts";
+import { DeliveryRecoveryError } from "@manyhands/execution-core";
 
 import {
   DeliveryReceiptSchema,
@@ -32,6 +34,14 @@ export interface TransitionalLifecycleResultStore {
   readExecution(runId: string, attemptId: string): Promise<TransitionalLifecycleResult | undefined>;
   writeDelivery(effectId: string, receipt: DeliveryReceipt): Promise<void>;
   readDelivery(effectId: string): Promise<DeliveryReceipt | undefined>;
+  /**
+   * Why an adapter refused, when it knew in terms the domain can use. A
+   * physical effect receipt knows nothing about refs or graph revisions, so a
+   * diagnostic that only existed inside a thrown Error reached the operator as
+   * prose and lost the identifiers that made it actionable.
+   */
+  writeRecoveryDiagnostic(effectId: string, diagnostic: RecoveryDiagnostic): Promise<void>;
+  readRecoveryDiagnostic(effectId: string): Promise<RecoveryDiagnostic | undefined>;
 }
 
 export interface TransitionalPlannerPort {
@@ -126,7 +136,8 @@ export function createTransitionalUnsafeProfile(
       const result = await results.readDelivery(effectId);
       if (result === undefined) throw new Error(`Delivery adapter result ${effectId} is missing.`);
       return DeliveryReceiptSchema.parse(result);
-    }
+    },
+    loadRecoveryDiagnostic: (effectId: string) => results.readRecoveryDiagnostic(effectId)
   });
 }
 
@@ -158,6 +169,18 @@ export class FileTransitionalLifecycleResultStore implements TransitionalLifecyc
   async readDelivery(effectId: string): Promise<DeliveryReceipt | undefined> {
     const value = await readJson(this.file("delivery", effectId));
     return value === undefined ? undefined : DeliveryReceiptSchema.parse(value);
+  }
+
+  writeRecoveryDiagnostic(effectId: string, diagnostic: RecoveryDiagnostic): Promise<void> {
+    return atomicWriteJson(
+      this.file("recovery-diagnostic", effectId),
+      RecoveryDiagnosticSchema.parse(diagnostic)
+    );
+  }
+
+  async readRecoveryDiagnostic(effectId: string): Promise<RecoveryDiagnostic | undefined> {
+    const value = await readJson(this.file("recovery-diagnostic", effectId));
+    return value === undefined ? undefined : RecoveryDiagnosticSchema.parse(value);
   }
 
   private file(kind: string, identity: string): string {
@@ -248,6 +271,13 @@ function createDeliveryAdapter(input: {
         }));
         await input.results.writeDelivery(intent.effectId, receipt);
       } catch (error) {
+        // The prose still says it, because an operator reading only the
+        // message has to learn the same thing. The structured diagnostic is
+        // written beside it so the workspace can name the ref and both OIDs
+        // rather than reprinting a sentence.
+        if (error instanceof DeliveryRecoveryError) {
+          await input.results.writeRecoveryDiagnostic(intent.effectId, error.diagnostic);
+        }
         await context.record({
           observation: "failed",
           reason: error instanceof Error ? error.message : String(error),
