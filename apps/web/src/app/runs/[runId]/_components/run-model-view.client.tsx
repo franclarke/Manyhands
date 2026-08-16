@@ -15,6 +15,7 @@ import { runUiStatus, statusMeta } from "@/lib/status";
 import { CockpitRunGraph } from "./cockpit-run-graph";
 import { evidenceMatrixForIdentity, isFinalCandidateDeliverable } from "./cockpit-state";
 import { DecisionQueueDrawer } from "./DecisionQueueDrawer";
+import { NODE_KIND_LABEL } from "./task-node-v2";
 
 export function RunModelView({
   seed,
@@ -112,7 +113,10 @@ export function RunModelView({
   }
 
   return (
-    <main className="flex h-dvh min-h-[680px] flex-col overflow-hidden bg-[var(--color-bg)] text-[var(--color-text)]">
+    // The app shell renders the page's `main`; this used to render a second
+    // one inside it, so the page had two main landmarks and neither was the
+    // whole of the content.
+    <section aria-label="Workspace del run" className="flex h-dvh min-h-[680px] flex-col overflow-hidden bg-[var(--color-bg)] text-[var(--color-text)]">
       <header className="flex min-h-14 shrink-0 items-center justify-between gap-4 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-baseline gap-2">
@@ -208,7 +212,7 @@ export function RunModelView({
         </aside>
       </div>
 
-    </main>
+    </section>
   );
 }
 
@@ -416,7 +420,7 @@ function decisionReason(question: string, nodes: ReturnType<typeof useLiveRunMod
 function NodeDetails({ node, contract, granularity, onClose }: { node: ReturnType<typeof useLiveRunModel>["model"]["nodes"][number]; contract: ReturnType<typeof useLiveRunModel>["model"]["contracts"][number] | null; granularity: GranularityExplanationView | null; onClose: () => void }): React.ReactElement {
   return (
     <section className="border-b border-[var(--color-border)] p-5">
-      <div className="flex items-start justify-between gap-4"><div><span className="mh-mono text-eyebrow uppercase tracking-[0.12em] text-[var(--color-text-subtle)]">{node.kind}</span><h2 className="mt-1 text-sm font-semibold">{node.title}</h2></div><button type="button" onClick={onClose} aria-label="Cerrar detalle"><X className="h-4 w-4" /></button></div>
+      <div className="flex items-start justify-between gap-4"><div><span className="mh-mono text-eyebrow uppercase tracking-[0.12em] text-[var(--color-text-subtle)]">{NODE_KIND_LABEL[node.kind]}</span><h2 className="mt-1 text-sm font-semibold">{node.title}</h2></div><button type="button" onClick={onClose} aria-label="Cerrar detalle"><X className="h-4 w-4" /></button></div>
       <p className="mt-3 text-xs leading-5 text-[var(--color-text-muted)]">{node.goal}</p>
       {granularity !== null ? <GranularityDetails granularity={granularity} /> : null}
       {contract !== null ? <div className="mt-5 space-y-4 text-xs"><Detail label="Alcance" value={`${contract.scope.allowedPaths.length} rutas permitidas`} /><Detail label="Criterios" value={`${contract.task.acceptanceCriteria.length} condiciones verificables`} /><Detail label="Entradas / salidas" value={`${contract.task.consumes.length} / ${contract.task.produces.length}`} /><div><span className="mb-2 block text-eyebrow uppercase tracking-wide text-[var(--color-text-subtle)]">Aceptación</span><ul className="space-y-1.5">{contract.task.acceptanceCriteria.map((criterion) => <li key={criterion.id} className="rounded bg-[var(--color-bg-subtle)] p-2">{criterion.description}</li>)}</ul></div></div> : <p className="mt-4 text-xs text-[var(--color-text-subtle)]">Este nodo agrupa trabajo; sus contratos viven en los nodos ejecutables.</p>}

@@ -13,19 +13,13 @@ export interface TaskNodeV2Data extends Record<string, unknown> {
   dimmed: boolean;
   blocked: boolean;
   decisionIds: readonly string[];
-  /**
-   * Topological level, present only in the flow arrangement. The band rail is
-   * `aria-hidden`, so this is where the level reaches assistive tech — attached
-   * to the node it describes rather than announced between every pair of nodes.
-   */
-  bandLevel?: number | undefined;
   onOpenDecision: (decisionId: string) => void;
 }
 
 export type TaskNodeV2FlowNode = Node<TaskNodeV2Data, "taskNodeV2">;
 
 /** The canonical kind is our vocabulary; the badge is the reader's. */
-const NODE_KIND_LABEL: Record<"root" | "composite" | "leaf" | "integrator", string> = {
+export const NODE_KIND_LABEL: Record<"root" | "composite" | "leaf" | "integrator", string> = {
   root: "objetivo",
   composite: "coordina",
   leaf: "ejecuta",
@@ -33,17 +27,13 @@ const NODE_KIND_LABEL: Record<"root" | "composite" | "leaf" | "integrator", stri
 };
 
 export function TaskNodeV2({ data }: NodeProps<TaskNodeV2FlowNode>): React.ReactElement {
-  const { node, medal, selected, dimmed, blocked, decisionIds, bandLevel, onOpenDecision } = data;
+  const { node, medal, selected, dimmed, blocked, decisionIds, onOpenDecision } = data;
   const visual = medalVisual(medal.state);
   return (
-    <article
-      aria-label={[
-        node.title,
-        medal.badge || fallbackStatus(node.status),
-        bandLevel === undefined
-          ? undefined
-          : bandLevel === 0 ? "Nivel 0, sin dependencias" : `Nivel ${bandLevel}, tras ${bandLevel === 1 ? "1 dependencia" : `${bandLevel} dependencias`}`
-      ].filter(Boolean).join(". ")}
+    // A plain card, not a named region. The element React Flow focuses is the
+    // wrapper around this one and it now carries the whole sentence; naming
+    // this too made a screen reader say the node twice in a row.
+    <div
       className={[
         "relative w-[246px] rounded-xl border-2 bg-[var(--color-surface-raised)] px-4 py-3 shadow-sm",
         "transition-[border-color,box-shadow,opacity,transform] duration-200 motion-reduce:transition-none",
@@ -67,7 +57,11 @@ export function TaskNodeV2({ data }: NodeProps<TaskNodeV2FlowNode>): React.React
           <span className="text-micro font-semibold uppercase tracking-wide text-[var(--color-text-subtle)]">{fallbackStatus(node.status)}</span>
         )}
       </div>
-      <h3 className="mt-2 text-sm font-semibold leading-5 text-[var(--color-text)]">{node.title}</h3>
+      {/* Not a heading: a card in a canvas is not a section of the document,
+          and as an h3 under the page h1 it both broke the outline and made a
+          screen reader say the title twice — the focusable wrapper already
+          announces it. */}
+      <p className="mt-2 text-sm font-semibold leading-5 text-[var(--color-text)]">{node.title}</p>
       <p className="mt-1 line-clamp-2 text-micro leading-4 text-[var(--color-text-muted)]">{node.goal}</p>
       {medal.state === "failed" ? (
         <p role="status" className="mt-2 flex gap-1.5 rounded-lg bg-red-50 p-2 text-micro leading-4 text-red-800 dark:bg-red-950/40 dark:text-red-200">
@@ -92,7 +86,7 @@ export function TaskNodeV2({ data }: NodeProps<TaskNodeV2FlowNode>): React.React
           ))}
         </div>
       ) : null}
-    </article>
+    </div>
   );
 }
 
@@ -146,15 +140,22 @@ function medalVisual(state: LifecycleMedal["state"]): { border: string; badge: s
   }
 }
 
-function fallbackStatus(status: RunNodeView["status"]): string {
+/**
+ * The status a node shows when it has no lifecycle badge yet — on the card and
+ * in the node's accessible name.
+ *
+ * It only appears before a node has produced anything, which is how it stayed
+ * in English through the pass that translated every badge that had one.
+ */
+export function fallbackStatus(status: RunNodeView["status"]): string {
   const labels: Record<RunNodeView["status"], string> = {
-    pending: "Pending",
-    ready: "Ready",
-    running: "Running",
-    waiting: "Waiting",
-    succeeded: "Complete",
-    failed: "Failed",
-    stale: "Stale"
+    pending: "Pendiente",
+    ready: "Listo",
+    running: "En curso",
+    waiting: "Esperando",
+    succeeded: "Completo",
+    failed: "Falló",
+    stale: "Obsoleto"
   };
   return labels[status];
 }

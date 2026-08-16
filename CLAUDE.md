@@ -82,10 +82,19 @@ gastar una corrida viva.
 - `pnpm typecheck` incluye `tests/` y resuelve `@manyhands/*` por `dist`, que no
   está versionado. Reconstruir los paquetes antes de typechequear: un `dist`
   viejo esconde deriva de tipos en los dobles de prueba.
+- `pnpm build` y el typecheck recursivo filtran `./packages/*`: **no cubren
+  `apps/daemon`**. Vitest transpila sin typechequear, así que un error de tipos
+  ahí pasa la suite entera y recién explota al levantar el stack de desarrollo,
+  que sí compila el daemon. Correr `pnpm --filter @manyhands/daemon build`
+  después de tocar `apps/daemon` o cualquier tipo que consuma.
+- La suite completa corre 312 archivos en paralelo y los tests que lanzan
+  procesos reales se caen por timeout bajo esa carga. `stage3-daemon-restart-physical`
+  ya lo hizo: 90 s de timeout en la suite, 4 s en aislamiento.
 
 ```bash
 pnpm test
 pnpm -r --filter "./packages/*" typecheck
+pnpm --filter @manyhands/daemon build
 pnpm --filter @manyhands/web exec tsc --noEmit
 pnpm build
 pnpm web:build

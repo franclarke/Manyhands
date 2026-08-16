@@ -12,7 +12,7 @@ export default function RunLoading(): React.ReactElement {
       aria-label="Cargando run"
       aria-live="polite"
     >
-      <main
+      <div
         aria-hidden="true"
         className="flex h-dvh min-h-[680px] flex-col overflow-hidden bg-[var(--color-bg)] text-[var(--color-text)]"
       >
@@ -87,7 +87,7 @@ export default function RunLoading(): React.ReactElement {
             </section>
           </aside>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

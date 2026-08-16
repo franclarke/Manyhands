@@ -1470,7 +1470,8 @@
 @media (prefers-reduced-motion: reduce) {
   .mh-working, .mh-panel-enter, .mh-skel-node, .mh-skel-node-bar, .mh-min-node-enter, .mh-min-node-integrated,
   .mh-graph-node-enter, .mh-graph-node-integrating, .mh-graph-node-integrated, .mh-edge-tooltip, .mh-status-pulse,
-  .coral-pulse, .edge-flow, .edge-flow-reverse, .mh-min-node-wave, .mh-skeleton, .animate-pulse { animation: none; }
+  .coral-pulse, .edge-flow, .edge-flow-reverse, .mh-min-node-wave, .mh-skeleton, .animate-pulse,
+  .animate-fade-in { animation: none; }
   .mh-run-graph .react-flow__node { transition: none; }
   .mh-run-graph .react-flow__edge.animated path { animation: none !important; }
 }

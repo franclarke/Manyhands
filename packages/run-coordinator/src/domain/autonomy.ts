@@ -42,7 +42,9 @@ export function standingAuthorization(level: AutonomyLevel): StandingAuthorizati
   return { kind: "autonomy_policy", level };
 }
 
-export function runAutonomy(definition: { autonomy?: AutonomyLevel } | undefined): AutonomyLevel {
+export function runAutonomy(
+  definition: { autonomy?: AutonomyLevel | undefined } | undefined
+): AutonomyLevel {
   return definition?.autonomy ?? DEFAULT_AUTONOMY;
 }
 

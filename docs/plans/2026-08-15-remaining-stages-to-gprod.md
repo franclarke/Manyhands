@@ -25,6 +25,7 @@ Read from the working tree and the run journals on 2026-08-15, not carried over.
 | 9 / GI | `in_review` | Deterministic work complete on a green tree. Needs a bounded independent review. |
 | 10 / GDel | `in_review` | Publication is one conditional ref update with a receipt for the exact delivered tree; seven invariants, a five-cell restart matrix, R12 and R13. Needs a bounded independent review. |
 | 11 | superseded | Replaced by Stages 11–13 below. |
+| 11 (new) | `in_progress` | Deliverables landed on 2026-08-16; see below. GObs needs its audit and a bounded independent review. |
 
 **The end-to-end evidence that changes the picture.** Run
 `run:e57c0076…` on 2026-08-15: composite root plus two leaves, both leaves
@@ -196,23 +197,44 @@ graph projection the UI still depends on, and the UI would go from wrong to
 blank. Stage 13 needs both: a truthful view to judge through, and a closed
 architecture so a gate result attributes to one candidate.
 
-## Why the demonstration run waits for Stage 11
+## What Stage 11 has delivered, on 2026-08-16
 
-Two blockers, both concrete.
+Both blockers named for the demonstration run are closed.
 
-`autonomy: autonomous` has no productive implementation in the daemon path, so
-every gate in a deep graph would stop for a manual approval. On a three-node run
-that is two clicks; on a twelve-node run across several waves it is the
-experiment's dominant cost, and each pause is a chance to perturb the thing being
-measured.
+**`autonomy` decides something.** The level travels in the durable run
+definition, and a pure policy in `run-coordinator` decides what a standing
+authorization may answer. The axis is reversibility, not confidence: `semi`
+resolves what lives inside the run's own workspace and can be discarded with it,
+`autonomous` additionally publishes, and no level answers a `clarify_goal` —
+that decision exists precisely because the answer could not be derived. The
+actor performs the delegated act, so the answer lands in the same journal as the
+question and is stamped with the authorization that produced it; the workspace
+says which acts a person performed and which the delegation did.
 
-And a graph is only evidence if the workspace can show it. The canonical graph
-now renders and the panel no longer invents state, but the reachability guard —
-no rendered domain value without a journal fact behind it — is what makes a
-twelve-node screenshot admissible rather than decorative.
+**Nothing on screen without a fact behind it.** A mechanical sweep asserts every
+identity and every sentence the run model exposes appears in the journal it was
+built from, over a canonical graph, a historical legacy journal and a run that
+failed before compiling anything. The pre-planning placeholder is named as the
+one value drawn from no fact, admissible only because the model marks that graph
+provisional. The guard is kept honest by a case that feeds it a fabricated node
+and requires it to complain, and by asserting how many values each pass
+examined — a guard that silently starts checking nothing still reports zero
+violations.
 
-Neither is a reason to delay indefinitely. Both are Stage 11 items already in
-scope, and the rehearsal run should follow immediately once they land.
+**A refused publication reads as evidence.** Stage 10's recovery diagnostic was
+being flattened into `Error.message` at the adapter boundary. It now travels
+through the durable side store the planning and execution results already use,
+onto `delivery.failed`, into the projection, and out as labelled fields: the ref
+and both OIDs rather than "the target changed".
+
+**The workspace answers to a keyboard.** React Flow puts every node in the tab
+order and never activates one, so the central object of the run could be reached
+without a mouse and not operated; the focused element also carried no accessible
+name. Both fixed, along with a nested `main` landmark, an `h1 → h3 → h2`
+outline, an English status that only ever reached assistive tech, and white text
+on the copper accent at 2.4:1.
+
+Still open in Stage 11: the audit, and a bounded independent review of GObs.
 
 ## Open decisions for the operator
 

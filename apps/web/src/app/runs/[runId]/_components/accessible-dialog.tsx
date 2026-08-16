@@ -28,8 +28,10 @@ export function AccessibleDialog({
     if (!open) return;
     returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const panel = panelRef.current;
-    const focusable = panel?.querySelector<HTMLElement>(FOCUSABLE);
-    focusable?.focus();
+    // The panel itself, not its first control. The first control is the close
+    // button, so opening a decision used to announce "Cerrar diálogo" before
+    // the question being asked; the panel carries the title and description.
+    panel?.focus();
 
     function onKeyDown(event: KeyboardEvent): void {
       if (event.key === "Escape") {

@@ -27,7 +27,9 @@ import {
   type GraphRelationKind,
   type GraphRelationView
 } from "@/lib/run-model/presentation";
+import { activatedNodeId, graphNodeAccessibleName } from "@/lib/run-model/graph-keyboard";
 import { affectedSubgraphNodeIds, lifecycleMedalForNode, relationDisplayName } from "./cockpit-state";
+import { fallbackStatus } from "./task-node-v2";
 import { InteractiveRelationEdge, type InteractiveRelationEdgeData } from "./InteractiveRelationEdge";
 import { TaskNodeV2, type TaskNodeV2FlowNode } from "./task-node-v2";
 import { FlowBandNode, type FlowBandFlowNode } from "./flow-band-node";
@@ -152,7 +154,17 @@ function CockpitRunGraphInner({
   }
 
   return (
-    <div ref={wrapperRef} className="h-full min-h-[420px]">
+    <div
+      ref={wrapperRef}
+      className="h-full min-h-[420px]"
+      onKeyDown={(event) => {
+        // React Flow puts every node in the tab order and never activates one.
+        const activated = activatedNodeId({ key: event.key, target: event.target as Element | null });
+        if (activated === null) return;
+        event.preventDefault();
+        onSelectNode(activated);
+      }}
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -190,7 +202,7 @@ function CockpitRunGraphInner({
                 type="button"
                 aria-pressed={lens === option.value}
                 onClick={() => setLens(option.value)}
-                className="rounded-md px-2 py-1.5 text-micro font-semibold text-[var(--color-text-muted)] hover:bg-[var(--color-bg-subtle)] aria-pressed:bg-[var(--color-accent)] aria-pressed:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                className="rounded-md px-2 py-1.5 text-micro font-semibold text-[var(--color-text-muted)] hover:bg-[var(--color-bg-subtle)] aria-pressed:bg-[var(--color-accent)] aria-pressed:text-[var(--color-accent-contrast)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
               >
                 {option.label}
               </button>
@@ -271,25 +283,36 @@ function graphElements(
 
   const taskNodes: TaskNodeV2FlowNode[] = model.nodes.map((node) => {
     const decisionIds = blockedByDecision.filter((decision) => decision.nodes.has(node.id)).map((decision) => decision.id);
+    const medal = lifecycleMedalForNode({
+      nodeId: node.id,
+      attempts,
+      integrations,
+      evidenceMatrixId: model.projection?.nodeEvidenceMatrixIds[node.id],
+      evidenceMatrices: model.evidenceMatrices,
+      delivered: model.run.lifecycle === "completed"
+    });
     return {
       id: node.id,
       type: "taskNodeV2",
+      // React Flow renders the focusable wrapper, so the name has to live on
+      // the node object: an unnamed `role="group"` is what a keyboard user
+      // reached before.
+      ariaLabel: graphNodeAccessibleName({
+        title: node.title,
+        kind: node.kind,
+        status: medal.badge.length === 0 ? fallbackStatus(node.status) : medal.badge,
+        ...(flow === undefined || node.topologicalLevel === undefined
+          ? {}
+          : { bandLevel: node.topologicalLevel })
+      }),
       position: positions.get(node.id) ?? { x: 0, y: 0 },
       data: {
         node,
-        medal: lifecycleMedalForNode({
-          nodeId: node.id,
-          attempts,
-          integrations,
-          evidenceMatrixId: model.projection?.nodeEvidenceMatrixIds[node.id],
-          evidenceMatrices: model.evidenceMatrices,
-          delivered: model.run.lifecycle === "completed"
-        }),
+        medal,
         selected: selectedNodeId === node.id,
         dimmed: selectedNodeId !== null && !neighborhood.has(node.id),
         blocked: decisionIds.length > 0,
         decisionIds,
-        ...(flow === undefined ? {} : { bandLevel: node.topologicalLevel ?? undefined }),
         onOpenDecision
       }
     };
