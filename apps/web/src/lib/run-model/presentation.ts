@@ -1,4 +1,4 @@
-import type { GranularityStrategyProjection, RunLifecycle } from "@manyhands/run-coordinator";
+import type { AutonomyLevel, GranularityStrategyProjection, RunLifecycle } from "@manyhands/run-coordinator";
 import type { RunGraphView } from "@/lib/run-model/graph-view";
 import type { RunNodeView } from "@/lib/run-model/types";
 
@@ -78,6 +78,71 @@ export function planningFailureFindings(projection: {
     }
     return { code, message: entry.slice(separator + 2).trim(), severity: "error" as const };
   });
+}
+
+export interface AutonomyDisclosure {
+  level: AutonomyLevel;
+  label: string;
+  scope: string;
+}
+
+const AUTONOMY_LABEL: Record<AutonomyLevel, string> = {
+  supervised: "Supervisado",
+  semi: "Semi",
+  autonomous: "Autónomo"
+};
+
+const AUTONOMY_SCOPE: Record<AutonomyLevel, string> = {
+  supervised: "Cada decisión y la publicación te esperan.",
+  semi: "Aprueba el plan y reintenta solo; la publicación espera tu decisión.",
+  autonomous: "Aprueba el plan y publica el resultado sin volver a preguntar."
+};
+
+/**
+ * The standing authorization the run is acting under, or nothing.
+ *
+ * A run that approves its own plan and publishes its own result looks, from the
+ * outside, exactly like a run whose operator was very fast. `supervised`
+ * returns nothing on purpose: there is no delegation to disclose, and a badge
+ * announcing its absence is chrome, not information.
+ */
+export function autonomyDisclosure(
+  definition: { autonomy?: AutonomyLevel | undefined } | undefined
+): AutonomyDisclosure | null {
+  const level = definition?.autonomy;
+  if (level === undefined || level === "supervised") return null;
+  return { level, label: AUTONOMY_LABEL[level], scope: AUTONOMY_SCOPE[level] };
+}
+
+/**
+ * One line saying who acted, for the events whose payload states it.
+ *
+ * Only those: a qualifier invented for every entry is how an activity feed
+ * starts describing itself instead of the run.
+ */
+export function eventDetail(event: { type: string; payload?: unknown }): string | null {
+  const payload = isRecord(event.payload) ? event.payload : {};
+  if (event.type === "decision.resolved") {
+    const authorized = isRecord(payload.authorizedBy) ? payload.authorizedBy : undefined;
+    const level = authorized?.level;
+    if (authorized?.kind === "autonomy_policy" && isAutonomyLevel(level)) {
+      return `Resuelta por la autonomía del run · ${AUTONOMY_LABEL[level]}`;
+    }
+    return "Respondida por una persona";
+  }
+  if (event.type === "delivery.started") {
+    const approval = isRecord(payload.approval) ? payload.approval : undefined;
+    return approval?.actor === "autonomy_policy" ? "Publicación delegada al iniciar el run" : null;
+  }
+  return null;
+}
+
+function isAutonomyLevel(value: unknown): value is AutonomyLevel {
+  return value === "supervised" || value === "semi" || value === "autonomous";
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export type GraphLens = "execution" | "artifact" | "contract" | "conflict" | "all";

@@ -568,6 +568,9 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
         ...(event.payload.optionId !== undefined ? { optionId: event.payload.optionId } : {}),
         ...(event.payload.answer !== undefined ? { answer: event.payload.answer } : {})
       };
+      // Absent means a person answered. Recording it only when a standing
+      // authorization acted keeps the two provenances distinguishable forever.
+      if (event.payload.authorizedBy !== undefined) decision.authorizedBy = event.payload.authorizedBy;
       next.readiness.pendingDecisionIds = next.readiness.pendingDecisionIds
         .filter((decisionId) => decisionId !== decision.id);
       if (event.payload.optionId === "stop") {

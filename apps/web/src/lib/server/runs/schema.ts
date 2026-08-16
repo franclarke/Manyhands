@@ -1,5 +1,5 @@
 import { EXECUTOR_IDS, ExecutionConfigSchema, ReasoningEffortSchema } from "@manyhands/execution-core";
-import { RunLifecycleSchema } from "@manyhands/run-coordinator";
+import { AutonomyLevelSchema, RunLifecycleSchema } from "@manyhands/run-coordinator";
 import { z } from "zod";
 
 import { RUN_USER_PROMPT_MAX_LENGTH } from "@/lib/run-limits";
@@ -135,6 +135,10 @@ export const RunCreateRequestSchema = z.object({
   executionSelection: StageSelectionSchema.optional(),
   repairSelection: StageSelectionSchema.optional(),
   granularityCondition: GranularityConditionSchema.optional(),
+  // How much of the run the operator delegates. Optional so a client that
+  // never learned about it keeps meaning `supervised` rather than acquiring a
+  // delegation nobody made.
+  autonomy: AutonomyLevelSchema.optional(),
   executionConfig: ExecutionConfigSchema.partial().omit({ routing: true }).strict().optional()
 }).strict();
 

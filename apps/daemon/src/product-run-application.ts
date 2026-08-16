@@ -8,6 +8,12 @@ import {
 } from "@manyhands/contracts";
 import {
   ProductRunCommandSchema,
+  autonomyPublishesDelivery,
+  autonomyResolution,
+  foldRun,
+  runAutonomy,
+  standingAuthorization,
+  type DeliveryApproval,
   type DeliveryReceipt,
   type ProductRunCommand,
   type ProductRunDefinition,
@@ -183,23 +189,34 @@ async function react(
   const attempt = observation.intent.attemptId;
   const succeeded = observation.terminal.type === "effect.completed";
   if (attempt === "stage3:planning") {
-    return {
-      domainEvents: succeeded
-        ? options.loadPlanningResult === undefined
-          ? [event(options, context.runId, "planning.failed", {
-            reason: "A productive planning effect completed without a durable canonical planning result."
-          }, observation.intent.effectId)]
-          : [...await options.loadPlanningResult(observation.intent.effectId)]
-        : [event(options, context.runId, "planning.failed", {
+    if (!succeeded) {
+      return {
+        domainEvents: [event(options, context.runId, "planning.failed", {
           reason: "The transitional planning adapter did not produce a successful physical receipt."
         }, observation.intent.effectId)],
-      effects: []
-    };
+        effects: []
+      };
+    }
+    if (options.loadPlanningResult === undefined) {
+      return {
+        domainEvents: [event(options, context.runId, "planning.failed", {
+          reason: "A productive planning effect completed without a durable canonical planning result."
+        }, observation.intent.effectId)],
+        effects: []
+      };
+    }
+    const planned = [...await options.loadPlanningResult(observation.intent.effectId)];
+    const delegated = delegatedPlanApproval(planned, context, options, observation.intent.effectId);
+    return { domainEvents: [...planned, ...delegated.events], effects: delegated.effects };
   }
 
   if (attempt === "stage3:delivery") {
-    const delivery = latestCommand(context, "deliver_run");
-    if (delivery === undefined) throw new Error("A delivery effect has no durable deliver_run command.");
+    // The approval is read from the projection, not from an accepted
+    // `deliver_run` command: a delegated delivery has no command behind it, and
+    // `delivery.started` is the fact the reducer itself validates receipts
+    // against, so it is the same authority in both cases.
+    const approval = context.projection.deliveryApproval;
+    if (approval === undefined) throw new Error("A delivery effect has no approval in the run journal.");
     const receipt = succeeded && options.loadDeliveryResult !== undefined
       ? await options.loadDeliveryResult(observation.intent.effectId)
       : undefined;
@@ -215,7 +232,7 @@ async function react(
           receipt: provenReceipt
         }, observation.intent.effectId)]
         : [event(options, context.runId, "delivery.failed", {
-          manifestId: delivery.approval.manifestId,
+          manifestId: approval.manifestId,
           reason: succeeded
             ? "A delivery effect completed without a durable receipt; nothing proves the target moved."
             : "The delivery adapter did not prove publication.",
@@ -276,10 +293,9 @@ async function react(
     };
   }
   if (attempt?.startsWith("stage3:execution") === true && succeeded && options.loadExecutionResult !== undefined) {
-    return {
-      domainEvents: [...await options.loadExecutionResult(context.runId, attempt)],
-      effects: []
-    };
+    const produced = [...await options.loadExecutionResult(context.runId, attempt)];
+    const delegated = delegatedDelivery(produced, context, options);
+    return { domainEvents: [...produced, ...delegated.events], effects: delegated.effects };
   }
   return { domainEvents: [], effects: [] };
 }
@@ -438,25 +454,140 @@ function deliveryEffects(
     eventsAfterAcceptance: [event(options, context.runId, "delivery.started", {
       approval: command.approval
     }, envelope.commandDigest)],
-    effects: [effectRequest({
-      runId: context.runId,
-      daemonEpoch: context.daemonEpoch,
-      attemptId: "stage3:delivery",
-      requestedAt: options.clock(),
-      idempotency: "reconcile_then_repeat",
-      inputSpec: {
-        schemaVersion: 1,
-        kind: "delivery",
-        payload: {
-          destinationRef: command.approval.targetBranch,
-          expectedHeadSha: command.approval.targetHead,
-          expectedTreeSha: projection.finalCandidate.finalManifest?.treeSha ?? command.approval.targetHead,
-          candidateCommitSha: command.approval.finalSha,
-          candidateTreeSha: projection.finalCandidate.finalManifest?.treeSha ?? command.approval.finalSha
-        }
-      }
-    }, options)]
+    effects: [deliveryEffect(
+      context,
+      command.approval,
+      projection.finalCandidate.finalManifest?.treeSha,
+      options
+    )]
   };
+}
+
+function deliveryEffect(
+  context: Pick<RunActorDecisionContext, "runId" | "daemonEpoch">,
+  approval: DeliveryApproval,
+  treeSha: string | undefined,
+  options: ProductRunApplicationOptions
+): RunActorEffectRequest {
+  return effectRequest({
+    runId: context.runId,
+    daemonEpoch: context.daemonEpoch,
+    attemptId: "stage3:delivery",
+    requestedAt: options.clock(),
+    idempotency: "reconcile_then_repeat",
+    inputSpec: {
+      schemaVersion: 1,
+      kind: "delivery",
+      payload: {
+        destinationRef: approval.targetBranch,
+        expectedHeadSha: approval.targetHead,
+        expectedTreeSha: treeSha ?? approval.targetHead,
+        candidateCommitSha: approval.finalSha,
+        candidateTreeSha: treeSha ?? approval.finalSha
+      }
+    }
+  }, options);
+}
+
+/** Nothing was delegated, so the run waits where it is. */
+const NOTHING_DELEGATED: DelegatedWork = { events: [], effects: [] };
+
+interface DelegatedWork {
+  readonly events: readonly RunEventInput[];
+  readonly effects: readonly RunActorEffectRequest[];
+}
+
+/**
+ * The plan approval an operator delegated when they started the run.
+ *
+ * It is answered here, in the actor, so the answer lands in the same journal as
+ * the question and carries the authorization that produced it — a reader can
+ * always tell a person's approval from a standing one. The revision being
+ * approved comes out of the planning result rather than the projection, because
+ * the projection at this point still predates the graph that was just compiled.
+ */
+function delegatedPlanApproval(
+  planned: readonly RunEventInput[],
+  context: RunActorReactionContext,
+  options: ProductRunApplicationOptions,
+  effectId: string
+): DelegatedWork {
+  const level = runAutonomy(context.projection.definition);
+  const raised = planned.find((item): item is Extract<RunEventInput, { type: "decision.raised" }> =>
+    item.type === "decision.raised" && item.payload.decision.kind === "approve_plan");
+  if (raised === undefined) return NOTHING_DELEGATED;
+  const optionId = autonomyResolution(level, raised.payload.decision);
+  if (optionId === undefined) return NOTHING_DELEGATED;
+  // Without a proposed revision nothing names what would be approved, and the
+  // reducer rejects an approval for a revision the projection does not hold.
+  const proposed = [...planned].reverse()
+    .find((item): item is Extract<RunEventInput, { type: "graph.revision.proposed" }> =>
+      item.type === "graph.revision.proposed");
+  if (proposed === undefined) return NOTHING_DELEGATED;
+  return {
+    events: [
+      event(options, context.runId, "decision.resolved", {
+        decisionId: raised.payload.decision.id,
+        optionId,
+        authorizedBy: standingAuthorization(level)
+      }, `${effectId}:delegated-plan-approval`),
+      event(options, context.runId, "graph.revision.approved", {
+        graphId: proposed.payload.graphId,
+        revision: proposed.payload.revision
+      }, `${effectId}:delegated-plan-approval`)
+    ],
+    effects: [executionEffect(context, requireDefinition(context.projection), options)]
+  };
+}
+
+/**
+ * Publication delegated at intake, for the one level that authorizes it.
+ *
+ * Whether the run actually finished is folded rather than inferred from the
+ * shape of the execution result: the reducer that decides `result_ready` is the
+ * same one the operator's own `deliver_run` command is checked against, so
+ * there is no second opinion about when a run is done. The actor folds these
+ * exact events immediately after this returns, so the fold costs nothing that
+ * was not already going to happen.
+ */
+function delegatedDelivery(
+  produced: readonly RunEventInput[],
+  context: RunActorReactionContext,
+  options: ProductRunApplicationOptions
+): DelegatedWork {
+  const level = runAutonomy(context.projection.definition);
+  if (!autonomyPublishesDelivery(level)) return NOTHING_DELEGATED;
+  const projection = foldRun([...context.events, ...appended(context, produced)]);
+  const candidate = projection.finalCandidate;
+  if (projection.lifecycle !== "result_ready" || candidate === undefined) return NOTHING_DELEGATED;
+  const approval: DeliveryApproval = {
+    manifestId: candidate.manifestId,
+    finalSha: candidate.commit,
+    targetBranch: candidate.targetBranch,
+    targetHead: candidate.targetHead,
+    targetFingerprint: candidate.sourceTargetFingerprint,
+    // Named for what it is. An operator reading the journal later has to be
+    // able to see that no person pressed anything here.
+    actor: "autonomy_policy",
+    idempotencyKey: `${context.runId}:${candidate.manifestId}:${candidate.commit}`
+  };
+  return {
+    events: [event(options, context.runId, "delivery.started", { approval }, approval.idempotencyKey)],
+    effects: [deliveryEffect(context, approval, candidate.finalManifest?.treeSha, options)]
+  };
+}
+
+/** The sequence these inputs will occupy once the actor appends them. */
+function appended(
+  context: RunActorReactionContext,
+  inputs: readonly RunEventInput[]
+): RunEvent[] {
+  const last = context.events.at(-1)?.sequence ?? 0;
+  return inputs.map((input, index) => ({
+    ...structuredClone(input),
+    runId: context.runId,
+    sequence: last + index + 1
+  }) as RunEvent);
 }
 
 function planningEffect(
@@ -541,21 +672,6 @@ function effectRequest(input: {
       requestedAt: input.requestedAt
     }, options.hasher)
   };
-}
-
-function latestCommand<T extends ProductRunCommand["type"]>(
-  context: RunActorReactionContext,
-  type: T
-): Extract<ProductRunCommand, { type: T }> | undefined {
-  const commands = context.events
-    .filter((item): item is Extract<RunEvent, { type: "command.accepted" }> =>
-      item.type === "command.accepted" && item.payload.command !== undefined)
-    .sort((left, right) => right.sequence - left.sequence);
-  for (const item of commands) {
-    const parsed = ProductRunCommandSchema.parse(item.payload.command!.command);
-    if (parsed.type === type) return parsed as Extract<ProductRunCommand, { type: T }>;
-  }
-  return undefined;
 }
 
 function latestUnappliedPause(

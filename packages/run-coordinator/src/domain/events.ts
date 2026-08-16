@@ -2,6 +2,7 @@ import { EffectIntentSchema, ExactCandidateSchema, PhysicalEffectReceiptSchema, 
 import { EntityIdSchema, FinalArtifactManifestSchema, IsoTimestampSchema, NonEmptyStringSchema } from "@manyhands/shared";
 import { z } from "zod";
 import { CommandReceiptSchema, RunCommandEnvelopeSchema } from "../command-envelope.js";
+import { StandingAuthorizationSchema } from "./autonomy.js";
 import { DecisionInputSchema, DecisionResolutionShape, requireDecisionResolution } from "./decisions.js";
 import { DeliveryApprovalSchema, DeliveryReceiptSchema } from "./outcomes.js";
 import { AdoptedArtifactSchema, ArtifactRetentionReleaseAuthorizationSchema } from "./artifacts.js";
@@ -346,7 +347,7 @@ export const RunEventSchema = z.discriminatedUnion("type", [
   event("graph.revision.proposed", z.object({ graphId: EntityIdSchema, revision: z.number().int().positive() }).strict()),
   event("graph.revision.approved", z.object({ graphId: EntityIdSchema, revision: z.number().int().positive() }).strict()),
   event("decision.raised", z.object({ decision: DecisionInputSchema }).strict()),
-  event("decision.resolved", z.object({ decisionId: EntityIdSchema, ...DecisionResolutionShape }).strict().superRefine(requireDecisionResolution)),
+  event("decision.resolved", z.object({ decisionId: EntityIdSchema, ...DecisionResolutionShape, authorizedBy: StandingAuthorizationSchema.optional() }).strict().superRefine(requireDecisionResolution)),
   event("decision.expired", z.object({ decisionId: EntityIdSchema, supersededByRevision: z.number().int().positive(), reason: NonEmptyStringSchema }).strict()),
   event("readiness.observed", z.object({
     readyNodeIds: z.array(EntityIdSchema),

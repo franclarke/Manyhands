@@ -251,31 +251,22 @@ function input(type: string, payload: Record<string, unknown>): RunEventInput {
   return { eventId: `${runId}:${type}`, occurredAt: at, type, payload } as RunEventInput;
 }
 
-/** The actor reads the approval from the accepted `deliver_run` command. */
+/**
+ * The actor reads the approval from `delivery.started` in the projection.
+ *
+ * It used to read it out of the accepted `deliver_run` command, which Stage 11
+ * broke: a run that publishes under a delegated authorization has no such
+ * command, and a delivery the actor cannot describe is one it cannot report as
+ * failed. `delivery.started` is the fact the reducer already validates receipts
+ * against, so it is the same authority whoever authorized the publication.
+ */
 function reactionContext(): RunActorReactionContext {
-  const events: RunEvent[] = [{
-    eventId: `${runId}:command`,
-    runId,
-    sequence: 1,
-    occurredAt: at,
-    type: "command.accepted",
-    payload: {
-      command: {
-        commandId: "command:stage10-delivery",
-        runId,
-        expectedRevision: 0,
-        submittedAt: at,
-        commandDigest: `sha256:${"c".repeat(64)}`,
-        command: { type: "deliver_run", approval: approval() }
-      }
-    }
-  }] as unknown as RunEvent[];
   return {
     runId,
     daemonEpoch,
     currentRevision: 1,
     acceptedRevision: 2,
-    events,
-    projection: { sequence: 1 } as RunProjection
+    events: [] as RunEvent[],
+    projection: { sequence: 1, deliveryApproval: approval() } as RunProjection
   } as RunActorReactionContext;
 }

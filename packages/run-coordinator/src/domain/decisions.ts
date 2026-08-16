@@ -1,4 +1,5 @@
 import { EntityIdSchema, NonEmptyStringSchema } from "@manyhands/shared";
+import { StandingAuthorizationSchema } from "./autonomy.js";
 import { z } from "zod";
 
 export const DecisionOptionSchema = z.object({
@@ -52,7 +53,9 @@ export function requireDecisionResolution(
 
 export const DecisionSchema = DecisionInputSchema.extend({
   status: z.enum(["pending", "resolved", "expired"]),
-  resolution: DecisionResolutionSchema.optional()
+  resolution: DecisionResolutionSchema.optional(),
+  // Present only when a standing authorization answered instead of a person.
+  authorizedBy: StandingAuthorizationSchema.optional()
 }).strict();
 
 export type Decision = z.infer<typeof DecisionSchema>;

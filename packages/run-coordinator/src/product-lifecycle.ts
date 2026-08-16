@@ -1,6 +1,7 @@
 import { EntityIdSchema, IsoTimestampSchema, NonEmptyStringSchema } from "@manyhands/shared";
 import { z } from "zod";
 
+import { AutonomyLevelSchema } from "./domain/autonomy.js";
 import { RunCommandJsonValueSchema } from "./command-envelope.js";
 import { DeliveryApprovalSchema } from "./domain/outcomes.js";
 import { HumanReviewInputSchema } from "./domain/human-review.js";
@@ -32,6 +33,10 @@ export const ProductRunDefinitionSchema = z.object({
   repairSelection: StageSelectionSchema,
   executionConfig: z.record(RunCommandJsonValueSchema),
   granularityCondition: z.enum(["A", "C"]).optional(),
+  // How much of this run the operator delegated at intake. Absent on every
+  // journal written before autonomy reached the daemon, and read as
+  // `supervised` there rather than assumed.
+  autonomy: AutonomyLevelSchema.optional(),
   targetContext: z.record(RunCommandJsonValueSchema)
 }).strict();
 

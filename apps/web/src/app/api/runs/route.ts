@@ -99,6 +99,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         ...(parsed.granularityCondition === undefined
           ? {}
           : { granularityCondition: parsed.granularityCondition }),
+        ...(parsed.autonomy === undefined ? {} : { autonomy: parsed.autonomy }),
         targetContext: JSON.parse(JSON.stringify(durableTargetContext)) as Record<string, RunCommandJsonValue>
       };
       return submitProductRunCommand({

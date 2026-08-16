@@ -3,11 +3,13 @@
 import { useMemo, useState } from "react";
 import { CheckCircle2, CircleStop, PanelRightClose, PanelRightOpen, Pause, Play, RotateCcw, Send, X } from "lucide-react";
 
+import type { AutonomyLevel } from "@manyhands/run-coordinator";
+
 import { useLiveRunModel } from "@/components/run-model/use-live-run-model";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { StatusPill } from "@/components/ui/status-pill";
-import { eventPresentation, granularityStrategyExplanation, objectiveHeadline, planningFailureFindings, showsExecutionCounters, summarizeRunNodes, type GranularityExplanationView } from "@/lib/run-model/presentation";
+import { autonomyDisclosure, eventDetail, eventPresentation, granularityStrategyExplanation, objectiveHeadline, planningFailureFindings, showsExecutionCounters, summarizeRunNodes, type GranularityExplanationView } from "@/lib/run-model/presentation";
 import type { RunEvent, RunSeed } from "@/lib/run-model/types";
 import { runUiStatus, statusMeta } from "@/lib/status";
 import { CockpitRunGraph } from "./cockpit-run-graph";
@@ -235,6 +237,7 @@ function RunSummary({ model, canDeliver }: { model: ReturnType<typeof useLiveRun
         executableCount: summary.executableCount,
         completedExecutables: summary.completedExecutables
       })}</h2>
+      <AutonomyNotice definition={model.projection?.definition} />
       {counters ? (
         <>
           <div className="mt-4 grid grid-cols-3 gap-2 text-center">
@@ -450,16 +453,38 @@ function Activity({ events }: { events: readonly RunEvent[] }): React.ReactEleme
   );
 }
 
+/**
+ * The standing authorization the run is acting under.
+ *
+ * Without it, a run that approved its own plan and published its own result is
+ * indistinguishable from one whose operator was very fast. Absent when nothing
+ * was delegated, because then there is nothing to disclose.
+ */
+function AutonomyNotice({ definition }: { definition?: { autonomy?: AutonomyLevel | undefined } | undefined }): React.ReactElement | null {
+  const disclosure = autonomyDisclosure(definition);
+  if (disclosure === null) return null;
+  return (
+    <p className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-micro text-[var(--color-text-muted)]">
+      <span className="rounded-full border border-[var(--color-border)] px-2 py-0.5 font-medium text-[var(--color-text)]">
+        Autonomía · {disclosure.label}
+      </span>
+      <span className="text-pretty">{disclosure.scope}</span>
+    </p>
+  );
+}
+
 function ActivityEvent({ event, presentation, muted = false }: {
   event: RunEvent;
   presentation: ReturnType<typeof eventPresentation>;
   muted?: boolean;
 }): React.ReactElement {
+  const detail = eventDetail(event);
   return (
     <li className={`flex gap-3 text-xs ${muted ? "opacity-70" : ""}`}>
       <span className={`mt-1.5 size-1.5 shrink-0 rounded-full ${muted ? "bg-[var(--color-text-subtle)]" : "bg-[var(--color-accent)]"}`} />
       <span>
         <strong className="block font-medium">{presentation.label}</strong>
+        {detail === null ? null : <span className="block text-[var(--color-text-muted)]">{detail}</span>}
         <small className="tabular-nums text-[var(--color-text-subtle)]">#{event.seq} · {new Date(event.at).toLocaleTimeString()}</small>
       </span>
     </li>

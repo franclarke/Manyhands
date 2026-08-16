@@ -27,10 +27,13 @@ import { RUN_USER_PROMPT_MAX_LENGTH } from "@/lib/run-limits";
 import { FolderGit2, GitBranch, Plus, Pencil, Trash2, AlertTriangle, OctagonAlert, Sparkles } from "lucide-react";
 
 type AutonomyLevel = "supervised" | "semi" | "autonomous";
+// El eje es qué tan reversible es cada acto, no cuánta confianza le tenés al
+// sistema. Semi decide todo lo que vive dentro del workspace del run, que se
+// puede tirar entero; autónomo además mueve la rama que otros bajan.
 const AUTONOMY_OPTIONS: ReadonlyArray<{ id: AutonomyLevel; label: string; hint: string }> = [
-  { id: "supervised", label: "Supervisado", hint: "Aprobás el plan y respondés cada decisión." },
-  { id: "semi", label: "Semi", hint: "Auto-aprueba el plan; frena en gates y preguntas." },
-  { id: "autonomous", label: "Autónomo", hint: "Auto-aprueba y auto-responde preguntas; frena solo en fallos de ejecución." }
+  { id: "supervised", label: "Supervisado", hint: "Aprobás el plan y publicás el resultado." },
+  { id: "semi", label: "Semi", hint: "Aprueba el plan y reintenta solo; la publicación te espera." },
+  { id: "autonomous", label: "Autónomo", hint: "Además publica en la rama objetivo sin volver a preguntar." }
 ];
 
 const PROMPT_STORAGE_KEY = "manyhands:lastPrompt";
@@ -291,12 +294,16 @@ export function CommandCenterShell({
         planningSelection?: StageSelection;
         executionSelection?: StageSelection;
         repairSelection?: StageSelection;
+        autonomy?: AutonomyLevel;
         userPrompt: string;
       } = {
         workspaceId: selectedWorkspace.id,
         planningSelection: planningStage,
         executionSelection: executionStage,
         repairSelection: executionStage,
+        // Se omite cuando no se delegó nada: el journal no tiene por qué
+        // registrar una delegación que el operador nunca hizo.
+        ...(autonomy === "supervised" ? {} : { autonomy }),
         userPrompt: prompt.trim()
       };
       const response = await fetch("/api/runs", {
