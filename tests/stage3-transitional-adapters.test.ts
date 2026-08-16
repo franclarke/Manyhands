@@ -12,7 +12,8 @@ import {
   type DigestHasher,
   type EffectInputSpec,
   type EffectKind,
-  type PhysicalEffectReceipt
+  type PhysicalEffectReceipt,
+  type RecoveryDiagnostic
 } from "@manyhands/contracts";
 import { compileGraphRevision } from "@manyhands/decomposer";
 import {
@@ -295,6 +296,7 @@ class MemoryLifecycleResultStore implements TransitionalLifecycleResultStore {
   private readonly planning = new Map<string, TransitionalLifecycleResult>();
   private readonly execution = new Map<string, TransitionalLifecycleResult>();
   private readonly delivery = new Map<string, DeliveryReceipt>();
+  private readonly diagnostics = new Map<string, RecoveryDiagnostic>();
 
   async writePlanning(effectId: string, result: TransitionalLifecycleResult): Promise<void> {
     this.planning.set(effectId, structuredClone(result));
@@ -318,6 +320,14 @@ class MemoryLifecycleResultStore implements TransitionalLifecycleResultStore {
 
   async readDelivery(effectId: string): Promise<DeliveryReceipt | undefined> {
     return structuredClone(this.delivery.get(effectId));
+  }
+
+  async writeRecoveryDiagnostic(effectId: string, diagnostic: RecoveryDiagnostic): Promise<void> {
+    this.diagnostics.set(effectId, structuredClone(diagnostic));
+  }
+
+  async readRecoveryDiagnostic(effectId: string): Promise<RecoveryDiagnostic | undefined> {
+    return structuredClone(this.diagnostics.get(effectId));
   }
 }
 
@@ -403,6 +413,7 @@ function verifiedMatrix() {
     }],
     outcome: "verified" as const,
     validationRecipeDigest: "sha256:recipe-current",
+    evidenceBindings: [],
     observations: []
   };
 }

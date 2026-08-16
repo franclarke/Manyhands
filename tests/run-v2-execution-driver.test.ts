@@ -600,6 +600,7 @@ describe("V2ExecutionDriver", () => {
             }],
             outcome: "verified",
             validationRecipeDigest: "sha256:recipe-v2",
+            evidenceBindings: [],
             observations: []
           },
           artifactLocation: `commit-${input.node.id}`,
@@ -688,6 +689,7 @@ describe("V2ExecutionDriver", () => {
             }],
             outcome: "failed",
             validationRecipeDigest: "sha256:recipe-root",
+            evidenceBindings: [],
             observations: []
           },
           reason: "parent_validation_failed: exact candidate is not verified"
@@ -858,6 +860,7 @@ function success(input: V2NodeExecutionInput): V2NodeExecutionOutcome {
       criteria: [{ criterionId: obligation.criterionId, obligationId: obligation.id, status: "satisfied", justification: "Passed.", evidenceRefs: [`evidence-${input.node.id}`] }],
       outcome: "verified",
       validationRecipeDigest: "sha256:recipe-v2",
+      evidenceBindings: [],
       observations: []
     },
     finalManifest: {

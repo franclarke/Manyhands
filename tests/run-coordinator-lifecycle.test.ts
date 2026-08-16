@@ -223,6 +223,7 @@ function evidenceMatrix(outcome: "verified" | "unverified" | "failed") {
       evidenceRefs: ["evidence-1"]
     }],
     outcome,
+    evidenceBindings: [],
     observations: []
   };
 }

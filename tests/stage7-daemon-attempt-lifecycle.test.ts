@@ -288,6 +288,7 @@ function matrix(matrixId: string, candidateCommit: string) {
     }],
     outcome: "verified" as const,
     validationRecipeDigest: "sha256:recipe-1",
+    evidenceBindings: [],
     observations: []
   };
 }

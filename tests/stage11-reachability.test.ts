@@ -149,7 +149,15 @@ function audit(model: RunModel, seed: RunSeed, events: readonly RunEvent[]): {
     }
   }
   for (const contract of model.contracts) {
-    claims.push(["contract.taskId", contract.taskId]);
+    // `contract.taskId` does not exist on a bundle, so this silently pushed
+    // `undefined` and every contract went unchecked. The root typecheck found
+    // it; the count assertions did not, because nodes and edges dominate them.
+    claims.push(
+      ["contract.task.id", contract.task.id],
+      ["contract.task.nodeId", contract.task.nodeId],
+      ["contract.scope.nodeId", contract.scope.nodeId],
+      ["contract.validation.id", contract.validation.id]
+    );
   }
 
   const named = claims.filter((claim): claim is [string, string] =>

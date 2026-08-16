@@ -19,7 +19,10 @@ export function objectiveHeadline(input: {
   executableCount: number;
   completedExecutables: number;
 }): string {
-  const over = ["failed", "completed", "cancelled", "interrupted"].includes(input.lifecycle);
+  // There is no `cancelled` lifecycle — a cancel ends at `interrupted` — so
+  // that entry never matched, and `cancelling` was missing: a run being
+  // cancelled kept reading "Planificando · N unidades identificadas".
+  const over = ["failed", "completed", "cancelling", "interrupted"].includes(input.lifecycle);
   if (input.graphPhase === "compiled") {
     return input.executableCount === 0
       ? "Sin trabajo ejecutable todavía"

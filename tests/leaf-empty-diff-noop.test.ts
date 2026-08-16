@@ -86,6 +86,7 @@ async function runLeaf(options: {
       candidateCommit,
       validationContract: { id: contract.validation.id, revision: contract.validation.revision },
       criteria: [],
+      evidenceBindings: [],
       observations: [],
       outcome: options.validate(candidateCommit)
     })

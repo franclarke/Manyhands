@@ -36,7 +36,9 @@ describe("Canonical planning prompt", () => {
     model: { ...fixture.repositoryView.model, commands: [], packages: [] }
   } as typeof fixture.repositoryView;
   const request = {
-    operation: "create",
+    // The engine's operations are plan / expand / amend; there is no "create",
+    // so this double was never the request the engine actually receives.
+    operation: "plan" as const,
     goal,
     repositoryView: {
       digest: repositoryView.digest,

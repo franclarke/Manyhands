@@ -8,11 +8,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { DigestHasher } from "@manyhands/contracts";
 import type {
   ProductRunDefinition,
-  RunActorReactionContext,
   RunEvent,
   RunEventInput,
   RunProjection
 } from "@manyhands/run-coordinator";
+import type { RunActorReactionContext } from "@manyhands/run-engine";
 import { JsonlRunEventStore } from "@manyhands/run-store";
 
 import { createProductRunApplication } from "../apps/daemon/src/product-run-application.js";
@@ -243,6 +243,7 @@ function verifiedMatrix() {
     }],
     outcome: "verified" as const,
     validationRecipeDigest: "sha256:recipe-stage10",
+    evidenceBindings: [],
     observations: []
   };
 }

@@ -170,6 +170,7 @@ function verifiedMatrix(matrixId: string, candidateCommit: string) {
     }],
     outcome: "verified" as const,
     validationRecipeDigest: "sha256:recipe",
+    evidenceBindings: [],
     observations: []
   };
 }

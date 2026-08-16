@@ -67,7 +67,7 @@ describe("delivery state machine V2", () => {
 
   it("checks the frozen target before publishing and adopts a prior receipt by idempotency key", async () => {
     const requestFingerprint = deliveryRequestFingerprint(approval);
-    const receipt = { receiptId: "receipt-1", requestFingerprint, manifestId: approval.manifestId, finalSha: approval.finalSha, targetBranch: approval.targetBranch, targetHeadBefore: approval.targetHead, targetHeadAfter: "merge-sha", disposition: "delivered" as const, confirmed: true as const };
+    const receipt = { receiptId: "receipt-1", requestFingerprint, manifestId: approval.manifestId, finalSha: approval.finalSha, targetBranch: approval.targetBranch, targetHeadBefore: approval.targetHead, targetHeadAfter: "merge-sha", deliveredTreeSha: "tree-sha", cleanlinessPolicyId: "manyhands-runtime-exempt.v1", disposition: "delivered" as const, confirmed: true as const };
     const publish = vi.fn().mockResolvedValue(receipt);
     const complete = vi.fn();
     const publisher = new TransactionalDeliveryPublisher({
@@ -96,7 +96,7 @@ function readyEvents(): RunEvent[] {
   ];
 }
 function verifiedMatrix(matrixId: string, candidateCommit: string) {
-  return { matrixId, candidateCommit, validationContract: { id: "validation-final", revision: "revision-1" }, criteria: [{ criterionId: "criterion-final", obligationId: "obligation-final", status: "satisfied" as const, justification: "The exact candidate passed.", evidenceRefs: ["evidence-final"] }], outcome: "verified" as const, validationRecipeDigest: "sha256:recipe", observations: [] };
+  return { matrixId, candidateCommit, validationContract: { id: "validation-final", revision: "revision-1" }, criteria: [{ criterionId: "criterion-final", obligationId: "obligation-final", status: "satisfied" as const, justification: "The exact candidate passed.", evidenceRefs: ["evidence-final"] }], outcome: "verified" as const, validationRecipeDigest: "sha256:recipe", observations: [], evidenceBindings: [] };
 }
 function coordinatorFor(events: RunEvent[], publish: ReturnType<typeof vi.fn>): RunCoordinator {
   return new RunCoordinator({ events: { load: async () => [...events], append: async (_id, expected, inputs) => { const added = inputs.map((input, index) => event(expected + index + 1, input.type, input.payload)); events.push(...added); return added; } }, delivery: { publish }, clock: () => "2026-07-17T00:00:00.000Z", eventId: (type, sequence) => `${type}-${sequence}` });

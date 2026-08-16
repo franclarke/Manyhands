@@ -7,10 +7,10 @@ import {
   foldRun,
   type AutonomyLevel,
   type ProductRunDefinition,
-  type RunActorReactionContext,
   type RunEvent,
   type RunEventInput
 } from "@manyhands/run-coordinator";
+import type { RunActorReactionContext } from "@manyhands/run-engine";
 
 import { createProductRunApplication } from "../apps/daemon/src/product-run-application.js";
 
@@ -297,6 +297,7 @@ function verifiedMatrix() {
     }],
     outcome: "verified" as const,
     validationRecipeDigest: "sha256:recipe-stage11",
+    evidenceBindings: [],
     observations: []
   };
 }

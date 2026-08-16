@@ -9,11 +9,11 @@ import type { DigestHasher } from "@manyhands/contracts";
 import { DeliveryRecoveryError } from "@manyhands/execution-core";
 import {
   foldRun,
-  type RunActorReactionContext,
   type RunEvent,
   type RunEventInput,
   type RunProjection
 } from "@manyhands/run-coordinator";
+import type { RunActorReactionContext } from "@manyhands/run-engine";
 import { JsonlRunEventStore } from "@manyhands/run-store";
 
 import { createProductRunApplication } from "../apps/daemon/src/product-run-application.js";
@@ -276,6 +276,7 @@ function verifiedMatrix() {
     }],
     outcome: "verified" as const,
     validationRecipeDigest: "sha256:recipe-diagnostic",
+    evidenceBindings: [],
     observations: []
   };
 }

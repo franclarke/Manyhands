@@ -61,6 +61,7 @@ async function runLeaf(options: { changed: string[]; forbiddenPaths?: string[] }
       candidateCommit,
       validationContract: { id: contract.validation.id, revision: contract.validation.revision },
       criteria: [],
+      evidenceBindings: [],
       observations: [],
       outcome: "verified" as const
     })

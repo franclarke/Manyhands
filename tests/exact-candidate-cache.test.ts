@@ -79,6 +79,7 @@ describe("validateExactCandidate evidence cache", () => {
       matrix: {
         criteria: [],
         outcome: "verified" as const,
+        evidenceBindings: [],
         observations: [],
         integrityFindings: [],
         negativeControls: []

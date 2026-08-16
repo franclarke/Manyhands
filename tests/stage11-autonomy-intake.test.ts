@@ -108,7 +108,7 @@ function projection(definition: ProductRunDefinition): RunProjection {
     lifecycle: "planning", sequence: 2, createdAt: "2026-08-16T00:00:00.000Z",
     updatedAt: "2026-08-16T00:00:00.000Z", appliedEventIds: [], commandReceipts: {},
     commandEnvelopes: {}, effectIntents: {}, physicalEffectReceipts: {}, effectTerminals: {},
-    decisions: {}, readiness: { readyNodeIds: [], pendingDecisionIds: [] }, selectedWaves: [],
+    decisions: {}, humanReviews: {}, readiness: { readyNodeIds: [], pendingDecisionIds: [] }, selectedWaves: [],
     attempts: {}, adoptedArtifacts: {}, nodeEvidenceMatrixIds: {}, integrations: {},
     recoveryHistory: [], evidenceMatrices: [], evidenceMatrixSummaries: {},
     outcomes: { execution: "pending", artifact: "missing", delivery: "not_started" }

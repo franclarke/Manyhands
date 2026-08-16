@@ -101,6 +101,7 @@ function resultReadyEvents(approval: DeliveryApproval): RunEvent[] {
             evidenceRefs: ["evidence-final"]
           }],
           outcome: "verified",
+          evidenceBindings: [],
           observations: []
         }
       }

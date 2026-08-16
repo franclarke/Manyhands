@@ -1456,6 +1456,7 @@ function matrix(contract: V2PhysicalNodeExecutionInput["contract"], candidateCom
     })),
     outcome: "verified",
     validationRecipeDigest: "sha256:recipe-v2",
+    evidenceBindings: [],
     observations: []
   };
 }

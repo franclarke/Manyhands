@@ -93,12 +93,18 @@ gastar una corrida viva.
 
 ```bash
 pnpm test
+pnpm typecheck
 pnpm -r --filter "./packages/*" typecheck
 pnpm --filter @manyhands/daemon build
 pnpm --filter @manyhands/web exec tsc --noEmit
 pnpm build
 pnpm web:build
 ```
+
+`pnpm typecheck` quedó verde el 2026-08-16 y tiene que seguir así. Es el único
+gate que mira `tests/`: encontró un guard que chequeaba un campo inexistente y
+por lo tanto no chequeaba nada, y un doble que decía `operation: "create"`
+cuando el motor sólo acepta `plan | expand | amend`.
 
 Para cambios sólo documentales, validar links, referencias obsoletas, diff y
 EOL; no hace falta ejecutar builds del producto.

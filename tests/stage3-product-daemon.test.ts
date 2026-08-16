@@ -127,7 +127,16 @@ describe("Stage 3 productive daemon boundary", () => {
       profile: {
         kind: "transitional_unsafe",
         adapters: adapters(new Map()),
-        executionProcess: () => ({ executable: process.execPath, argv: ["-e", ""], cwd: process.cwd(), env: {} })
+        executionProcess: () => ({ executable: process.execPath, argv: ["-e", ""], cwd: process.cwd(), env: {} }),
+        // This profile has no planner. Saying so as a durable fact keeps the
+        // run in a state the reducer accepts; returning nothing would leave it
+        // planning forever and make a real planning bug look like patience.
+        loadPlanningResult: async () => [{
+          eventId: "planning:stage3:conflict:no-planner",
+          occurredAt: at,
+          type: "planning.failed" as const,
+          payload: { reason: "This profile has no planner; the boundary under test is command identity." }
+        }]
       }
     });
     try {

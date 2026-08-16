@@ -47,7 +47,8 @@ describe("Stage 6 canonical execution driver", () => {
             }],
             outcome: "verified",
             validationRecipeDigest: "sha256:fake",
-            observations: []
+            observations: [],
+            evidenceBindings: []
           },
           ...(input.node.id === compiled.graph.rootId ? {
             integrationManifestId: "integration-root",
@@ -197,7 +198,7 @@ function manifestsFor(input: {
   attemptId: string;
   inputFingerprint: string;
   contract: { artifacts: Array<{ id: string; revision: string; producerNodeId: string }> };
-}): Record<string, object> {
+}) {
   return Object.fromEntries(input.contract.artifacts
     .filter((artifact) => artifact.producerNodeId === input.node.id)
     .map((artifact) => {
@@ -214,10 +215,10 @@ function manifestsFor(input: {
         producerAttemptId: input.attemptId,
         inputFingerprint: input.inputFingerprint,
         repositoryObjectStoreId: "object-store:fake",
-        objectFormat: "sha1",
+        objectFormat: "sha1" as const,
         sourceCandidate: { commitOid: candidate, treeOid: tree },
         retainedByRef: `refs/manyhands/test/${artifact.id}`,
-        kind: "change_set",
+        kind: "change_set" as const,
         baseTreeSha: oid("base"),
         resultTreeSha: tree,
         entries: [],

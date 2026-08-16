@@ -35,7 +35,10 @@ describe("What the objective panel claims", () => {
   });
 
   it("does not describe planning in the present tense once the run is over", () => {
-    for (const lifecycle of ["failed", "completed", "cancelled"] as const) {
+    // `cancelled` is not a lifecycle this system has; a cancel ends at
+    // `interrupted`, and `cancelling` was the state that still read as
+    // present-tense planning.
+    for (const lifecycle of ["failed", "completed", "cancelling", "interrupted"] as const) {
       expect(objectiveHeadline({
         lifecycle,
         graphPhase: "provisional",

@@ -238,6 +238,7 @@ async function seedRun(stateRoot: string, fixture: Stage10DeliveryTarget): Promi
         }],
         outcome: "verified" as const,
         validationRecipeDigest: "sha256:recipe-stage10",
+        evidenceBindings: [],
         observations: []
       }
     }),

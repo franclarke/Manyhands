@@ -39,7 +39,7 @@ function projection(index: number): RunProjection {
     runId: `run-${index}`, goal: definition.userPrompt, definition, lifecycle: "completed", sequence: 1,
     createdAt: "2026-08-13T00:00:00.000Z", updatedAt: "2026-08-13T00:00:00.000Z",
     appliedEventIds: [], commandReceipts: {}, commandEnvelopes: {}, effectIntents: {},
-    physicalEffectReceipts: {}, effectTerminals: {}, decisions: {},
+    physicalEffectReceipts: {}, effectTerminals: {}, decisions: {}, humanReviews: {},
     readiness: { readyNodeIds: [], pendingDecisionIds: [] }, selectedWaves: [], attempts: {},
     adoptedArtifacts: {}, nodeEvidenceMatrixIds: {}, integrations: {}, recoveryHistory: [],
     evidenceMatrices: [], evidenceMatrixSummaries: {},

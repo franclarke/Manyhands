@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   PlanningEngine,
-  type PlanningFinding,
+  type PlanFinding,
   type PlanningModel,
   type PlanningModelProposal,
   type PlanningRepositoryReader
@@ -62,9 +62,9 @@ function brokenMaterial(
 }
 
 /** The repair prompt is the only consumer of these findings, so it is the observable. */
-async function findingsHandedToRepair(material: unknown): Promise<readonly PlanningFinding[]> {
+async function findingsHandedToRepair(material: unknown): Promise<readonly PlanFinding[]> {
   const fixture = stage5Fixture();
-  const seen: Array<readonly PlanningFinding[]> = [];
+  const seen: Array<readonly PlanFinding[]> = [];
   const model: PlanningModel = {
     propose: vi.fn(async (input): Promise<PlanningModelProposal> => {
       seen.push(input.previousFindings);
