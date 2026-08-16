@@ -225,7 +225,7 @@ export const CANONICAL_PLAN_EXAMPLE: PlanProposalExample = {
       specification: "The producer exports createFeature(input: string): Feature.",
       producerUnitId: "unit:producer",
       consumerUnitIds: ["unit:consumer", "unit:root"],
-      semanticFacts: { export: "createFeature", returns: "Feature" },
+      semanticFacts: { export: "createFeature", returns: "Feature", constructorArgs: "message: string, cause?: Error" },
       compatibility: { mode: "exact", rules: ["The exported signature stays stable."] },
       artifactId: "artifact:producer-change",
       validationObligationIds: ["validation:consumer"]
@@ -273,6 +273,7 @@ export const CANONICAL_PLAN_RULES: readonly string[] = [
   "Two units may modify overlapping resources only when they are ordered by an artifact: the later unit consumes the artifact of the earlier one and its modify intent carries inputArtifactId set to that artifact. Two units creating files under the same package resource overlap, so they need that ordering.",
   "Claim the narrowest resource that authorises the write. A unit that only changes files which already exist claims those file resources, and two units holding different file resources do not overlap, so they run at the same time. Claiming the package when a file would do forces an ordering the work does not need and turns a wide plan into a chain.",
   "A seam is declared in seamRefs by its producer and by every consumer, every consumer also consumes the artifactId of the seam, semanticFacts and compatibility.rules are both non-empty, and the artifact of the seam has the same producer.",
+  "semanticFacts is a flat map of string to string. A fact that is naturally a list — argument names, accepted values — is one string, never an array or a nested object. Every field this contract shows as a string is a string.",
   "Every required validation obligation carries an evidence binding, or execution refuses the node because no command can be materialized. Use {kind: focused_command, selectors, references} for a test or check layer, {kind: static_proof, references} only when layer is static, or {kind: shared_command, criterionIds, references, rationale} when one command covers several criteria.",
   "evidence selectors are repository-relative paths passed to the validation command as arguments. They may not be absolute, start with a hyphen, or contain a .. segment, and the files they name must be produced by the same unit.",
   "Replace every criterion:, resource: and evidence: identifier taken from the example with ids from the supplied lists. Invented ids are rejected."
