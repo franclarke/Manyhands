@@ -236,6 +236,43 @@ on the copper accent at 2.4:1.
 
 Still open in Stage 11: the audit, and a bounded independent review of GObs.
 
+## What the rehearsal run found, on 2026-08-16
+
+The first hands-off run. Two attempts on the sandbox target, same goal: a
+readability CLI over four metric modules.
+
+**Attempt 1 was rejected by the compiler** with six `resource_double_writer`
+findings. The plan verifier orders writers of one resource transitively; the
+graph validator demanded a direct artifact requirement between every pair, so a
+five-writer plan needed a complete graph. Two authorities for one invariant, and
+the stricter one made every fan-out wider than two units unplannable. Fixed, with
+controls that keep the fix from being "stop checking".
+
+**Attempt 2 planned six nodes and approved itself.** Root plus five leaves, nine
+artifact requirements, and `decision.resolved` stamped
+`{ kind: "autonomy_policy", level: "autonomous" }`. Three leaves executed,
+validated and adopted their artifacts with nobody watching.
+
+Three findings stand, in the order they matter for R19:
+
+1. **The graph is deep, not wide.** Every `readiness.observed` named exactly one
+   ready node: the planner chained all five units, because that is the only legal
+   shape when they all write the same package. The transitive fix unblocked
+   depth; it did not buy parallelism. Units creating different new files under
+   one package still cannot be expressed as disjoint, so **R19 cannot yet
+   demonstrate real parallelism**, only real depth. This is a resource-granularity
+   question in the Stage 9 model and is not reopened here.
+2. **A delegated run parked on a decision it was authorized to answer.** Only the
+   plan approval was wired; decisions raised during execution were not. Fixed.
+3. **`artifact_error` materializing a predecessor's artifact** at depth 3 of the
+   chain (`unit:sentence-length` consuming `unit:top-words`). Undiagnosed. It is
+   the first failure this system has hit that is not about contracts or
+   ordering, and it needs its own investigation before R19.
+
+And one observability gap, unfixed: when the compiler rejects a plan, the
+proposal is discarded. Diagnosing attempt 1 meant reasoning from the finding
+text, because the plan the model actually produced was never retained.
+
 ## Open decisions for the operator
 
 1. **GLeaf's B1.** The blocking item is a live R0 re-run with `codex-cli`,
