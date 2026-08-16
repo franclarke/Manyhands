@@ -277,8 +277,41 @@ function validateSeams(graph: GraphRevision, out: GraphRevisionFinding[]): void 
   }
 }
 
+/**
+ * Whether two writers of one resource can never run at the same time.
+ *
+ * The walk is transitive, which is both the correct reading and the one the
+ * plan verifier already applies: if B consumes A's artifact and C consumes B's,
+ * then C runs after B runs after A and no two of them write concurrently. This
+ * used to look for a single direct requirement between exactly those two nodes,
+ * so a graph with N writers of one resource — which is every graph whose units
+ * create new files in the same package — needed a requirement between all N
+ * pairs. A five-unit plan was rejected for six pairs it had ordered through a
+ * chain.
+ */
 function orderedByArtifact(graph: GraphRevision, first: Extract<ResourceClaim, { access: "modify" }>, second: Extract<ResourceClaim, { access: "modify" }>): boolean {
-  return graph.artifactRequirements.some((req) => req.producerNodeId === first.nodeId && req.consumerNodeId === second.nodeId && refKey(req.artifactContract) === refKey(first.outputArtifact) && second.inputVersion.kind === "artifact_contract" && refKey(second.inputVersion.ref) === refKey(first.outputArtifact)) || graph.artifactRequirements.some((req) => req.producerNodeId === second.nodeId && req.consumerNodeId === first.nodeId && refKey(req.artifactContract) === refKey(second.outputArtifact) && first.inputVersion.kind === "artifact_contract" && refKey(first.inputVersion.ref) === refKey(second.outputArtifact));
+  return versionReachable(graph, first, second) || versionReachable(graph, second, first);
+}
+
+function versionReachable(graph: GraphRevision, from: Extract<ResourceClaim, { access: "modify" }>, target: Extract<ResourceClaim, { access: "modify" }>): boolean {
+  const writers = graph.resourceClaims.filter((claim): claim is Extract<ResourceClaim, { access: "modify" }> => claim.access === "modify");
+  const pending = [from];
+  const seen = new Set<string>();
+  while (pending.length > 0) {
+    const current = pending.pop()!;
+    if (current.id === target.id) return true;
+    if (seen.has(current.id)) continue;
+    seen.add(current.id);
+    for (const next of writers) {
+      if (next.inputVersion.kind !== "artifact_contract" || refKey(next.inputVersion.ref) !== refKey(current.outputArtifact)) continue;
+      // The consumption has to be declared as a relation, not merely implied by
+      // a matching reference, or the order would rest on a coincidence of ids.
+      if (graph.artifactRequirements.some((req) => req.producerNodeId === current.nodeId && req.consumerNodeId === next.nodeId && refKey(req.artifactContract) === refKey(current.outputArtifact))) {
+        pending.push(next);
+      }
+    }
+  }
+  return false;
 }
 
 function detectCycle(ids: string[], next: (id: string) => string[], onCycle: () => void): void {
