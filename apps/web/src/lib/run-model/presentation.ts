@@ -1,6 +1,84 @@
-import type { GranularityStrategyProjection } from "@manyhands/run-coordinator";
+import type { GranularityStrategyProjection, RunLifecycle } from "@manyhands/run-coordinator";
 import type { RunGraphView } from "@/lib/run-model/graph-view";
 import type { RunNodeView } from "@/lib/run-model/types";
+
+/**
+ * What the objective panel claims, derived from the run rather than from the
+ * shape of the graph alone.
+ *
+ * A run that failed planning rendered "Construyendo el grafo · 1 nodo
+ * identificado" — present tense, twelve hours after it stopped — because the
+ * heading read only `graphPhase`. A provisional graph means planning got as far
+ * as naming units; whether it is still doing so is a different question.
+ */
+export function objectiveHeadline(input: {
+  lifecycle: RunLifecycle;
+  graphPhase: "provisional" | "compiled" | null;
+  nodeCount: number;
+  executableCount: number;
+  completedExecutables: number;
+}): string {
+  const over = ["failed", "completed", "cancelled", "interrupted"].includes(input.lifecycle);
+  if (input.graphPhase === "compiled") {
+    return input.executableCount === 0
+      ? "Sin trabajo ejecutable todavía"
+      : `${input.completedExecutables} de ${input.executableCount} ejecutables con resultado`;
+  }
+  if (input.graphPhase === "provisional") {
+    if (over) return "La planificación se detuvo antes de compilar el grafo";
+    return `Planificando · ${input.nodeCount} unidad${input.nodeCount === 1 ? "" : "es"} identificada${input.nodeCount === 1 ? "" : "s"}`;
+  }
+  return over ? "La planificación no llegó a producir un grafo" : "Preparando el plan";
+}
+
+/**
+ * Agents, blocked work and results are counted against a compiled graph. Before
+ * there is one, three zeros read as "nothing happened" rather than "there was
+ * nothing yet to count".
+ */
+export function showsExecutionCounters(input: { graphPhase: "provisional" | "compiled" | null }): boolean {
+  return input.graphPhase === "compiled";
+}
+
+export interface PlanningFailureEntry {
+  code?: string | undefined;
+  message: string;
+  severity: "error" | "warning" | "advisory";
+}
+
+/**
+ * One entry per finding, never one paragraph.
+ *
+ * A failed plan reached the operator as seven findings joined with " | " in a
+ * single red block. The findings now travel structured, and this reads them.
+ * A journal recorded before that carries only the sentence, so it is split
+ * back apart — reading history, not a substitute for recording it — and a
+ * reason that is plain prose stays one entry rather than acquiring a code it
+ * never had.
+ */
+export function planningFailureFindings(projection: {
+  failureReason?: string | undefined;
+  planningFindings?: readonly PlanningFailureEntry[] | undefined;
+}): PlanningFailureEntry[] {
+  if (projection.planningFindings !== undefined && projection.planningFindings.length > 0) {
+    return projection.planningFindings.map((finding) => ({
+      ...(finding.code === undefined ? {} : { code: finding.code }),
+      message: finding.message,
+      severity: finding.severity
+    }));
+  }
+  const reason = projection.failureReason?.trim();
+  if (reason === undefined || reason.length === 0) return [];
+  return reason.split(" | ").map((entry) => {
+    const separator = entry.indexOf(": ");
+    const code = separator < 0 ? undefined : entry.slice(0, separator);
+    // A code is one identifier, so a colon inside a sentence is not one.
+    if (code === undefined || !/^[a-z][a-z0-9_]*$/u.test(code)) {
+      return { message: entry.trim(), severity: "error" as const };
+    }
+    return { code, message: entry.slice(separator + 2).trim(), severity: "error" as const };
+  });
+}
 
 export type GraphLens = "execution" | "artifact" | "contract" | "conflict" | "all";
 export type GraphRelationKind = "hierarchy" | "artifact" | "contract" | "conflict";
@@ -147,14 +225,29 @@ export function eventPresentation(type: string): { label: string; diagnostic: bo
     "decision.resolved": "Decisión respondida",
     "final_candidate.verified": "Resultado final verificado",
     "delivery.published": "Resultado publicado",
-    "run.failed": "Run fallido"
+    "delivery.started": "Publicación iniciada",
+    "delivery.failed": "Publicación fallida",
+    "run.failed": "Run fallido",
+    // The effect protocol is how the daemon does work, not what happened. It
+    // stays available under technical detail, in the interface language.
+    "command.accepted": "Comando aceptado",
+    "effect.requested": "Efecto solicitado",
+    "effect.observed": "Efecto observado",
+    "effect.completed": "Efecto completado",
+    "effect.failed": "Efecto fallido",
+    "operation.interrupted": "Operación interrumpida"
   };
   const diagnosticTypes = new Set([
     "planning.node_discovered",
     "planning.critic_recorded",
     "graph.revision.proposed",
     "readiness.observed",
-    "failure.classified"
+    "failure.classified",
+    "command.accepted",
+    "effect.requested",
+    "effect.observed",
+    "effect.completed",
+    "effect.failed"
   ]);
   return {
     label: labels[type] ?? humanizeEventType(type),

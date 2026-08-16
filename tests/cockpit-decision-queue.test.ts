@@ -202,10 +202,14 @@ describe("delivery evidence guard", () => {
 });
 
 describe("relation and viewport contracts", () => {
-  it("uses the canonical typed relation names", () => {
-    expect(relationDisplayName("artifact")).toBe("ArtifactRequirement");
-    expect(relationDisplayName("contract")).toBe("SeamBinding");
-    expect(relationDisplayName("conflict")).toBe("ConflictConstraint");
+  it("names a relation by what it is, not by the type that carries it", () => {
+    // This used to pin the canonical type names as the operator-facing labels.
+    // `ArtifactRequirement` is precise and it is our word, not theirs; the
+    // canonical name still appears in the inspector, beside the contract it
+    // names, where the precision is what the reader came for.
+    expect(relationDisplayName("artifact")).toBe("Entrega de artefacto");
+    expect(relationDisplayName("contract")).toBe("Contrato de frontera");
+    expect(relationDisplayName("conflict")).toBe("Conflicto de recursos");
   });
 
   it("never auto-fits the canvas in response to run events", () => {

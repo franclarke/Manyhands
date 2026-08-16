@@ -1,5 +1,5 @@
 import { TaskContractBundleSchema, type TaskContractBundle } from "@manyhands/contracts";
-import { foldRun, type RunEvent as CoordinatorRunEvent, type RunProjection } from "@manyhands/run-coordinator";
+import { foldRun, type RunEvent as CoordinatorRunEvent, type RunLifecycle, type RunProjection } from "@manyhands/run-coordinator";
 import {
   canonicalGraphView,
   legacyGraphView,
@@ -18,10 +18,11 @@ export function buildRunModel(seed: RunSeed, inputEvents: readonly RunEvent[]): 
   // fall back to a placeholder because the newer shape was not recognised.
   const compiledGraph = canonicalGraphView(compiled?.payload.graph)
     ?? legacyGraphView(compiled?.payload.graph);
-  const provisional = compiledGraph === null ? buildProvisionalGraph(seed, events) : null;
+  const runLifecycle = projection?.lifecycle ?? seed.lifecycle;
+  const provisional = compiledGraph === null ? buildProvisionalGraph(seed, events, runLifecycle) : null;
   const graph = compiledGraph ?? provisional?.graph ?? null;
   const contracts = parseContracts(compiled?.payload.contracts);
-  const nodes = graph === null ? [] : buildNodeViews(graph, projection, provisional?.layoutByNodeId, provisional !== null);
+  const nodes = graph === null ? [] : buildNodeViews(graph, projection, provisional?.layoutByNodeId, provisional !== null ? runLifecycle : undefined);
   const evidenceMatrices = events
     .filter((event) => event.type === "evidence.matrix_recorded" || event.type === "validation.completed" || event.type === "integration.completed")
     .flatMap((event) => {
@@ -70,10 +71,18 @@ function parseContracts(value: unknown): TaskContractBundle[] {
   });
 }
 
-function buildNodeViews(graph: RunGraphView, projection: RunProjection | null, layoutByNodeId?: ReadonlyMap<string, RunNodeView["layout"]>, provisional = false): RunNodeView[] {
+function buildNodeViews(
+  graph: RunGraphView,
+  projection: RunProjection | null,
+  layoutByNodeId?: ReadonlyMap<string, RunNodeView["layout"]>,
+  /** Set only for a provisional graph: the lifecycle the placeholder reflects. */
+  provisionalLifecycle?: RunLifecycle
+): RunNodeView[] {
   const own = Object.values(graph.nodes).map((node) => ({
     ...nodeView(node, projection),
-    ...(provisional && node.id === graph.rootId ? { status: "running" as const } : {}),
+    ...(provisionalLifecycle !== undefined && node.id === graph.rootId
+      ? { status: provisionalRootStatus(provisionalLifecycle) }
+      : {}),
     ...(layoutByNodeId?.get(node.id) !== undefined ? { layout: layoutByNodeId.get(node.id) } : {})
   }));
   const byId = new Map(own.map((node) => [node.id, node]));
@@ -106,7 +115,11 @@ function buildNodeViews(graph: RunGraphView, projection: RunProjection | null, l
   return own;
 }
 
-function buildProvisionalGraph(seed: RunSeed, events: readonly RunEvent[]): { graph: RunGraphView; layoutByNodeId: Map<string, RunNodeView["layout"]> } | null {
+function buildProvisionalGraph(
+  seed: RunSeed,
+  events: readonly RunEvent[],
+  lifecycle: RunLifecycle
+): { graph: RunGraphView; layoutByNodeId: Map<string, RunNodeView["layout"]> } | null {
   let startedIndex = -1;
   for (let index = events.length - 1; index >= 0; index -= 1) {
     if (events[index]?.type === "planning.attempt_started") {
@@ -147,6 +160,11 @@ function buildProvisionalGraph(seed: RunSeed, events: readonly RunEvent[]): { gr
   }
   let rootId = Object.values(nodes).find((node) => node.parentId === null)?.id;
   if (rootId === undefined) {
+    // The placeholder is the view's own invention. While planning runs it
+    // stands for work about to be named; on a run that stopped without naming
+    // any, it stands for nothing, and drawing it claims a unit that never
+    // existed.
+    if (["failed", "cancelled", "interrupted", "completed"].includes(lifecycle)) return null;
     rootId = `planning-root:${seed.id}`;
     nodes[rootId] = { id: rootId, parentId: null, kind: "root", title: "Diseñando la solución", goal: seed.goal };
     layoutByNodeId.set(rootId, { depth: 0, siblingIndex: 0, siblingCount: 1 });
@@ -183,6 +201,18 @@ function provisionalDepth(nodeId: string, discoveries: readonly RunEvent[]): num
     current = parents.get(current) ?? null;
   }
   return depth;
+}
+
+/**
+ * The placeholder root reflects the run, not an assumption about it. It was
+ * pinned to `running`, so a run that failed planning twelve hours earlier still
+ * rendered a node badged RUNNING reading "Diseñando la solución".
+ */
+function provisionalRootStatus(lifecycle: RunLifecycle): NodeExecutionStatus {
+  if (["failed", "cancelled", "interrupted"].includes(lifecycle)) return "failed";
+  if (["planning", "running"].includes(lifecycle)) return "running";
+  if (lifecycle === "waiting_for_input" || lifecycle === "needs_approval") return "waiting";
+  return "pending";
 }
 
 function nodeView(node: RunGraphNodeView, projection: RunProjection | null): RunNodeView {

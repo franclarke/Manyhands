@@ -128,6 +128,15 @@ export interface RunProjection {
   deliveryApproval?: DeliveryApproval;
   lifecycleBeforePause?: Extract<RunLifecycle, "running" | "waiting_for_input">;
   failureReason?: string;
+  /** Absent on journals recorded before findings travelled structured. */
+  planningFindings?: PlanningFailureFinding[];
+}
+
+export interface PlanningFailureFinding {
+  code?: string | undefined;
+  message: string;
+  severity: "error" | "warning" | "advisory";
+  evidenceRefs: string[];
 }
 
 export function foldRun(rawEvents: readonly RunEvent[]): RunProjection {
@@ -325,6 +334,7 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       break;
     case "planning.failed":
       next.failureReason = event.payload.reason;
+      if (event.payload.findings !== undefined) next.planningFindings = event.payload.findings;
       transition(next, "failed");
       break;
     case "attempt.started":

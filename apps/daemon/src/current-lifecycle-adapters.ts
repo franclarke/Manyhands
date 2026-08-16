@@ -932,7 +932,18 @@ function nonReadyPlanningEvents(
   }
   const findings = result.kind === "unsupported" || result.kind === "rejected" ? result.findings : [];
   return [fact(`planning:${runId}:failed`, now(), "planning.failed", {
-    reason: findings.map(({ code, message }) => `${code}: ${message}`).join(" | ") || result.kind
+    // The sentence stays: anything that only knows how to show a reason still
+    // works. The findings travel beside it so a reader does not have to parse
+    // prose to learn which of seven things went wrong.
+    reason: findings.map(({ code, message }) => `${code}: ${message}`).join(" | ") || result.kind,
+    ...(findings.length === 0 ? {} : {
+      findings: findings.map(({ code, message, severity, evidenceRefs }) => ({
+        code,
+        message,
+        severity: severity === "error" ? "error" as const : severity === "warning" ? "warning" as const : "advisory" as const,
+        evidenceRefs: [...evidenceRefs]
+      }))
+    })
   })];
 }
 

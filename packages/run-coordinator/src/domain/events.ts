@@ -289,7 +289,20 @@ export const RunEventSchema = z.discriminatedUnion("type", [
     trace: z.record(z.unknown())
   }).strict()),
   event("planning.critic_recorded", z.object({ critic: NonEmptyStringSchema, findings: z.array(z.record(z.unknown())) }).strict()),
-  event("planning.failed", z.object({ reason: NonEmptyStringSchema }).strict()),
+  event("planning.failed", z.object({
+    reason: NonEmptyStringSchema,
+    /**
+     * The findings as the engine produced them. Optional because journals
+     * written before this carry only the joined sentence, and a journal that no
+     * longer replays is worse than one missing a field.
+     */
+    findings: z.array(z.object({
+      code: NonEmptyStringSchema.optional(),
+      message: NonEmptyStringSchema,
+      severity: z.enum(["error", "warning", "advisory"]).default("error"),
+      evidenceRefs: z.array(NonEmptyStringSchema).default([])
+    }).strict()).optional()
+  }).strict()),
   event("attempt.started", z.object({
     attemptId: EntityIdSchema,
     nodeId: EntityIdSchema,

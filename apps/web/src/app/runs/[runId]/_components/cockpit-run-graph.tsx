@@ -51,11 +51,19 @@ const NODE_HEIGHT = 132;
 const BAND_PADDING_X = 104;
 const BAND_PADDING_Y = 30;
 const edgeTypes: EdgeTypes = { interactiveRelation: InteractiveRelationEdge };
+/**
+ * The lens names what the operator wants to see, not the type that carries it.
+ * `ArtifactRequirement` and `SeamBinding` are canonical vocabulary and belong
+ * in the inspector, where the contract itself is on screen.
+ *
+ * Conflicts are gone rather than renamed: Stage 9 replaced pairwise conflict
+ * constraints with resource claims, so a canonical graph has none and the lens
+ * could only ever be empty.
+ */
 const LENSES: ReadonlyArray<{ value: GraphLens; label: string }> = [
   { value: "execution", label: "Ejecución" },
-  { value: "artifact", label: "ArtifactRequirement" },
-  { value: "contract", label: "SeamBinding" },
-  { value: "conflict", label: "ConflictConstraint" },
+  { value: "artifact", label: "Entregas" },
+  { value: "contract", label: "Contratos" },
   { value: "all", label: "Todas" }
 ];
 

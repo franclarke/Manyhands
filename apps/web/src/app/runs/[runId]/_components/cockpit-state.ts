@@ -141,9 +141,9 @@ export function affectedSubgraphNodeIds(
 export function relationDisplayName(kind: GraphRelationKind): string {
   const names: Record<GraphRelationKind, string> = {
     hierarchy: "ParentOwnership",
-    artifact: "ArtifactRequirement",
-    contract: "SeamBinding",
-    conflict: "ConflictConstraint"
+    artifact: "Entrega de artefacto",
+    contract: "Contrato de frontera",
+    conflict: "Conflicto de recursos"
   };
   return names[kind];
 }

@@ -35,7 +35,7 @@ export default function RunLoading(): React.ReactElement {
 
         <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_340px]">
           {/* Graph workspace skeleton */}
-          <section className="relative min-h-0 overflow-hidden border-r border-[var(--color-border)] bg-[radial-gradient(circle,var(--color-border)_1px,transparent_1px)] [background-size:22px_22px]">
+          <section className="relative min-h-0 overflow-hidden lg:border-r lg:border-[var(--color-border)] bg-[radial-gradient(circle,var(--color-border)_1px,transparent_1px)] [background-size:22px_22px]">
             <div className="mh-graph-toolbar absolute left-0 top-0 z-10">
               <div className="flex items-center gap-2">
                 <div className="mh-skeleton h-5 w-16" />

@@ -7,7 +7,7 @@ import { useLiveRunModel } from "@/components/run-model/use-live-run-model";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { StatusPill } from "@/components/ui/status-pill";
-import { eventPresentation, granularityStrategyExplanation, summarizeRunNodes, type GranularityExplanationView } from "@/lib/run-model/presentation";
+import { eventPresentation, granularityStrategyExplanation, objectiveHeadline, planningFailureFindings, showsExecutionCounters, summarizeRunNodes, type GranularityExplanationView } from "@/lib/run-model/presentation";
 import type { RunEvent, RunSeed } from "@/lib/run-model/types";
 import { runUiStatus, statusMeta } from "@/lib/status";
 import { CockpitRunGraph } from "./cockpit-run-graph";
@@ -34,6 +34,7 @@ export function RunModelView({
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [inspectorCollapsed, setInspectorCollapsed] = useState(false);
+  const [mobilePane, setMobilePane] = useState<"graph" | "inspector">("graph");
   const selectedNode = model.nodes.find((node) => node.id === selectedNodeId) ?? null;
   const pendingDecisions = model.projection === null
     ? []
@@ -118,8 +119,11 @@ export function RunModelView({
             <h1 className="truncate text-base font-semibold">{model.run.title}</h1>
           </div>
           <div className="mt-0.5 flex min-w-0 items-center gap-2 text-micro text-[var(--color-text-muted)]">
-            <p className="truncate">{model.run.goal}</p>
-            <span aria-hidden className="shrink-0 text-[var(--color-text-subtle)]">·</span>
+            {/* The title is a truncation of the goal, so printing both spends
+                a line to say the same sentence twice. */}
+            {model.run.goal.trim() !== model.run.title.trim() && !model.run.title.startsWith(model.run.goal.slice(0, 40))
+              ? <><p className="truncate">{model.run.goal}</p><span aria-hidden className="shrink-0 text-[var(--color-text-subtle)]">·</span></>
+              : null}
             <span className="shrink-0 text-[var(--color-text-subtle)]">{fixture ? "historial de muestra" : live.connected ? "sincronizado" : live.connection}</span>
           </div>
         </div>
@@ -147,8 +151,26 @@ export function RunModelView({
         </div>
       ) : null}
 
-      <div className={`grid min-h-0 flex-1 transition-[grid-template-columns] duration-200 motion-reduce:transition-none ${inspectorCollapsed ? "grid-cols-[minmax(0,1fr)_0px]" : "grid-cols-[minmax(0,1fr)_340px]"}`}>
-        <section className={`relative min-h-0 ${inspectorCollapsed ? "" : "border-r border-[var(--color-border)]"}`}>
+      {/* Below lg the two panes cannot share the width: a 340px inspector left
+          the graph about 35px wide, so the object the whole product is about
+          simply was not there. One pane at a time, graph first. */}
+      <div role="tablist" aria-label="Vista del run" className="flex shrink-0 gap-1 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 lg:hidden">
+        {([["graph", "Grafo"], ["inspector", "Detalle"]] as const).map(([pane, label]) => (
+          <button
+            key={pane}
+            type="button"
+            role="tab"
+            aria-selected={mobilePane === pane}
+            onClick={() => setMobilePane(pane)}
+            className={`rounded-md px-3 py-1.5 text-label font-medium transition-colors duration-150 motion-reduce:transition-none ${mobilePane === pane ? "bg-[var(--color-accent)] text-[var(--color-accent-contrast)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div className={`grid min-h-0 flex-1 grid-cols-1 transition-[grid-template-columns] duration-200 motion-reduce:transition-none ${inspectorCollapsed ? "lg:grid-cols-[minmax(0,1fr)_0px]" : "lg:grid-cols-[minmax(0,1fr)_340px]"}`}>
+        <section className={`relative min-h-0 ${mobilePane === "graph" ? "" : "hidden lg:block"} ${inspectorCollapsed ? "" : "lg:border-r lg:border-[var(--color-border)]"}`}>
           <CockpitRunGraph
             model={model}
             selectedNodeId={selectedNodeId}
@@ -162,13 +184,13 @@ export function RunModelView({
             aria-expanded={!inspectorCollapsed}
             aria-controls="run-inspector"
             onClick={() => setInspectorCollapsed((collapsed) => !collapsed)}
-            className="absolute right-3 top-3 z-20 h-8 w-8 border-[var(--color-border)] bg-[var(--color-surface-raised)] shadow-sm"
+            className="absolute right-3 top-3 z-20 hidden h-8 w-8 border-[var(--color-border)] bg-[var(--color-surface-raised)] shadow-sm lg:flex"
           >
             {inspectorCollapsed ? <PanelRightOpen aria-hidden className="h-4 w-4" /> : <PanelRightClose aria-hidden className="h-4 w-4" />}
           </IconButton>
         </section>
 
-        <aside id="run-inspector" aria-hidden={inspectorCollapsed} className="min-h-0 overflow-y-auto overflow-x-hidden bg-[var(--color-surface)]">
+        <aside id="run-inspector" aria-hidden={inspectorCollapsed} className={`min-h-0 overflow-y-auto overflow-x-hidden bg-[var(--color-surface)] ${mobilePane === "inspector" ? "" : "hidden lg:block"}`}>
           {!inspectorCollapsed ? (
             <>
               {activeDecision !== null ? (
@@ -202,25 +224,63 @@ function RunActions({ lifecycle, busy, canDeliver, onCommand, onDeliver }: { lif
 
 function RunSummary({ model, canDeliver }: { model: ReturnType<typeof useLiveRunModel>["model"]; canDeliver: boolean }): React.ReactElement {
   const summary = summarizeRunNodes(model.nodes);
-  const resultLabel = summary.executableCount === 0
-    ? "Sin trabajo ejecutable todavía"
-    : `${summary.completedExecutables} de ${summary.executableCount} ejecutables con resultado`;
+  const counters = showsExecutionCounters({ graphPhase: model.graphPhase });
   return (
     <section className="border-b border-[var(--color-border)] p-5">
       <span className="mh-mono text-eyebrow uppercase tracking-[0.12em] text-[var(--color-text-subtle)]">Estado del objetivo</span>
-      <h2 className="mt-2 text-balance text-sm font-semibold">{model.graphPhase === "provisional" ? `Construyendo el grafo · ${model.nodes.length} nodo${model.nodes.length === 1 ? "" : "s"} identificado${model.nodes.length === 1 ? "" : "s"}` : model.graph === null ? "Preparando el plan" : resultLabel}</h2>
-      <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-        <Metric value={summary.activeAgents} label="agentes" />
-        <Metric value={summary.blockedAgents} label="bloqueados" />
-        <Metric value={`${summary.completedExecutables}/${summary.executableCount}`} label="resultados" />
-      </div>
-      <p className="mt-3 text-pretty text-micro text-[var(--color-text-subtle)]">
-        {summary.coordinatingNodes > 0 ? `${summary.coordinatingNodes} nodo coordinando · ` : ""}{model.contracts.length} contrato{model.contracts.length === 1 ? "" : "s"} vigente{model.contracts.length === 1 ? "" : "s"}
-      </p>
+      <h2 className="mt-2 text-balance text-sm font-semibold">{objectiveHeadline({
+        lifecycle: model.run.lifecycle,
+        graphPhase: model.graphPhase,
+        nodeCount: model.nodes.length,
+        executableCount: summary.executableCount,
+        completedExecutables: summary.completedExecutables
+      })}</h2>
+      {counters ? (
+        <>
+          <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+            <Metric value={summary.activeAgents} label="agentes" />
+            <Metric value={summary.blockedAgents} label="bloqueados" />
+            <Metric value={`${summary.completedExecutables}/${summary.executableCount}`} label="resultados" />
+          </div>
+          <p className="mt-3 text-pretty text-micro text-[var(--color-text-subtle)]">
+            {summary.coordinatingNodes > 0 ? `${summary.coordinatingNodes} nodo coordinando · ` : ""}{model.contracts.length} contrato{model.contracts.length === 1 ? "" : "s"} vigente{model.contracts.length === 1 ? "" : "s"}
+          </p>
+        </>
+      ) : null}
       {canDeliver ? <div className="mt-4 rounded-lg border border-[var(--status-completed-border)] bg-[var(--status-completed-bg)] p-3 text-xs text-[var(--status-completed-fg)]"><CheckCircle2 className="mr-2 inline h-4 w-4" />Resultado verificado listo para publicar.</div> : null}
       {model.run.lifecycle === "result_ready" && model.projection?.finalCandidate !== undefined && !canDeliver ? <div className="mt-4 rounded-lg border border-[var(--status-review-border)] bg-[var(--status-review-bg)] p-3 text-xs text-[var(--status-review-fg)]">La entrega está bloqueada hasta verificar la matriz exacta del candidato.</div> : null}
       <EvidenceDetails matrices={model.evidenceMatrices} matrixId={model.projection?.finalCandidate?.evidenceMatrixId} candidateCommit={model.projection?.finalCandidate?.commit} />
-      {model.projection?.failureReason !== undefined ? <div className="mt-4 rounded-lg border border-[var(--status-failed-border)] bg-[var(--status-failed-bg)] p-3 text-xs text-[var(--status-failed-fg)]">{model.projection.failureReason}</div> : null}
+      <FailureFindings projection={model.projection} />
+    </section>
+  );
+}
+
+/**
+ * One entry per finding. A failed plan used to arrive as seven of them joined
+ * with " | " inside a single red block, so the operator read a paragraph to
+ * learn which of seven things went wrong.
+ */
+function FailureFindings({ projection }: { projection: ReturnType<typeof useLiveRunModel>["model"]["projection"] }): React.ReactElement | null {
+  const findings = planningFailureFindings({
+    ...(projection?.failureReason === undefined ? {} : { failureReason: projection.failureReason }),
+    ...(projection?.planningFindings === undefined ? {} : { planningFindings: projection.planningFindings })
+  });
+  if (findings.length === 0) return null;
+  return (
+    <section className="mt-4 rounded-lg border border-[var(--status-failed-border)] bg-[var(--status-failed-bg)] p-3">
+      <h3 className="text-xs font-semibold text-[var(--status-failed-fg)]">
+        {findings.length === 1 ? "El run se detuvo por este motivo" : `El run se detuvo por ${findings.length} motivos`}
+      </h3>
+      <ul className="mt-2 space-y-2">
+        {findings.map((finding, index) => (
+          <li key={`${finding.code ?? "reason"}:${index}`} className="text-xs text-[var(--status-failed-fg)]">
+            {finding.code !== undefined ? (
+              <span className="mh-mono block text-eyebrow uppercase tracking-[0.08em] opacity-80">{finding.code}</span>
+            ) : null}
+            <p className="text-pretty">{finding.message}</p>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
@@ -248,13 +308,39 @@ function EvidenceDetails({ matrices, matrixId, candidateCommit }: { matrices: re
                 <strong>{typeof criterion.status === "string" ? criterion.status : "pending"}</strong>
               </div>
               {typeof criterion.justification === "string" ? <p className="mt-1 text-[var(--color-text-muted)]">{criterion.justification}</p> : null}
-              {evidenceRefs.length > 0 ? <p className="mt-1 break-all text-[var(--color-text-subtle)]">Evidencia: {evidenceRefs.join(", ")}</p> : null}
+              {evidenceRefs.length > 0 ? (
+                <details className="mt-1">
+                  <summary className="cursor-pointer select-none text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
+                    {describeEvidenceRefs(evidenceRefs)}
+                  </summary>
+                  <ul className="mt-1 space-y-1">
+                    {evidenceRefs.map((ref) => <li key={ref} className="mh-mono break-all text-eyebrow text-[var(--color-text-subtle)]">{ref}</li>)}
+                  </ul>
+                </details>
+              ) : null}
             </li>
           );
         })}
       </ul>
     </section>
   );
+}
+
+/**
+ * What the evidence is, not its digest. `command-bfd5b36f…:attempt:1` is the
+ * identity of a validation run; it is not a sentence anyone can read, and the
+ * digest is only useful once someone has decided to check it.
+ */
+function describeEvidenceRefs(refs: readonly string[]): string {
+  const commands = refs.filter((ref) => ref.startsWith("command-")).length;
+  const controls = refs.filter((ref) => ref.includes("negative-control")).length;
+  const rest = refs.length - commands - controls;
+  const parts = [
+    commands === 0 ? null : `${commands} comando${commands === 1 ? "" : "s"} ejecutado${commands === 1 ? "" : "s"}`,
+    controls === 0 ? null : `${controls} control negativo`,
+    rest <= 0 ? null : `${rest} referencia${rest === 1 ? "" : "s"}`
+  ].filter((part): part is string => part !== null);
+  return parts.length === 0 ? `${refs.length} referencias` : parts.join(" · ");
 }
 
 function Metric({ value, label }: { value: number | string; label: string }): React.ReactElement { return <div className="rounded-lg bg-[var(--color-bg-subtle)] p-2"><strong className="block text-base tabular-nums">{value}</strong><span className="text-eyebrow text-[var(--color-text-subtle)]">{label}</span></div>; }
