@@ -89,6 +89,47 @@ describe("A delegated plan approval", () => {
   });
 });
 
+/**
+ * The rehearsal run of 2026-08-16 parked at `waiting_for_input` with a pending
+ * `resolve_conflict`, despite being autonomous. The policy resolves that kind
+ * and says so in its own tests; nothing wired it to the execution reaction,
+ * where such decisions are actually raised. A delegation that covers the first
+ * gate and not the ones that stop the run is not a delegation.
+ */
+describe("A delegated repair", () => {
+  it("answers the conflict its own execution raised and tries again", async () => {
+    const reaction = await executionReaction("autonomous", { raiseConflict: true });
+
+    expect(reaction.domainEvents.map(({ type }) => type)).toEqual([
+      "decision.raised",
+      "decision.resolved"
+    ]);
+    const resolved = reaction.domainEvents.at(-1) as RunEventInput & {
+      payload: { optionId: string; authorizedBy: unknown };
+    };
+    expect(resolved.payload.optionId).toBe("retry");
+    expect(resolved.payload.authorizedBy).toEqual({ kind: "autonomy_policy", level: "autonomous" });
+    expect(reaction.effects).toHaveLength(1);
+    expect(reaction.effects[0]?.intent.attemptId).toMatch(/^stage3:execution/u);
+  });
+
+  it("leaves a supervised run parked on the same conflict", async () => {
+    const reaction = await executionReaction("supervised", { raiseConflict: true });
+
+    expect(reaction.domainEvents.map(({ type }) => type)).toEqual(["decision.raised"]);
+    expect(reaction.effects).toEqual([]);
+  });
+
+  it("does not answer a question about what the operator wanted", async () => {
+    // A `clarify_goal` raised mid-execution stops the run under every level,
+    // because the answer is not in the repository or the graph.
+    const reaction = await executionReaction("autonomous", { raiseClarification: true });
+
+    expect(reaction.domainEvents.map(({ type }) => type)).toEqual(["decision.raised"]);
+    expect(reaction.effects).toEqual([]);
+  });
+});
+
 describe("A delegated delivery", () => {
   it("publishes the candidate the run just verified", async () => {
     const reaction = await executionReaction("autonomous");
@@ -196,13 +237,18 @@ async function planningReaction(autonomy: AutonomyLevel | undefined) {
 
 async function executionReaction(
   autonomy: AutonomyLevel,
-  result: { verifyCandidate?: boolean } = {}
+  result: { verifyCandidate?: boolean; raiseConflict?: boolean; raiseClarification?: boolean } = {}
 ) {
+  const blocked = result.raiseConflict === true || result.raiseClarification === true;
   const application = buildApplication({
-    loadExecutionResult: async () => [
-      input("evidence.matrix_recorded", { matrix: verifiedMatrix() }),
-      ...(result.verifyCandidate === false ? [] : [input("final_candidate.verified", finalCandidate())])
-    ]
+    loadExecutionResult: async () => blocked
+      ? [input("decision.raised", {
+        decision: result.raiseClarification === true ? clarifyDecision() : conflictDecision()
+      })]
+      : [
+        input("evidence.matrix_recorded", { matrix: verifiedMatrix() }),
+        ...(result.verifyCandidate === false ? [] : [input("final_candidate.verified", finalCandidate())])
+      ]
   });
   const events = sequenced([
     creationInput(autonomy),
@@ -246,6 +292,28 @@ function planDecision() {
     affectedNodeIds: ["node:root"],
     evidenceRefs: ["graph:graph-stage11:r1"],
     impact: "acceptance"
+  };
+}
+
+function conflictDecision() {
+  return {
+    id: "resolve-conflict:unit:a",
+    kind: "resolve_conflict",
+    question: "Execution for A requires guidance.",
+    options: [{ id: "retry", label: "Retry" }, { id: "stop", label: "Stop" }],
+    affectedNodeIds: ["unit:a"],
+    evidenceRefs: ["attempt:unit:a:1"],
+    impact: "risk"
+  };
+}
+
+function clarifyDecision() {
+  return {
+    ...conflictDecision(),
+    id: "clarify-goal:unit:a",
+    kind: "clarify_goal",
+    options: [{ id: "yes", label: "Yes" }, { id: "no", label: "No" }],
+    impact: "scope"
   };
 }
 

@@ -313,8 +313,16 @@ async function react(
   }
   if (attempt?.startsWith("stage3:execution") === true && succeeded && options.loadExecutionResult !== undefined) {
     const produced = [...await options.loadExecutionResult(context.runId, attempt)];
-    const delegated = delegatedDelivery(produced, context, options);
-    return { domainEvents: [...produced, ...delegated.events], effects: delegated.effects };
+    // Decisions first: a pending one blocks the run, and the reducer refuses a
+    // final candidate while any is open, so delivery is only asked about a run
+    // whose questions are answered.
+    const answered = delegatedDecisions(produced, context, options);
+    const settled = [...produced, ...answered.events];
+    const delivery = delegatedDelivery(settled, context, options);
+    return {
+      domainEvents: [...settled, ...delivery.events],
+      effects: [...answered.effects, ...delivery.effects]
+    };
   }
   return { domainEvents: [], effects: [] };
 }
@@ -557,6 +565,47 @@ function delegatedPlanApproval(
     ],
     effects: [executionEffect(context, requireDefinition(context.projection), options)]
   };
+}
+
+/**
+ * The decisions this execution raised that the operator delegated.
+ *
+ * The plan approval is answered in the planning reaction; these are the ones a
+ * run hits while working — a leaf that could not finish, an amendment — and
+ * they are what actually park a long run. Answering only the first gate and
+ * none of these is not a delegation, which is how the rehearsal run of
+ * 2026-08-16 ended at `waiting_for_input` while set to autonomous.
+ *
+ * A retry is a new execution attempt, exactly as when a person presses it.
+ */
+function delegatedDecisions(
+  produced: readonly RunEventInput[],
+  context: RunActorReactionContext,
+  options: ProductRunApplicationOptions
+): DelegatedWork {
+  const level = runAutonomy(context.projection.definition);
+  const events: RunEventInput[] = [];
+  const effects: RunActorEffectRequest[] = [];
+  for (const item of produced) {
+    if (item.type !== "decision.raised") continue;
+    const decision = item.payload.decision;
+    const optionId = autonomyResolution(level, decision);
+    if (optionId === undefined) continue;
+    events.push(event(options, context.runId, "decision.resolved", {
+      decisionId: decision.id,
+      optionId,
+      authorizedBy: standingAuthorization(level)
+    }, `${decision.id}:delegated`));
+    if (decision.kind === "resolve_conflict" && optionId === "retry" && effects.length === 0) {
+      effects.push(executionEffect(
+        context,
+        requireDefinition(context.projection),
+        options,
+        nextExecutionAttempt(context.projection)
+      ));
+    }
+  }
+  return { events, effects };
 }
 
 /**
