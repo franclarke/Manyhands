@@ -155,8 +155,19 @@ correct. The prior gates answer the second question and cannot answer the first.
   independent reviews for GI, GDel and the two stages above.
 - R18: a medium real application, with independent topology, product and
   clean-clone oracles.
-- R19: a larger meaningful hierarchy, judged on useful boundaries, real
-  parallelism and bounded cost — explicitly not on node count.
+- R19 — **the demonstration run**: a larger meaningful hierarchy, judged on
+  useful boundaries, real parallelism and bounded cost, explicitly not on node
+  count. This is the run Francisco presents, so it is designed once and executed
+  once: a goal whose natural decomposition is several layers deep and wider than
+  one wave, on a target that makes the boundaries legible to an audience.
+
+  Everything exercised so far is one root over two leaves. Depth beyond that is
+  untested, and the failures it would surface — scheduling across more than one
+  wave, repair routed to the right descendant, integration composing more than
+  two artifacts, a workspace that stays readable at a dozen nodes — are exactly
+  what R19 exists to find. Treat a cheaper mid-size rehearsal as part of this
+  cell, not as a separate stage: run it, fix what it surfaces, then run the
+  demonstration on a tree that has already been de-risked.
 - Operator, recovery, security and limitations documentation updated to what the
   system does, including what it does not do.
 - Freeze the bounded post-GProd study target, prompts, browser flows, cutoffs
@@ -184,6 +195,24 @@ Stage 12 deletes routes; doing that before Stage 11 would remove the legacy
 graph projection the UI still depends on, and the UI would go from wrong to
 blank. Stage 13 needs both: a truthful view to judge through, and a closed
 architecture so a gate result attributes to one candidate.
+
+## Why the demonstration run waits for Stage 11
+
+Two blockers, both concrete.
+
+`autonomy: autonomous` has no productive implementation in the daemon path, so
+every gate in a deep graph would stop for a manual approval. On a three-node run
+that is two clicks; on a twelve-node run across several waves it is the
+experiment's dominant cost, and each pause is a chance to perturb the thing being
+measured.
+
+And a graph is only evidence if the workspace can show it. The canonical graph
+now renders and the panel no longer invents state, but the reachability guard —
+no rendered domain value without a journal fact behind it — is what makes a
+twelve-node screenshot admissible rather than decorative.
+
+Neither is a reason to delay indefinitely. Both are Stage 11 items already in
+scope, and the rehearsal run should follow immediately once they land.
 
 ## Open decisions for the operator
 
