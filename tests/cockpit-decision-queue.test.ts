@@ -27,7 +27,7 @@ describe("cockpit lifecycle medals", () => {
 
     expect(candidate).toMatchObject({
       state: "candidate",
-      badge: "Candidate [abc123d]"
+      badge: "Candidato · abc123d"
     });
   });
 
@@ -57,7 +57,7 @@ describe("cockpit lifecycle medals", () => {
 
     expect(verified).toMatchObject({
       state: "verified",
-      badge: "Verified [2/3 passed]"
+      badge: "Verificado · 2/3 criterios"
     });
   });
 
@@ -76,7 +76,7 @@ describe("cockpit lifecycle medals", () => {
       evidenceMatrixId: "matrix-api",
       evidenceMatrices: [{ matrixId: "matrix-api", candidateCommit: attempt.candidateCommit, outcome: "unverified", criteria: [] }],
       delivered: false
-    })).toMatchObject({ state: "evidence_incomplete", badge: "Evidence incomplete" });
+    })).toMatchObject({ state: "evidence_incomplete", badge: "Evidencia incompleta" });
 
     expect(lifecycleMedalForNode({
       nodeId: "api",
@@ -85,7 +85,7 @@ describe("cockpit lifecycle medals", () => {
       evidenceMatrixId: "matrix-api",
       evidenceMatrices: [{ matrixId: "matrix-api", candidateCommit: attempt.candidateCommit, outcome: "failed", criteria: [] }],
       delivered: false
-    })).toMatchObject({ state: "failed", badge: "Failed", detail: "Validation failed." });
+    })).toMatchObject({ state: "failed", badge: "Falló", detail: "La validación no pasó." });
 
     expect(lifecycleMedalForNode({
       nodeId: "api",
@@ -93,7 +93,7 @@ describe("cockpit lifecycle medals", () => {
       integrations: [],
       evidenceMatrices: [],
       delivered: false
-    })).toMatchObject({ state: "evidence_pending", badge: "Evidence pending" });
+    })).toMatchObject({ state: "evidence_pending", badge: "Evidencia pendiente" });
 
     expect(lifecycleMedalForNode({
       nodeId: "root",
@@ -101,7 +101,7 @@ describe("cockpit lifecycle medals", () => {
       integrations: [{ nodeId: "root", status: "completed", candidateCommit: "root123", evidenceMatrixId: "matrix-root" }],
       evidenceMatrices: [{ matrixId: "matrix-root", candidateCommit: "root123", outcome: "unverified", criteria: [] }],
       delivered: false
-    })).toMatchObject({ state: "evidence_incomplete", badge: "Evidence incomplete" });
+    })).toMatchObject({ state: "evidence_incomplete", badge: "Evidencia incompleta" });
   });
 
   it("uses the canonical matrix id when the same commit has multiple outcomes", () => {
@@ -116,7 +116,7 @@ describe("cockpit lifecycle medals", () => {
         { matrixId: "matrix-other", candidateCommit: commit, outcome: "verified", criteria: [{ status: "satisfied" }] }
       ],
       delivered: false
-    })).toMatchObject({ state: "evidence_incomplete", badge: "Evidence incomplete" });
+    })).toMatchObject({ state: "evidence_incomplete", badge: "Evidencia incompleta" });
 
     expect(evidenceMatrixForIdentity([
       { matrixId: "matrix-final", candidateCommit: commit, outcome: "unverified" },
@@ -142,7 +142,7 @@ describe("cockpit lifecycle medals", () => {
       integrations: [],
       evidenceMatrices: [],
       delivered: false
-    })).toMatchObject({ state: "stale", badge: "Stale" });
+    })).toMatchObject({ state: "stale", badge: "Obsoleto" });
 
     expect(lifecycleMedalForNode({
       nodeId: "api",
@@ -150,7 +150,7 @@ describe("cockpit lifecycle medals", () => {
       integrations: [],
       evidenceMatrices: [],
       delivered: true
-    })).toMatchObject({ state: "delivered", badge: "Delivered" });
+    })).toMatchObject({ state: "delivered", badge: "Entregado" });
   });
 });
 

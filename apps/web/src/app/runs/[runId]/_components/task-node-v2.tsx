@@ -24,6 +24,14 @@ export interface TaskNodeV2Data extends Record<string, unknown> {
 
 export type TaskNodeV2FlowNode = Node<TaskNodeV2Data, "taskNodeV2">;
 
+/** The canonical kind is our vocabulary; the badge is the reader's. */
+const NODE_KIND_LABEL: Record<"root" | "composite" | "leaf" | "integrator", string> = {
+  root: "objetivo",
+  composite: "coordina",
+  leaf: "ejecuta",
+  integrator: "integra"
+};
+
 export function TaskNodeV2({ data }: NodeProps<TaskNodeV2FlowNode>): React.ReactElement {
   const { node, medal, selected, dimmed, blocked, decisionIds, bandLevel, onOpenDecision } = data;
   const visual = medalVisual(medal.state);
@@ -49,7 +57,7 @@ export function TaskNodeV2({ data }: NodeProps<TaskNodeV2FlowNode>): React.React
       <Handle id="target" type="target" position={Position.Top} className="opacity-0" />
       <Handle id="source" type="source" position={Position.Bottom} className="opacity-0" />
       <div className="flex items-start justify-between gap-3">
-        <span className="font-mono text-micro uppercase tracking-[0.12em] text-[var(--color-text-subtle)]">{node.kind}</span>
+        <span className="font-mono text-micro uppercase tracking-[0.12em] text-[var(--color-text-subtle)]">{NODE_KIND_LABEL[node.kind]}</span>
         {medal.state !== "none" ? (
           <span className={`inline-flex max-w-[155px] items-center gap-1 rounded-full px-2 py-1 text-micro font-semibold leading-none ${visual.badge}`}>
             <MedalIcon state={medal.state} />

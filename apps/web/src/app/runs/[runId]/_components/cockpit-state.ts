@@ -28,11 +28,11 @@ type EvidenceMatrixLike = {
 export type LifecycleMedal =
   | { state: "candidate"; badge: string; commit: string; detail?: undefined }
   | { state: "verified"; badge: string; commit?: string | undefined; detail?: undefined }
-  | { state: "evidence_incomplete"; badge: "Evidence incomplete"; commit?: string | undefined; detail?: undefined }
-  | { state: "evidence_pending"; badge: "Evidence pending"; commit?: string | undefined; detail?: undefined }
-  | { state: "failed"; badge: "Failed"; detail: string; commit?: undefined }
-  | { state: "stale"; badge: "Stale"; detail?: undefined; commit?: undefined }
-  | { state: "delivered"; badge: "Delivered"; detail?: undefined; commit?: string | undefined }
+  | { state: "evidence_incomplete"; badge: "Evidencia incompleta"; commit?: string | undefined; detail?: undefined }
+  | { state: "evidence_pending"; badge: "Evidencia pendiente"; commit?: string | undefined; detail?: undefined }
+  | { state: "failed"; badge: "Falló"; detail: string; commit?: undefined }
+  | { state: "stale"; badge: "Obsoleto"; detail?: undefined; commit?: undefined }
+  | { state: "delivered"; badge: "Entregado"; detail?: undefined; commit?: string | undefined }
   | { state: "none"; badge: ""; detail?: undefined; commit?: undefined };
 
 export function lifecycleMedalForNode(input: {
@@ -49,16 +49,16 @@ export function lifecycleMedalForNode(input: {
   const matrixId = integration?.evidenceMatrixId ?? input.evidenceMatrixId;
 
   if (input.delivered) {
-    return { state: "delivered", badge: "Delivered", ...(commit === undefined ? {} : { commit }) };
+    return { state: "delivered", badge: "Entregado", ...(commit === undefined ? {} : { commit }) };
   }
   if (integration?.status === "failed" || integration?.status === "decision_required" || attempt?.status === "failed" || attempt?.status === "discarded") {
     return {
       state: "failed",
-      badge: "Failed",
+      badge: "Falló",
       detail: integration?.failureReason ?? attempt?.failureReason ?? "El intento no produjo un resultado verificable."
     };
   }
-  if (attempt?.status === "stale") return { state: "stale", badge: "Stale" };
+  if (attempt?.status === "stale") return { state: "stale", badge: "Obsoleto" };
 
   const matrix = evidenceMatrixForIdentity(input.evidenceMatrices, { matrixId, candidateCommit: commit });
   if ((attempt?.status === "validated" || attempt?.status === "adopted" || integration?.status === "completed") && matrix?.outcome === "verified") {
@@ -68,30 +68,30 @@ export function lifecycleMedalForNode(input: {
     )).length;
     return {
       state: "verified",
-      badge: `Verified [${passed}/${criteria.length} passed]`,
+      badge: `Verificado · ${passed}/${criteria.length} criterios`,
       ...(commit === undefined ? {} : { commit })
     };
   }
   if (attempt?.status === "validated" || attempt?.status === "adopted" || integration?.status === "completed") {
     if (matrix?.outcome === "failed") {
-      return { state: "failed", badge: "Failed", detail: "Validation failed." };
+      return { state: "failed", badge: "Falló", detail: "La validación no pasó." };
     }
     if (matrix?.outcome === "unverified") {
       return {
         state: "evidence_incomplete",
-        badge: "Evidence incomplete",
+        badge: "Evidencia incompleta",
         ...(commit === undefined ? {} : { commit })
       };
     }
     return {
       state: "evidence_pending",
-      badge: "Evidence pending",
+      badge: "Evidencia pendiente",
       ...(commit === undefined ? {} : { commit })
     };
   }
   if (attempt?.status === "candidate" && attempt.candidateCommit !== undefined) {
     const shortSha = attempt.candidateCommit.slice(0, 7);
-    return { state: "candidate", badge: `Candidate [${shortSha}]`, commit: attempt.candidateCommit };
+    return { state: "candidate", badge: `Candidato · ${shortSha}`, commit: attempt.candidateCommit };
   }
   return { state: "none", badge: "" };
 }
