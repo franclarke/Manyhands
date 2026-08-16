@@ -136,3 +136,30 @@ function pathResolver(nodes: readonly FlowLayoutNode[]): (nodeId: string) => str
     return path;
   };
 }
+
+/**
+ * Where the camera sits when a run is opened.
+ *
+ * The canvas used a constant `{ x: 84, y: 110, zoom: 0.84 }`, so the graph
+ * appeared wherever that happened to land — usually against the left edge. This
+ * places the root in the middle of the pane instead.
+ *
+ * It runs once, before the operator has a frame of reference to preserve, which
+ * is what separates it from the auto-fit the interaction model forbids: that
+ * rule is about the camera moving in response to server events.
+ */
+export function initialViewport(input: {
+  root?: { x: number; y: number } | undefined;
+  containerWidth: number;
+  nodeWidth: number;
+  zoom: number;
+  y?: number;
+}): { x: number; y: number; zoom: number } | null {
+  if (input.root === undefined || input.containerWidth <= 0) return null;
+  const rootCentre = (input.root.x + input.nodeWidth / 2) * input.zoom;
+  return {
+    x: input.containerWidth / 2 - rootCentre,
+    y: input.y ?? 110,
+    zoom: input.zoom
+  };
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -18,7 +18,7 @@ import "@xyflow/react/dist/style.css";
 
 import type { RunModel } from "@/lib/run-model/types";
 import { layoutRunTree } from "@/lib/run-model/tree-layout";
-import { layoutRunFlow, nextLayoutOffset, offsetPositions, type FlowBand } from "@/lib/run-model/flow-layout";
+import { initialViewport, layoutRunFlow, nextLayoutOffset, offsetPositions, type FlowBand } from "@/lib/run-model/flow-layout";
 import type { RunGraphView } from "@/lib/run-model/graph-view";
 import {
   buildRelationViews,
@@ -47,6 +47,7 @@ const ARRANGEMENTS: ReadonlyArray<{ value: GraphArrangement; label: string; hint
   { value: "flow", label: "Flujo", hint: "Qué puede ejecutarse a la vez" }
 ];
 const NODE_WIDTH = 246;
+const DEFAULT_ZOOM = 0.84;
 const NODE_HEIGHT = 132;
 const BAND_PADDING_X = 104;
 const BAND_PADDING_Y = 30;
@@ -92,7 +93,7 @@ function CockpitRunGraphInner({
 }): React.ReactElement {
   const [lens, setLens] = useState<GraphLens>("execution");
   const [arrangement, setArrangement] = useState<GraphArrangement>("ownership");
-  const { getViewport } = useReactFlow();
+  const { getViewport, setViewport } = useReactFlow();
   // Applied to whichever arrangement is active, so a switch can keep the anchor
   // node exactly where it was without touching the camera.
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -102,6 +103,8 @@ function CockpitRunGraphInner({
     [arrangement, lens, model, offset, onOpenDecision, pendingDecisions, selectedNodeId]
   );
   positionsRef.current = positions;
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const placedRef = useRef(false);
 
   /**
    * Switching layout moves every node, so without an anchor the node the
@@ -123,18 +126,39 @@ function CockpitRunGraphInner({
     setArrangement(next);
   }, [arrangement, getViewport, model, selectedNodeId]);
 
+  /**
+   * Open with the root in the middle of the pane. The canvas used a constant
+   * camera, so a run opened with its graph against the left edge.
+   *
+   * Once, guarded by a ref: this must never become a camera that moves when the
+   * server says something, which is the behaviour the interaction model forbids.
+   */
+  useEffect(() => {
+    if (placedRef.current) return;
+    const rootId = model.graph?.rootId;
+    const placement = initialViewport({
+      ...(rootId === undefined ? {} : { root: positionsRef.current.get(rootId) }),
+      containerWidth: wrapperRef.current?.clientWidth ?? 0,
+      nodeWidth: NODE_WIDTH,
+      zoom: DEFAULT_ZOOM
+    });
+    if (placement === null) return;
+    placedRef.current = true;
+    setViewport(placement);
+  }, [model.graph?.rootId, nodes.length, setViewport]);
+
   if (nodes.length === 0) {
     return <div className="grid h-full min-h-[420px] place-items-center text-sm text-[var(--color-text-muted)]">Preparando el primer nodo…</div>;
   }
 
   return (
-    <div className="h-full min-h-[420px]">
+    <div ref={wrapperRef} className="h-full min-h-[420px]">
       <ReactFlow
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
-        defaultViewport={{ x: 84, y: 110, zoom: 0.84 }}
+        defaultViewport={{ x: 84, y: 110, zoom: DEFAULT_ZOOM }}
         onPaneClick={() => onSelectNode(null)}
         onNodeClick={(_event, node) => onSelectNode(node.id)}
         minZoom={0.25}
