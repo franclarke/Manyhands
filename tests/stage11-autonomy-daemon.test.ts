@@ -120,6 +120,16 @@ describe("A delegated repair", () => {
     expect(reaction.effects).toEqual([]);
   });
 
+  it("stops answering once the node has failed its budget of attempts", async () => {
+    // Two failed attempts on unit:a already in the journal. The driver raises a
+    // decision on every failure and has no budget of its own, so without this
+    // an autonomous run retries a deterministic failure forever.
+    const reaction = await executionReaction("autonomous", { raiseConflict: true, priorFailures: 2 });
+
+    expect(reaction.domainEvents.map(({ type }) => type)).toEqual(["decision.raised"]);
+    expect(reaction.effects).toEqual([]);
+  });
+
   it("does not answer a question about what the operator wanted", async () => {
     // A `clarify_goal` raised mid-execution stops the run under every level,
     // because the answer is not in the repository or the graph.
@@ -237,7 +247,12 @@ async function planningReaction(autonomy: AutonomyLevel | undefined) {
 
 async function executionReaction(
   autonomy: AutonomyLevel,
-  result: { verifyCandidate?: boolean; raiseConflict?: boolean; raiseClarification?: boolean } = {}
+  result: {
+    verifyCandidate?: boolean;
+    raiseConflict?: boolean;
+    raiseClarification?: boolean;
+    priorFailures?: number;
+  } = {}
 ) {
   const blocked = result.raiseConflict === true || result.raiseClarification === true;
   const application = buildApplication({
@@ -253,7 +268,8 @@ async function executionReaction(
   const events = sequenced([
     creationInput(autonomy),
     input("graph.revision.proposed", { graphId: "graph-stage11", revision: 1 }),
-    input("graph.revision.approved", { graphId: "graph-stage11", revision: 1 })
+    input("graph.revision.approved", { graphId: "graph-stage11", revision: 1 }),
+    ...failedAttempts(result.priorFailures ?? 0)
   ], 0);
   return application.react({
     intent: executionIntent(),
@@ -293,6 +309,32 @@ function planDecision() {
     evidenceRefs: ["graph:graph-stage11:r1"],
     impact: "acceptance"
   };
+}
+
+/** Attempts on unit:a that already failed, as the journal would carry them. */
+function failedAttempts(count: number): RunEventInput[] {
+  const events: RunEventInput[] = [];
+  for (let ordinal = 1; ordinal <= count; ordinal += 1) {
+    const attemptId = `${runId}:attempt:unit:a:${ordinal}`;
+    events.push({
+      eventId: `${runId}:attempt:${ordinal}:started`,
+      occurredAt: at,
+      type: "attempt.started",
+      payload: {
+        attemptId,
+        nodeId: "unit:a",
+        inputFingerprint: `sha256:${"f".repeat(64)}`,
+        executorProfile: { id: "claude-code-cli", revision: "1" }
+      }
+    } as RunEventInput);
+    events.push({
+      eventId: `${runId}:attempt:${ordinal}:failed`,
+      occurredAt: at,
+      type: "attempt.failed",
+      payload: { attemptId, nodeId: "unit:a", reason: "Could not materialize the predecessor artifact." }
+    } as RunEventInput);
+  }
+  return events;
 }
 
 function conflictDecision() {

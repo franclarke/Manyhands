@@ -1,6 +1,7 @@
 /** Productive canonical driver. Lifecycle facts remain owned by RunCoordinator. */
 export { CanonicalExecutionDriver } from "./canonical-execution-driver.js";
 export { assertNoConcurrentResourceConflict } from "./concurrent-resource-invariant.js";
+export { executionBaseArtifacts, type ExecutionBaseArtifactRef } from "./execution-base-closure.js";
 export type {
   CanonicalExecutionDriverOptions,
   CanonicalExecutionRunInput,

@@ -68,6 +68,18 @@ const DELEGATED_KINDS: Record<AutonomyLevel, readonly DecisionInput["kind"][]> =
 };
 
 /**
+ * How many times a standing authorization retries one node before it stops
+ * answering and lets the run wait for a person.
+ *
+ * The execution driver raises a decision on every failed attempt and has no
+ * budget of its own: the operator is the budget. A delegation that always
+ * answers "retry" therefore has no bound at all, and a deterministic failure —
+ * an artifact that cannot apply, a command that is not installed — becomes an
+ * unbounded spend on a model that will fail identically every time.
+ */
+export const DELEGATED_RETRY_LIMIT = 2;
+
+/**
  * The option this authorization answers the decision with, or `undefined` when
  * only a person can answer it.
  *
@@ -75,14 +87,26 @@ const DELEGATED_KINDS: Record<AutonomyLevel, readonly DecisionInput["kind"][]> =
  * option that is not on the decision would be the policy inventing a choice
  * the run never presented, and the reducer would reject it anyway; failing
  * here means the run parks for a human instead of throwing.
+ *
+ * Past the retry limit the answer is `undefined`, not `stop`. Repeated identical
+ * failure is the signal that a person is needed, and deciding to abandon the
+ * work is a larger claim than the operator delegated at intake.
  */
 export function autonomyResolution(
   level: AutonomyLevel,
-  decision: Pick<DecisionInput, "kind" | "options">
+  decision: Pick<DecisionInput, "kind" | "options">,
+  budget?: { failedAttempts: number }
 ): string | undefined {
   if (!DELEGATED_KINDS[level].includes(decision.kind)) return undefined;
   const optionId = DELEGATED_OPTION[decision.kind];
   if (optionId === undefined) return undefined;
+  if (
+    decision.kind === "resolve_conflict" &&
+    budget !== undefined &&
+    budget.failedAttempts >= DELEGATED_RETRY_LIMIT
+  ) {
+    return undefined;
+  }
   return decision.options.some((option) => option.id === optionId) ? optionId : undefined;
 }
 

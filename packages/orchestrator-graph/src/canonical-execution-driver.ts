@@ -19,6 +19,7 @@ import {
   type IntegrationRiskEstimate
 } from "@manyhands/scheduler";
 import { assertNoConcurrentResourceConflict } from "./concurrent-resource-invariant.js";
+import { executionBaseArtifacts } from "./execution-base-closure.js";
 import {
   GraphRevisionSchema,
   checkResourceAuthority,
@@ -502,12 +503,14 @@ const sha256 = (value: string) => `sha256:${createHash("sha256").update(value).d
 function createAttempt(run: PreparedRun, state: RunProjection, nodeId: string, waveId: string, at: string): PreparedAttempt {
   const node = run.graph.nodes[nodeId]!;
   const contract = run.contracts[nodeId]!;
-  const requirements = run.graph.artifactRequirements.filter((requirement) => requirement.consumerNodeId === nodeId);
-  const consumedArtifacts = requirements.map((requirement) => {
+  // The whole base, not only the direct inputs. Each artifact is a change set
+  // against one exact tree, so an input that was itself built on another has to
+  // land on that other one first or its manifest will not apply.
+  const consumedArtifacts = executionBaseArtifacts(run.graph, nodeId).map(({ artifactContract }) => {
     const adopted = Object.values(state.adoptedArtifacts).find((artifact) =>
-      artifact.contract.id === requirement.artifactContract.id && Number(artifact.contract.revision) === requirement.artifactContract.revision
+      artifact.contract.id === artifactContract.id && Number(artifact.contract.revision) === artifactContract.revision
     );
-    if (adopted === undefined) throw new Error(`Ready node ${nodeId} is missing ${requirement.artifactContract.id}.`);
+    if (adopted === undefined) throw new Error(`Ready node ${nodeId} is missing ${artifactContract.id}.`);
     return adopted;
   });
   const ordinal = Object.values(state.attempts).filter((attempt) => attempt.nodeId === nodeId).length + 1;

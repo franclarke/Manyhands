@@ -12,6 +12,7 @@ import {
   ProductRunCommandSchema,
   autonomyPublishesDelivery,
   autonomyResolution,
+  type DecisionInput,
   foldRun,
   runAutonomy,
   standingAuthorization,
@@ -589,7 +590,9 @@ function delegatedDecisions(
   for (const item of produced) {
     if (item.type !== "decision.raised") continue;
     const decision = item.payload.decision;
-    const optionId = autonomyResolution(level, decision);
+    const optionId = autonomyResolution(level, decision, {
+      failedAttempts: failedAttemptsFor(context.projection, decision)
+    });
     if (optionId === undefined) continue;
     events.push(event(options, context.runId, "decision.resolved", {
       decisionId: decision.id,
@@ -643,6 +646,24 @@ function delegatedDelivery(
     events: [event(options, context.runId, "delivery.started", { approval }, approval.idempotencyKey)],
     effects: [deliveryEffect(context, approval, candidate.finalManifest?.treeSha, options)]
   };
+}
+
+/**
+ * How many attempts on the node this decision is about have already failed.
+ *
+ * The node the decision names, not the run: a leaf that has failed twice should
+ * stop being retried on its own, while an unrelated leaf's first failure is
+ * still a routine retry. `repairTargetNodeId` is the node whose next attempt is
+ * expected to fix it; without one, the blocked scope is the best the decision
+ * offers.
+ */
+function failedAttemptsFor(projection: RunProjection, decision: DecisionInput): number {
+  const targets = new Set(
+    decision.repairTargetNodeId === undefined ? decision.affectedNodeIds : [decision.repairTargetNodeId]
+  );
+  return Object.values(projection.attempts)
+    .filter((attempt) => targets.has(attempt.nodeId) && attempt.status === "failed")
+    .length;
 }
 
 /** The sequence these inputs will occupy once the actor appends them. */

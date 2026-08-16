@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_AUTONOMY,
+  DELEGATED_RETRY_LIMIT,
   autonomyPublishesDelivery,
   autonomyResolution,
   foldRun,
@@ -57,6 +58,23 @@ describe("What a standing authorization answers", () => {
     ] };
 
     expect(autonomyResolution("autonomous", narrowed)).toBeUndefined();
+  });
+
+  it("stops retrying one node once it has failed twice", () => {
+    // The execution driver raises a decision on every failed attempt and has no
+    // budget of its own — the operator is the budget. Always answering "retry"
+    // therefore has no bound, and a deterministic failure becomes an unbounded
+    // spend on a model that will fail identically every time.
+    expect(autonomyResolution("autonomous", conflict(), { failedAttempts: 0 })).toBe("retry");
+    expect(autonomyResolution("autonomous", conflict(), { failedAttempts: 1 })).toBe("retry");
+    expect(autonomyResolution("autonomous", conflict(), { failedAttempts: 2 })).toBeUndefined();
+    expect(DELEGATED_RETRY_LIMIT).toBe(2);
+  });
+
+  it("does not spend the retry budget on the plan approval", () => {
+    // The plan is approved once. Counting a node's failures against it would
+    // make an unrelated leaf's trouble refuse a revision nobody has judged.
+    expect(autonomyResolution("semi", plan(), { failedAttempts: 9 })).toBe("approve");
   });
 
   it("publishes to the target branch only when the run is fully autonomous", () => {
