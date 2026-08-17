@@ -59,13 +59,21 @@ the target orchestration architecture.
 
 ## Development
 
-Requirements: Node.js 22 or newer and pnpm 7.29.3.
+Requirements: Node.js 22 or newer. The pnpm version is pinned by
+`packageManager` in `package.json`, so it is not something to install by hand —
+`engines.pnpm` rejects any other version with `ERR_PNPM_UNSUPPORTED_ENGINE`.
 
 ```bash
-corepack enable
-pnpm install
-pnpm web:dev
+corepack pnpm install
+corepack pnpm web:dev
 ```
+
+`corepack pnpm` resolves the pinned version whatever else is on PATH, which is
+why every command here is written that way. `corepack enable` installs shims so
+a bare `pnpm` works too, but only when nothing earlier on PATH shadows them: a
+standalone pnpm under `%LOCALAPPDATA%\pnpm` usually does, and then `pnpm`
+reports its own version and the engine check fails. Either keep the `corepack`
+prefix, or remove the standalone install.
 
 ## Verification
 

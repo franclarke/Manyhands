@@ -91,6 +91,10 @@ gastar una corrida viva.
   procesos reales se caen por timeout bajo esa carga. `stage3-daemon-restart-physical`
   ya lo hizo: 90 s de timeout en la suite, 4 s en aislamiento.
 
+Todos estos comandos van con `corepack pnpm`. El `pnpm` global de esta máquina
+es 7.29.3 y `engines.pnpm` pide 11.21.0, así que un `pnpm` pelado falla con
+`ERR_PNPM_UNSUPPORTED_ENGINE` antes de ejecutar nada.
+
 ```bash
 pnpm test
 pnpm typecheck
