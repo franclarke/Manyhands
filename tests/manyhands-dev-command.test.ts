@@ -18,7 +18,51 @@ async function loadResolver(): Promise<{
   return (await import(commandUrl)) as never;
 }
 
+/**
+ * The launcher spawned the first `pnpm` it found on PATH, and on a machine with
+ * a standalone pnpm 7.29.3 installed under `%LOCALAPPDATA%\pnpm` that is not
+ * the version this repo pins. `engines.pnpm` then rejected it before the build
+ * ran: `pnpm web:dev` failed inside its own setup step even when the operator
+ * had invoked it through corepack, because the child resolution started over.
+ *
+ * `packageManager` is where the version lives and corepack is what honours it,
+ * so the child is spawned through corepack when it is available.
+ */
 describe("manyhands dev child command", () => {
+  it("spawns the pinned pnpm through corepack when corepack is installed", async () => {
+    const { resolveDefaultDevSpawn } = await loadResolver();
+    const corepack = path.join("C:\Program Files\nodejs", "corepack.cmd");
+    const standalone = path.join("C:\Users\me\AppData\Local\pnpm", "pnpm.exe");
+    const result = resolveDefaultDevSpawn(["build:packages"], {
+      platform: "win32",
+      // The standalone pnpm sits earlier, exactly as it does on the machine
+      // that produced ERR_PNPM_UNSUPPORTED_ENGINE.
+      pathValue: "C:\Users\me\AppData\Local\pnpm;C:\Program Files\nodejs",
+      comspec: "cmd.exe",
+      fileExists: (candidate) => candidate === corepack || candidate === standalone
+    });
+
+    expect(result.command).toBe("cmd.exe");
+    expect(result.args.join(" ")).toContain("corepack.cmd");
+    expect(result.args.join(" ")).toContain("pnpm");
+    expect(result.args.join(" ")).toContain("build:packages");
+  });
+
+  it("spawns corepack directly off Windows", async () => {
+    const { resolveDefaultDevSpawn } = await loadResolver();
+    const result = resolveDefaultDevSpawn(["web:dev:raw"], {
+      platform: "linux",
+      pathValue: "/usr/local/bin",
+      fileExists: (candidate) => candidate === "/usr/local/bin/corepack"
+    });
+
+    expect(result).toEqual({
+      command: "/usr/local/bin/corepack",
+      args: ["pnpm", "web:dev:raw"],
+      windowsVerbatimArguments: false
+    });
+  });
+
   it("uses pnpm.exe directly on Windows without shell argv forwarding", async () => {
     const { resolveDefaultDevSpawn } = await loadResolver();
     const expected = path.join("C:\\tools", "pnpm.exe");

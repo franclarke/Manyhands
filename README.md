@@ -68,12 +68,21 @@ corepack pnpm install
 corepack pnpm web:dev
 ```
 
-`corepack pnpm` resolves the pinned version whatever else is on PATH, which is
-why every command here is written that way. `corepack enable` installs shims so
-a bare `pnpm` works too, but only when nothing earlier on PATH shadows them: a
-standalone pnpm under `%LOCALAPPDATA%\pnpm` usually does, and then `pnpm`
-reports its own version and the engine check fails. Either keep the `corepack`
-prefix, or remove the standalone install.
+`corepack pnpm` resolves the pinned version whatever else is on PATH. The
+prefix is not enough on its own, though: scripts such as `build:packages` invoke
+`pnpm` again, and that nested call is resolved from PATH. A stale pnpm installed
+under `%LOCALAPPDATA%\pnpm` or `%APPDATA%
+pm` shadows the corepack shims and
+fails the engine check from inside a command that was started correctly.
+
+Remove those installs once and the whole workspace, nested scripts included,
+resolves to the pinned version:
+
+```bash
+npm uninstall -g pnpm
+corepack enable
+pnpm --version   # 11.21.0
+```
 
 ## Verification
 
