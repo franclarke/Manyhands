@@ -184,6 +184,10 @@ interface ConnectionContext {
 function acceptOneFrame(socket: Socket, context: ConnectionContext): void {
   let buffered = Buffer.alloc(0);
   let handled = false;
+  socket.on("error", (error) => {
+    socket.destroy();
+    context.onError?.(error);
+  });
   socket.setTimeout(context.socketTimeoutMs, () => socket.destroy());
 
   socket.on("data", (chunk: Buffer) => {

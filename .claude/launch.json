@@ -9,6 +9,21 @@
       "autoPort": true
     },
     {
+      "name": "manyhands-stack",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "C:/Users/franc/AppData/Local/Temp/claude/C--Users-franc-Documents-Proyectos-Manyhands/fbc32804-d518-49cc-800b-31fccd0dd5f3/scratchpad/run-stack.mjs"
+      ],
+      "port": 3000
+    },
+    {
+      "name": "web-corepack",
+      "runtimeExecutable": "corepack",
+      "runtimeArgs": ["pnpm", "--filter", "@manyhands/web", "dev"],
+      "port": 3000,
+      "autoPort": true
+    },
+    {
       "name": "web-prod",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@manyhands/web", "start"],

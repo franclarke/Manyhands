@@ -174,7 +174,7 @@ async function replaceAbandonedOwner(
 
   const quarantine = `${leaseDirectory}.abandoned-${randomUUID()}`;
   try {
-    await rename(leaseDirectory, quarantine);
+    await renameWithRetry(leaseDirectory, quarantine);
   } catch (error) {
     if (isNotFound(error) || isPathCollision(error)) {
       throw new InstallationLeaseUnavailableError(
@@ -197,7 +197,7 @@ async function replaceAbandonedOwner(
   }
 
   try {
-    await rename(stagingDirectory, leaseDirectory);
+    await renameWithRetry(stagingDirectory, leaseDirectory);
   } catch (error) {
     await restoreQuarantine(quarantine, leaseDirectory);
     if (isPathCollision(error) || isNotFound(error)) {
@@ -235,7 +235,7 @@ function createLease(
 
         const quarantine = `${leaseDirectory}.released-${randomUUID()}`;
         try {
-          await rename(leaseDirectory, quarantine);
+          await renameWithRetry(leaseDirectory, quarantine);
         } catch (error) {
           if (isNotFound(error)) return;
           throw error;
@@ -287,7 +287,7 @@ async function publishGuardClaim(
   };
   try {
     await writeJsonDirectory(stagingDirectory, owner);
-    await rename(stagingDirectory, claimDirectory);
+    await renameWithRetry(stagingDirectory, claimDirectory);
   } catch (error) {
     await rm(stagingDirectory, { recursive: true, force: true }).catch(() => undefined);
     throw error;
@@ -331,6 +331,11 @@ async function waitUntilGuardElected(
       const hasPriority = claim.ticket !== undefined &&
         compareGuardPriority(claim.ticket, claim.owner.claimId, ownTicket, ownOwner.claimId) < 0;
       if (!isChoosing && !hasPriority) continue;
+
+      if (isChoosing && Date.now() - Date.parse(claim.owner.claimedAt) > 2_000) {
+        await removeGuardClaim(leaseDirectory, claim.directory);
+        continue;
+      }
 
       const status = sameProcessIdentity(claim.owner, context)
         ? "same"
@@ -419,18 +424,11 @@ async function removeGuardClaim(leaseDirectory: string, claimDirectory: string):
     guardDirectoryFor(leaseDirectory),
     `.claim-released-${path.basename(claimDirectory)}-${randomUUID()}`
   );
-  for (let attempt = 0; ; attempt += 1) {
-    try {
-      await rename(claimDirectory, quarantine);
-      break;
-    } catch (error) {
-      if (isNotFound(error)) return;
-      if (attempt < 80 && isTransientWindowsRenameError(error)) {
-        await delay(5 + Math.floor(Math.random() * 15));
-        continue;
-      }
-      throw error;
-    }
+  try {
+    await renameWithRetry(claimDirectory, quarantine);
+  } catch (error) {
+    if (isNotFound(error)) return;
+    throw error;
   }
   await rm(quarantine, { recursive: true, force: true }).catch(() => undefined);
 }
@@ -521,7 +519,7 @@ async function writeJsonFileAtomically(
     await handle.close();
   }
   try {
-    await rename(stagingPath, targetPath);
+    await renameWithRetry(stagingPath, targetPath);
   } finally {
     await rm(stagingPath, { force: true }).catch(() => undefined);
   }
@@ -606,9 +604,28 @@ async function probeProcessIdentity(
 
 async function restoreQuarantine(quarantine: string, leaseDirectory: string): Promise<void> {
   try {
-    await rename(quarantine, leaseDirectory);
+    await renameWithRetry(quarantine, leaseDirectory);
   } catch (error) {
     if (!isPathCollision(error)) throw error;
+  }
+}
+
+async function renameWithRetry(
+  source: string,
+  destination: string,
+  maxAttempts = 80
+): Promise<void> {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      await rename(source, destination);
+      return;
+    } catch (error) {
+      if (attempt < maxAttempts && isTransientWindowsRenameError(error)) {
+        await delay(5 + Math.floor(Math.random() * 15));
+        continue;
+      }
+      throw error;
+    }
   }
 }
 
