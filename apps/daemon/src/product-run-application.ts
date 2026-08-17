@@ -649,20 +649,20 @@ function delegatedDelivery(
 }
 
 /**
- * How many attempts on the node this decision is about have already failed.
+ * How many attempts within this decision's scope have already failed.
  *
- * The node the decision names, not the run: a leaf that has failed twice should
- * stop being retried on its own, while an unrelated leaf's first failure is
- * still a routine retry. `repairTargetNodeId` is the node whose next attempt is
- * expected to fix it; without one, the blocked scope is the best the decision
- * offers.
+ * Over `affectedNodeIds`, not `repairTargetNodeId`. The repair target is where a
+ * fix would go, which is not where the failures pile up: when a consumer cannot
+ * use a producer's artifact, the driver routes the repair to the producer while
+ * every failing attempt belongs to the consumer. Budgeting against the target
+ * counted a node that had never failed, so the count stayed zero and an
+ * autonomous run retried without limit — the exact unbounded loop this budget
+ * exists to prevent, silently.
  */
 function failedAttemptsFor(projection: RunProjection, decision: DecisionInput): number {
-  const targets = new Set(
-    decision.repairTargetNodeId === undefined ? decision.affectedNodeIds : [decision.repairTargetNodeId]
-  );
+  const scope = new Set(decision.affectedNodeIds);
   return Object.values(projection.attempts)
-    .filter((attempt) => targets.has(attempt.nodeId) && attempt.status === "failed")
+    .filter((attempt) => scope.has(attempt.nodeId) && attempt.status === "failed")
     .length;
 }
 

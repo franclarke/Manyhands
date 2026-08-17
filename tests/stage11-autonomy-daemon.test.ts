@@ -130,6 +130,22 @@ describe("A delegated repair", () => {
     expect(reaction.effects).toEqual([]);
   });
 
+  it("counts the failures in the decision's scope, not on its repair target", async () => {
+    // A consumer that cannot use a producer's artifact fails on the consumer
+    // while the driver routes the repair to the producer. Budgeting against the
+    // target counts a node that never failed, so the count stays zero and the
+    // run retries forever — which is what the rich run of 2026-08-16 did, three
+    // times, with the budget in place.
+    const reaction = await executionReaction("autonomous", {
+      raiseConflict: true,
+      priorFailures: 2,
+      repairTargetElsewhere: true
+    });
+
+    expect(reaction.domainEvents.map(({ type }) => type)).toEqual(["decision.raised"]);
+    expect(reaction.effects).toEqual([]);
+  });
+
   it("does not answer a question about what the operator wanted", async () => {
     // A `clarify_goal` raised mid-execution stops the run under every level,
     // because the answer is not in the repository or the graph.
@@ -252,13 +268,18 @@ async function executionReaction(
     raiseConflict?: boolean;
     raiseClarification?: boolean;
     priorFailures?: number;
+    repairTargetElsewhere?: boolean;
   } = {}
 ) {
   const blocked = result.raiseConflict === true || result.raiseClarification === true;
   const application = buildApplication({
     loadExecutionResult: async () => blocked
       ? [input("decision.raised", {
-        decision: result.raiseClarification === true ? clarifyDecision() : conflictDecision()
+        decision: result.raiseClarification === true
+          ? clarifyDecision()
+          : result.repairTargetElsewhere === true
+            ? { ...conflictDecision(), repairTargetNodeId: "unit:producer", affectedNodeIds: ["unit:a", "unit:producer"] }
+            : conflictDecision()
       })]
       : [
         input("evidence.matrix_recorded", { matrix: verifiedMatrix() }),
