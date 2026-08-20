@@ -47,6 +47,11 @@ export async function queryProductRun(runId: string): Promise<RunProjection> {
   return parseProjection(await client().query({ runId, query: "projection" }));
 }
 
+async function queryProductRunIfPresent(runId: string): Promise<RunProjection | null> {
+  const result = await client().query({ runId, query: "projection_if_present" });
+  return result === null ? null : parseProjection(result);
+}
+
 export async function listProductRuns(argumentsValue: {
   workspaceId?: string;
   includeArchived?: boolean;
@@ -158,12 +163,9 @@ export async function submitProductRunCommand(input: {
 }): Promise<{ receipt: IpcJsonValue; projection: RunProjection }> {
   const command = ProductRunCommandSchema.parse(input.command);
   const commandId = input.commandId ?? commandIdForRequest(input.request);
-  let projection: RunProjection | undefined;
-  try {
-    projection = await queryProductRun(input.runId);
-  } catch (error) {
-    if (!input.allowMissingRun || !isDaemonRequestFailure(error)) throw error;
-  }
+  const projection = input.allowMissingRun
+    ? (await queryProductRunIfPresent(input.runId)) ?? undefined
+    : await queryProductRun(input.runId);
   const previous = projection?.commandEnvelopes[commandId];
   const envelope = previous === undefined
     ? buildRunCommandEnvelope({

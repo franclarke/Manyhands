@@ -16,10 +16,11 @@ import {
   buildCommandReceipt,
   buildRunCommandEnvelope,
   type IpcCapabilityOsProtection,
+  type ProductRunDefinition,
   type RunCommandEnvelope
 } from "@manyhands/run-coordinator";
 import { FileEffectInputStore, JsonlRunEventStore } from "@manyhands/run-store";
-import type { PhysicalEffectAdapter } from "@manyhands/run-engine";
+import type { PhysicalEffectAdapter, RunActorOptions } from "@manyhands/run-engine";
 import { startDaemonKernel } from "../apps/daemon/src/daemon-kernel.js";
 import {
   createWindowsIpcAclProtector,
@@ -27,6 +28,7 @@ import {
   verifyWindowsRestrictedNamedPipe
 } from "../apps/daemon/src/windows-ipc-acl.js";
 import { createLocalIpcClient } from "../apps/web/src/lib/server/daemon/local-ipc-client.js";
+import { submitProductRunCommand } from "../apps/web/src/lib/server/daemon/productive-client.js";
 
 const temporaryRoots: string[] = [];
 const execFileAsync = promisify(execFile);
@@ -253,6 +255,77 @@ describe("durable daemon composition root", () => {
     }
   });
 
+  it("returns null without reporting an IPC error when an optional projection is absent", async () => {
+    const root = await temporaryRoot();
+    const ipcErrors: Error[] = [];
+    const kernel = await startKernel(root, "daemon:optional-projection", {
+      onIpcError: (error) => ipcErrors.push(error)
+    });
+    try {
+      const client = createLocalIpcClient({
+        endpoint: kernel.endpoint,
+        capabilityFilePath: kernel.capabilityFilePath,
+        production: false
+      });
+
+      await expect(client.query({
+        runId: "run:not-created",
+        query: "projection_if_present"
+      })).resolves.toBeNull();
+      expect(ipcErrors).toEqual([]);
+    } finally {
+      await kernel.close();
+    }
+  });
+
+  it("creates a missing run without an IPC error and replays the existing command", async () => {
+    const root = await temporaryRoot();
+    const ipcErrors: Error[] = [];
+    const definition = productDefinition();
+    const kernel = await startKernel(root, "daemon:productive-create", {
+      onIpcError: (error) => ipcErrors.push(error),
+      decide: (command) => ({
+        eventsBeforeAcceptance: [{
+          eventId: "event:productive-create",
+          occurredAt: command.submittedAt,
+          type: "run.created",
+          payload: { goal: definition.userPrompt, definition }
+        }],
+        eventsAfterAcceptance: [],
+        effects: []
+      })
+    });
+    const previousStateRoot = process.env.MANYHANDS_DAEMON_STATE_ROOT;
+    const previousEndpoint = process.env.MANYHANDS_DAEMON_ENDPOINT;
+    process.env.MANYHANDS_DAEMON_STATE_ROOT = root;
+    process.env.MANYHANDS_DAEMON_ENDPOINT = kernel.endpoint;
+    try {
+      const runId = "run:productive-create";
+      const input = {
+        request: new Request("http://127.0.0.1/api/runs", { method: "POST" }),
+        runId,
+        commandId: "command:productive-create",
+        command: { type: "create_run" as const, definition },
+        allowMissingRun: true
+      };
+
+      const first = await submitProductRunCommand(input);
+      const firstEvents = await kernel.eventStore.load(runId);
+      const replay = await submitProductRunCommand(input);
+
+      expect(first.projection).toMatchObject({ runId, sequence: 2 });
+      expect(replay).toEqual(first);
+      expect(await kernel.eventStore.load(runId)).toEqual(firstEvents);
+      expect(ipcErrors).toEqual([]);
+    } finally {
+      if (previousStateRoot === undefined) delete process.env.MANYHANDS_DAEMON_STATE_ROOT;
+      else process.env.MANYHANDS_DAEMON_STATE_ROOT = previousStateRoot;
+      if (previousEndpoint === undefined) delete process.env.MANYHANDS_DAEMON_ENDPOINT;
+      else process.env.MANYHANDS_DAEMON_ENDPOINT = previousEndpoint;
+      await kernel.close();
+    }
+  });
+
   it("composes Windows production IPC with physical capability and named-pipe ACLs", async () => {
     if (process.platform !== "win32") return;
     const root = await temporaryRoot();
@@ -313,6 +386,8 @@ interface StartKernelOverrides {
   protectCapabilityPath?: IpcCapabilityOsProtection;
   assertOsRestrictedCapabilityPath?: IpcCapabilityOsProtection;
   windowsPipeAclHelperPath?: string;
+  onIpcError?: (error: Error) => void;
+  decide?: RunActorOptions["decide"];
 }
 
 async function startKernel(
@@ -457,6 +532,21 @@ function commandEnvelope(): RunCommandEnvelope {
     submittedAt: "2026-08-12T22:30:00.000Z",
     command: { type: "continue" }
   }, sha256);
+}
+
+function productDefinition(): ProductRunDefinition {
+  return {
+    schemaVersion: 1,
+    workspaceId: "workspace:productive-create",
+    userPrompt: "Create a run through the productive helper",
+    acceptanceCriteria: [],
+    title: "Productive create",
+    planningSelection: { executorId: "test-planner", model: "test" },
+    executionSelection: { executorId: "test-executor", model: "test" },
+    repairSelection: { executorId: "test-repair", model: "test" },
+    executionConfig: {},
+    targetContext: {}
+  };
 }
 
 async function temporaryRoot(): Promise<string> {

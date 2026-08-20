@@ -69,6 +69,11 @@ export class DurableRunEngine {
     return foldRun(events);
   }
 
+  async queryIfPresent(runId: string): Promise<RunProjection | null> {
+    const events = await this.readAuthoritativeEvents(runId);
+    return events.length === 0 ? null : foldRun(events);
+  }
+
   async eventsReady(runId: string, afterSequence: number): Promise<RunEventPage> {
     if (!Number.isInteger(afterSequence) || afterSequence < 0) {
       throw new TypeError("afterSequence must be a non-negative integer.");

@@ -192,6 +192,9 @@ export async function startDaemonKernel(
           if (input.query === "projection" && input.arguments === undefined) {
             return asIpcJson(await engine.query(input.runId));
           }
+          if (input.query === "projection_if_present" && input.arguments === undefined) {
+            return asIpcJson(await engine.queryIfPresent(input.runId));
+          }
           if (input.query === "activity") {
             const args = input.arguments ?? {};
             const nodeId = (args as Record<string, unknown>).nodeId;
