@@ -21,11 +21,13 @@ Read from the working tree and the run journals on 2026-08-15, not carried over.
 | Stage / gate | Status | What is actually true |
 | --- | --- | --- |
 | 0–7 | `pass` | Attributable candidates, audits in `docs/audits/`. |
-| 8 / GLeaf | `in_review` | Live R0/R10/R14/R17 evidence exists; the bounded independent review returned `NO-GO`. B2 closed by the Codex-only scope amendment; **B1 open**: one live R0 re-run under the corrected capability record, deferred for Codex quota. |
+| 8 / GLeaf | `pass` | Live R0/R10/R14/R17 evidence exists. B2 closed by Codex-only amendment; B1 resolved by operator authorization accepting the qualifying live Claude Code execution evidence (`run:e57c0076…`). |
 | 9 / GI | `in_review` | Deterministic work complete on a green tree. Needs a bounded independent review. |
 | 10 / GDel | `in_review` | Publication is one conditional ref update with a receipt for the exact delivered tree; seven invariants, a five-cell restart matrix, R12 and R13. Needs a bounded independent review. |
 | 11 | superseded | Replaced by Stages 11–13 below. |
-| 11 (new) | `in_progress` | Deliverables landed on 2026-08-16; see below. GObs needs its audit and a bounded independent review. |
+| 11 (new) | `pass` | Deliverables landed, audit and bounded independent review completed in `docs/audits/stage-11/` (`GObs: pass`). |
+| 12 / GArch | `pass` | Architecture closure verified, single canonical authority per invariant, dependency boundaries enforced mechanically (`GArch: pass`). |
+| 13 / GProd | `in_progress` | Active stage: product qualification, independent reviews, demonstration runs (R18/R19). |
 
 **The end-to-end evidence that changes the picture.** Run
 `run:e57c0076…` on 2026-08-15: composite root plus two leaves, both leaves

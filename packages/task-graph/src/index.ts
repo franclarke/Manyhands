@@ -93,7 +93,7 @@ export const TaskNodeMetadataSchema = z.record(z.unknown());
 
 export type TaskNodeMetadata = z.infer<typeof TaskNodeMetadataSchema>;
 
-export const TaskNodeSchema = z.object({
+export const LegacyTaskNodeSchema = z.object({
   id: EntityIdSchema,
   parentId: EntityIdSchema.nullable(),
   kind: TaskNodeKindSchema,
@@ -113,9 +113,13 @@ export const TaskNodeSchema = z.object({
   metadata: TaskNodeMetadataSchema.optional()
 });
 
-export type TaskNode = Omit<z.infer<typeof TaskNodeSchema>, "contract"> & {
+export type LegacyTaskNode = Omit<z.infer<typeof LegacyTaskNodeSchema>, "contract"> & {
   contract?: AgentTaskContract;
 };
+
+/** Transitional alias: prefer CanonicalTaskNodeSchema for canonical graph operations. */
+export const TaskNodeSchema = LegacyTaskNodeSchema;
+export type TaskNode = LegacyTaskNode;
 
 export const TaskGraphSchema = z.object({
   id: EntityIdSchema,
@@ -124,14 +128,14 @@ export const TaskGraphSchema = z.object({
   baseBranch: NonEmptyStringSchema,
   baseCommit: NonEmptyStringSchema,
   featureRequest: NonEmptyStringSchema,
-  nodes: z.record(EntityIdSchema, TaskNodeSchema),
+  nodes: z.record(EntityIdSchema, LegacyTaskNodeSchema),
   dependencies: z.array(TaskDependencySchema).default([]),
   rootId: EntityIdSchema,
   createdAt: IsoTimestampSchema
 });
 
 export type TaskGraph = Omit<z.infer<typeof TaskGraphSchema>, "nodes"> & {
-  nodes: Record<string, TaskNode>;
+  nodes: Record<string, LegacyTaskNode>;
 };
 
 export const TaskValidationIssueCodeSchema = z.union([

@@ -1,5 +1,7 @@
 import { selectReadyWaveV2 } from "@manyhands/scheduler";
 import { describe, it, expect } from "vitest";
+import type { LegacyGraphRevisionV2 } from "@manyhands/task-graph";
+import type { ConflictConstraintEvidence } from "@manyhands/conflict-risk";
 
 describe("selectReadyWaveV2 - ConflictConstraints", () => {
   const baseGraph = {
@@ -19,7 +21,7 @@ describe("selectReadyWaveV2 - ConflictConstraints", () => {
     conflictConstraints: [],
     legacyOrderingConstraints: [],
     createdAt: "2026-07-22T00:00:00Z"
-  } as any;
+  } as unknown as LegacyGraphRevisionV2;
 
   const baseState = {
     adoptedArtifacts: [],
@@ -80,7 +82,7 @@ describe("selectReadyWaveV2 - ConflictConstraints", () => {
       nodeIds: ["A", "B"],
       state: baseState,
       effectiveConfig: { maxParallel: 2 },
-      conflictConstraints: [{ id: "e1", leftNodeId: "A", rightNodeId: "B", risk: "blocking", type: "conflict", providerId: "p", evidenceIds: [] } as any]
+      conflictConstraints: [{ id: "e1", leftNodeId: "A", rightNodeId: "B", risk: "blocking", type: "conflict", providerId: "p", evidenceIds: [] } as unknown as ConflictConstraintEvidence]
     });
     expect(result.nodeIds).toEqual(["A"]);
   });
@@ -91,7 +93,7 @@ describe("selectReadyWaveV2 - ConflictConstraints", () => {
       nodeIds: ["B"],
       state: { ...baseState, activeResourceNodeIds: ["A"] },
       effectiveConfig: { maxParallel: 2 },
-      conflictConstraints: [{ id: "e1", leftNodeId: "B", rightNodeId: "A", risk: "high", type: "conflict", providerId: "p", evidenceIds: [] } as any]
+      conflictConstraints: [{ id: "e1", leftNodeId: "B", rightNodeId: "A", risk: "high", type: "conflict", providerId: "p", evidenceIds: [] } as unknown as ConflictConstraintEvidence]
     });
     expect(result.nodeIds).toEqual([]);
     expect(result.explanations.find(e => e.nodeId === "B")?.deferred).toBe(true);
@@ -103,7 +105,7 @@ describe("selectReadyWaveV2 - ConflictConstraints", () => {
       nodeIds: ["A", "B"],
       state: baseState,
       effectiveConfig: { maxParallel: 2 },
-      conflictConstraints: [{ id: "e1", leftNodeId: "A", rightNodeId: "B", risk: "low", type: "conflict", providerId: "p", evidenceIds: [] } as any]
+      conflictConstraints: [{ id: "e1", leftNodeId: "A", rightNodeId: "B", risk: "low", type: "conflict", providerId: "p", evidenceIds: [] } as unknown as ConflictConstraintEvidence]
     });
     expect(result.nodeIds).toEqual(["A", "B"]);
   });
@@ -114,7 +116,7 @@ describe("selectReadyWaveV2 - ConflictConstraints", () => {
       nodeIds: ["B", "A"], // B comes first in input
       state: baseState,
       effectiveConfig: { maxParallel: 2 },
-      conflictConstraints: [{ id: "e1", leftNodeId: "B", rightNodeId: "A", risk: "high", type: "conflict", providerId: "p", evidenceIds: [] } as any]
+      conflictConstraints: [{ id: "e1", leftNodeId: "B", rightNodeId: "A", risk: "high", type: "conflict", providerId: "p", evidenceIds: [] } as unknown as ConflictConstraintEvidence]
     });
     // Because it sorts by localeCompare, A should be selected and B deferred
     expect(result.nodeIds).toEqual(["A"]);
@@ -137,7 +139,7 @@ describe("selectReadyWaveV2 - ConflictConstraints", () => {
       nodeIds: ["B"],
       state: { ...baseState, activeResourceNodeIds: [] }, // A finished
       effectiveConfig: { maxParallel: 2 },
-      conflictConstraints: [{ id: "e1", leftNodeId: "A", rightNodeId: "B", risk: "high", type: "conflict", providerId: "p", evidenceIds: [] } as any]
+      conflictConstraints: [{ id: "e1", leftNodeId: "A", rightNodeId: "B", risk: "high", type: "conflict", providerId: "p", evidenceIds: [] } as unknown as ConflictConstraintEvidence]
     });
     expect(result.nodeIds).toEqual(["B"]);
   });
@@ -149,8 +151,8 @@ describe("selectReadyWaveV2 - ConflictConstraints", () => {
       state: baseState,
       effectiveConfig: { maxParallel: 3 },
       conflictConstraints: [
-        { id: "e1", leftNodeId: "A", rightNodeId: "B", risk: "high", type: "conflict", providerId: "p", evidenceIds: [] } as any,
-        { id: "e2", leftNodeId: "A", rightNodeId: "C", risk: "high", type: "conflict", providerId: "p", evidenceIds: [] } as any
+        { id: "e1", leftNodeId: "A", rightNodeId: "B", risk: "high", type: "conflict", providerId: "p", evidenceIds: [] } as unknown as ConflictConstraintEvidence,
+        { id: "e2", leftNodeId: "A", rightNodeId: "C", risk: "high", type: "conflict", providerId: "p", evidenceIds: [] } as unknown as ConflictConstraintEvidence
       ]
     });
     expect(result.nodeIds).toEqual(["A"]);

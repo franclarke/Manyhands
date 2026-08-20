@@ -8,6 +8,21 @@ export const DecisionOptionSchema = z.object({
   description: NonEmptyStringSchema.optional()
 }).strict();
 
+/**
+ * A deterministic reason a node could not start.
+ *
+ * It is not a failure of the attempt — no attempt ran. The check reads the
+ * node's contract and the repository, so repeating it changes nothing, and a
+ * decision carrying blockers must not offer a retry as if it might.
+ */
+export const DecisionBlockerSchema = z.object({
+  obligationId: NonEmptyStringSchema,
+  cause: z.enum(["evidence_missing", "shared_evidence_invalid", "capability_missing"]),
+  detail: NonEmptyStringSchema
+}).strict();
+
+export type DecisionBlocker = z.infer<typeof DecisionBlockerSchema>;
+
 export const DecisionInputSchema = z.object({
   id: EntityIdSchema,
   kind: z.enum(["clarify_goal", "approve_plan", "approve_amendment", "resolve_conflict", "approve_delivery"]),
@@ -21,6 +36,9 @@ export const DecisionInputSchema = z.object({
   // single node can, which is what makes an amendment necessary.
   repairTargetNodeId: EntityIdSchema.optional(),
   evidenceRefs: z.array(NonEmptyStringSchema),
+  // Present when the node never started. These are the reasons, and they are
+  // what the operator has to act on instead of the decision's question.
+  blockers: z.array(DecisionBlockerSchema).min(1).optional(),
   impact: z.enum(["behavior", "architecture", "scope", "risk", "acceptance"]),
   // The graph revision the decision was raised against. When a later revision is
   // approved, a still-pending decision tied to an older revision has a stale

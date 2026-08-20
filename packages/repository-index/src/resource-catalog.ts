@@ -14,6 +14,14 @@ export interface CatalogResource {
   evidenceRefs: string[];
   epistemic: EpistemicAssessment;
   generated: GeneratedFileDisposition;
+  /**
+   * `indexed` was observed in the tree. `declared` is a directory a plan named
+   * that the index never lists: `ls-tree -r` reports blobs, so no directory is
+   * ever a resource. Without it the only authority over a file that does not
+   * exist yet is the package containing it, so every unit creating a file in a
+   * new repository claims the same resource and they can only run in sequence.
+   */
+  origin?: "indexed" | "declared";
 }
 
 export interface GeneratedFileDisposition {
@@ -134,6 +142,8 @@ export class ResourceCatalog {
         evidenceRefs: [...new Set(candidates.flatMap((candidate) => candidate.evidenceRefs))].sort()
       };
     }
+    const directory = this.declaredDirectory(reference);
+    if (directory !== undefined) return { state: "known", resource: directory, evidenceRefs: [] };
     return {
       state: "unknown",
       reason: this.isInsideGitlink(reference)
@@ -143,15 +153,69 @@ export class ResourceCatalog {
     };
   }
 
+  /**
+   * The directory a `path:` locator names, when the tree holds no blob at that
+   * exact path. It owns everything under it, so it authorises creating files
+   * there, and two disjoint directories do not overlap.
+   */
+  private declaredDirectory(reference: string): CatalogResource | undefined {
+    if (this.coverage.state === "unknown") return undefined;
+    const candidatePath = extractPathLocator(reference);
+    if (candidatePath === undefined || candidatePath === "") return undefined;
+    if (candidatePath.split("/").some((segment) => segment === "" || segment === "." || segment === "..")) {
+      return undefined;
+    }
+    if (this.isInsideGitlink(candidatePath)) return undefined;
+    return {
+      id: repositoryFactId("resource", { kind: "path", path: candidatePath }),
+      kind: "path",
+      canonicalLocator: `path:${candidatePath}`,
+      path: candidatePath,
+      origin: "declared",
+      evidenceRefs: [],
+      epistemic: { state: "known", confidence: "high", evidenceRefs: [] },
+      generated: {
+        state: "source",
+        reason: "A directory named by a plan. The tree holds no blob at this path.",
+        evidenceRefs: []
+      }
+    };
+  }
+
   overlaps(leftReference: string, rightReference: string): ResourceOverlap {
     const left = this.resolve(leftReference);
     const right = this.resolve(rightReference);
-    if (left.state !== "known" || right.state !== "known") return "unknown";
-    if (left.resource.epistemic.state !== "known" || right.resource.epistemic.state !== "known") return "unknown";
-    if (left.resource.id === right.resource.id) return "yes";
-    if (this.containsResource(left.resource.id, right.resource.id)) return "yes";
-    if (this.containsResource(right.resource.id, left.resource.id)) return "yes";
-    return "no";
+    if (left.state === "known" && right.state === "known") {
+      if (left.resource.epistemic.state !== "known" || right.resource.epistemic.state !== "known") return "unknown";
+      if (left.resource.id === right.resource.id) return "yes";
+      if (this.containsResource(left.resource.id, right.resource.id)) return "yes";
+      if (this.containsResource(right.resource.id, left.resource.id)) return "yes";
+      // A declared directory has no containment relations, because the index
+      // never listed it. Its extent is its path, so compare paths instead.
+      if (left.resource.origin === "declared" || right.resource.origin === "declared") {
+        const leftExtent = left.resource.path;
+        const rightExtent = right.resource.path;
+        if (leftExtent === undefined || rightExtent === undefined) return "unknown";
+        return isDisjointPath(leftExtent, rightExtent) ? "no" : "yes";
+      }
+      return "no";
+    }
+
+    const leftPath = left.state === "known" && left.resource.path !== undefined
+      ? left.resource.path
+      : extractPathLocator(leftReference);
+    const rightPath = right.state === "known" && right.resource.path !== undefined
+      ? right.resource.path
+      : extractPathLocator(rightReference);
+
+    if (leftPath !== undefined && rightPath !== undefined) {
+      if (this.isInsideGitlink(leftPath) || this.isInsideGitlink(rightPath)) return "unknown";
+      if (leftPath === rightPath) return "yes";
+      if (isDisjointPath(leftPath, rightPath)) return "no";
+      return "yes";
+    }
+
+    return "unknown";
   }
 
   neighborhood(reference: string, depth: number): CatalogResource[] {
@@ -387,4 +451,26 @@ function uniqueRelations(relations: readonly CatalogContainment[]): CatalogConta
 function uniqueAliases(aliases: readonly CatalogAlias[]): CatalogAlias[] {
   return [...new Map(aliases.map((alias) => [`${alias.locator}\0${alias.resourceId}`, alias])).values()]
     .sort((left, right) => `${left.locator}\0${left.resourceId}`.localeCompare(`${right.locator}\0${right.resourceId}`));
+}
+
+function extractPathLocator(reference: string): string | undefined {
+  if (reference.startsWith("path:")) return normalizePosixPath(reference.slice("path:".length));
+  if (reference.startsWith("resource:path:")) return normalizePosixPath(reference.slice("resource:path:".length));
+  if (reference.startsWith("resource:file:")) return normalizePosixPath(reference.slice("resource:file:".length));
+  return undefined;
+}
+
+function normalizePosixPath(value: string): string {
+  const forward = value.replaceAll("\\", "/");
+  return forward.startsWith("/") ? forward.slice(1) : forward;
+}
+
+function isDisjointPath(left: string, right: string): boolean {
+  const normLeft = normalizePosixPath(left);
+  const normRight = normalizePosixPath(right);
+  if (normLeft === normRight) return false;
+  // The repository root is the empty path and contains everything.
+  if (normLeft === "" || normRight === "") return false;
+  if (normLeft.startsWith(`${normRight}/`) || normRight.startsWith(`${normLeft}/`)) return false;
+  return true;
 }

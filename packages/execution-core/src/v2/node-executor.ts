@@ -35,7 +35,7 @@ import {
 import type { IntegrationOperationJournal } from "../integration/operation-journal";
 import { ResultRecorder } from "../result/recorder";
 import type { ExecutionConfig, WorktreeRecord } from "../types";
-import type { PreparedValidationRecipe } from "../validation/recipe-compiler";
+import type { PreparedValidationRecipe, UnmaterializedObligation } from "../validation/recipe-compiler";
 import { WorktreeManager } from "../worktree/manager";
 import type { DeclaredCredential, SandboxProfile, SandboxProvider, SandboxSession } from "../sandbox/types";
 
@@ -185,6 +185,8 @@ export type V2PhysicalNodeExecutionOutcome =
       kind: "needs_input";
       reason: string;
       unmaterializedObligationIds: string[];
+      /** Why each obligation produced no command, so the operator sees the remedy. */
+      unmaterialized: UnmaterializedObligation[];
     }
   | {
       kind: "failure";
@@ -263,8 +265,9 @@ export class V2NodeExecutor {
       if (unmaterialized.length > 0) {
         return {
           kind: "needs_input",
-          reason: `Required validation obligations cannot be materialized: ${unmaterialized.join(", ")}.`,
-          unmaterializedObligationIds: unmaterialized
+          reason: `Required validation obligations cannot be materialized: ${unmaterialized.map(({ obligationId }) => obligationId).join(", ")}.`,
+          unmaterializedObligationIds: unmaterialized.map(({ obligationId }) => obligationId),
+          unmaterialized
         };
       }
       const hasChildren = Object.values(input.graph.nodes).some((node) => node.parentId === input.node.id);
@@ -1254,12 +1257,20 @@ function requiredValidationRecipeDigest(matrix: Pick<V2ExecutionEvidenceMatrix, 
 function requiredUnmaterializedObligations(
   contract: TaskContractBundle,
   prepared: PreparedValidationRecipe | undefined
-): string[] {
+): UnmaterializedObligation[] {
   if (prepared === undefined) return [];
   const required = new Set(contract.validation.obligations
     .filter((obligation) => obligation.severity === "required")
     .map((obligation) => obligation.id));
-  return prepared.unmaterializedObligationIds.filter((id) => required.has(id));
+  // A recipe prepared before this field existed still reports identities, so
+  // fall back to them rather than losing the block entirely.
+  const detailed = prepared.unmaterialized
+    ?? prepared.unmaterializedObligationIds.map((obligationId) => ({
+      obligationId,
+      cause: "evidence_missing" as const,
+      detail: "This obligation produced no command."
+    }));
+  return detailed.filter(({ obligationId }) => required.has(obligationId));
 }
 
 function missingExpectedArtifactPaths(

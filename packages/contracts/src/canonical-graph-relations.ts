@@ -1,4 +1,4 @@
-import { EntityIdSchema, NonEmptyStringSchema } from "@manyhands/shared";
+import { EntityIdSchema, NonEmptyStringSchema, ResourceReferenceSchema } from "@manyhands/shared";
 import { z } from "zod";
 import { CanonicalContractRefSchema, CanonicalDigestSchema } from "./canonical-reference.js";
 import { EpistemicAssessmentSchema } from "./semantic-plan.js";
@@ -30,9 +30,12 @@ export const ResourceVersionRefSchema = z.discriminatedUnion("kind", [
 export type ResourceVersionRef = z.infer<typeof ResourceVersionRefSchema>;
 
 const ResourceClaimCommonShape = {
-  id: EntityIdSchema,
+  // A claim names a repository resource, which may be a `path:` locator for a
+  // directory a plan declared, and its own id is composed from that reference.
+  // Both therefore carry the reference charset rather than the entity one.
+  id: ResourceReferenceSchema,
   nodeId: EntityIdSchema,
-  resourceId: EntityIdSchema,
+  resourceId: ResourceReferenceSchema,
   source: z.enum(["planner", "compiler", "repository_policy"]),
   evidenceRefs: z.array(NonEmptyStringSchema).default([]),
   epistemic: EpistemicAssessmentSchema

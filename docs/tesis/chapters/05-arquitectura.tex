@@ -1,0 +1,221 @@
+\chapter{Arquitectura del sistema}
+\label{cap:arquitectura}
+
+Este capítulo detalla la arquitectura de \sistema, correspondiente al eje principal de investigación de esta tesis. Se describe el modelo de ejecución centrado en el \emph{run} como unidad de producto, el modelo de grafo híbrido con relaciones canónicas tipadas, el subsistema de indexación y grounding del repositorio, el motor de planificación progresiva presupuestada (\texttt{PlanningEngine}), el catálogo inmutable de contratos formales y el motor de verificación estática de invariantes (\texttt{verifyPlan}).
+
+\section{El run como unidad de producto y ciclo de vida}
+
+En \sistema, la unidad atómica de interacción y valor de ingeniería es el \textbf{run}: la transformación completa, auditable y controlada de un requerimiento expresado en lenguaje natural sobre un repositorio base, en un resultado integrado, verificado y entregado sobre un commit físico exacto.
+
+A diferencia de los asistentes conversacionales que mantienen sesiones de chat efímeras, un run es una entidad formal de dominio gobernada por una \textbf{máquina de estados determinista}. La figura~\ref{fig:run-lifecycle} ilustra las transiciones canónicas del ciclo de vida.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+    state/.style={draw=black!80, fill=black!4, rounded corners=4pt, align=center, font=\small, minimum height=0.9cm, minimum width=2.5cm},
+    primary/.style={draw=blue!80!black, fill=blue!6, thick, rounded corners=4pt, align=center, font=\small, minimum height=0.9cm, minimum width=2.5cm},
+    terminal/.style={draw=green!60!black, fill=green!8, thick, rounded corners=4pt, align=center, font=\small, minimum height=0.9cm, minimum width=2.5cm},
+    fail/.style={draw=red!70!black, fill=red!6, rounded corners=4pt, align=center, font=\small, minimum height=0.9cm, minimum width=2.5cm},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=black!70}
+  ]
+    \node[primary] (init) {\textbf{planning}\\ Planificación progresiva};
+    \node[state, right=1.2cm of init] (appr) {\textbf{needs\_approval}\\ Aprobación humana};
+    \node[primary, right=1.2cm of appr] (exec) {\textbf{running}\\ Ejecución en olas};
+    \node[state, below=1.2cm of exec] (ready) {\textbf{result\_ready}\\ Integración verificada};
+    \node[primary, left=1.2cm of ready] (deliv) {\textbf{delivering}\\ Publicación transaccional};
+    \node[terminal, left=1.2cm of deliv] (done) {\textbf{completed}\\ Entrega confirmada};
+    
+    \node[fail, below=1.2cm of done] (fail) {\textbf{failed / rejected}\\ Falla con diagnóstico};
+
+    \draw[arrow] (init) -- node[above, font=\tiny] {Plan válido} (appr);
+    \draw[arrow] (appr) -- node[above, font=\tiny] {Aprobado} (exec);
+    \draw[arrow] (exec) -- node[right, font=\tiny] {Hojas completas} (ready);
+    \draw[arrow] (ready) -- node[above, font=\tiny] {Comprobante} (deliv);
+    \draw[arrow] (deliv) -- node[above, font=\tiny] {Fast-forward OK} (done);
+
+    \draw[arrow, dashed] (init) |- (fail);
+    \draw[arrow, dashed] (exec) |- (fail);
+    \draw[arrow, dashed] (ready) |- (fail);
+  \end{tikzpicture}
+  \caption{Máquina de estados finitos del ciclo de vida de un Run en ManyHands.}
+  \label{fig:run-lifecycle}
+\end{figure}
+
+El ciclo de vida transita por las siguientes fases formales:
+\begin{enumerate}
+  \item \textbf{Planning:} El motor interactúa progresivamente con el modelo y el índice del repositorio bajo un presupuesto estricto, hasta derivar un plan semántico libre de violaciones de invariantes.
+  \item \textbf{Needs Approval:} Si el plan exige decisiones arquitectónicas o si la política de autonomía configurada lo requiere, el sistema suspende la transición y expone una decisión estructurada al operador.
+  \item \textbf{Running:} El scheduler despacha olas de ejecución concurrentes en worktrees aislados, respetando el orden topológico y las exclusiones mutuas por recursos.
+  \item \textbf{Result Ready:} Todos los intentos de hojas finalizaron; el orquestador ejecuta los intentos de integración ascendente de los nodos compuestos y valida la Matriz de Evidencias global.
+  \item \textbf{Delivering:} El publicador transaccional valida la correspondencia exacta entre el manifiesto final, el árbol de Git y la rama de destino del usuario.
+  \item \textbf{Completed:} El cambio se publica mediante un avance rápido (\emph{fast-forward}) limpio y se emite un recibo inmutable de entrega.
+\end{enumerate}
+
+\section{Modelo de grafo híbrido y relaciones canónicas tipadas}
+\label{sec:grafo-hibrido}
+
+Un grafo en ManyHands no es una colección homogénea de nodos conectados por aristas arbitrarias. Se estructura como un \textbf{grafo híbrido jerárquico}:
+\begin{itemize}
+  \item \textbf{Nodo Raíz (\emph{Goal Root}):} Representa el objetivo general del usuario y la envoltura final de integración.
+  \item \textbf{Nodos Compuestos (\emph{Composite Nodes}):} Representan fronteras de integración arquitectónica (por ejemplo, subsistemas, paquetes o capas). Un compuesto no escribe código directamente: su labor consiste en coordinar y ejecutar la integración de sus nodos hijos.
+  \item \textbf{Nodos Hoja (\emph{Leaf Nodes}):} Representan unidades atómicas de implementación asignadas a un agente individual dentro de un único worktree aislado.
+\end{itemize}
+
+\subsection{Tipado canónico de relaciones}
+
+Para eliminar la ambigüedad de las dependencias genéricas, el grafo tipifica estrictamente cuatro clases de relaciones formales (tabla~\ref{tab:relaciones-canonicas}):
+
+\begin{table}[htbp]
+  \centering
+  \caption{Catálogo de relaciones canónicas del grafo de ManyHands.}
+  \label{tab:relaciones-canonicas}
+  \small
+  \begin{tabularx}{\textwidth}{@{}l p{4.2cm} X l@{}}
+    \toprule
+    \textbf{Relación} & \textbf{Semántica formal} & \textbf{Efecto operacional en el Scheduler} & \textbf{Orden temporal} \\
+    \midrule
+    \textbf{Jerarquía (\texttt{parentId})} & Pertenencia jerárquica y propiedad de integración. & El padre espera a que todos sus hijos finalicen para ejecutar la integración. & Ascendente (\emph{bottom-up}) \\
+    \textbf{\texttt{ArtifactRequirement}} & Un nodo consumidor requiere un archivo/artefacto producido por otro. & Bloquea el despacho del consumidor hasta que el artefacto exista físicamente. & Estricto ($A \rightarrow B$) \\
+    \textbf{\texttt{SeamBinding}} & Productor y consumidores comparten un contrato de interfaz congelado. & \textbf{Habilita ejecución concurrente}: ambos nodos trabajan contra el contrato formal. & Paralelo ($A \parallel B$) \\
+    \textbf{\texttt{ResourceClaim}} & Dos nodos declaran acceso de modificación sobre el mismo recurso. & \textbf{Serializa la ejecución}: evita colisiones de escritura sin crear acoplamiento funcional. & Exclusión mutua \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+Esta distinción tipada resuelve un problema fundamental en la ingeniería de software multi-agente: un acuerdo de interfaz (\texttt{SeamBinding}) no impone una espera temporal, mientras que una colisión de recursos (\texttt{ResourceClaim}) no implica que un nodo deba consumir los datos del otro.
+
+\section{Grounding del repositorio: RepositoryModel y consultas presupuestadas}
+
+Para evitar que los modelos de lenguaje alucinen la estructura de directorios o los nombres de las clases exportadas, la planificación se fundamenta en un modelo formal del repositorio provisto por \texttt{@manyhands/repository-index}:
+
+\begin{enumerate}
+  \item \textbf{Snapshot inmutable (\texttt{RepositorySnapshot}):} Representa una fotografía exacta del repositorio anclada al SHA del commit base de Git. El descubrimiento de rutas se realiza mediante \texttt{ripgrep} nativo, indexando archivos rastreados e ignorando rutas declaradas en \texttt{.gitignore}.
+  \item \textbf{Vista de repositorio (\texttt{RepositoryView}):} Estructura que clasifica los límites de paquetes, módulos exportados, catálogos de recursos y capacidades de validación detectadas (por ejemplo, scripts de test en \texttt{package.json}, configuraciones de Vitest o pytest).
+  \item \textbf{Consultas presupuestadas (\texttt{RepositoryQuery}):} Durante la fase de planificación, el modelo LLM no recibe el código fuente completo como contexto estático. En su lugar, el planificador emite consultas acotadas al índice (\texttt{searchGoalTerms}, \texttt{inspectBoundary}, \texttt{validationCapabilities}). Cada consulta descuenta bytes leídos y llamadas contra un presupuesto estricto (\texttt{RepositoryQueryBudget}), garantizando que la indexación no sature la memoria ni la ventana de contexto del modelo.
+\end{enumerate}
+
+\section{Motor de planificación progresiva presupuestada (PlanningEngine)}
+\label{sec:planning-engine}
+
+La generación de planes de descomposición se implementa en la clase \texttt{PlanningEngine} dentro del paquete \texttt{@manyhands/decomposer}. En lugar de depender de un único prompt generativo de un solo paso (*one-shot*), el motor orquesta un proceso interactivo multi-turno gobernado por un presupuesto multidimensional inmutable \texttt{PlanningBudget}:
+
+\begin{lstlisting}[language=C,caption={Estructura del presupuesto de planificación en TypeScript.}]
+export interface PlanningBudget {
+  modelCalls: number;         // Maximo de llamadas al LLM
+  repositoryQueries: number;  // Maximo de consultas al indice
+  queryBytes: number;         // Maximo acumulado de bytes leidos
+  revisions: number;          // Maximo de revisiones formales
+  repairs: number;            // Reintentos permitidos por errores de esquema
+  expansions: number;         // Expansiones de nodos frontera
+}
+\end{lstlisting}
+
+\subsection{Prevención de bucles causales (\emph{Causal Loop Prevention})}
+
+Uno de los modos de fallo más comunes en la planificación asistida por LLMs es el atrapamiento en ciclos infinitos de reparación: ante un error de validación, el modelo propone una corrección que reintroduce un error previo, oscilando indefinidamente sin converger.
+
+Para erradicar este comportamiento, \texttt{PlanningEngine} calcula en cada iteración un digest criptográfico del estado causal:
+
+\begin{equation}
+\text{causalDigest} = \text{SHA256}\Big(\text{proposalDigest} \mathbin{\Vert} \text{requestDigest} \mathbin{\Vert} \text{queryReceipts} \mathbin{\Vert} \text{findings}\Big)
+\label{eq:causal-digest}
+\end{equation}
+
+El motor mantiene un conjunto inmutable de estados visitados $\mathcal{S}_{\text{seen}}$. Si una nueva propuesta produce un $\text{causalDigest} \in \mathcal{S}_{\text{seen}}$, el motor aborta inmediatamente la rama de ejecución con un hallazgo tipado \texttt{no\_progress}, evitando el consumo inútil de tokens y garantizando la terminación determinista del proceso.
+
+\subsection{Taxonomía discriminada de resultados de planificación}
+
+El resultado retornado por \texttt{PlanningEngine.plan()} es una unión discriminada estricta que modela con precisión matemática el estado de la propuesta:
+
+\begin{itemize}
+  \item \textbf{\texttt{ready}:} El plan cumple el 100\% de los invariantes y es directamente compilable a un grafo ejecutable.
+  \item \textbf{\texttt{needs\_input}:} El plan identificó ambigüedades de negocio que requieren clarificación humana; genera un objeto inmutable \texttt{PlanningContinuation} con el digest de continuación.
+  \item \textbf{\texttt{ambiguous}:} Existen múltiples alternativas arquitectónicas viables pero mutuamente incompatibles.
+  \item \textbf{\texttt{unsupported}:} El repositorio carece de las herramientas o capacidades mínimas exigidas por el requerimiento.
+  \item \textbf{\texttt{rejected}:} El plan violó invariantes estáticos no reparables o agotó su presupuesto asignado.
+\end{itemize}
+
+\section{Sistema canónico de contratos: acotando los modos de falla}
+\label{sec:contratos}
+
+En un sistema multi-agente, la delegación no puede basarse en descripciones informales en lenguaje natural. Si un agente recibe instrucciones no estructuradas, la estocasticidad del modelo induce tres modos de fallo sistémicos: modificación destructiva de archivos circundantes, divergencia en las signaturas de funciones y emisión de código sin pruebas verificables.
+
+Para neutralizar estas amenazas, \sistema\ formaliza cada dimensión de la ejecución mediante un catálogo inmutable de contratos validados mediante esquemas Zod en \texttt{@manyhands/contracts} (figura~\ref{fig:contratos-jerarquia}):
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+    contract/.style={draw=blue!80!black, fill=blue!5, thick, rounded corners=3pt, align=center, font=\small, minimum height=1.0cm, text width=3.4cm},
+    bundle/.style={draw=black!80, fill=black!4, thick, rounded corners=3pt, align=center, font=\small, minimum height=1.2cm, text width=4.0cm},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=black!70}
+  ]
+    \node[contract] (goal) {\textbf{GoalContract}\\ Requerimiento raíz\\ Criterios globales};
+    
+    \node[bundle, below=1.2cm of goal] (bundle) {\textbf{TaskContractBundle}\\ Paquete cerrado por hoja\\ Identidad inmutable};
+    
+    \node[contract, below left=1.2cm and 0.2cm of bundle] (scope) {\textbf{ScopeContract}\\ Rutas permitidas\\ Rutas protegidas};
+    \node[contract, below=1.2cm of bundle] (seam) {\textbf{SeamContract}\\ Frontera de interfaz\\ Signaturas públicas};
+    \node[contract, below right=1.2cm and 0.2cm of bundle] (val) {\textbf{ValidationObligation}\\ Criterio de prueba\\ Comando y severidad};
+
+    \draw[arrow] (goal) -- (bundle);
+    \draw[arrow] (bundle) -- (scope);
+    \draw[arrow] (bundle) -- (seam);
+    \draw[arrow] (bundle) -- (val);
+  \end{tikzpicture}
+  \caption{Jerarquía de contratos inmutables en ManyHands.}
+  \label{fig:contratos-jerarquia}
+\end{figure}
+
+Cada contrato responde a una decisión explícita de diseño arquitectónico:
+
+\begin{enumerate}
+  \item \textbf{\texttt{GoalContract} (Preservación del requerimiento raíz):} Fija la intención global del usuario y los criterios de aceptación innegociables. Impide que la descomposición sufra de \emph{deriva teleológica}, asegurando que ninguna sub-tarea descarte objetivos originales.
+  \item \textbf{\texttt{TaskContractBundle} (Hermeticidad del agente):} Constituye el paquete cerrado e inmutable entregado al worker. Un agente no tiene visibilidad del grafo completo ni de las conversaciones de otros agentes: su universo operacional está estrictamente delimitado por su bundle.
+  \item \textbf{\texttt{ScopeContract} (Contención de dispersión de archivos):} Declara las listas blancas de rutas de lectura y escritura (\texttt{writePaths}). Erradica el \emph{scope creep}, impidiendo que un agente edite dependencias globales o archivos de configuración ajenos a su incumbencia.
+  \item \textbf{\texttt{SeamContract} (Congelamiento de interfaces públicas):} Formaliza tipos exportados, firmas de métodos y endpoints HTTP acordados \emph{a priori}. Al desacoplar la interfaz de su implementación, permite que el productor y los consumidores trabajen en paralelo (\texttt{SeamBinding}) con garantía matemática de compatibilidad.
+  \item \textbf{\texttt{ArtifactContract} (Determinismo de materialización):} Especifica los archivos físicos que el nodo debe generar y sus modos de persistencia, asegurando que los consumidores reciban exactamente las rutas esperadas.
+  \item \textbf{\texttt{CanonicalValidationObligation} (Gobernanza probatoria):} Vincula cada criterio de aceptación con un comando de validación exacto y una política de severidad. Impide que un agente declare una tarea como completada sin evidencia física ejecutable.
+\end{enumerate}
+
+\section{Verificador estático de invariantes (verifyPlan): prevención de patologías de grafo}
+\label{sec:verify-plan}
+
+Antes de autorizar la compilación de un plan semántico a una revisión ejecutable del grafo (\texttt{GraphRevision}), la función pura y determinista \texttt{verifyPlan} somete la propuesta a una auditoría matemática exhaustiva. Ningún plan generado por un LLM es ejecutado sin superar esta barrera.
+
+Cada una de las \textbf{ocho categorías de invariantes} está diseñada para erradicar una patología catastrófica específica documentada en la orquestación multi-agente:
+
+\begin{enumerate}
+  \item \textbf{Jerarquía y aciclicidad (\texttt{verifyHierarchy}):}  
+  \emph{Patología prevenida: Particiones huérfanas y ciclos estructurales.}  
+  Garantiza que el árbol posea una única raíz formal, que todo nodo no-raíz tenga un padre válido y que no existan ciclos jerárquicos que impidan el cálculo del orden topológico.
+  
+  \item \textbf{Refinamiento y trazabilidad de criterios (\texttt{verifyCriteria}):}  
+  \emph{Patología prevenida: Deriva de objetivos (*goal drift*).}  
+  Comprueba que todo criterio de aceptación del objetivo descienda hacia las hojas y que ningún sub-nodo invente criterios espurios. Si un LLM omite silenciosamente un requerimiento complejo, el verificador aborta el plan de inmediato.
+  
+  \item \textbf{Coherencia de roles y granularidad (\texttt{verifyUnits}):}  
+  \emph{Patología prevenida: Nodos híbridos inconsistentes.}  
+  Exige que las hojas sean atómicas y carezcan de lógica de integración, y que los nodos compuestos posean al menos dos hijos directos y un contrato formal de integración. Impide que una hoja intente coordinar o que un compuesto ejecute código directo.
+  
+  \item \textbf{Flujo y aciclicidad de dependencias de artefactos (\texttt{verifyArtifacts}):}  
+  \emph{Patología prevenida: Bloqueos mutuos (*deadlocks*) en el Scheduler.}  
+  Construye el grafo dirigido de producción y consumo de artefactos y verifica que sea estrictamente acíclico ($A_{\text{prod}} \rightarrow A_{\text{cons}}$). Previene que dos agentes queden bloqueados esperándose mutuamente para iniciar.
+  
+  \item \textbf{Compatibilidad y cierre de costuras (\texttt{verifySeams}):}  
+  \emph{Patología prevenida: Ruptura silenciosa de contratos de interfaz.}  
+  Audita que toda costura compartida vincule a productores y consumidores existentes y posea al menos una obligación de validación que certifique la compatibilidad antes de la integración.
+  
+  \item \textbf{Protección e integridad de rutas (\texttt{verifyPaths}):}  
+  \emph{Patología prevenida: Escapes de directorio y vulneración del host.}  
+  Actúa como un firewall estático. Exige rutas relativas POSIX normalizadas, rechazando secuencias de ascenso (\texttt{..}), rutas absolutas del host o accesos a directorios protegidos (\texttt{.git}, credenciales del daemon).
+  
+  \item \textbf{Disyunción de escritores de recursos (\texttt{verifyResources}):}  
+  \emph{Patología prevenida: Pérdida silenciosa de cambios por doble escritura (*lost updates*).}  
+  Detecta si dos unidades concurrentes paralelas reclaman acceso de modificación (\texttt{access: "modify"}) sobre el mismo archivo sin una dependencia de artefacto que las serialice. Si se detecta un conflicto, el plan se rechaza para evitar que un agente sobrescriba el código de otro.
+  
+  \item \textbf{Cobertura probatoria de evidencia (\texttt{verifyEvidence}):}  
+  \emph{Patología prevenida: Entregas sin evidencia o con pruebas omitidas.}  
+  Exige que todo criterio de aceptación obligatorio esté vinculado a una estrategia de prueba formal (\texttt{ProofStrategy}) y una obligación de validación física, impidiendo que el sistema acepte código sin respaldo empírico.
+\end{enumerate}
+
+Una vez superadas exitosamente las ocho categorías de invariantes, la función \texttt{compilePlan} transforma determinísticamente el plan semántico en una \texttt{GraphRevision}, garantizando que ningún estado inconsistente o ambiguo alcance la etapa de ejecución concurrente.

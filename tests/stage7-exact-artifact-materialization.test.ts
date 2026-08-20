@@ -81,7 +81,7 @@ describe("Stage 7 exact artifact materialization", () => {
 
   it("does not run a repository smudge filter while materializing exact blobs", async () => {
     const marker = path.join(repo, "smudge-ran.txt");
-    await git(repo, "config", "filter.hostile.smudge", `cmd /c echo smudged>\"${marker}\"`);
+    await git(repo, "config", "filter.hostile.smudge", `cmd /c echo smudged>"${marker}"`);
     await writeFile(path.join(repo, ".gitattributes"), "owned.txt filter=hostile\n", "utf8");
     await git(repo, "add", ".gitattributes");
     await git(repo, "commit", "-m", "hostile attribute fixture");
@@ -109,7 +109,6 @@ describe("Stage 7 exact artifact materialization", () => {
     const baseCommit = await git(repo, "rev-parse", "HEAD");
     const baseTree = await git(repo, "rev-parse", "HEAD^{tree}");
     const ownedOldOid = await git(repo, "rev-parse", "HEAD:owned.txt");
-    const secondOldOid = await git(repo, "rev-parse", "HEAD:second.txt");
     await git(repo, "switch", "--create", "candidate");
     await writeFile(path.join(repo, "owned.txt"), "after\n", "utf8");
     await writeFile(path.join(repo, "second.txt"), "after\n", "utf8");

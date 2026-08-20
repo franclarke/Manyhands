@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi } from "vitest";
 import { V2ExecutionDriver, type V2ExecutionRunInput } from "@manyhands/orchestrator-graph";
 
@@ -417,7 +418,7 @@ describe("V2ExecutionDriver - continuous dispatch", () => {
       }]
     };
 
-    let adopted: Record<string, any> = {};
+    const adopted: Record<string, any> = {};
     const state = () => mockState({ adoptedArtifacts: adopted });
     const coordinator = {
       load: vi.fn().mockImplementation(() => Promise.resolve(state())),

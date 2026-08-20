@@ -1,0 +1,76 @@
+\chapter{Estado del arte}
+\label{cap:estado}
+
+Este capítulo revisa los principales enfoques de la literatura científica y técnica en torno a agentes de lenguaje aplicados al desarrollo de software, marcos multi-agente conversacionales, orquestación mediante grafos de tareas y políticas de optimización de costos. Finalmente, se presenta una matriz comparativa que posiciona las contribuciones de \sistema\ frente a las limitaciones de los sistemas existentes.
+
+\section{Agentes autónomos individuales en ingeniería de software}
+
+El surgimiento de conjuntos de evaluación rigurosos construidos sobre repositorios reales de código abierto, notablemente SWE-bench \cite{jimenez2024swebench}, impulsó una nueva generación de agentes de software. SWE-bench recopila más de dos mil incidencias históricas resueltas en proyectos populares de Python en GitHub, exigiendo a los modelos generar parches que superen las pruebas de regresión del proyecto sin acceso a las soluciones humanas.
+
+En este contexto, SWE-agent \cite{yang2024sweagent} demostró que la efectividad de un modelo de lenguaje depende fuertemente de la \emph{Interfaz Agente-Computadora} (\emph{Agent-Computer Interface}, ACI). Al proporcionar al modelo comandos adaptados para navegar directorios, realizar búsquedas de texto paginadas y editar bloques acotados mediante coincidencia exacta de líneas, SWE-agent logró mejoras dramáticas de desempeño frente a interfaces basadas en shells estándar. Herramientas contemporáneas orientadas al flujo de trabajo del desarrollador en terminal —tales como Aider, OpenHands y las CLI especializadas Claude Code o Codex CLI \cite{chen2021codex}— han profundizado este enfoque, incorporando mapas de repositorio basados en árboles sintácticos (Tree-sitter) y bucles interactivos de edición y prueba.
+
+A pesar de su notable efectividad en la resolución de incidencias autocontenidas o refactorizaciones locales, estas herramientas operan fundamentalmente bajo el paradigma de \textbf{un agente único por problema}: el modelo ejecuta un bucle lineal de inferencia hasta agotar su presupuesto de tokens o turnos. Como se evidenció en la motivación, este enfoque monolítico no escala cuando el requerimiento exige modificaciones arquitectónicas simultáneas en múltiples subsistemas o capas (por ejemplo, esquemas de persistencia, reglas de dominio, controladores de API e interfaces de usuario), ya que la masa de código excede la ventana de contexto efectiva y desencadena alucinaciones, pérdida de dependencias y desbordes de alcance. \sistema\ no compite como un modelo generativo individual frente a estas herramientas, sino que actúa como un \textbf{plano supervisor de control, partición y verificación} que las coordina concurrentemente.
+
+\section{Sociedades multi-agente conversacionales}
+
+Para superar las limitaciones del agente individual, diversos trabajos han propuesto marcos basados en \emph{sociedades multi-agente} con división de roles. ChatDev \cite{qian2024chatdev} y MetaGPT \cite{hong2024metagpt} estructuran la colaboración emulando el modelo en cascada de una empresa de software: definen agentes con perfiles especializados (Product Manager, Arquitecto, Ingeniero de Software, Tester) que se comunican entre sí mediante lenguaje natural. MetaGPT introduce \emph{Procedimientos Operativos Estandarizados} (\emph{Standard Operating Procedures}, SOPs), exigiendo que los agentes intercambien diagramas de clases y documentos de diseño estructurados para reducir la ambigüedad.
+
+Sin embargo, estos marcos conversacionales presentan tres limitaciones severas cuando se aplican a repositorios de software reales preexistentes:
+
+\begin{enumerate}
+  \item \textbf{Generación desde cero vs. evolución de código existente:} Estos sistemas fueron diseñados principalmente para generar aplicaciones de juguete desde cero (*greenfield*). Carecen de mecanismos para indexar repositorios complejos con millones de líneas de código, historiales de Git o configuraciones de compilación preexistentes.
+  \item \textbf{Deriva conversacional y desalineación de interfaces:} Al basar la coordinación en el intercambio libre de mensajes de texto entre modelos, el código producido por el agente programador frecuentemente contradice las signaturas asumidas por el agente tester o el arquitecto, generando bucles infinitos de discusión sin convergencia matemática.
+  \item \textbf{Ausencia de control de versiones y contención física:} No implementan aislamiento a nivel de sistema operativo ni control de versiones por intento. Las escrituras se realizan de forma directa y destructiva en el sistema de archivos, sin capacidad de revertir intentos fallidos ni auditar los cambios contra un árbol de Git limpio.
+\end{enumerate}
+
+\section{Orquestación de tareas mediante grafos}
+
+La descomposición de flujos de razonamiento en grafos dirigidos acíclicos ha sido explorada por sistemas como LLMCompiler \cite{kim2024llmcompiler} y DSPy. LLMCompiler analiza las dependencias de datos entre llamadas a funciones y construye un DAG de invocaciones, despachando en paralelo aquellas operaciones cuyas entradas no dependen de los resultados de otras herramientas.
+
+Si bien este principio de paralelización topológica es conceptualmente valioso, en el dominio de la ingeniería de software las dependencias no se limitan a valores escalares o salidas JSON retornadas por una API:
+\begin{itemize}
+  \item Las dependencias en software son \textbf{parches de código sobre el sistema de archivos}, los cuales pueden generar conflictos de fusión textual o semántica si dos agentes editan archivos concurrentes.
+  \item Requieren \textbf{contratos de interfaces públicas congeladas (\emph{seams})} para habilitar trabajo paralelo seguro antes de que la implementación exista.
+  \item Exigen \textbf{obligaciones jerárquicas de validación} para demostrar que la composición de dos módulos preserva el comportamiento global.
+\end{itemize}
+
+Por ende, un DAG de herramientas homogéneo no puede resolver la coordinación de agentes de código sin un sistema formal de contratos y relaciones tipadas.
+
+\section{Políticas de asignación de recursos y enrutamiento}
+
+La optimización de costos y recursos en el uso de modelos de lenguaje ha sido abordada mediante técnicas de \emph{enrutamiento adaptativo de modelos}. FrugalGPT \cite{chen2023frugalgpt} y RouteLLM \cite{ong2024routellm} entrenan clasificadores que analizan la complejidad de una consulta y la redirigen al modelo más económico capaz de resolverla (por ejemplo, derivando consultas simples a modelos ligeros como GPT-4o-mini y reservando modelos de mayor capacidad como Claude 3.5 Sonnet para tareas complejas).
+
+Estos enfoques resuelven la pregunta de \textbf{<<qué modelo asignar a una consulta dada>>}. Por el contrario, la política de granularidad desarrollada en esta tesis actúa en una etapa previa y complementaria, resolviendo la pregunta de \textbf{<<cuánto trabajo constituye una unidad atómica ejecutable>>} antes de la asignación. Ambas estrategias son ortogonales y pueden combinarse armónicamente.
+
+\section{Análisis de brechas y posicionamiento de ManyHands}
+
+La tabla~\ref{tab:estado-del-arte} resume la comparación sistemática entre los enfoques representativos del estado del arte y la arquitectura de \sistema.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Comparación sistemática de ManyHands frente al estado del arte.}
+  \label{tab:estado-del-arte}
+  \small
+  \begin{tabularx}{\textwidth}{@{}l X X X X@{}}
+    \toprule
+    \textbf{Dimensión} & \textbf{SWE-agent} \cite{yang2024sweagent} & \textbf{MetaGPT} \cite{hong2024metagpt} & \textbf{LLMCompiler} \cite{kim2024llmcompiler} & \textbf{ManyHands} (Esta tesis) \\
+    \midrule
+    \textbf{Unidad de trabajo} & Incidencia aislada (1 agente) & Proyecto completo (roles conversacionales) & DAG de llamadas a herramientas & \textbf{Run de producto con grafo híbrido} \\
+    \textbf{Descomposición} & No (monolítico) & Fija por roles (PM, Dev, QA) & Dinámica por flujo de datos & \textbf{Adaptativa categórica (Política 4.0)} \\
+    \textbf{Fronteras de interfaz} & N/A & Prompts en lenguaje natural & Parámetros de función & \textbf{Contratos formales versionados (\emph{seams})} \\
+    \textbf{Aislamiento físico} & Entorno local único & Directorio compartido & N/A (en memoria) & \textbf{Pool de Git worktrees con scope guard} \\
+    \textbf{Resolución de conflictos} & N/A & Discusión multi-turno & N/A & \textbf{Integración bottom-up con repair} \\
+    \textbf{Verificación} & Test final de la incidencia & Generación de tests por LLM & N/A & \textbf{Matriz de Evidencias sobre commit exacto} \\
+    \textbf{Persistencia} & Logs de texto & Logs de texto & N/A & \textbf{Journal append-only (Event Sourcing)} \\
+    \textbf{Entrega} & Parche \texttt{.patch} & Archivos generados & Resultado en memoria & \textbf{Manifiesto y recibo transaccional} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+A partir de este análisis de brechas, las contribuciones distintivas de \sistema\ se sintetizan en tres pilares de ingeniería:
+
+\begin{enumerate}
+  \item \textbf{Gobernanza mediante contratos y relaciones tipadas:} Sustitución de la comunicación libre entre agentes por un plano formal de contratos inmutables (\texttt{TaskContractBundle}, \texttt{SeamContract}, \texttt{ArtifactContract}, \texttt{ValidationObligation}) que garantiza la compatibilidad de interfaces antes de la ejecución.
+  \item \textbf{Política de granularidad categórica explicable:} Superación de los modelos opacos de scoring y las reglas estáticas mediante una política que evalúa capacidad física, paralelismo real y aislamiento de pruebas, respaldada por un banco de regresión offline congelado.
+  \item \textbf{Disciplina de evidencia y entrega transaccional:} Validación estricta sobre el SHA del commit exacto en worktrees aislados, con auditoría de controles negativos e integridad de tests, publicando únicamente resultados con recibos inmutables de entrega.
+\end{enumerate}

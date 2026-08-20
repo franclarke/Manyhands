@@ -50,6 +50,22 @@ export interface ValidationRecipeBindingInput {
  * Commands and repository snapshot identity are authoritative here. Binding a
  * candidate must not re-resolve either from a second source.
  */
+/**
+ * Why an obligation produced no command.
+ *
+ * `evidence_missing` and `shared_evidence_invalid` are defects of the plan;
+ * `capability_missing` is a defect of the repository, which declares no command
+ * able to run the obligation. The distinction decides the remedy, so it travels
+ * with the finding instead of being flattened into a list of ids.
+ */
+export type UnmaterializedCause = "evidence_missing" | "shared_evidence_invalid" | "capability_missing";
+
+export interface UnmaterializedObligation {
+  obligationId: string;
+  cause: UnmaterializedCause;
+  detail: string;
+}
+
 export interface PreparedValidationRecipe {
   schemaVersion: 1;
   templateId: string;
@@ -58,7 +74,13 @@ export interface PreparedValidationRecipe {
   validationContract: { id: string; revision: string };
   repositorySnapshotId: string;
   steps: ValidationRecipeStep[];
+  /** Retained so callers that only need identities keep working. */
   unmaterializedObligationIds: string[];
+  /**
+   * Optional so a recipe built before this field existed still typechecks. A
+   * reader that needs the cause falls back to the identities above.
+   */
+  unmaterialized?: UnmaterializedObligation[];
 }
 
 export interface ValidationRecipe extends PreparedValidationRecipe {
@@ -69,15 +91,31 @@ export interface ValidationRecipe extends PreparedValidationRecipe {
 
 export function prepareValidationRecipe(input: ValidationRecipePreparationInput): PreparedValidationRecipe {
   const steps: ValidationRecipeStep[] = [];
-  const unmaterializedObligationIds: string[] = [];
+  const unmaterialized: UnmaterializedObligation[] = [];
   for (const obligation of input.contract.obligations) {
-    if (obligation.evidence === undefined || !validSharedEvidence(obligation, input.contract.obligations)) {
-      unmaterializedObligationIds.push(obligation.id);
+    if (obligation.evidence === undefined) {
+      unmaterialized.push({
+        obligationId: obligation.id,
+        cause: "evidence_missing",
+        detail: "The plan attached no evidence to this obligation, so there is nothing to execute."
+      });
+      continue;
+    }
+    if (!validSharedEvidence(obligation, input.contract.obligations)) {
+      unmaterialized.push({
+        obligationId: obligation.id,
+        cause: "shared_evidence_invalid",
+        detail: "The shared evidence on this obligation disagrees with the other obligations it covers."
+      });
       continue;
     }
     const capability = capabilityFor(obligation, input.capabilities);
     if (capability === undefined) {
-      unmaterializedObligationIds.push(obligation.id);
+      unmaterialized.push({
+        obligationId: obligation.id,
+        cause: "capability_missing",
+        detail: `The repository declares no ${obligation.layer === "static" ? "typecheck, lint or build" : "test"} command, so this obligation has nothing to run.`
+      });
       continue;
     }
     const selectors = obligation.evidence.kind === "focused_command"
@@ -124,7 +162,7 @@ export function prepareValidationRecipe(input: ValidationRecipePreparationInput)
     contract: { id: input.contract.id, revision: input.contract.revision },
     snapshot: input.repositorySnapshotId,
     steps,
-    unmaterializedObligationIds
+    unmaterializedObligationIds: unmaterialized.map(({ obligationId }) => obligationId)
   });
   const templateId = `template-${createHash("sha256").update(templateIdentity).digest("hex").slice(0, 16)}`;
   return {
@@ -136,7 +174,8 @@ export function prepareValidationRecipe(input: ValidationRecipePreparationInput)
     validationContract: { id: input.contract.id, revision: input.contract.revision },
     repositorySnapshotId: input.repositorySnapshotId,
     steps,
-    unmaterializedObligationIds
+    unmaterializedObligationIds: unmaterialized.map(({ obligationId }) => obligationId),
+    unmaterialized
   };
 }
 
@@ -230,6 +269,7 @@ function assertSafeSelectors(selectors: readonly string[]): void {
       normalized.startsWith("-") ||
       /^[A-Za-z]:/u.test(normalized) ||
       normalized.split("/").includes("..") ||
+      // eslint-disable-next-line no-control-regex
       /[\u0000-\u001f]/u.test(selector)
     ) {
       throw new Error(`Unsafe validation selector: ${JSON.stringify(selector)}.`);

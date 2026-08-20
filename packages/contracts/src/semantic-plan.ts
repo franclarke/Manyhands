@@ -1,4 +1,4 @@
-import { EntityIdSchema, EpistemicAssessmentSchema, NonEmptyStringSchema } from "@manyhands/shared";
+import { EntityIdSchema, EpistemicAssessmentSchema, NonEmptyStringSchema, ResourceReferenceSchema } from "@manyhands/shared";
 import { z } from "zod";
 import { ArtifactMaterializationSchema } from "./artifact-contract.js";
 import { computeCanonicalDigest, sortedUniqueStrings, type DigestHasher } from "./canonical-json.js";
@@ -66,14 +66,14 @@ export const CriterionRefinementSchema = z.object({
 
 export const PlannedResourceIntentSchema = z.discriminatedUnion("access", [
   z.object({
-    resourceId: EntityIdSchema,
+    resourceId: ResourceReferenceSchema,
     access: z.literal("observe"),
     inputArtifactId: EntityIdSchema.optional(),
     evidenceRefs: z.array(NonEmptyStringSchema).default([]),
     epistemic: EpistemicAssessmentSchema
   }).strict(),
   z.object({
-    resourceId: EntityIdSchema,
+    resourceId: ResourceReferenceSchema,
     access: z.literal("modify"),
     ownerPhase: z.enum(["implementation", "integration"]),
     inputArtifactId: EntityIdSchema.optional(),

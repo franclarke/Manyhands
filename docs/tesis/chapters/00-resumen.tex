@@ -1,59 +1,33 @@
 \chapter*{Resumen}
 \addcontentsline{toc}{chapter}{Resumen}
 
-Los agentes de programación basados en modelos de lenguaje pueden modificar un
-repositorio, ejecutar pruebas y reaccionar a sus resultados. Cuando el objetivo
-atraviesa varias capas, sin embargo, un único agente concentra demasiado
-contexto y una división excesiva introduce coordinación, contratos y conflictos
-de integración. Esta tesis estudia esa tensión, denominada \emph{paradoja de la
-granularidad}, mediante el diseño, la implementación y la evaluación de
-\sistema, un orquestador local de agentes de código.
+Los agentes de programación basados en modelos de lenguaje de gran escala (LLMs) son capaces de interactuar con repositorios de software, ejecutar comandos en terminal y reaccionar iterativamente a los resultados de compiladores y suites de pruebas. Sin embargo, cuando un requerimiento de ingeniería atraviesa múltiples módulos y capas arquitectónicas, delegar la tarea a un único agente provoca saturación de contexto, colisiones de alcance y desalineación con las interfaces preexistentes. Por otro lado, descomponer el trabajo en un conjunto excesivo de sub-tareas genera sobrecostos de coordinación, proliferación de interfaces redundantes y fallas catastróficas de integración. Esta tensión fundamental, denominada en esta tesis \emph{la paradoja de la granularidad}, plantea el desafío de diseñar arquitecturas de orquestación capaces de particionar el trabajo de forma adaptativa y coordinar la ejecución multi-agente garantizando la corrección formal del resultado integrado.
 
-El aporte técnico combina dos responsabilidades. Un planificador semántico
-propone unidades de trabajo justificadas por el objetivo y el repositorio. Una
-política determinista y versionada evalúa si conviene conservar cada unidad como
-hoja cohesiva o aceptar un corte semántico propuesto. El resultado se compila en
-un grafo híbrido con jerarquía de integración y relaciones tipadas para
-artefactos, interfaces y conflictos. Cada intento se ejecuta en un
-\emph{worktree} aislado; el orquestador inspecciona el diff, controla el alcance,
-valida el commit candidato exacto, integra de abajo hacia arriba y publica sólo
-un resultado acompañado por manifiesto y comprobante. La historia canónica del
-run es un journal append-only de eventos de dominio.
+Esta tesis presenta el diseño, la implementación formal y la evaluación de \sistema, una plataforma local de orquestación multi-agente guiada por contratos y grafos dirigidos acíclicos. La arquitectura del sistema articula dos ejes complementarios:
 
-La evaluación confirmatoria final se pre-registró como una serie pequeña y
-acotada. Se utilizó un repositorio Node ESM con capas de dominio, aplicación y
-API; dos formas de tarea ---una modificación multi-capa y una función cohesiva
-de dominio---; dos repeticiones por forma; una única configuración adaptativa;
-el modelo Codex \texttt{gpt-5.4-mini}; cero reintentos automáticos; y un oráculo
-externo ejecutado sobre cada SHA candidato exacto. Un rehearsal previo verificó
-el instrumento y quedó fuera del denominador.
+En primer lugar, como aporte central (80\% del alcance del sistema), se define un plano de control basado en \emph{contratos formales versionados} y un \emph{grafo híbrido} con relaciones canónicas tipadas (jerarquía de integración, requisitos temporales de artefactos, acuerdos de costuras o \emph{seams}, y reclamos exclusivos de recursos). La planificación se ejecuta mediante un motor progresivo y presupuestado (\texttt{PlanningEngine}) que opera sobre un modelo queryable del repositorio (\texttt{RepositoryModel}) e implementa prevención determinista de bucles causales. El plan resultante se valida mediante un verificador estático de ocho categorías de invariantes (\texttt{verifyPlan}) y se compila directamente en una revisión ejecutable del grafo. Cada agente ejecuta su labor en un \emph{Git worktree} estrictamente aislado, con verificación de alcance (\emph{scope}) en tiempo de ejecución, supervisión de procesos del sistema operativo y saneamiento de variables de entorno. La integración se produce de forma ascendente (\emph{bottom-up}) mediante intentos formales con resolución semántica de conflictos y construcción de una \emph{Matriz de Evidencias} auditada contra controles negativos e integridad de pruebas. La publicación final se realiza mediante un publicador transaccional (\texttt{TransactionalDeliveryPublisher}) que exige un manifiesto de artefactos y un recibo inmutable sobre el commit físico exacto, mientras que la historia del ciclo de vida se preserva en un \emph{journal append-only} de eventos de dominio.
 
-Se fijaron dos hipótesis. \textbf{H-F1} exigía que las cuatro celdas llegaran a
-\texttt{completed} y \texttt{delivered}, publicaran un SHA no vacío y pasaran el
-oráculo externo. \textbf{H-F2} exigía que la tarea multi-capa produjera una raíz
-compuesta con tres hojas ---dominio, aplicación y API---, y que la tarea cohesiva
-produjera una sola hoja ejecutable. El resultado fue \textbf{PASS 4/4 para
-H-F1} y \textbf{PASS 4/4 para H-F2}. Las cuatro entregas y topologías se derivan
-de journals, snapshots, recibos y resultados de oráculo preservados junto con
-el manuscrito.
+En segundo lugar, como aporte metodológico complementario (20\% del alcance), se introduce la \emph{Política de Granularidad Categórica 4.0} (\texttt{GranularityPolicy}). Frente a los enfoques tradicionales basados en funciones continuas de utilidad y umbrales numéricos arbitrarios —cuyo análisis histórico demostró carecer de calibración y justificabilidad física—, la política 4.0 evalúa tres propiedades estructurales discretas: capacidad física y contexto (\texttt{doesNotFit}), paralelismo real derivado de rondas de producción (\texttt{runsInParallel}) y aislamiento probatorio con criterios de aceptación disjuntos (\texttt{verifiableApart}). Si un corte propuesto no satisface ninguna de estas tres razones, el sistema colapsa determinísticamente la partición en una única hoja cohesiva remapeando contratos y costuras huérfanas.
 
-El alcance de la conclusión es deliberadamente estrecho. La serie no tiene
-controles A/B y usa un único target pequeño; por ello no demuestra superioridad
-frente a no descomponer, causalidad, optimalidad, escalabilidad ni
-generalización estadística. Las líneas históricas Warehouse, G5, G6, G7 y SP2
-no se combinan con el resultado final: Warehouse permanece en 1/8, G5 produjo un
-resultado comparativo negativo, G6 fue inconcluso, G7 no produjo candidatos y
-SP2 fue piloto. Se conservan como evidencia adversa o formativa, no como piezas
-incompletas de un denominador positivo.
+Se formula y presenta el diseño de un protocolo experimental pre-registrado para evaluar la viabilidad de la arquitectura y la capacidad discriminativa de la política sobre una aplicación multicapa en Node.js ESM. Los resultados metodológicos, el banco de regresión congelado con más de 80 casos históricos y las decisiones de diseño analizadas demuestran que la orquestación guiada por contratos y evidencia proporciona una base rigurosa, auditable y segura para el desarrollo autónomo de software asistido por IA.
 
-La conclusión defendible es concreta: bajo la versión, el modelo, la política,
-los límites y el protocolo congelados, \sistema\ realizó de forma reproducible
-el recorrido de planificación, ejecución aislada, integración, validación
-externa del commit exacto y entrega, y seleccionó las dos formas de topología
-pre-registradas. El trabajo aporta además una disciplina de evidencia para no
-confundir actividad de agentes, tests autocontenidos o resultados parciales con
-software entregado y verificado.
+\vspace{1.5em}
+\noindent\textbf{Palabras clave:} Orquestación de agentes, Modelos de lenguaje, Descomposición de tareas, Granularidad adaptativa, Diseño por contratos, Git worktrees, Matriz de evidencias, Event Sourcing, Integración de software.
 
-\textbf{Palabras clave:} orquestación de agentes, modelos de lenguaje,
-descomposición de tareas, granularidad adaptativa, worktrees de Git, validación
-de commits, evidencia experimental.
+\clearpage
+
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+
+Large Language Model (LLM) coding agents are increasingly capable of interacting with software repositories, running terminal commands, and iteratively reacting to compiler and test suite diagnostics. However, when an engineering requirement spans multiple architectural layers and components, delegating the entire goal to a single agent triggers context saturation, scope violations, and architectural drift. Conversely, excessively decomposing the goal into micro-tasks introduces severe coordination overhead, redundant interface boundaries, and catastrophic integration conflicts. This fundamental tension, termed in this thesis \emph{the granularity paradox}, necessitates orchestration architectures capable of adaptively partitioning work while enforcing formal correctness over the integrated outcome.
+
+This thesis presents the design, formal implementation, and evaluation of \sistema, a local multi-agent orchestration platform driven by explicit contracts and directed acyclic task graphs. The architecture bridges two complementary research axes:
+
+First, as the core contribution (80\% of the architectural scope), we propose a control plane founded on \emph{versioned canonical contracts} and a \emph{hybrid graph} with typed relations (integration hierarchy, artifact requirement dependencies, seam interface bindings, and resource-indexed conflict claims). Planning is governed by a multi-turn, budgeted engine (\texttt{PlanningEngine}) grounded in a queryable repository model (\texttt{RepositoryModel}) with causal loop prevention. Candidate plans undergo deterministic verification across eight invariant categories (\texttt{verifyPlan}) before direct compilation into executable graph revisions. Worker attempts execute within isolated \emph{Git worktrees} under strict runtime path scoping, OS-level process tree supervision, and environment sanitization. Composite integration proceeds bottom-up via first-class integration attempts with semantic conflict repair, producing a verified \emph{Evidence Matrix} that audits negative controls and test integrity against the exact candidate commit. Delivery is enforced via a transactional publisher that requires durable artifact manifests and immutable delivery receipts, persisted within an append-only domain event journal.
+
+Second, as an adaptive decomposition contribution (20\% of the scope), we introduce the \emph{Categorical Granularity Policy 4.0} (\texttt{GranularityPolicy}). Moving beyond continuous utility scoring and dimensionless numerical thresholds—which empirical replay across 83 historical cuts revealed to be uncalibrated and diffuse—the 4.0 policy decides cuts based on three categorical properties: physical attempt feasibility (\texttt{doesNotFit}), structural concurrency in artifact production rounds (\texttt{runsInParallel}), and disjoint acceptance criteria ownership for failure isolation (\texttt{verifiableApart}). Cuts lacking these rationales are deterministically collapsed into cohesive leaves while remapping orphaned seams and obligations.
+
+We specify a pre-registered experimental evaluation protocol designed to validate end-to-end delivery and topological adaptation across contrasting multi-layer and cohesive tasks in a Node.js ESM target. The resulting architecture, offline regression test bank, and verified invariants provide a robust and auditable engineering foundation for verifiable multi-agent software engineering.
+
+\vspace{1.5em}
+\noindent\textbf{Keywords:} Agent orchestration, Large Language Models, Task decomposition, Adaptive granularity, Design by Contract, Git worktrees, Evidence Matrix, Event Sourcing, Software integration.

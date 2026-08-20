@@ -1,0 +1,145 @@
+\chapter{Implementación}
+\label{cap:implementacion}
+
+Este capítulo describe la implementación física de la plataforma \sistema, detallando los mecanismos de software que materializan la arquitectura propuesta: la organización del monorepo, el subsistema de ejecución aislada en \emph{Git worktrees}, la contención y supervisión de procesos del sistema operativo, el motor de integración ascendente con reparación semántica, la construcción de la Matriz de Evidencias, el publicador transaccional de entregas, la persistencia orientada a eventos y la interfaz de supervisión accesible.
+
+\section{Organización del código y fronteras de paquetes}
+
+\sistema\ está implementado en TypeScript bajo el entorno de ejecución Node.js (versión 20+ ESM), estructurado como un monorepo gestionado con \texttt{pnpm workspaces}. Para asegurar la mantenibilidad y prevenir dependencias circulares, se impone una regla estricta de direccionalidad unidireccional de dependencias: \textbf{\texttt{apps $\rightarrow$ packages especializados $\rightarrow$ packages compartidos}}.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Módulos y paquetes principales del monorepo ManyHands.}
+  \label{tab:paquetes-monorepo}
+  \small
+  \begin{tabularx}{\textwidth}{@{}l l X@{}}
+    \toprule
+    \textbf{Paquete / Aplicación} & \textbf{Ubicación} & \textbf{Responsabilidad principal} \\
+    \midrule
+    \texttt{@manyhands/contracts} & \texttt{packages/contracts} & Definición de esquemas Zod inmutables para todos los contratos del dominio. \\
+    \texttt{@manyhands/task-graph} & \texttt{packages/task-graph} & Estructura de datos del grafo híbrido, relaciones tipadas y revisiones inmutables. \\
+    \texttt{@manyhands/decomposer} & \texttt{packages/decomposer} & Motor de planificación progresivo, Política 4.0, verificador \texttt{verifyPlan} y compilador. \\
+    \texttt{@manyhands/repository-index} & \texttt{packages/repository-index} & Indexación de repositorios mediante \texttt{ripgrep}, snapshots inmutables y consultas queryables. \\
+    \texttt{@manyhands/execution-core} & \texttt{packages/execution-core} & Workers aislados en worktrees, control de alcance, supervisión de procesos y entrega transaccional. \\
+    \texttt{@manyhands/run-engine} & \texttt{packages/run-engine} & Máquina de estados del run, reductor de eventos de dominio y orquestación de olas. \\
+    \texttt{@manyhands/run-store} & \texttt{packages/run-store} & Persistencia append-only en archivos JSONL con escrituras atómicas y recuperación. \\
+    \texttt{apps/daemon} & \texttt{apps/daemon} & Daemon local que hospeda los actores del run, gestiona los workers y expone la API RPC/HTTP. \\
+    \texttt{apps/web} & \texttt{apps/web} & Interfaz de supervisión web (Next.js App Router, Tailwind CSS, accesible WCAG 2.2 AA). \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\section{Subsistema de ejecución aislada en Workers}
+\label{sec:workers-aislados}
+
+La ejecución de código generado por modelos de lenguaje plantea riesgos significativos de corrupción del sistema de archivos y desbordes de recursos. El paquete \texttt{@manyhands/execution-core} implementa una capa de contención multicapa para cada intento de ejecución:
+
+\subsection{Pool de Git worktrees y reciclado determinista}
+
+Cada intento asignado a un agente se despacha en un worktree independiente dentro de un pool administrado por el orquestador. Antes de iniciar la ejecución, el worktree se restablece al commit base requerido mediante una secuencia atómica de comandos Git:
+
+\begin{lstlisting}[language=bash,caption={Secuencia de limpieza y preparación de un worktree del pool.}]
+git reset --hard <baseCommitSha>
+git clean -fdx
+\end{lstlisting}
+
+\noindent Cuando el agente finaliza, el orquestador inspecciona el árbol mediante \texttt{git diff} y \texttt{git status --porcelain=v1}. La salida textual (\texttt{stdout}) del modelo nunca se utiliza para determinar qué archivos cambiaron: \textbf{la única fuente física de verdad es el diff del sistema de archivos}.
+
+\subsection{Verificación estricta de alcance en tiempo de ejecución (\emph{Scope Guard})}
+
+Para evitar que un agente modifique archivos ajenos a su sub-tarea, el subsistema de ejecución aplica un validador de alcance en dos fases con política de \emph{denegación prioritaria} (\emph{deny-first}):
+
+\begin{enumerate}
+  \item \textbf{Normalización POSIX y prevención de escapes:} Cada ruta tocada se normaliza resolviendo enlaces simbólicos (\emph{symlinks}) y secuencias de ascenso de directorios (\texttt{..}). Cualquier intento de escapar de la raíz del worktree genera un rechazo inmediato.
+  \item \textbf{Verificación contra el contrato de alcance:} Todo archivo modificado, creado o eliminado en el diff debe pertenecer al conjunto de rutas permitidas (\texttt{writePaths}) del \texttt{ScopeContract}. Si el agente toca un solo archivo no autorizado (por ejemplo, \texttt{package.json} o archivos de configuración global cuando solo tenía permiso sobre \texttt{src/domain/}), el intento se aborta de inmediato clasificándose con el estado terminal \texttt{scope\_violation}, y ningún commit es adoptado por el orquestador.
+\end{enumerate}
+
+\subsection{Supervisión de procesos, comunicación IPC y saneamiento de entorno}
+
+\begin{itemize}
+  \item \textbf{Supervisión del árbol de procesos del SO:} La ejecución de la CLI del agente (Codex o Claude) se encapsula en un subproceso supervisado con redirección estricta de descriptores estándar (\texttt{stdin}, \texttt{stdout}, \texttt{stderr}). El supervisor consume el streaming de eventos y diagnósticos en tiempo real sin bloquear el hilo principal. Ante una cancelación por timeout, desborde de recursos o intervención del usuario, el orquestador termina recursivamente todo el árbol de procesos secundarios (utilizando \texttt{taskkill.exe /pid <PID> /t /f} en Windows o \texttt{process.kill(-PID, "SIGKILL")} en Unix) y verifica activamente la muerte de todos los descendientes antes de autorizar el reciclado del worktree.
+  \item \textbf{Saneamiento de variables de entorno:} Los subprocesos de los agentes no heredan el entorno global del sistema anfitrión. Se inyecta una lista blanca estricta de variables (\texttt{PATH}, \texttt{HOME}, variables de localización), excluyendo sistemáticamente claves de API del daemon, credenciales corporativas o variables de depuración internas.
+  \item \textbf{Concesiones con testigo (\emph{Witness Leases}):} Toda mutación sobre un repositorio o estado del run exige la posesión de una concesión durable con testigo de vigencia (\texttt{withTransitionalRepositoryLease}) \cite{burrows2006chubby}. Si un worker tarda más de lo estipulado o el daemon se reinicia, la concesión expira y cualquier resultado tardío devuelto por un proceso zombie es descartado de forma segura.
+\end{itemize}
+
+\section{Integración ascendente y reparación semántica de conflictos}
+\label{sec:integracion-ascendente}
+
+La integración en ManyHands es un proceso de primer orden modelado explícitamente en el grafo. Los nodos compuestos no son meros agrupadores visuales: son responsables de integrar los commits adoptados de sus hijos:
+
+\begin{enumerate}
+  \item \textbf{Composición en árbol limpio:} El nodo compuesto adquiere un worktree limpio e integra sucesivamente los parches producidos por sus nodos hijos siguiendo el orden topológico de artefactos.
+  \item \textbf{Verificación de costuras e interfaces:} Una vez fusionados los cambios, el compuesto ejecuta las obligaciones de validación de nivel integración (\texttt{layer: "integration"}) asociadas a sus \texttt{SeamContract}s. Que dos ramas apliquen sin conflictos textuales de Git no garantiza corrección semántica: la integración solo se considera exitosa si las pruebas de integración conjuntas pasan.
+  \item \textbf{Reparación semántica de conflictos (*Semantic Conflict Repair*):} Si la fusión produce un conflicto de Git o una prueba de integración falla, el orquestador genera un intento de reparación automática acotado. En dicho intento, se invoca a un agente asignándole el contexto global del padre y los diagnósticos exactos del conflicto. Si la reparación no converge dentro del presupuesto de reparaciones configurado, el sistema suspende la rama y eleva una decisión estructurada al operador humano en lugar de producir un estado parcial inconsistente.
+\end{enumerate}
+
+\section{Matriz de Evidencias (Evidence Matrix)}
+\label{sec:matriz-evidencias}
+
+La validez de un resultado de software en ManyHands se sintetiza en la \textbf{Matriz de Evidencias} (\texttt{EvidenceMatrix}). Cada celda de la matriz vincula formalmente:
+
+\begin{equation}
+\text{CeldaEvidencia} = \Big(\text{CriterioId},\; \text{ObligacionValidacionId},\; \text{CommitSha},\; \text{Resultado},\; \text{TrazaComando}\Big)
+\label{eq:celda-evidencia}
+\end{equation}
+
+\noindent La matriz aplica las siguientes reglas de auditoría:
+
+\begin{itemize}
+  \item \textbf{Prohibición de pruebas debilitadas (*Test Integrity Guard*):} El verificador de evidencias audita los diffs de pruebas generados por los agentes. Si detecta la eliminación de aserciones existentes, la adición de modificadores para omitir pruebas (como \texttt{it.skip}, \texttt{describe.only} o \texttt{xit}) o la modificación de configuraciones del runner de pruebas para ignorar fallos, el resultado de validación es clasificado como \texttt{fraudulent\_evidence} y rechazado de inmediato.
+  \item \textbf{Controles negativos obligatorios:} Para cada nueva prueba introducida por un agente, el sistema ejecuta la prueba sobre el commit base anterior a la modificación. La prueba debe fallar en el commit base; si pasa en el código previo, se clasifica como un control negativo inválido (prueba no sensible que aprueba trivialmente).
+  \item \textbf{Política contra pruebas inestables (*Flaky Test Policy*):} Las obligaciones de validación críticas declaran \texttt{flakyPolicy: "forbid"}. Si una prueba exhibe intermitencia no determinista durante repeticiones consecutivas sobre el mismo commit, la matriz clasifica la celda como inestable y bloquea la promoción del artefacto.
+\end{itemize}
+
+Un candidato solo alcanza el estado \texttt{verified} si el 100\% de sus obligaciones de validación requeridas poseen estado \texttt{passed} con controles negativos confirmados.
+
+\section{Publicación y Entrega Transaccional (TransactionalDeliveryPublisher)}
+\label{sec:entrega-transaccional}
+
+La fase final de entrega es gestionada por la clase \texttt{TransactionalDeliveryPublisher} en \texttt{@manyhands/execution-core}. La publicación garantiza atomicidad y trazabilidad mediante el protocolo de tres fases ilustrado en la figura~\ref{fig:entrega-transaccional}:
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+    box/.style={draw=black!70, fill=black!3, rounded corners=3pt, align=center, font=\small, minimum height=1.0cm, text width=3.4cm},
+    act/.style={draw=blue!80!black, fill=blue!5, thick, rounded corners=3pt, align=center, font=\small, minimum height=1.0cm, text width=3.4cm},
+    term/.style={draw=green!60!black, fill=green!8, thick, rounded corners=3pt, align=center, font=\small, minimum height=1.0cm, text width=3.4cm},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=black!70}
+  ]
+    \node[box] (prep) {\textbf{1. Preparación}\\ Construcción del Manifiesto Final (\texttt{FinalManifest})};
+    \node[act, right=1.0cm of prep] (val) {\textbf{2. Validación exacta}\\ Comparación de SHA, árbol Git y Evidence Matrix};
+    \node[term, right=1.0cm of val] (pub) {\textbf{3. Publicación}\\ Fast-forward atómico y emisión de recibo};
+
+    \draw[arrow] (prep) -- (val);
+    \draw[arrow] (val) -- (pub);
+  \end{tikzpicture}
+  \caption{Protocolo de publicación transaccional de entrega.}
+  \label{fig:entrega-transaccional}
+\end{figure}
+
+\begin{enumerate}
+  \item \textbf{Manifiesto de artefacto final (\texttt{FinalArtifactManifest}):} Documento inmutable que contiene el SHA del commit candidato, el SHA del árbol físico de Git (\texttt{treeSha}), el ID de la Matriz de Evidencias verificada y la rama de destino.
+  \item \textbf{Validación de concurrencia y precondiciones:} El publicador inspecciona el repositorio de destino y comprueba que la rama destino no haya avanzado concurrentemente (\texttt{targetHead == targetHeadBefore}) y que el directorio de trabajo esté limpio.
+  \item \textbf{Publicación y Recibo de Entrega (\texttt{TransactionalDeliveryReceipt}):} El publicador ejecuta un avance rápido atómico (\texttt{git merge --ff-only <finalSha>}) y emite un recibo inmutable persistido en el journal de eventos, conteniendo las identidades criptográficas de antes y después del cambio.
+\end{enumerate}
+
+\section{Persistencia append-only basada en eventos y Daemon local}
+
+El estado del sistema se persiste mediante un \emph{Event Store} en formato JSON Lines (\texttt{.jsonl}) con semántica de solo anexión (\emph{append-only}). Cada mutación se escribe siguiendo el patrón de escritura segura:
+
+\begin{equation}
+\text{archivo\_temp} \xrightarrow{\text{flush a disco}} \text{fsync()} \xrightarrow{\text{reemplazo atómico}} \text{archivo\_definitivo}
+\label{eq:atomic-write}
+\end{equation}
+
+El \textbf{Daemon local} (\texttt{apps/daemon}) se ejecuta como un proceso de fondo en el sistema operativo del desarrollador. El daemon es el único dueño del journal de eventos, los temporizadores de ejecución y los procesos de los workers. La aplicación web (\texttt{apps/web}) actúa meramente como un cliente de consulta y comando que se comunica con el daemon mediante HTTP y WebSockets/SSE. Si la aplicación web se cierra o recarga, la ejecución de los agentes y el registro de eventos en el daemon continúan sin interrupciones.
+
+\section{Interfaz web de supervisión y accesibilidad}
+
+La interfaz gráfica de usuario (\texttt{apps/web}) está construida sobre Next.js y React Flow, diseñada como un \textbf{Command Center} de supervisión de alta densidad informativa:
+
+\begin{itemize}
+  \item \textbf{Estabilidad visual del lienzo:} Se implementa el invariante estricto de que \textbf{el lienzo del grafo nunca se recentra, reencuadra ni altera su nivel de zoom de forma automática} ante la llegada de eventos de ejecución o cambios de estado de los nodos. El desarrollador mantiene el control absoluto de su encuadre de trabajo.
+  \item \textbf{Cola global de decisiones no bloqueante:} Las decisiones humanas pendientes se presentan en una cola accesible. El trabajo en ramas independientes del grafo continúa ejecutándose concurrentemente: una decisión pendiente detiene únicamente aquellos nodos cuya disponibilidad depende directamente del resultado de dicha decisión.
+  \item \textbf{Cumplimiento de accesibilidad y movimiento reducido:} La interfaz sigue las directrices de accesibilidad WCAG 2.2 nivel AA \cite{w3c2023wcag22}, proveyendo navegación completa por teclado, indicadores visibles de foco, relaciones de contraste cromático superiores a 4.5:1 y soporte nativo para la preferencia del sistema operativo de movimiento reducido (\texttt{prefers-reduced-motion: reduce}).
+\end{itemize}

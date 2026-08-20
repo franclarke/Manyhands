@@ -1,0 +1,392 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-nodecimaldot]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage[pdftex,hidelinks,pdfauthor={Francisco Clarke},pdftitle={Guia Integral de Estudio y Defensa: ManyHands}]{hyperref}
+
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,calc}
+
+\geometry{top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm}
+\onehalfspacing
+
+% Colores temáticos
+\definecolor{primaryblue}{RGB}{24, 76, 120}
+\definecolor{darkgray}{RGB}{45, 55, 72}
+\definecolor{lightbg}{RGB}{248, 249, 250}
+\definecolor{accentgreen}{RGB}{40, 167, 69}
+\definecolor{accentred}{RGB}{220, 53, 69}
+\definecolor{boxbg}{RGB}{240, 244, 248}
+
+% Entornos visuales para estudio
+\newenvironment{conceptbox}[1]{%
+  \par\vspace{0.8em}
+  \noindent\begin{minipage}{\textwidth}
+  \color{primaryblue}\hrule height 1.2pt\vspace{0.4em}
+  \noindent{\large\bfseries\color{primaryblue}#1}\vspace{0.4em}
+  \color{primaryblue}\hrule height 0.5pt\vspace{0.6em}
+  \color{black}\normalsize
+}{%
+  \vspace{0.6em}\color{primaryblue}\hrule height 0.5pt
+  \end{minipage}\par\vspace{0.8em}
+}
+
+\newenvironment{qaquestion}[1]{%
+  \par\vspace{0.8em}
+  \noindent\begin{minipage}{\textwidth}
+  \color{darkgray}\hrule height 1pt\vspace{0.4em}
+  \noindent{\bfseries\color{primaryblue}Pregunta de los profesores:}\ \textit{#1}\vspace{0.4em}
+  \color{darkgray}\hrule height 0.4pt\vspace{0.6em}
+  \color{black}\normalsize
+}{%
+  \vspace{0.6em}\color{darkgray}\hrule height 0.4pt
+  \end{minipage}\par\vspace{0.8em}
+}
+
+\newcommand{\sistema}{\textbf{ManyHands}}
+
+\begin{document}
+
+% ==============================================================================
+% PORTADA / ENCABEZADO
+% ==============================================================================
+\begin{titlepage}
+  \begin{center}
+    {\large\textbf{Universidad Nacional del Sur}}\\[0.2em]
+    {\normalsize Departamento de Ciencias e Ingeniería de la Computación}\\[0.2em]
+    {\normalsize Ingeniería en Sistemas de Información}\\[2.5em]
+
+    {\huge\bfseries\color{primaryblue} Guía Integral de Estudio y Defensa}\\[0.8em]
+    {\Large\bfseries ManyHands: Orquestación de Agentes de Lenguaje mediante Contratos, Grafos Tipados y Verificación por Evidencia}\\[2.0em]
+
+    {\large\textbf{Material de Preparación para la Reunión de Tesis con Directores}}\\[3.0em]
+
+    \begin{tabular}{rl}
+      \textbf{Tesista:} & Francisco Clarke (LU: 120547) \\[0.6em]
+      \textbf{Directora:} & Dra. Ana Gabriela Maguitman \\[0.6em]
+      \textbf{Codirector:} & Dr. Federico Martín Schmidt \\[0.6em]
+      \textbf{Fecha:} & Agosto de 2026
+    \end{tabular}
+
+    \vfill
+
+    \begin{minipage}{0.9\textwidth}
+      \small\color{darkgray}
+      \textbf{Propósito de este documento:} Servir como texto de estudio integral, estructurado y de lectura fluida para dominar todos los conceptos, decisiones arquitectónicas, estrategias de implementación y justificaciones metodológicas del proyecto ManyHands, facilitando una defensa oral clara, rigurosa y convincente frente a los directores de tesis.
+    \end{minipage}
+  \end{center}
+\end{titlepage}
+
+\tableofcontents
+\clearpage
+
+% ==============================================================================
+% SECCIÓN 1: EL PITCH DE ELEVADOR Y VISIÓN GENERAL
+% ==============================================================================
+\section{El <<Pitch>> y la Visión General: ¿Qué es ManyHands?}
+
+\subsection{El problema fundamental del desarrollo con agentes de IA}
+En los últimos años, los Modelos de Lenguaje de Gran Escala (LLMs) han demostrado una impresionante capacidad para escribir y editar código. Herramientas como Codex o Claude Code permiten a un modelo leer un archivo, ejecutar comandos en terminal y corregir errores sintácticos de forma interactiva.
+
+Sin embargo, cuando intentamos utilizar estos agentes en **proyectos de software reales y de escala intermedia a grande**, surgen dos grandes fallas en los enfoques actuales:
+
+\begin{enumerate}[leftmargin=1.8cm]
+  \item \textbf{El enfoque de Agente Único (Monolítico):} Si le entregamos un requerimiento complejo que toca varias capas (ej. base de datos, lógica de negocio y endpoints de API) a un solo agente, el modelo sufre de \emph{saturación de contexto} (se marea con demasiados archivos en su ventana de atención), empieza a inventar clases inexistentes (*alucinación*), comete \emph{violaciones de alcance} (modifica archivos que nadie le pidió tocar) o rompe código no relacionado.
+  \item \textbf{El enfoque Multi-Agente Conversacional tradicional (ChatDev, MetaGPT):} Para solucionar lo anterior, la literatura propuso poner a varios agentes a <<charlar>> entre sí en lenguaje natural simulando una empresa de software (un agente hace de Product Manager, otro de Programador, otro de Tester). **En la práctica, esto falla en repositorios reales**: hablar en lenguaje natural acumula ambigüedades, los agentes no respetan las interfaces pactadas, no hay control de versiones riguroso por tarea y, al momento de juntar el código, se producen conflictos destructivos de integración.
+\end{enumerate}
+
+\subsection{La propuesta de ManyHands: Ingeniería guiada por contratos}
+\sistema\ no es un chatbot ni un sistema de discusión libre entre modelos. Es una **plataforma local de orquestación de software**. 
+
+\begin{conceptbox}{La Tesis Central de ManyHands en una frase}
+ManyHands sustituye la conversación libre entre agentes por un plano formal de \textbf{contratos inmutables}, un \textbf{grafo dirigido acíclico híbrido con relaciones tipadas}, \textbf{aislamiento físico estricto en Git worktrees} y una \textbf{disciplina de verificación basada en evidencia física sobre commits exactos}.
+\end{conceptbox}
+
+\noindent\textbf{La analogía de la construcción:}  
+En una obra de ingeniería civil, el plomero, el electricista y el albañil no se coordinan teniendo charlas informales libres todos los días. Trabajan sobre **planos arquitectónicos con contratos de interfaz claros** (por dónde pasa cada caño, qué voltaje soporta la pared) y cada uno opera en su sector sin interferir físicamente con el otro. Cuando terminan, un inspector independiente prueba la presión del agua y la corriente eléctrica antes de dar la habilitación final. ManyHands aplica exactamente este rigor de ingeniería civil al desarrollo de software con agentes de IA.
+
+---
+
+% ==============================================================================
+% SECCIÓN 2: EL VIAJE DE UNA TAREA DE EXTREMO A EXTREMO
+% ==============================================================================
+\section{El Viaje de una Tarea: Ciclo de Vida de Extremo a Extremo}
+
+Para explicarle a los profesores cómo funciona el sistema, lo más efectivo es describir el camino paso a paso que recorre un requerimiento desde que el usuario lo ingresa hasta que se entrega el código en Git.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+    node distance=4mm,
+    stage/.style={draw=primaryblue, fill=boxbg, rounded corners=3pt, align=center, font=\footnotesize, minimum height=0.9cm, text width=2.2cm},
+    arrow/.style={-{Stealth[length=2.0mm]}, thick, draw=primaryblue}
+  ]
+    \node[stage] (p1) {\textbf{1. Grounding}\\ Indexar repo con \texttt{ripgrep}};
+    \node[stage, right=of p1] (p2) {\textbf{2. Planning}\\ Multi-turno presupuestado};
+    \node[stage, right=of p2] (p3) {\textbf{3. Granularidad}\\ Política 4.0 y colapso};
+    \node[stage, right=of p3] (p4) {\textbf{4. Verificación}\\ \texttt{verifyPlan} 8 invariantes};
+    \node[stage, below=8mm of p4] (p5) {\textbf{5. Ejecución}\\ Workers en worktrees};
+    \node[stage, left=of p5] (p6) {\textbf{6. Integración}\\ Ascendente con repair};
+    \node[stage, left=of p6] (p7) {\textbf{7. Validación}\\ Evidence Matrix exacta};
+    \node[stage, left=of p7] (p8) {\textbf{8. Entrega}\\ Publicación transaccional};
+
+    \draw[arrow] (p1) -- (p2);
+    \draw[arrow] (p2) -- (p3);
+    \draw[arrow] (p3) -- (p4);
+    \draw[arrow] (p4) -- (p5);
+    \draw[arrow] (p5) -- (p6);
+    \draw[arrow] (p6) -- (p7);
+    \draw[arrow] (p7) -- (p8);
+  \end{tikzpicture}
+  \caption{Flujo secuencial de ejecución de un requerimiento en ManyHands.}
+  \label{fig:lifecycle-flow}
+\end{figure}
+
+\begin{enumerate}[leftmargin=1.5cm]
+  \item \textbf{Fase 1: Grounding del repositorio (\texttt{repository-index}):}  
+  Antes de planificar, el sistema toma una fotografía exacta del repositorio anclada al commit de Git actual (\texttt{RepositorySnapshot}). Utiliza \texttt{ripgrep} para descubrir archivos respetando \texttt{.gitignore} y construye un modelo estructurado (\texttt{RepositoryModel}) con los módulos, paquetes y scripts de prueba existentes.
+  
+  \item \textbf{Fase 2: Planificación Progresiva Presupuestada (\texttt{PlanningEngine}):}  
+  El usuario ingresa su requerimiento (ej. <<agregar soporte de prioridades a los pedidos>>). El motor de planificación interactúa con el LLM pero **bajo un presupuesto estricto** (límite de llamadas, consultas y bytes). El LLM no recibe todo el código del tirón, sino que hace consultas puntuales al índice del repositorio. Además, el motor calcula un hash de estado causal para detectar si el modelo cae en un bucle infinito de reparación y abortar a tiempo (\emph{Causal Loop Prevention}).
+
+  \item \textbf{Fase 3: Evaluación de Granularidad (\texttt{GranularityPolicy}):}  
+  El plan propuesto pasa por la Política de Granularidad 4.0. Si el corte propuesto es innecesario (no aporta paralelismo ni pruebas aisladas y cabe en un solo intento), el sistema **colapsa automáticamente las tareas en una sola hoja cohesiva** sin perder criterios de prueba.
+
+  \item \textbf{Fase 4: Verificación Estática de Invariantes (\texttt{verifyPlan}):}  
+  Antes de tocar una sola línea de código, un verificador determinista somete el plan a **8 categorías de invariantes matemáticos** (que no haya dependencias circulares, que ningún archivo sea editado por dos agentes a la vez sin orden previo, que todas las rutas sean seguras, etc.). Si pasa, se compila a un grafo ejecutable inmutable (\texttt{GraphRevision}).
+
+  \item \textbf{Fase 5: Ejecución Concurrente Aislada en Workers (\texttt{execution-core}):}  
+  El scheduler calcula qué tareas están listas para comenzar y las despacha en paralelo. Cada agente corre en su propio **Git worktree independiente** (una carpeta aislada con su propia copia de trabajo). El sistema aplica un \emph{Scope Guard} estricto: si un agente intenta modificar un archivo que no tenía autorizado en su contrato, su intento es abortado y rechazado de inmediato.
+
+  \item \textbf{Fase 6: Integración Ascendente y Reparación Semántica:}  
+  A medida que las hojas terminan, los nodos padres (compuestos) toman los parches de sus hijos en un worktree limpio y los integran de abajo hacia arriba (*bottom-up*), ejecutando pruebas de integración sobre las interfaces compartidas (\emph{seams}). Si hay un conflicto, un agente especializado intenta una reparación semántica acotada.
+
+  \item \textbf{Fase 7: Matriz de Evidencias y Verificación Exacta:}  
+  No alcanza con que el agente diga <<terminé>>. El sistema corre las pruebas sobre el commit exacto, verifica que las pruebas pasadas no hayan sido alteradas o debilitadas (\emph{Test Integrity Guard}) y exige **controles negativos** (demostrar que la prueba nueva fallaba en el código viejo).
+
+  \item \textbf{Fase 8: Publicación Transaccional (\texttt{TransactionalDeliveryPublisher}):}  
+  El orquestador genera un manifiesto final inmutable y aplica un avance rápido (*fast-forward*) en la rama de Git del usuario emitiendo un recibo criptográfico de entrega.
+\end{enumerate}
+
+---
+
+% ==============================================================================
+% SECCIÓN 3: LOS PILARES ARQUITECTÓNICOS (80% DEL SISTEMA)
+% ==============================================================================
+\section{Los Pilares Arquitectónicos Fundamentales (80\% del Sistema)}
+
+Esta sección detalla los componentes clave de la arquitectura para que puedas explicar su diseño conceptual y responder cualquier pregunta sobre cómo están construidos.
+
+\subsection{1. El Grafo Híbrido y las 4 Relaciones Canónicas Tipadas}
+En ManyHands, los nodos del grafo tienen roles jerárquicos claros:
+\begin{itemize}
+  \item \textbf{Nodo Raíz (\emph{Goal Root}):} Representa el objetivo final y la entrega al usuario.
+  \item \textbf{Nodos Compuestos (\emph{Composite Nodes}):} Representan fronteras de integración (ej. el módulo de pedidos, la capa de API). Su trabajo no es escribir código, sino integrar y validar los resultados de sus hijos.
+  \item \textbf{Nodos Hoja (\emph{Leaf Nodes}):} Son las tareas atómicas asignadas a un agente en un worktree.
+\end{itemize}
+
+\subsubsection{Las 4 Relaciones Tipadas (¿Por qué no una arista de dependencia genérica?)}
+En los grafos tradicionales, solo existe una flecha genérica <<A depende de B>>. En ManyHands demostramos que en ingeniería de software mezclar distintos tipos de dependencia genera problemas graves. Por eso definimos 4 relaciones canónicas:
+
+\begin{table}[htbp]
+  \centering
+  \caption{Las 4 relaciones canónicas del grafo de ManyHands y su significado.}
+  \small
+  \begin{tabularx}{\textwidth}{@{}l p{4.5cm} X@{}}
+    \toprule
+    \textbf{Relación Tipada} & \textbf{¿Qué significa en la práctica?} & \textbf{Efecto en el Scheduler de ejecución} \\
+    \midrule
+    \textbf{Jerarquía (\texttt{parentId})} & Pertenencia arquitectónica. & El nodo padre espera a que sus hijos terminen para integrarlos. \\
+    \textbf{\texttt{ArtifactRequirement}} & Un nodo necesita el archivo físico que produce otro. & **Orden estricto**: El consumidor se bloquea hasta que el artefacto exista. \\
+    \textbf{\texttt{SeamBinding}} & Dos nodos acuerdan una interfaz común (ej. una firma de función). & **Paralelismo**: Ambos pueden programar al mismo tiempo contra el contrato. \\
+    \textbf{\texttt{ResourceClaim}} & Dos nodos necesitan editar el mismo archivo. & **Exclusión mutua**: Se ejecutan uno después del otro para no pisarse. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{2. El Sistema de Contratos Inmutables}
+En lugar de pasarle al agente un prompt largo y desestructurado, cada tarea recibe un **paquete hermético de contratos** (\texttt{TaskContractBundle}):
+\begin{itemize}
+  \item \textbf{\texttt{ScopeContract} (Contrato de Alcance):} Define la lista blanca cerrada de archivos que el agente tiene permitido leer y modificar (\texttt{writePaths}). Si el agente toca un archivo fuera de esa lista, el orquestador rechaza el cambio automáticamente.
+  \item \textbf{\texttt{SeamContract} (Contrato de Costura / Interfaz):} Define las interfaces públicas acordadas antes de escribir código (tipos exportados, parámetros, nombres de endpoints).
+  \item \textbf{\texttt{ArtifactContract} (Contrato de Artefacto):} Define qué archivo o entregable exacto debe producir el nodo.
+  \item \textbf{\texttt{ValidationObligation} (Obligación de Validación):} Define qué comando de test debe ejecutarse para considerar que la tarea es correcta y qué nivel de severidad tiene.
+\end{itemize}
+
+\subsection{3. Seguridad y Aislamiento Físico en Workers}
+¿Cómo garantizamos que ejecutar agentes no rompa la máquina del desarrollador?
+\begin{enumerate}
+  \item \textbf{Pool de Git Worktrees:} Cada agente trabaja en una carpeta aislada gestionada por Git. Si el agente borra archivos o rompe dependencias, el directorio principal del usuario queda 100\% intacto. Al finalizar, el worktree se limpia con \texttt{git reset --hard} y \texttt{git clean -fdx}.
+  \item \textbf{Scope Guard (Deny-First):} Se audita el diff real de Git. Se bloquean rutas con secuencias de escape (\texttt{../}) y enlaces simbólicos engañosos.
+  \item \textbf{Supervisión del árbol de procesos del SO:} Si un agente se cuelga o agota su tiempo, ManyHands utiliza \texttt{taskkill /t /f} en Windows o \texttt{SIGKILL} en Unix para matar recursivamente a todos los procesos hijos sin dejar servidores zombies consumiendo memoria.
+  \item \textbf{Saneamiento de entorno:} Los agentes no heredan las variables de entorno de la máquina. Se eliminan claves de API y credenciales para evitar fugas de información.
+\end{enumerate}
+
+\subsection{4. La Matriz de Evidencias (Evidence Matrix)}
+ManyHands no confía en la palabra del modelo ni en una salida de texto de la consola. La aprobación se basa en evidencia formal:
+\begin{itemize}
+  \item \textbf{Validación sobre el commit exacto:} Los tests se corren sobre el hash SHA exacto generado en Git.
+  \item \textbf{Controles Negativos Obligatorios:} Si el agente crea un nuevo test para validar su código, el orquestador corre ese test contra el código viejo antes de su cambio. **El test debe fallar en el código viejo**. Si el test pasaba en el código viejo, significa que el test es trivial o no evalúa nada real (*falso positivo*).
+  \item \textbf{Test Integrity Guard (Anti-trampas):} Si el agente intenta hacer <<trampa>> borrando aserciones de tests existentes o agregando directivas para ignorar pruebas (\texttt{it.skip}, \texttt{xit}), el verificador de AST detecta la maniobra y clasifica el intento como \texttt{fraudulent\_evidence}, descartándolo.
+  \item \textbf{Flaky Policy (Anti-intermitencia):} Si una prueba pasa y falla de forma aleatoria sin cambios de código, se marca como inestable y bloquea la entrega.
+\end{itemize}
+
+\subsection{5. Event Sourcing y Daemon Local}
+Toda la historia del sistema se guarda en un **journal de solo anexión (\emph{append-only log}) de eventos de dominio** en formato JSONL:
+\begin{itemize}
+  \item **Tolerancia a fallos:** Si la máquina se apaga o se corta la luz, al reiniciar el sistema lee los eventos del disco y reconstruye en memoria exactamente el mismo estado sin pérdida de datos.
+  \item **Desacoplamiento de la UI:** Un daemon en segundo plano custodia la ejecución real. La interfaz web es solo una vista cliente que puede abrirse o cerrarse sin interrumpir el trabajo de los agentes.
+\end{itemize}
+
+---
+
+% ==============================================================================
+% SECCIÓN 4: LA POLÍTICA DE GRANULARIDAD (20% METODOLÓGICO)
+% ==============================================================================
+\section{La Política de Granularidad Adaptativa (20\% del Sistema)}
+
+Esta es una sección clave para tu defensa. La granularidad responde a la pregunta metodológica: **¿Cómo decide el sistema cuándo dividir una tarea y cuándo dejarla como una sola unidad?**
+
+\subsection{La Paradoja de la Granularidad}
+\begin{itemize}
+  \item Si **no divides** una tarea compleja $\rightarrow$ El agente sufre saturación de contexto y falla.
+  \item Si **divides de más** (sobre-fragmentación) $\rightarrow$ Gastas miles de tokens coordinando interfaces, y el costo de integrar y resolver conflictos supera el costo de haber hecho la tarea junta.
+\end{itemize}
+
+\subsection{Por qué falló el scoring continuo (La historia de los 83 casos)}
+En las primeras versiones del proyecto se intentó usar una fórmula matemática tradicional: se calculaba un puntaje continuo ponderando 4 variables (radio de alcance, impacto de interfaz, superficie de validación y masa de código) y se comparaba contra un umbral $\theta = 3{,}5$.
+
+Al probar esa fórmula contra **83 casos históricos de cortes reales**, se descubrió algo contundente:
+\begin{enumerate}
+  \item El número no tenía unidades físicas (no medía tokens ni minutos).
+  \item Al mover el umbral en todo el rango $[0, 0{,}20]$, el sistema tomaba exactamente las mismas decisiones. El umbral era un adorno matemático que no se podía calibrar ni defender.
+  \item En 83 casos, la fórmula solo aportó 10 colapsos frente a la regla simple de dividir siempre, y ningún factor explicaba por qué.
+\end{enumerate}
+
+\subsection{La solución: Política de Granularidad Categórica 4.0}
+Eliminamos los números arbitrarios y los reemplazamos por **3 límites físicos** y **3 razones categóricas expresables en lenguaje natural**:
+
+\begin{conceptbox}{Los 3 Límites Físicos de una Hoja}
+Una tarea solo puede ser resuelta por un único agente si cumple los tres límites:
+\begin{enumerate}
+  \item $\text{Tokens de contexto} \le 24\,000$ tokens.
+  \item $\text{Archivos existentes leídos/modificados} \le 40$ archivos.
+  \item $\text{Archivos nuevos a crear} \le 12$ archivos. (Lección del caso Warehouse W2: crear muchos archivos desde cero satura al agente aunque el repo sea chico).
+\end{enumerate}
+\end{conceptbox}
+
+\begin{conceptbox}{Las 3 Razones Categóricas para Dividir (SPLIT)}
+Una tarea solo se divide si se cumple al menos una de estas tres condiciones:
+\begin{enumerate}
+  \item \textbf{\texttt{doesNotFit} (No cabe):} Supera alguno de los 3 límites físicos anteriores. Dividir es la única forma de que sea ejecutable.
+  \item \textbf{\texttt{runsInParallel} (Paralelismo real):} Al analizar el grafo de dependencias de artefactos, al menos dos sub-tareas pueden arrancar al mismo tiempo. (Nota: una cadena estrictamente secuencial $A \rightarrow B \rightarrow C$ no compra tiempo de reloj y recibe \texttt{runsInParallel = false}).
+  \item \textbf{\texttt{verifiableApart} (Verificable por separado):} Cada sub-tarea es dueña de una prueba que ningún hermano comparte. Si una sub-tarea falla, la evidencia de éxito de las otras no se pierde.
+\end{enumerate}
+\end{conceptbox}
+
+\noindent\textbf{La Regla de Decisión y Colapso:}  
+Si una partición propuesta **no cumple ninguna de las 3 razones**, el sistema ejecuta \texttt{applyGranularitySelection} y **colapsa determinísticamente la división en una sola hoja cohesiva**, absorbiendo todos los criterios y eliminando las interfaces intermedias innecesarias.
+
+\noindent\textbf{El Banco de Regresión Offline:}  
+Tenemos una suite de pruebas con 83 casos congelados (\texttt{granularity-bank-baseline.json}). Cada vez que se toca una línea de la política, se corre la suite determinista para comprobar que las decisiones se mantengan estables y auditables.
+
+---
+
+% ==============================================================================
+% SECCIÓN 5: GUÍA DE PREGUNTAS TÍPICAS DE LOS PROFESORES (Q&A PREP)
+% ==============================================================================
+\section{Preguntas Típicas de los Profesores y Cómo Responderlas}
+
+Esta sección contiene las preguntas conceptuales y de diseño que los profesores y directores de tesis suelen formular, junto con la respuesta recomendada y fundamentada.
+
+\begin{qaquestion}{1. ¿Por qué creaste ManyHands en lugar de usar frameworks existentes como LangChain, AutoGen o MetaGPT?}
+  \textbf{Respuesta clave:}  
+  <<Los frameworks como AutoGen o MetaGPT están basados en el paradigma conversacional: simulan una reunión entre personas donde los agentes intercambian mensajes de chat en lenguaje natural. Eso funciona bien para demos o para generar scripts pequeños desde cero (*greenfield*), pero fracasa en repositorios reales con miles de líneas de código porque el lenguaje natural acumula ambigüedades, no hay control de versiones por intento y los agentes terminan desalineando sus interfaces.
+
+  ManyHands aborda el problema desde la **ingeniería de software**: en lugar de chat libre, implementamos un plano de control con contratos formales inmutables, aislamiento de procesos en Git worktrees, verificación estática antes de ejecutar y validación de pruebas sobre el commit físico exacto. Es la diferencia entre una charla informal y un plano de ingeniería.>>
+\end{qaquestion}
+
+\begin{qaquestion}{2. ¿Cómo evitas que dos agentes entren en conflicto si necesitan editar el mismo archivo?}
+  \textbf{Respuesta clave:}  
+  <<Lo resolvemos en dos niveles complementarios:
+  
+  1. **En la planificación (Prevención):** Nuestro modelo de grafo incluye la relación tipada \texttt{ResourceClaim}. Si dos tareas declaran que necesitan modificar el mismo archivo, el scheduler detecta el conflicto y las serializa automáticamente (las pone en olas distintas en lugar de correrlas en paralelo).
+  2. **En la integración (Resolución):** Cuando los nodos hijos terminan, el nodo padre ejecuta la integración en un worktree limpio. Si surge un conflicto semántico, el orquestador dispara un intento de reparación automática con el contexto global del padre. Si no converge, escala una decisión estructurada al usuario en vez de introducir código roto.>>
+\end{qaquestion}
+
+\begin{qaquestion}{3. ¿Cómo aseguras que un agente no genere pruebas falsas o triviales que siempre den verde para <<aprobar>>?}
+  \textbf{Respuesta clave:}  
+  <<Implementamos la \textbf{Matriz de Evidencias} con dos mecanismos de seguridad fundamentales:
+  
+  1. **Controles Negativos Obligatorios:** Cuando un agente introduce un nuevo test, el orquestador ejecuta esa prueba sobre el commit base anterior a su cambio. La prueba está obligada a fallar en el código previo. Si pasa en el código viejo, se descarta por considerarse un falso positivo no sensible.
+  2. **Test Integrity Guard:** Analizamos el AST del código de prueba para detectar si el agente intentó borrar aserciones previas, debilitar comparaciones o usar directivas para saltear pruebas (\texttt{it.skip}). Si se detecta manipulación, el intento se marca como evidencia fraudulenta y se rechaza.>>
+\end{qaquestion}
+
+\begin{qaquestion}{4. ¿Por qué la política de granularidad no usa Machine Learning o una optimización matemática?}
+  \textbf{Respuesta clave:}  
+  <<Inicialmente probamos un enfoque de scoring continuo ponderando variables contra un umbral. Al evaluarlo empíricamente sobre 83 casos históricos reales, descubrimos que los puntajes continuos eran adimensionales, no tenían unidades físicas y el umbral numérico degeneraba (daba exactamente igual en cualquier valor entre 0 y 0.20).
+  
+  Por eso adoptamos la **Política Categórica 4.0**: la granularidad se decide por propiedades físicas y estructurales discretas (\texttt{doesNotFit}, \texttt{runsInParallel}, \texttt{verifiableApart}). Esto elimina los hiperparámetros libres y hace que cada decisión de partición o colapso tenga una justificación explicable en lenguaje natural y sea 100\% reproducible mediante un banco de regresión offline.>>
+\end{qaquestion}
+
+\begin{qaquestion}{5. ¿Qué pasa si se corta la luz, se reinicia la máquina o se cae el proceso del daemon en medio de una ejecución?}
+  \textbf{Respuesta clave:}  
+  <<El sistema utiliza una arquitectura basada en **Event Sourcing** con un journal append-only en formato JSONL. Ningún estado mutable vive solo en memoria. Cada transición de estado, inicio de intento o resultado de prueba se escribe a disco de forma atómica.
+  
+  Al reiniciar el daemon, el sistema lee la secuencia de eventos desde el principio, ejecuta la función reductora pura y reconstruye el estado exacto del grafo y de los workers en memoria. Además, las concesiones de ejecución utilizan *testigos durables* (*witness leases*), por lo que cualquier proceso zombie que haya quedado colgado es detectado y descartado sin corromper el repositorio.>>
+\end{qaquestion}
+
+\begin{qaquestion}{6. ¿Cuál es la autoría de lo que hiciste frente a herramientas externas?}
+  \textbf{Respuesta clave:}  
+  <<Las herramientas externas que usamos son los ejecutores de lenguaje (Codex CLI o Claude Code) como motores de inferencia de bajo nivel, Git para el almacenamiento de versiones y \texttt{ripgrep} para la búsqueda rápida de texto.
+  
+  **Toda la arquitectura de orquestación es desarrollo propio**: el diseño e implementación del modelo de grafo híbrido y sus 4 relaciones tipadas, el motor de contratos formales con esquemas Zod, el motor de planificación presupuestado con prevención de bucles causales, el verificador de 8 invariantes de plan, el pool de worktrees con scope guard en tiempo de ejecución, el motor de integración ascendente, la matriz de evidencias con controles negativos, el publicador transaccional de entregas, la política de granularidad categórica y la interfaz de supervisión accesible.>>
+\end{qaquestion}
+
+\begin{qaquestion}{7. ¿Qué es exactamente una <<Costura>> o Seam en la arquitectura?}
+  \textbf{Respuesta clave:}  
+  <<El concepto de *Seam* proviene de la literatura de diseño de software (Michael Feathers y David Parnas) y representa una frontera de interfaz compartida entre dos módulos. En ManyHands, un \texttt{SeamContract} formaliza esa frontera antes de que los agentes empiecen a programar (por ejemplo, define el nombre de una función, sus tipos de entrada y salida).
+  
+  Esto tiene un impacto enorme en la concurrencia: al congelar la costura de antemano mediante un contrato, el agente que implementa la función y el agente que la consume pueden trabajar **en paralelo al mismo tiempo**, porque ambos programan contra una especificación formal y no necesitan esperar a que el otro termine.>>
+\end{qaquestion}
+
+---
+
+% ==============================================================================
+% SECCIÓN 6: GLOSARIO RÁPIDO Y CONCEPTOS CLAVE (CHEAT SHEET)
+% ==============================================================================
+\section{Glosario Rápido y Conceptos Clave (\emph{Cheat Sheet})}
+
+Utiliza estos términos canónicos con precisión durante tu conversación con los directores:
+
+\begin{description}[leftmargin=3.8cm,style=nextline]
+  \item[\texttt{Run}] La unidad atómica de producto en ManyHands: transforma un objetivo en lenguaje natural en un commit verificado y entregado en Git.
+  \item[\texttt{GraphRevision}] Revisión inmutable del grafo de tareas que contiene nodos, relaciones y paquetes de contratos.
+  \item[\texttt{Composite Node}] Nodo compuesto que representa una frontera arquitectónica y es responsable de integrar y validar los resultados de sus hijos.
+  \item[\texttt{Leaf Node}] Nodo hoja que representa una tarea atómica de código ejecutada por un agente en un worktree aislado.
+  \item[\texttt{SeamContract}] Contrato de interfaz pública compartida pactado a priori para permitir desarrollo concurrente.
+  \item[\texttt{ScopeContract}] Lista blanca cerrada de rutas de archivos que un agente tiene autorización de modificar (\texttt{writePaths}).
+  \item[\texttt{Scope Guard}] Mecanismo de contención en tiempo de ejecución que rechaza cualquier cambio fuera del alcance permitido.
+  \item[\texttt{PlanningBudget}] Presupuesto multidimensional inmutable que limita llamadas LLM, consultas al repositorio y bytes leídos.
+  \item[\texttt{CausalDigest}] Hash criptográfico que previene bucles infinitos de reparación (*no\_progress*) en la planificación.
+  \item[\texttt{verifyPlan}] Verificador estático determinista que audita 8 categorías de invariantes antes de compilar el grafo.
+  \item[\texttt{EvidenceMatrix}] Matriz que vincula criterios de aceptación con ejecuciones de pruebas sobre el commit exacto, auditando controles negativos.
+  \item[\texttt{Negative Control}] Validación obligatoria de que una prueba nueva falle cuando se corre contra el código previo.
+  \item[\texttt{Test Integrity Guard}] Verificador que detecta si un agente eliminó aserciones o salteó tests (\texttt{it.skip}) de forma fraudulenta.
+  \item[\texttt{GranularityPolicy 4.0}] Política categórica que decide cortes o colapsos basada en capacidad física, paralelismo real y pruebas aisladas.
+  \item[\texttt{Event Sourcing}] Patrón de persistencia donde la historia del run es un log inmutable append-only de eventos de dominio.
+\end{description}
+
+\end{document}

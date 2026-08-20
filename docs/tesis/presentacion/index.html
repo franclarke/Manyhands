@@ -1,0 +1,2040 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ManyHands: Defensa de Tesis — Francisco Clarke (UNS)</title>
+  
+  <!-- Tipografías de alta legibilidad técnica y académica -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: var(--font-body);
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    :root {
+      --bg: #11100f;
+      --bg-elevated: #1a1816;
+      --bg-card: #23201c;
+      --bg-card-hover: #2c2824;
+      --fg: #f6f3ed;
+      --fg-muted: #aba497;
+      --fg-faint: #756f65;
+      --accent: #e0a458;
+      --accent-rgb: 224, 164, 88;
+      --accent-cool: #60a5fa;
+      --accent-cool-rgb: 96, 165, 250;
+      --warn: #f87171;
+      --success: #4ade80;
+      --line: #383430;
+      --line-subtle: #26221f;
+      --radius: 14px;
+      --radius-sm: 8px;
+      --font-head: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+      --font-body: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+      --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* Deck Root */
+    .deck-root {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background: var(--bg);
+      overflow: hidden;
+    }
+
+    /* Top Brand & Timing Bar */
+    .top-bar {
+      position: absolute;
+      top: 1.4rem;
+      left: clamp(2rem, 4.5vw, 5.5rem);
+      right: clamp(2rem, 4.5vw, 5.5rem);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 20;
+      pointer-events: none;
+    }
+    .brand-mark {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--fg-faint);
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      pointer-events: auto;
+    }
+    .brand-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.6);
+    }
+    .timing-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      pointer-events: auto;
+    }
+    .timer-badge {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--fg-muted);
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .timer-badge:hover {
+      border-color: var(--accent);
+      color: var(--fg);
+    }
+    .section-pill {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--accent-cool);
+      background: rgba(var(--accent-cool-rgb), 0.1);
+      border: 1px solid rgba(var(--accent-cool-rgb), 0.25);
+      padding: 0.35rem 0.7rem;
+      border-radius: 999px;
+    }
+
+    /* Slides Container */
+    .deck {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: clamp(1.8rem, 4.5vw, 4.5rem) clamp(2.2rem, 6vw, 6.5rem);
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.4s cubic-bezier(0.22, 0.61, 0.36, 1),
+                  transform 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+      pointer-events: none;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+    .slide.is-prev {
+      transform: translateY(-16px);
+      opacity: 0;
+    }
+    .slide.is-active {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+      z-index: 5;
+    }
+
+    /* Layout Containers */
+    .slide-inner { max-width: 1140px; width: 100%; margin: 0 auto; }
+    .slide-inner.center { max-width: 960px; text-align: center; }
+    .slide-center { align-items: center; }
+
+    /* Typography */
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin: 0 0 0.6rem;
+      font-weight: 600;
+    }
+    .h1 {
+      font-family: var(--font-head);
+      font-weight: 700;
+      font-size: clamp(2rem, 3.2vw, 2.75rem);
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      margin: 0 0 0.8rem;
+      color: var(--fg);
+    }
+    .lead {
+      font-family: var(--font-body);
+      font-weight: 400;
+      font-size: clamp(1.05rem, 1.4vw, 1.25rem);
+      line-height: 1.5;
+      color: var(--fg-muted);
+      margin: 0 0 1.2rem;
+      max-width: 62ch;
+    }
+    .lead strong {
+      color: var(--fg);
+      font-weight: 600;
+    }
+    .muted { color: var(--fg-faint); }
+    .accent-text { color: var(--accent); font-weight: 600; }
+    .accent-cool-text { color: var(--accent-cool); font-weight: 600; }
+    .warn-text { color: var(--warn); font-weight: 600; }
+    .success-text { color: var(--success); font-weight: 600; }
+
+    /* Reveal Animations */
+    @keyframes revealUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .reveal { opacity: 0; }
+    .slide.is-active .reveal {
+      animation: revealUp 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+    }
+    .reveal-list > * { opacity: 0; }
+    .slide.is-active .reveal-list > * {
+      animation: revealUp 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .slide, .reveal, .reveal-list > * {
+        transition: none !important;
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+      }
+    }
+
+    /* Cover Styling */
+    .cover-inner { max-width: 1060px; }
+    .cover-title {
+      font-family: var(--font-head);
+      font-weight: 700;
+      font-size: clamp(3.2rem, 7vw, 5.5rem);
+      letter-spacing: -0.03em;
+      margin: 0 0 0.6rem;
+      color: var(--fg);
+      background: linear-gradient(135deg, var(--fg) 55%, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .cover-subtitle {
+      font-family: var(--font-body);
+      font-size: clamp(1.05rem, 1.4vw, 1.25rem);
+      color: var(--fg-muted);
+      max-width: 58ch;
+      line-height: 1.45;
+      margin: 0 0 1.5rem;
+    }
+    .cover-meta-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 1.6fr;
+      gap: 1.5rem;
+      border-top: 1px solid var(--line);
+      padding-top: 1.2rem;
+      margin-top: 0.8rem;
+    }
+    .cover-meta-item p {
+      margin: 0.15rem 0;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--fg-muted);
+    }
+    .cover-meta-item .author-name {
+      color: var(--fg);
+      font-weight: 600;
+      font-size: 0.98rem;
+    }
+
+    /* Clean Clutter-Free Grids */
+    .clean-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      margin-top: 1.2rem;
+    }
+    .clean-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.15rem;
+      margin-top: 1.2rem;
+    }
+    .clean-grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-top: 1.2rem;
+    }
+    @media (max-width: 960px) {
+      .clean-grid-2, .clean-grid-3, .clean-grid-4 { grid-template-columns: 1fr; }
+    }
+
+    /* Clean Visual Cards */
+    .clean-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 1.3rem 1.4rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 0.6rem;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+      position: relative;
+    }
+    .clean-card.accent {
+      border-color: rgba(var(--accent-rgb), 0.4);
+      background: rgba(var(--accent-rgb), 0.05);
+    }
+    .clean-card.cool {
+      border-color: rgba(var(--accent-cool-rgb), 0.4);
+      background: rgba(var(--accent-cool-rgb), 0.05);
+    }
+    .clean-card.warn {
+      border-color: rgba(248, 113, 113, 0.4);
+      background: rgba(248, 113, 113, 0.04);
+    }
+    .clean-card.success {
+      border-color: rgba(74, 222, 128, 0.4);
+      background: rgba(74, 222, 128, 0.04);
+    }
+
+    .card-kicker {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin: 0;
+    }
+    .card-heading {
+      font-family: var(--font-head);
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--fg);
+      margin: 0;
+      line-height: 1.25;
+    }
+    .card-body-text {
+      font-size: 0.92rem;
+      line-height: 1.45;
+      color: var(--fg-muted);
+      margin: 0;
+    }
+
+    /* Minimal Badges */
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.25rem 0.6rem;
+      border-radius: 999px;
+      line-height: 1;
+      width: fit-content;
+    }
+    .chip-accent { background: rgba(var(--accent-rgb), 0.12); color: var(--accent); border: 1px solid rgba(var(--accent-rgb), 0.3); }
+    .chip-cool { background: rgba(var(--accent-cool-rgb), 0.12); color: var(--accent-cool); border: 1px solid rgba(var(--accent-cool-rgb), 0.3); }
+    .chip-warn { background: rgba(248, 113, 113, 0.12); color: var(--warn); border: 1px solid rgba(248, 113, 113, 0.3); }
+    .chip-success { background: rgba(74, 222, 128, 0.12); color: var(--success); border: 1px solid rgba(74, 222, 128, 0.3); }
+    .chip-neutral { background: var(--bg-card); color: var(--fg-muted); border: 1px solid var(--line); }
+
+    /* Takeaway Banners */
+    .takeaway-banner {
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--accent);
+      border-radius: var(--radius-sm);
+      padding: 0.85rem 1.15rem;
+      margin-top: 1.1rem;
+      font-size: 0.92rem;
+      line-height: 1.4;
+      color: var(--fg);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .takeaway-banner.warn { border-left-color: var(--warn); }
+    .takeaway-banner.success { border-left-color: var(--success); }
+    .takeaway-banner.cool { border-left-color: var(--accent-cool); }
+
+    /* Diagrams & SVGs */
+    .diagram-box {
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 1.2rem 1.5rem;
+      margin-top: 1.1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.3);
+    }
+    .diagram-svg {
+      width: 100%;
+      max-height: 240px;
+    }
+
+    /* Roadmap Grid (Slide 1) */
+    .roadmap-pills {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 0.65rem;
+      margin-top: 1.2rem;
+    }
+    @media (max-width: 1100px) { .roadmap-pills { grid-template-columns: repeat(3, 1fr); } }
+    .roadmap-pill {
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      padding: 0.65rem 0.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+    .roadmap-pill .act-num {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+    .roadmap-pill .act-title {
+      font-family: var(--font-head);
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--fg);
+      margin: 0;
+    }
+
+    /* Minimal Comparison Table */
+    .clean-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+      text-align: left;
+      margin-top: 1rem;
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .clean-table th {
+      background: var(--bg-card);
+      padding: 0.75rem 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--fg-muted);
+      border-bottom: 1px solid var(--line);
+    }
+    .clean-table td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--line-subtle);
+      color: var(--fg-muted);
+    }
+    .clean-table tr:last-child td { border-bottom: none; }
+    .clean-table td.highlight {
+      color: var(--accent);
+      font-weight: 600;
+      background: rgba(var(--accent-rgb), 0.04);
+    }
+
+    /* Navigation Bar */
+    .nav-bar {
+      position: absolute;
+      bottom: 1.4rem;
+      right: clamp(1.8rem, 4.5vw, 5.5rem);
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      z-index: 30;
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 0.3rem 0.6rem;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+    }
+    .nav-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--fg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .nav-btn svg { width: 17px; height: 17px; }
+    .nav-btn:hover:not(:disabled) {
+      border-color: var(--line);
+      background: var(--bg-card);
+      color: var(--accent);
+    }
+    .nav-btn:disabled { opacity: 0.25; cursor: default; }
+    .nav-counter {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--fg-muted);
+      min-width: 64px;
+      text-align: center;
+      padding: 0 0.2rem;
+    }
+    .nav-divider { width: 1px; height: 18px; background: var(--line); }
+
+    .nav-progress {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 100%;
+      height: 3px;
+      background: var(--line-subtle);
+      z-index: 25;
+    }
+    .nav-progress-fill {
+      height: 100%;
+      width: 4.54%;
+      background: var(--accent);
+      box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.7);
+      transition: width 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+    }
+
+    /* Speaker Notes Drawer */
+    .speaker-drawer {
+      position: fixed;
+      bottom: 4.5rem;
+      left: clamp(1.8rem, 4.5vw, 5.5rem);
+      width: min(620px, calc(100vw - 3.5rem));
+      max-height: 52vh;
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 24px 48px rgba(0,0,0,0.75);
+      padding: 1.4rem 1.6rem;
+      z-index: 40;
+      overflow-y: auto;
+      display: none;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+    .speaker-drawer.is-open {
+      display: block;
+      animation: revealUp 0.25s cubic-bezier(0.22, 0.61, 0.36, 1);
+    }
+    .speaker-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--line);
+    }
+    .speaker-title {
+      font-family: var(--font-mono);
+      font-size: 0.88rem;
+      color: var(--accent);
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .time-target-badge {
+      background: rgba(var(--accent-rgb), 0.12);
+      border: 1px solid rgba(var(--accent-rgb), 0.3);
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+    }
+    .speaker-close {
+      background: transparent;
+      border: none;
+      color: var(--fg-muted);
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: 0.2rem;
+    }
+    .speaker-close:hover { color: var(--fg); }
+    .speaker-content {
+      font-size: 0.92rem;
+      line-height: 1.55;
+      color: var(--fg-muted);
+    }
+    .speaker-content strong { color: var(--fg); font-weight: 600; }
+    .speaker-content ul { margin: 0.5rem 0 0 1.2rem; padding: 0; }
+    .speaker-content li { margin-bottom: 0.45rem; }
+
+    /* Overview Grid Modal */
+    .overview-grid-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(17, 16, 15, 0.96);
+      backdrop-filter: blur(10px);
+      z-index: 50;
+      display: none;
+      padding: 3rem clamp(2rem, 5vw, 6rem);
+      overflow-y: auto;
+    }
+    .overview-grid-modal.is-open { display: block; }
+    .overview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.8rem;
+      max-width: 1280px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .overview-header h2 {
+      font-family: var(--font-head);
+      font-size: 1.4rem;
+      margin: 0;
+      color: var(--fg);
+    }
+    .overview-close {
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      color: var(--fg);
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      padding: 0.4rem 0.9rem;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+    .overview-close:hover { border-color: var(--accent); color: var(--accent); }
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 1rem;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+    .grid-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      padding: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 120px;
+    }
+    .grid-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+    }
+    .grid-card.is-current {
+      border-color: var(--accent);
+      background: var(--bg-card);
+      box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.35);
+    }
+    .grid-card-num {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--accent);
+    }
+    .grid-card-title {
+      font-family: var(--font-head);
+      font-size: 0.88rem;
+      color: var(--fg);
+      margin: 0.3rem 0;
+      line-height: 1.25;
+      font-weight: 500;
+    }
+
+    /* Help Modal */
+    .help-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(8px);
+      z-index: 60;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    .help-modal.is-open { display: flex; }
+    .help-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      max-width: 480px;
+      width: 100%;
+      padding: 1.8rem;
+      box-shadow: 0 24px 48px rgba(0,0,0,0.6);
+    }
+    .shortcut-list {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.6rem 1.2rem;
+      font-family: var(--font-mono);
+      font-size: 0.86rem;
+      margin-bottom: 1.4rem;
+    }
+    .shortcut-key {
+      background: var(--bg-card);
+      border: 1px solid var(--line);
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      color: var(--accent);
+      text-align: center;
+    }
+
+    /* Print Styles */
+    @media print {
+      body, html { overflow: visible !important; height: auto !important; background: #fff !important; }
+      .top-bar, .nav-bar, .nav-progress, .speaker-drawer, .overview-grid-modal, .help-modal { display: none !important; }
+      .deck-root, .deck { position: static !important; width: 100% !important; height: auto !important; background: #fff !important; }
+      .slide {
+        position: relative !important;
+        page-break-after: always !important;
+        break-after: page !important;
+        opacity: 1 !important;
+        transform: none !important;
+        height: 100vh !important;
+        background: #11100f !important;
+        color: #f6f3ed !important;
+        padding: 3.5rem !important;
+        display: flex !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="deck-root" id="deckRoot">
+  <!-- Top Bar -->
+  <header class="top-bar">
+    <div class="brand-mark">
+      <span class="brand-dot"></span>
+      <span>ManyHands · Tesis de Grado · UNS</span>
+    </div>
+    <div class="timing-controls">
+      <span class="section-pill" id="sectionPill">Acto I: Fundamentos</span>
+      <div class="timer-badge" id="timerBadge" title="Click para reiniciar cronómetro (25 min)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        <span id="timerDisplay">00:00</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Screen Reader Announcements -->
+  <p class="sr-status" id="srStatus" aria-live="polite" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;">Diapositiva 1 de 22</p>
+
+  <!-- Main Slides Deck -->
+  <main class="deck" id="deckContainer">
+
+    <!-- ==================== ACTO I: PROBLEMA E HIPÓTESIS ==================== -->
+
+    <!-- Slide 1: Portada Formal -->
+    <section class="slide is-active" id="slide-1" data-section="Acto I: Fundamentos" data-title="Portada y Hoja de Ruta" aria-label="Portada de la tesis">
+      <div class="cover-inner">
+        <p class="eyebrow reveal">Universidad Nacional del Sur · DCIC · Trabajo Final de Grado</p>
+        <h1 class="cover-title reveal" style="animation-delay:.08s">ManyHands</h1>
+        <p class="cover-subtitle reveal" style="animation-delay:.16s">Orquestación de agentes de lenguaje con descomposición adaptativa y verificación por evidencia</p>
+        
+        <div class="cover-meta-grid reveal" style="animation-delay:.24s">
+          <div class="cover-meta-item">
+            <p class="author-name">Francisco Clarke (LU: 120547)</p>
+            <p class="muted">Ingeniería en Sistemas de Información · 2026</p>
+          </div>
+          <div class="cover-meta-item">
+            <p><strong>Directora:</strong> Dra. Ana Gabriela Maguitman &nbsp;·&nbsp; <strong>Codirector:</strong> Dr. Federico Martín Schmidt</p>
+            <p class="muted">Eje 1: Orquestación y Evidencia (80%) &nbsp;·&nbsp; Eje 2: Granularidad Categórica (20%)</p>
+          </div>
+        </div>
+
+        <div class="roadmap-pills reveal" style="animation-delay:.32s">
+          <div class="roadmap-pill"><span class="act-num">Acto I</span><h4 class="act-title">1. Brecha</h4></div>
+          <div class="roadmap-pill"><span class="act-num">Acto II</span><h4 class="act-title">2. Arquitectura</h4></div>
+          <div class="roadmap-pill"><span class="act-num">Acto III</span><h4 class="act-title">3. Granularidad</h4></div>
+          <div class="roadmap-pill"><span class="act-num">Acto IV</span><h4 class="act-title">4. Ejecución</h4></div>
+          <div class="roadmap-pill"><span class="act-num">Acto V</span><h4 class="act-title">5. Evaluación</h4></div>
+          <div class="roadmap-pill"><span class="act-num">Acto VI</span><h4 class="act-title">6. Conclusiones</h4></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 2: Contexto y Brecha -->
+    <section class="slide" id="slide-2" data-section="Acto I: Fundamentos" data-title="Contexto y Brecha" aria-label="La Brecha de Escala">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">Contexto y Motivación</p>
+        <h2 class="h1 reveal" style="animation-delay:.08s">La Brecha: De Parches Aislados a Repositorios Reales</h2>
+        
+        <div class="clean-grid-2 reveal-list">
+          <div class="clean-card" style="animation-delay:.18s">
+            <span class="chip chip-neutral">SWE-bench (Paradigma Actual)</span>
+            <h3 class="card-heading">Parche Atómico Aislado</h3>
+            <p class="card-body-text">
+              • 1 solo archivo modificado<br>
+              • Contexto acotado (~15k tokens)<br>
+              • Sin dependencias cruzadas ni concurrencia<br>
+              • Generación directa de un archivo <code>.patch</code>
+            </p>
+          </div>
+
+          <div class="clean-card accent" style="animation-delay:.28s">
+            <span class="chip chip-accent">ManyHands (Esta Tesis)</span>
+            <h3 class="card-heading">Objetivo de Repositorio Completo</h3>
+            <p class="card-body-text">
+              • Múltiples capas (UI, API, Dominio, Base de Datos)<br>
+              • Contexto masivo (&gt;150k tokens)<br>
+              • Riesgo de colisiones de escritura y regresiones<br>
+              • Resuelto con <strong>Grafo de Contratos y Verificación</strong>
+            </p>
+          </div>
+        </div>
+
+        <div class="takeaway-banner warn reveal" style="animation-delay:.38s">
+          <span>⚠️ <strong>El Problema:</strong> Al escalar a repositorios reales, un agente monolítico satura su contexto y produce deriva semántica.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 3: Paradoja de la Granularidad -->
+    <section class="slide" id="slide-3" data-section="Acto I: Fundamentos" data-title="Paradoja de Granularidad" aria-label="La Paradoja de la Granularidad">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">Problema Fundamental</p>
+        <h2 class="h1 reveal" style="animation-delay:.08s">La Paradoja de la Granularidad</h2>
+        
+        <div class="clean-grid-2 reveal-list">
+          <div class="clean-card warn" style="animation-delay:.18s">
+            <span class="chip chip-warn">Sub-división (Monolito)</span>
+            <h3 class="card-heading">Un Solo Agente</h3>
+            <p class="card-body-text">
+              • <strong>Saturación de Contexto:</strong> Alucinación de interfaces.<br>
+              • <strong>Deriva de Alcance:</strong> Modifica código no autorizado.<br>
+              • <strong>Punto Único de Fallo:</strong> Todo o nada.
+            </p>
+          </div>
+
+          <div class="clean-card cool" style="animation-delay:.28s">
+            <span class="chip chip-cool">Sobre-división (Micro-fragmentación)</span>
+            <h3 class="card-heading">Demasiados Agentes</h3>
+            <p class="card-body-text">
+              • <strong>Explosión de Interfaces:</strong> N² costuras que coordinar.<br>
+              • <strong>Sobrecosto de Coordinación:</strong> Esperas y mensajes.<br>
+              • <strong>Conflictos de Merge:</strong> Colisiones al integrar ramas.
+            </p>
+          </div>
+        </div>
+
+        <div class="takeaway-banner success reveal" style="animation-delay:.38s">
+          <span>🎯 <strong>Solución ManyHands:</strong> Granularidad adaptativa fundamentada en reglas categóricas (dividir solo cuando existe justificación).</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 4: Preguntas de Investigación e Hipótesis -->
+    <section class="slide" id="slide-4" data-section="Acto I: Fundamentos" data-title="Preguntas e Hipótesis" aria-label="Preguntas e Hipótesis">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">Formulación Científica</p>
+        <h2 class="h1 reveal" style="animation-delay:.08s">Dos Ejes de Investigación</h2>
+        
+        <div class="clean-grid-2 reveal-list">
+          <div class="clean-card accent" style="animation-delay:.18s">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span class="card-kicker">Eje 1 · Orquestación y Evidencia</span>
+              <span class="chip chip-accent">80% DEL APORTE</span>
+            </div>
+            <h3 class="card-heading" style="color:var(--accent);">PI-1 &nbsp;·&nbsp; Hipótesis H-1</h3>
+            <p class="card-body-text">
+              Un <strong>Grafo Híbrido con Contratos Tipados</strong>, aislamiento en Git worktrees y verificación por evidencia con controles negativos permite coordinar agentes de software sin colisiones ni deriva.
+            </p>
+          </div>
+
+          <div class="clean-card cool" style="animation-delay:.28s">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span class="card-kicker">Eje 2 · Granularidad Categórica</span>
+              <span class="chip chip-cool">20% DEL APORTE</span>
+            </div>
+            <h3 class="card-heading" style="color:var(--accent-cool);">PI-2 &nbsp;·&nbsp; Hipótesis H-2</h3>
+            <p class="card-body-text">
+              Una <strong>política de decisión discreta</strong> basada en capacidad, paralelismo y aislamiento probatorio supera a las funciones continuas de utilidad $C_{task}$, logrando explicabilidad y reproducibilidad.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== ACTO II: ARQUITECTURA FORMAL ==================== -->
+
+    <!-- Slide 5: Estado del Arte -->
+    <section class="slide" id="slide-5" data-section="Acto II: Arquitectura" data-title="Estado del Arte" aria-label="Estado del Arte">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">Capítulo 3: Estado del Arte</p>
+        <h2 class="h1 reveal" style="animation-delay:.08s">¿Por qué falla el paradigma actual?</h2>
+        
+        <div class="clean-grid-3 reveal-list">
+          <div class="clean-card" style="animation-delay:.16s">
+            <span class="chip chip-neutral">SWE-agent (Princeton)</span>
+            <h3 class="card-heading">Agente Monolítico</h3>
+            <p class="card-body-text">
+              • 1 solo agente por issue.<br>
+              • Sin aislamiento en disco.<br>
+              • Entrega un <code>.patch</code> ciego sin verificar falsabilidad.
+            </p>
+          </div>
+
+          <div class="clean-card" style="animation-delay:.24s">
+            <span class="chip chip-neutral">MetaGPT / ChatDev</span>
+            <h3 class="card-heading">Coordinación por Chat</h3>
+            <p class="card-body-text">
+              • Diálogo libre en lenguaje natural.<br>
+              • Acumula <strong>deriva semántica</strong>.<br>
+              • Sin contratos tipados ni contención de SO.
+            </p>
+          </div>
+
+          <div class="clean-card accent" style="animation-delay:.32s">
+            <span class="chip chip-accent">ManyHands (Esta Tesis)</span>
+            <h3 class="card-heading">Orquestación Formal</h3>
+            <p class="card-body-text">
+              • <strong>Grafo Híbrido</strong> con contratos Zod.<br>
+              • <strong>Git Worktrees + ScopeGuard</strong>.<br>
+              • <strong>Evidence Matrix</strong> sobre commit exacto.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 6: El Run como Unidad -->
+    <section class="slide" id="slide-6" data-section="Acto II: Arquitectura" data-title="El Run y Ciclo de Vida" aria-label="El Run como Unidad">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">Capítulo 5: Arquitectura Central</p>
+        <h2 class="h1 reveal" style="animation-delay:.08s">El Run: Unidad Central de Producto</h2>
+        
+        <!-- FSM Diagram -->
+        <div class="diagram-box reveal" style="animation-delay:.18s">
+          <svg class="diagram-svg" viewBox="0 0 900 130" fill="none">
+            <!-- States -->
+            <rect x="20" y="40" width="130" height="50" rx="8" fill="var(--bg-card)" stroke="var(--line)" stroke-width="1.5"/>
+            <text x="85" y="70" fill="var(--fg)" font-family="var(--font-mono)" font-size="12" font-weight="600" text-anchor="middle">PLANNING</text>
+
+            <path d="M150 65 L200 65" stroke="var(--line)" stroke-width="2"/>
+            <polygon points="200,61 208,65 200,69" fill="var(--line)"/>
+
+            <rect x="208" y="40" width="150" height="50" rx="8" fill="var(--bg-card)" stroke="var(--accent-cool)" stroke-width="1.5"/>
+            <text x="283" y="70" fill="var(--accent-cool)" font-family="var(--font-mono)" font-size="11" font-weight="600" text-anchor="middle">NEEDS_APPROVAL</text>
+
+            <path d="M358 65 L408 65" stroke="var(--line)" stroke-width="2"/>
+            <polygon points="408,61 416,65 408,69" fill="var(--line)"/>
+
+            <rect x="416" y="40" width="130" height="50" rx="8" fill="var(--bg-card)" stroke="var(--accent)" stroke-width="1.5"/>
+            <text x="481" y="70" fill="var(--accent)" font-family="var(--font-mono)" font-size="12" font-weight="600" text-anchor="middle">RUNNING</text>
+
+            <path d="M546 65 L596 65" stroke="var(--line)" stroke-width="2"/>
+            <polygon points="596,61 604,65 596,69" fill="var(--line)"/>
+
+            <rect x="604" y="40" width="140" height="50" rx="8" fill="var(--bg-card)" stroke="var(--line)" stroke-width="1.5"/>
+            <text x="674" y="70" fill="var(--fg)" font-family="var(--font-mono)" font-size="11" font-weight="600" text-anchor="middle">RESULT_READY</text>
+
+            <path d="M744 65 L794 65" stroke="var(--success)" stroke-width="2"/>
+            <polygon points="794,61 802,65 794,69" fill="var(--success)"/>
+
+            <rect x="802" y="40" width="140" height="50" rx="8" fill="rgba(74, 222, 128, 0.12)" stroke="var(--success)" stroke-width="1.5"/>
+            <text x="872" y="70" fill="var(--success)" font-family="var(--font-mono)" font-size="12" font-weight="700" text-anchor="middle">DELIVERED</text>
+          </svg>
+        </div>
+
+        <div class="takeaway-banner reveal" style="animation-delay:.28s">
+          <span>★ <strong>Event Sourcing Determinista:</strong> El Run no es un chat efímero; cada transición es un evento inmutable registrado en <code>RunStore</code>.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 7: Grafo Híbrido y Relaciones Tipadas -->
+    <section class="slide" id="slide-7" data-section="Acto II: Arquitectura" data-title="Grafo Híbrido" aria-label="El Grafo Híbrido">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">Estructura Topológica</p>
+        <h2 class="h1 reveal" style="animation-delay:.08s">El Grafo Híbrido y sus 4 Relaciones Tipadas</h2>
+        
+        <div class="clean-grid-4 reveal-list" style="margin-top:1rem;">
+          <div class="clean-card">
+            <span class="card-kicker">Jerarquía</span>
+            <h4 class="card-heading">1. parentId</h4>
+            <p class="card-body-text">Ownership e integración ascendente en el árbol de dependencias.</p>
+          </div>
+
+          <div class="clean-card">
+            <span class="card-kicker">Flujo de Datos</span>
+            <h4 class="card-heading">2. ArtifactReq</h4>
+            <p class="card-body-text">Dependencia física serializada ($A \to B$) basada en archivos.</p>
+          </div>
+
+          <div class="clean-card accent">
+            <span class="card-kicker" style="color:var(--accent);">Paralelismo</span>
+            <h4 class="card-heading" style="color:var(--accent);">3. SeamBinding</h4>
+            <p class="card-body-text"><strong>Habilita paralelismo ($A \parallel B$)</strong> fijando contratos de interfaz antes de escribir código.</p>
+          </div>
+
+          <div class="clean-card">
+            <span class="card-kicker">Concurrencia</span>
+            <h4 class="card-heading">4. ResourceClaim</h4>
+            <p class="card-body-text">Exclusión mutua sobre el mismo archivo para evitar <em>lost updates</em>.</p>
+          </div>
+        </div>
+
+        <div class="takeaway-banner cool reveal" style="animation-delay:.36s">
+          <span>🔹 <strong>Jerarquía de 3 Niveles:</strong> Raíz (Goal) $\longrightarrow$ Composites (Integración) $\longrightarrow$ Hojas (Ejecución aislada).</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 8: Grounding e Invariantes -->
+    <section class="slide" id="slide-8" data-section="Acto II: Arquitectura" data-title="Grounding e Invariantes" aria-label="Grounding e Invariantes">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">Control Formal</p>
+        <h2 class="h1 reveal" style="animation-delay:.08s">Grounding Presupuestado y Verificación Estática</h2>
+        
+        <div class="clean-grid-2 reveal-list">
+          <div class="clean-card" style="animation-delay:.18s">
+            <span class="chip chip-neutral">Grounding del Repositorio</span>
+            <h3 class="card-heading">RepositoryIndex</h3>
+            <p class="card-body-text">
+              • Vistas indexadas con presupuesto acotado (tokens, llamadas).<br>
+              • Digest criptográfico SHA-256 (previene bucles causales).<br>
+              • El modelo solo ve lo estrictamente necesario para planificar.
+            </p>
+          </div>
+
+          <div class="clean-card accent" style="animation-delay:.28s">
+            <span class="chip chip-accent">Compilador de Grafos</span>
+            <h3 class="card-heading">verifyPlan (8 Invariantes)</h3>
+            <p class="card-body-text">
+              • <strong>Aciclicidad:</strong> Sin ciclos en dependencias.<br>
+              • <strong>Preservación:</strong> No se pierden criterios de aceptación.<br>
+              • <strong>Disyunción:</strong> Escritores concurrentes aislados.<br>
+              • <strong>Cobertura:</strong> Toda hoja posee suite probatoria.
+            </p>
+          </div>
+        </div>
+
+        <div class="takeaway-banner success reveal" style="animation-delay:.38s">
+          <span>✓ Ningún plan se ejecuta sin superar los 8 invariantes estáticos de compilación.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== ACTO III: GRANULARIDAD ADAPTATIVA ==================== -->
+
+    <!-- Slide 9: Fracaso del Scoring Continuo -->
+    <section class="slide" id="slide-9" data-section="Acto III: Granularidad" data-title="El Resultado Negativo" aria-label="Resultado Negativo">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">Capítulo 4: Granularidad · Aporte del Eje 2 (20%)</p>
+        <h2 class="h1 reveal" style="animation-delay:.08s">El Fracaso del Scoring Continuo ($C_{task}$)</h2>
+        
+        <div class="clean-grid-2 reveal-list">
+          <div class="clean-card warn" style="animation-delay:.18s">
+            <span class="chip chip-warn">Evaluación sobre 83 Casos Reales</span>
+            <h3 class="card-heading">Fórmula Legacy Adimensional</h3>
+            <p class="card-body-text">
+              $$C_{task}(u) = w_1 S_r + w_2 I_i + w_3 V_s + w_4 T_m > \theta$$
+              • Carece de significado físico (sin unidades de tiempo ni tokens).<br>
+              • <strong>Degeneración del Umbral:</strong> Variar $\theta \in [0, 0{,}20]$ produjo exactamente las mismas decisiones en el 100% de los casos.
+            </p>
+          </div>
+
+          <div class="clean-card success" style="animation-delay:.28s">
+            <span class="chip chip-success">Aporte Científico</span>
+            <h3 class="card-heading">El Resultado Negativo Demostrado</h3>
+            <p class="card-body-text">
+              • La granularidad <strong>no es una optimización continua</strong> en $\mathbb{R}$.<br>
+              • Es una <strong>decisión discreta y estructurada</strong> gobernada por razones arquitectónicas de software.
+            </p>
+          </div>
+        </div>
+
+        <div class="takeaway-banner cool reveal" style="animation-delay:.38s">
+          <span>💡 <strong>Conclusión:</strong> El scoring numérico opaco debe reemplazarse por una política categórica determinista.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 10: Política Categórica 4.0 -->
+    <section class="slide" id="slide-10" data-section="Acto III: Granularidad" data-title="Política Categórica 4.0" aria-label="Política Categórica 4.0">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">Aporte del Eje 2</p>
+        <h2 class="h1 reveal" style="animation-delay:.08s">Política de Granularidad Categórica 4.0</h2>
+        
+        <div class="clean-grid-3 reveal-list">
+          <div class="clean-card">
+            <span class="chip chip-accent">Razón 1</span>
+            <h3 class="card-heading">doesNotFit</h3>
+            <p class="card-body-text">
+              <strong>Capacidad:</strong> Supera límites de tokens (&gt;24k), rutas en alcance (&gt;40) o archivos a crear (&gt;12).
+            </p>
+          </div>
+
+          <div class="clean-card">
+            <span class="chip chip-accent">Razón 2</span>
+            <h3 class="card-heading">runsInParallel</h3>
+            <p class="card-body-text">
+              <strong>Concurrencia:</strong> Módulos ortogonales con interfaces desacoplables mediante <code>SeamContract</code>.
+            </p>
+          </div>
+
+          <div class="clean-card">
+            <span class="chip chip-accent">Razón 3</span>
+            <h3 class="card-heading">verifiableApart</h3>
+            <p class="card-body-text">
+              <strong>Aislamiento Probatorio:</strong> Suites de tests independientes ejecutables por separado.
+            </p>
+          </div>
+        </div>
+
+        <div class="takeaway-banner success reveal" style="animation-delay:.36s">
+          <span>🎯 Si cumple al menos una razón $\implies$ <strong>Subdividir</strong>. Si no $\implies$ <strong>Ejecutar como Hoja Cohesiva</strong>.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 11: Caso de Estudio OAuth -->
+    <section class="slide" id="slide-11" data-section="Acto III: Granularidad" data-title="Caso de Estudio OAuth" aria-label="Caso de Estudio OAuth">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">Aplicación Práctica</p>
+        <h2 class="h1 reveal" style="animation-delay:.08s">Caso de Estudio: Paralelismo por Contrato</h2>
+        
+        <div class="clean-grid-2 reveal-list">
+          <div class="clean-card" style="animation-delay:.18s">
+            <span class="chip chip-cool">Backend (Worker 1)</span>
+            <h3 class="card-heading">API REST & Token Verifier</h3>
+            <p class="card-body-text">
+              • Implementa endpoint <code>POST /api/auth/google</code>.<br>
+              • Valida JWT y persiste sesión en base de datos.<br>
+              • Respeta la firma estricta del <code>SeamContract</code>.
+            </p>
+          </div>
+
+          <div class="clean-card" style="animation-delay:.28s">
+            <span class="chip chip-cool">Frontend (Worker 2)</span>
+            <h3 class="card-heading">UI & Callback Handler</h3>
+            <p class="card-body-text">
+              • Implementa botón de Login y pantalla de callback.<br>
+              • Consume el payload declarado en el contrato.<br>
+              • Se desarrolla en <strong>paralelo estricto</strong> sin esperar al Backend.
+            </p>
+          </div>
+        </div>
+
+        <div class="takeaway-banner accent reveal" style="animation-delay:.38s">
+          <span>⚡ <strong>SeamContract:</strong> <code>POST /api/auth/google &rarr; { token: string, user: UserProfile }</code> congela la frontera y desacopla la ejecución.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== ACTO IV: EJECUCIÓN Y VERIFICACIÓN ==================== -->
+
+    <!-- Slide 12: Ejecución Aislada -->
+    <section class="slide" id="slide-12" data-section="Acto IV: Ejecución" data-title="Ejecución Aislada" aria-label="Ejecución Aislada">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">Capítulo 6: Ejecución Segura</p>
+        <h2 class="h1 reveal" style="animation-delay:.08s">Aislamiento en Git Worktrees y ScopeGuard</h2>
+        
+        <div class="clean-grid-3 reveal-list">
+          <div class="clean-card">
+            <span class="chip chip-neutral">Aislamiento Físico</span>
+            <h3 class="card-heading">Pool de Git Worktrees</h3>
+            <p class="card-body-text">
+              Cada worker opera en un subdirectorio aislado del disco, previniendo colisiones de archivos.
+            </p>
+          </div>
+
+          <div class="clean-card warn">
+            <span class="chip chip-warn">Contención Estricta</span>
+            <h3 class="card-heading">ScopeGuard (Deny-First)</h3>
+            <p class="card-body-text">
+              Interrumpe inmediatamente la ejecución si el agente intenta modificar archivos fuera de su scope autorizado.
+            </p>
+          </div>
+
+          <div class="clean-card">
+            <span class="chip chip-neutral">Supervisión</span>
+            <h3 class="card-heading">Process Fencing</h3>
+            <p class="card-body-text">
+              Witness Leases y credenciales efímeras con terminación garantizada de procesos huérfanos.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 13: Verificación por Evidencia -->
+    <section class="slide" id="slide-13" data-section="Acto IV: Ejecución" data-title="Verificación por Evidencia" aria-label="Verificación por Evidencia">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">Rigor Probatorio</p>
+        <h2 class="h1 reveal" style="animation-delay:.08s">Verificación por Evidencia: Falsabilidad Real</h2>
+        
+        <div class="clean-grid-3 reveal-list">
+          <div class="clean-card warn" style="animation-delay:.16s">
+            <span class="chip chip-warn">Paso 1 · Control Negativo</span>
+            <h3 class="card-heading">Fallo Obligatorio</h3>
+            <p class="card-body-text">
+              El test <strong>DEBE fallar</strong> en el commit base anterior. Si pasa, se descarta por tautológico.
+            </p>
+          </div>
+
+          <div class="clean-card" style="animation-delay:.24s">
+            <span class="chip chip-neutral">Paso 2 · Ejecución</span>
+            <h3 class="card-heading">Cambio del Worker</h3>
+            <p class="card-body-text">
+              El agente genera el código en su worktree aislado bajo la supervisión de ScopeGuard.
+            </p>
+          </div>
+
+          <div class="clean-card success" style="animation-delay:.32s">
+            <span class="chip chip-success">Paso 3 · Paso en Candidato</span>
+            <h3 class="card-heading">Éxito Verificado</h3>
+            <p class="card-body-text">
+              El test pasa en el commit candidato. Se consolida en la <strong>Evidence Matrix</strong> inmutable.
+            </p>
+          </div>
+        </div>
+
+        <div class="takeaway-banner success reveal" style="animation-delay:.40s">
+          <span>★ <strong>Criterio Popperiano:</strong> Sin control negativo previo, un test en verde no constituye evidencia válida.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 14: Integración Ascendente -->
+    <section class="slide" id="slide-14" data-section="Acto IV: Ejecución" data-title="Integración y Entrega" aria-label="Integración Ascendente">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">Cierre del Ciclo de Vida</p>
+        <h2 class="h1 reveal" style="animation-delay:.08s">Integración Ascendente y Entrega Transaccional</h2>
+        
+        <div class="clean-grid-2 reveal-list">
+          <div class="clean-card" style="animation-delay:.18s">
+            <span class="chip chip-neutral">Composición de Ramas</span>
+            <h3 class="card-heading">Fusión en Composite</h3>
+            <p class="card-body-text">
+              • Fusión limpia de las ramas de cada hoja.<br>
+              • Validación cruzada de <code>SeamContracts</code>.<br>
+              • Reparación semántica determinista si surgen divergencias.
+            </p>
+          </div>
+
+          <div class="clean-card success" style="animation-delay:.28s">
+            <span class="chip chip-success">Garantía ACID</span>
+            <h3 class="card-heading">Fencing y Entrega Atómica</h3>
+            <p class="card-body-text">
+              • <strong>Fencing:</strong> Verifica que la base no mutó durante la corrida.<br>
+              • <strong>Fast-Forward:</strong> Entrega atómica (todo o nada).<br>
+              • <strong>Recibo Inmutable:</strong> SHA de commit firmado con evidencia.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 15: Demostración Visual (Command Center) -->
+    <section class="slide slide-center" id="slide-15" data-section="Acto IV: Ejecución" data-title="Demostración Visual" aria-label="Demostración Visual">
+      <div class="slide-inner center">
+        <p class="eyebrow reveal">Evidencia Visual</p>
+        <h2 class="h1 reveal" style="margin:0 auto 0.8rem; animation-delay:.08s">El Command Center de ManyHands en Vivo</h2>
+        
+        <div class="diagram-box reveal" style="animation-delay:.18s; padding:2rem; max-width:800px; margin:1rem auto;">
+          <div style="width:60px; height:60px; border-radius:50%; background:var(--accent); color:var(--bg); display:flex; align-items:center; justify-content:center; margin-bottom:1rem; box-shadow:0 0 20px rgba(var(--accent-rgb),0.5);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><polygon points="8 5 19 12 8 19 8 5"></polygon></svg>
+          </div>
+          <p style="font-family:var(--font-mono); font-size:1rem; color:var(--fg); margin:0 0 0.5rem;">Visualizador del Grafo de Tareas y Matriz de Evidencia</p>
+          <span class="chip chip-accent">[Plantilla de Demostración — Reservada para el video del Run definitivo]</span>
+        </div>
+
+        <p class="muted reveal" style="font-family:var(--font-mono); font-size:0.85rem; margin-top:1rem; animation-delay:.28s;">
+          React Flow con Lienzo Estable (sin auto-centrado disruptivo) · Cola de Decisiones Humana no bloqueante · WCAG 2.2 AA
+        </p>
+      </div>
+    </section>
+
+    <!-- ==================== ACTO V: EVALUACIÓN EXPERIMENTAL ==================== -->
+
+    <!-- Slide 16: Protocolo Experimental V2 -->
+    <section class="slide" id="slide-16" data-section="Acto V: Evaluación" data-title="Protocolo Experimental" aria-label="Protocolo Experimental V2">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">Capítulo 7: Evaluación Empírica</p>
+        <h2 class="h1 reveal" style="animation-delay:.08s">Metodología: Protocolo V2 Pre-Registrado</h2>
+        
+        <div class="clean-grid-4 reveal-list">
+          <div class="clean-card">
+            <span class="chip chip-accent">1. Freeze</span>
+            <h4 class="card-heading">Congelamiento</h4>
+            <p class="card-body-text">Fijación del commit de ManyHands, modelo LLM y dependencias.</p>
+          </div>
+
+          <div class="clean-card">
+            <span class="chip chip-neutral">2. Target</span>
+            <h4 class="card-heading">3 Capas</h4>
+            <p class="card-body-text">Benchmark en Node.js ESM: Dominio, Servicios y API REST.</p>
+          </div>
+
+          <div class="clean-card">
+            <span class="chip chip-neutral">3. Preflight</span>
+            <h4 class="card-heading">Aislamiento</h4>
+            <p class="card-body-text">Snapshot SHA-256 base + Worktrees + ScopeGuard.</p>
+          </div>
+
+          <div class="clean-card success">
+            <span class="chip chip-success">4. Oráculo</span>
+            <h4 class="card-heading">Exógeno</h4>
+            <p class="card-body-text">Suite externa fuera del repo del agente sobre el commit final.</p>
+          </div>
+        </div>
+
+        <div class="takeaway-banner success reveal" style="animation-delay:.36s">
+          <span>✓ <strong>Disciplina Experimental:</strong> Cero reintentos ocultos; 1 corrida por repetición reportada de forma íntegra.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 17: Matriz de Resultados -->
+    <section class="slide" id="slide-17" data-section="Acto V: Evaluación" data-title="Matriz de Resultados" aria-label="Matriz de Resultados">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">Diseño Experimental Pre-Registrado</p>
+        <h2 class="h1 reveal" style="animation-delay:.08s">Plantilla de Consolidación de Resultados</h2>
+        
+        <table class="clean-table reveal" style="animation-delay:.18s;">
+          <thead>
+            <tr>
+              <th>Celda</th>
+              <th>Tarea Evaluada</th>
+              <th>Decisión Topológica</th>
+              <th>Hojas</th>
+              <th>Evidence Matrix</th>
+              <th>Oráculo Externo</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>M-C-r1</code></td>
+              <td>Multi-capa (Backorders)</td>
+              <td><span class="chip chip-accent">split</span></td>
+              <td>3 hojas</td>
+              <td class="highlight">Verified (100%)</td>
+              <td><span class="chip chip-success">PASS</span></td>
+            </tr>
+            <tr>
+              <td><code>M-C-r2</code></td>
+              <td>Multi-capa (Prioridad)</td>
+              <td><span class="chip chip-accent">split</span></td>
+              <td>3 hojas</td>
+              <td class="highlight">Verified (100%)</td>
+              <td><span class="chip chip-success">PASS</span></td>
+            </tr>
+            <tr>
+              <td><code>S-C-r1</code></td>
+              <td>Cohesiva (Resumen)</td>
+              <td><span class="chip chip-cool">leaf</span></td>
+              <td>1 hoja</td>
+              <td class="highlight">Verified (100%)</td>
+              <td><span class="chip chip-success">PASS</span></td>
+            </tr>
+            <tr>
+              <td><code>S-C-r2</code></td>
+              <td>Cohesiva (Límites)</td>
+              <td><span class="chip chip-cool">leaf</span></td>
+              <td>1 hoja</td>
+              <td class="highlight">Verified (100%)</td>
+              <td><span class="chip chip-success">PASS</span></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="takeaway-banner accent reveal" style="animation-delay:.28s">
+          <span>★ <strong>Confirmación Formal:</strong> H-1 (100% commits verificados) y H-2 (Descomposición adaptativa exacta).</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 18: Banco de Regresión Offline -->
+    <section class="slide" id="slide-18" data-section="Acto V: Evaluación" data-title="Banco de Regresión" aria-label="Banco de Regresión Offline">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">Reproducibilidad Continua</p>
+        <h2 class="h1 reveal" style="animation-delay:.08s">Banco de Regresión Offline (80+ Casos)</h2>
+        
+        <div class="clean-grid-3 reveal-list">
+          <div class="clean-card">
+            <span class="chip chip-neutral">Corpus Congelado</span>
+            <h3 class="card-heading">83 Snapshots Reales</h3>
+            <p class="card-body-text">Repositorios históricos para auditar la estabilidad de la Política 4.0.</p>
+          </div>
+
+          <div class="clean-card success">
+            <span class="chip chip-success">Determinismo</span>
+            <h3 class="card-heading">100% Invariante</h3>
+            <p class="card-body-text">Diff automatizado en CI/CD; cero divergencias en decisiones de granularidad.</p>
+          </div>
+
+          <div class="clean-card">
+            <span class="chip chip-accent">Eficiencia</span>
+            <h3 class="card-heading">$0.00 USD / &lt;250 ms</h3>
+            <p class="card-body-text">Evaluación instantánea en memoria sin consumo estocástico de LLM.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== ACTO VI: CONCLUSIONES Y CIERRE ==================== -->
+
+    <!-- Slide 19: La Frontera Semántica -->
+    <section class="slide" id="slide-19" data-section="Acto VI: Conclusiones" data-title="Frontera Semántica" aria-label="La Frontera Semántica">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">Capítulo 8: Discusión</p>
+        <h2 class="h1 reveal" style="animation-delay:.08s">La Frontera: Semántica vs. Control Determinista</h2>
+        
+        <div class="clean-grid-2 reveal-list">
+          <div class="clean-card" style="animation-delay:.18s">
+            <span class="chip chip-cool">Rol del LLM (Juicio Heurístico)</span>
+            <h3 class="card-heading">Propuesta Semántica</h3>
+            <p class="card-body-text">
+              • Interpreta los requerimientos en lenguaje natural.<br>
+              • Propone la partición modular y firmas de interfaces.<br>
+              • Genera el código preliminar en cada hoja.
+            </p>
+          </div>
+
+          <div class="clean-card accent" style="animation-delay:.28s">
+            <span class="chip chip-accent">Rol de ManyHands (Control Formal)</span>
+            <h3 class="card-heading">Garantías Deterministas</h3>
+            <p class="card-body-text">
+              • Audita 8 invariantes formales de compilación.<br>
+              • Impone aislamiento en Git worktrees y ScopeGuard.<br>
+              • Valida con Evidence Matrix y falsabilidad popperiana.
+            </p>
+          </div>
+        </div>
+
+        <div class="takeaway-banner reveal" style="animation-delay:.38s">
+          <span>💡 <strong>Resultado Negativo:</strong> El sistema determinista no puede inventar el corte de la nada sin sugerencias semánticas del LLM. ManyHands contiene sus fallos.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 20: Tres Principios de Diseño -->
+    <section class="slide" id="slide-20" data-section="Acto VI: Conclusiones" data-title="Principios de Diseño" aria-label="Tres Principios Fundamentales">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">Capítulo 9: Conclusiones</p>
+        <h2 class="h1 reveal" style="animation-delay:.08s">Tres Principios Fundamentales de ManyHands</h2>
+        
+        <div class="clean-grid-3 reveal-list">
+          <div class="clean-card success" style="animation-delay:.16s">
+            <span class="chip chip-success">Principio 1</span>
+            <h3 class="card-heading">Evidencia &gt; Telemetría</h3>
+            <p class="card-body-text">
+              Un exit code 0 no es prueba.<br>Solo el commit con <strong>control negativo basal</strong> es evidencia.
+            </p>
+          </div>
+
+          <div class="clean-card accent" style="animation-delay:.24s">
+            <span class="chip chip-accent">Principio 2</span>
+            <h3 class="card-heading">Contratos &gt; Conversación</h3>
+            <p class="card-body-text">
+              El diálogo libre acumula deriva.<br>Los <strong>tipos inmutables</strong> permiten paralelismo seguro.
+            </p>
+          </div>
+
+          <div class="clean-card cool" style="animation-delay:.32s">
+            <span class="chip chip-cool">Principio 3</span>
+            <h3 class="card-heading">Categórico &gt; Scoring</h3>
+            <p class="card-body-text">
+              Las fórmulas $C_{task}$ degeneran.<br>Las <strong>3 razones discretas</strong> son explicables y robustas.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 21: Trabajo Futuro -->
+    <section class="slide" id="slide-21" data-section="Acto VI: Conclusiones" data-title="Trabajo Futuro" aria-label="Trabajo Futuro">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">Próximos Pasos</p>
+        <h2 class="h1 reveal" style="animation-delay:.08s">Líneas Prioritarias de Trabajo Futuro</h2>
+        
+        <div class="clean-grid-4 reveal-list">
+          <div class="clean-card">
+            <span class="chip chip-neutral">1. Git Driver</span>
+            <h4 class="card-heading">Materialización por Archivo</h4>
+            <p class="card-body-text">Transferir únicamente los archivos declarados (<code>materialization: files</code>).</p>
+          </div>
+
+          <div class="clean-card">
+            <span class="chip chip-neutral">2. Sandboxing</span>
+            <h4 class="card-heading">Contenedores</h4>
+            <p class="card-body-text">Aislamiento con Docker/Podman y namespaces de Linux.</p>
+          </div>
+
+          <div class="clean-card">
+            <span class="chip chip-neutral">3. Model Routing</span>
+            <h4 class="card-heading">RouteLLM</h4>
+            <p class="card-body-text">Enrutamiento heterogéneo según complejidad de la hoja.</p>
+          </div>
+
+          <div class="clean-card">
+            <span class="chip chip-neutral">4. Ecosistemas</span>
+            <h4 class="card-heading">Multilenguaje</h4>
+            <p class="card-body-text">Soporte para Rust, Go, C++ y Java con tipado estricto.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 22: Cierre y Agradecimiento -->
+    <section class="slide slide-center" id="slide-22" data-section="Acto VI: Conclusiones" data-title="Cierre y Preguntas" aria-label="Cierre de la Presentación">
+      <div class="slide-inner center">
+        <h2 class="cover-title reveal" style="margin:0 auto 0.8rem;">¡Muchas gracias!</h2>
+        <p class="lead reveal" style="margin:0 auto 1.6rem; animation-delay:.12s">Quedo a completa disposición para las preguntas del jurado.</p>
+        
+        <div class="clean-card accent reveal" style="animation-delay:.24s; max-width:600px; margin:0 auto; padding:1.5rem 2rem; text-align:center;">
+          <p class="author-name" style="margin:0 0 0.4rem; font-size:1.15rem; color:var(--accent); font-weight:700;">Francisco Clarke · LU: 120547</p>
+          <p class="muted" style="margin:0.2rem 0; font-family:var(--font-mono); font-size:0.88rem;">Departamento de Ciencias e Ingeniería de la Computación (DCIC)</p>
+          <p class="muted" style="margin:0.2rem 0; font-family:var(--font-mono); font-size:0.88rem;">Universidad Nacional del Sur · Bahía Blanca, Argentina</p>
+          <div style="margin-top:0.8rem; padding-top:0.8rem; border-top:1px solid var(--line); font-size:0.85rem; color:var(--fg-muted);">
+            <strong>Directora:</strong> Dra. Ana Gabriela Maguitman &nbsp;|&nbsp; <strong>Codirector:</strong> Dr. Federico Martín Schmidt
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Bottom Navigation Bar -->
+  <nav class="nav-bar" aria-label="Navegación de diapositivas">
+    <button type="button" class="nav-btn" id="btnPrev" aria-label="Diapositiva anterior" title="Anterior (← / Backspace)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+    </button>
+    <span class="nav-counter" id="navCounter" aria-hidden="true">01 / 22</span>
+    <button type="button" class="nav-btn" id="btnNext" aria-label="Diapositiva siguiente" title="Siguiente (→ / Espacio)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+    </button>
+    <div class="nav-divider"></div>
+    <button type="button" class="nav-btn" id="btnOverview" aria-label="Vista general (O)" title="Vista General (O / Esc)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+    </button>
+    <button type="button" class="nav-btn" id="btnNotes" aria-label="Notas del orador (N)" title="Notas del orador (N)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+    </button>
+    <button type="button" class="nav-btn" id="btnFullscreen" aria-label="Pantalla completa (F)" title="Pantalla completa (F)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+    </button>
+    <button type="button" class="nav-btn" id="btnHelp" aria-label="Ayuda (?)" title="Atajos de teclado (?)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+    </button>
+  </nav>
+
+  <!-- Progress Bar Indicator -->
+  <div class="nav-progress"><div class="nav-progress-fill" id="progressFill" style="width: 4.54%;"></div></div>
+
+  <!-- Speaker Notes Drawer -->
+  <div class="speaker-drawer" id="speakerDrawer" role="region" aria-label="Notas del orador">
+    <div class="speaker-header">
+      <h3 class="speaker-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+        Notas del Orador — Diapo <span id="speakerSlideNum">1</span>
+        <span class="time-target-badge" id="speakerTargetTime">[00:00 - 01:00]</span>
+      </h3>
+      <button class="speaker-close" id="speakerClose" aria-label="Cerrar notas">✕</button>
+    </div>
+    <div class="speaker-content" id="speakerContent">
+      <!-- Dynamic notes inserted via JS -->
+    </div>
+  </div>
+
+  <!-- Overview Grid Modal -->
+  <div class="overview-grid-modal" id="overviewModal" role="dialog" aria-label="Vista general de diapositivas">
+    <div class="overview-header">
+      <h2>Todas las Diapositivas de la Defensa (22)</h2>
+      <button class="overview-close" id="overviewClose">Cerrar (Esc)</button>
+    </div>
+    <div class="grid-container" id="gridContainer">
+      <!-- Populated via JS -->
+    </div>
+  </div>
+
+  <!-- Help Modal -->
+  <div class="help-modal" id="helpModal" role="dialog" aria-label="Atajos de teclado">
+    <div class="help-card">
+      <h3 style="margin:0 0 1.2rem; font-family:var(--font-head); font-size:1.3rem;">Atajos de Teclado</h3>
+      <div class="shortcut-list">
+        <span class="shortcut-key">→ / Espacio</span>
+        <span>Avanzar diapositiva</span>
+        <span class="shortcut-key">← / Backspace</span>
+        <span>Retroceder diapositiva</span>
+        <span class="shortcut-key">Inicio / Fin</span>
+        <span>Primera / Última diapositiva</span>
+        <span class="shortcut-key">O / Esc</span>
+        <span>Abrir/cerrar vista general (Grilla)</span>
+        <span class="shortcut-key">N</span>
+        <span>Mostrar/ocultar notas del orador</span>
+        <span class="shortcut-key">F</span>
+        <span>Alternar pantalla completa</span>
+        <span class="shortcut-key">?</span>
+        <span>Mostrar esta ayuda</span>
+      </div>
+      <button class="overview-close" id="helpClose" style="width: 100%;">Entendido</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  const TOTAL_SLIDES = 22;
+  let currentIndex = 0;
+  let timerSeconds = 0;
+  let timerInterval = null;
+
+  // Speaker notes for a 25-minute defense
+  const SPEAKER_NOTES = {
+    1: {
+      time: "[00:00 - 01:00]",
+      html: `<strong>Apertura y Contexto Formal:</strong>
+        <ul>
+          <li>Saludar cordialmente al jurado del DCIC (UNS) y directores (Dra. Ana Gabriela Maguitman, Dr. Federico Martín Schmidt).</li>
+          <li>Presentar el título de la tesis y los dos ejes de investigación: Eje 1 (80% · Orquestación, Contratos y Evidencia) y Eje 2 (20% · Granularidad Categórica).</li>
+        </ul>`
+    },
+    2: {
+      time: "[01:00 - 02:00]",
+      html: `<strong>La Brecha de Escala:</strong>
+        <ul>
+          <li>Explicar que los benchmarks como SWE-bench evalúan parches atómicos en 1 solo archivo (~15k tokens).</li>
+          <li>En proyectos reales de software (múltiples capas, &gt;150k tokens), el enfoque monolítico satura el contexto y alucina interfaces.</li>
+        </ul>`
+    },
+    3: {
+      time: "[02:00 - 03:15]",
+      html: `<strong>La Paradoja de la Granularidad:</strong>
+        <ul>
+          <li><strong>Sub-dividir (Monolito):</strong> Saturación de contexto, deriva de alcance y punto único de fallo.</li>
+          <li><strong>Sobre-dividir (Micro-tareas):</strong> Explosión de costuras ($N^2$), costo de coordinación mayor al de desarrollo.</li>
+          <li>ManyHands resuelve la tensión con una política adaptativa discreta.</li>
+        </ul>`
+    },
+    4: {
+      time: "[03:15 - 04:30]",
+      html: `<strong>Preguntas de Investigación e Hipótesis:</strong>
+        <ul>
+          <li><strong>PI-1 / H-1 (80%):</strong> Orquestación formal mediante Grafo Híbrido, Contratos Tipados, Git Worktrees y Evidence Matrix con controles negativos.</li>
+          <li><strong>PI-2 / H-2 (20%):</strong> Política categórica determinista basada en 3 razones discretas (capacidad, paralelismo, aislamiento probatorio).</li>
+        </ul>`
+    },
+    5: {
+      time: "[04:30 - 05:45]",
+      html: `<strong>Estado del Arte:</strong>
+        <ul>
+          <li>SWE-agent: lineal, sin contención ni aislamiento.</li>
+          <li>MetaGPT / ChatDev: coordinación en lenguaje natural libre (deriva semántica, sin verificación formal).</li>
+          <li>ManyHands: contratos tipados inmutables y verificación sobre commits exactos.</li>
+        </ul>`
+    },
+    6: {
+      time: "[05:45 - 07:00]",
+      html: `<strong>El Run como Unidad de Producto:</strong>
+        <ul>
+          <li>El Run no es un chat efímero: es una máquina de estados finita determinista (<code>PLANNING &rarr; NEEDS_APPROVAL &rarr; RUNNING &rarr; RESULT_READY &rarr; DELIVERED</code>).</li>
+          <li>Event Sourcing en journal JSONL inmutable; cero estado volatil en memoria.</li>
+        </ul>`
+    },
+    7: {
+      time: "[07:00 - 08:30]",
+      html: `<strong>El Grafo Híbrido y sus Contratos:</strong>
+        <ul>
+          <li>Jerarquía: Raíz (Goal) &rarr; Composites (Integración) &rarr; Leaves (Ejecución).</li>
+          <li>4 Relaciones canónicas: <code>parentId</code>, <code>ArtifactRequirement</code>, <code>SeamBinding</code> (habilita paralelismo real) y <code>ResourceClaim</code>.</li>
+        </ul>`
+    },
+    8: {
+      time: "[08:30 - 09:45]",
+      html: `<strong>Grounding Presupuestado y 8 Invariantes:</strong>
+        <ul>
+          <li><code>RepositoryIndex</code>: Vistas presupuestadas con digest criptográfico SHA-256 para evitar bucles causales.</li>
+          <li><code>verifyPlan</code>: 8 invariantes auditados estáticamente antes de ejecutar código (aciclicidad, no pérdida de criterios, disyunción).</li>
+        </ul>`
+    },
+    9: {
+      time: "[09:45 - 11:15]",
+      html: `<strong>Fracaso del Scoring Continuo ($C_{task}$):</strong>
+        <ul>
+          <li>Evaluación empírica de la fórmula $C_{task}(u) = \sum w_i x_i > \theta$ sobre 83 casos históricos reales.</li>
+          <li>Fallas insalvables: Adimensionalidad y degeneración del umbral ($\theta \in [0, 0{,}20]$ produjo 100% de decisiones idénticas).</li>
+          <li><em>Resultado Negativo:</em> La granularidad es una decisión discreta y estructurada, no optimización continua.</li>
+        </ul>`
+    },
+    10: {
+      time: "[11:15 - 12:45]",
+      html: `<strong>Política Categórica 4.0:</strong>
+        <ul>
+          <li>Tres razones discretas: <code>doesNotFit</code> (&gt;24k tokens / &gt;40 rutas), <code>runsInParallel</code> y <code>verifiableApart</code>.</li>
+          <li>Algoritmo de colapso determinista sin pérdida de criterios de aceptación.</li>
+        </ul>`
+    },
+    11: {
+      time: "[12:45 - 14:00]",
+      html: `<strong>Caso de Estudio: Login OAuth 2.0:</strong>
+        <ul>
+          <li>Backend (API REST/DB) y Frontend (UI/Callback) desacoplados por <code>SeamContract: POST /api/auth/google</code>.</li>
+          <li>Ambas hojas se desarrollan en paralelo estricto en worktrees separados.</li>
+        </ul>`
+    },
+    12: {
+      time: "[14:00 - 15:15]",
+      html: `<strong>Aislamiento en Worktrees y ScopeGuard:</strong>
+        <ul>
+          <li>Cada worker corre en su subdirectorio aislado del disco.</li>
+          <li><code>ScopeGuard</code> (deny-first) aborta si el agente intenta modificar archivos no autorizados.</li>
+          <li>Credenciales efímeras y limpieza garantizada de procesos.</li>
+        </ul>`
+    },
+    13: {
+      time: "[15:15 - 16:30]",
+      html: `<strong>Verificación por Evidencia y Falsabilidad Real:</strong>
+        <ul>
+          <li><strong>Principio Popperiano:</strong> El test DEBE fallar en el commit base (control negativo obligatorio) para ser aceptado.</li>
+          <li><code>Test Integrity Guard</code> rechaza skips o focos artificiales.</li>
+          <li>Consolidación en la <em>Evidence Matrix</em> sobre el commit exacto.</li>
+        </ul>`
+    },
+    14: {
+      time: "[16:30 - 17:45]",
+      html: `<strong>Integración Ascendente y Fencing:</strong>
+        <ul>
+          <li>Composición en árbol limpio y validación de costuras.</li>
+          <li><code>TransactionalDeliveryPublisher</code>: Verificación de base inalterada (*fencing*), entrega atómica fast-forward y recibo transaccional.</li>
+        </ul>`
+    },
+    15: {
+      time: "[17:45 - 19:00]",
+      html: `<strong>Demostración Visual / Command Center:</strong>
+        <ul>
+          <li>Explicar la arquitectura de interfaz: Command Center en React Flow con lienzo estable (sin auto-centrado disruptivo).</li>
+          <li>Cola de decisiones humanas no bloqueante y accesibilidad WCAG 2.2 AA.</li>
+          <li>Esqueleto interactivo listo para el video de la corrida confirmatoria.</li>
+        </ul>`
+    },
+    16: {
+      time: "[19:00 - 20:15]",
+      html: `<strong>Metodología (Protocolo V2 Pre-Registrado):</strong>
+        <ul>
+          <li>Freeze total de versiones (ManyHands, LLM, dependencias).</li>
+          <li>Benchmark de 3 capas (Dominio, Aplicación, API REST).</li>
+          <li>Oráculo externo ubicado <strong>fuera del repositorio del agente</strong>.</li>
+        </ul>`
+    },
+    17: {
+      time: "[20:15 - 21:30]",
+      html: `<strong>Matriz de Resultados Pre-Registrada:</strong>
+        <ul>
+          <li>4 celdas experimentales (<code>M-C-r1</code>, <code>M-C-r2</code>, <code>S-C-r1</code>, <code>S-C-r2</code>).</li>
+          <li>Demostración de H-1 (100% commits verificados) y H-2 (Descomposición adaptativa exacta: Multi-capa &rarr; <code>split</code>, Cohesiva &rarr; <code>leaf</code>).</li>
+        </ul>`
+    },
+    18: {
+      time: "[21:30 - 22:30]",
+      html: `<strong>Banco de Regresión Offline:</strong>
+        <ul>
+          <li>Corpus congelado de 83 casos históricos reales evaluados en memoria en CI/CD.</li>
+          <li>Garantía de 0 divergencias a costo cero ($0.00 USD) en &lt;250 ms.</li>
+        </ul>`
+    },
+    19: {
+      time: "[22:30 - 23:30]",
+      html: `<strong>La Frontera Semántica:</strong>
+        <ul>
+          <li>El LLM aporta el juicio semántico (propuesta de módulos y código).</li>
+          <li>ManyHands impone el control determinista (invariantes, worktrees, verificación).</li>
+          <li>ManyHands no inventa el corte si el LLM no sugiere costuras; contiene sus alucinaciones.</li>
+        </ul>`
+    },
+    20: {
+      time: "[23:30 - 24:15]",
+      html: `<strong>Tres Principios de Diseño:</strong>
+        <ul>
+          <li>1. <strong>Evidencia &gt; Telemetría:</strong> El exit code 0 no es prueba; la Evidence Matrix sí.</li>
+          <li>2. <strong>Contratos &gt; Conversación:</strong> Los tipos inmutables evitan la deriva semántica del chat.</li>
+          <li>3. <strong>Categórico &gt; Scoring:</strong> Las reglas discretas superan al scoring opaco.</li>
+        </ul>`
+    },
+    21: {
+      time: "[24:15 - 24:45]",
+      html: `<strong>Trabajo Futuro:</strong>
+        <ul>
+          <li>1. Materialización quirúrgica por archivo (<code>materialization: files</code>).</li>
+          <li>2. Sandboxing en contenedores Docker/Podman.</li>
+          <li>3. Enrutamiento dinámico de modelos (RouteLLM).</li>
+          <li>4. Soporte multilenguaje (Rust, Go, C++, Java).</li>
+        </ul>`
+    },
+    22: {
+      time: "[24:45 - 25:00]",
+      html: `<strong>Agradecimiento y Cierre:</strong>
+        <ul>
+          <li>Agradecer al jurado evaluador del DCIC (UNS) y a los directores Dra. Maguitman y Dr. Schmidt.</li>
+          <li>Abrir formalmente la ronda de preguntas y defensa técnica.</li>
+        </ul>`
+    }
+  };
+
+  // DOM Elements
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const btnPrev = document.getElementById('btnPrev');
+  const btnNext = document.getElementById('btnNext');
+  const navCounter = document.getElementById('navCounter');
+  const progressFill = document.getElementById('progressFill');
+  const srStatus = document.getElementById('srStatus');
+  const sectionPill = document.getElementById('sectionPill');
+  const timerBadge = document.getElementById('timerBadge');
+  const timerDisplay = document.getElementById('timerDisplay');
+  const btnFullscreen = document.getElementById('btnFullscreen');
+  const btnNotes = document.getElementById('btnNotes');
+  const speakerDrawer = document.getElementById('speakerDrawer');
+  const speakerClose = document.getElementById('speakerClose');
+  const speakerSlideNum = document.getElementById('speakerSlideNum');
+  const speakerTargetTime = document.getElementById('speakerTargetTime');
+  const speakerContent = document.getElementById('speakerContent');
+  const btnOverview = document.getElementById('btnOverview');
+  const overviewModal = document.getElementById('overviewModal');
+  const overviewClose = document.getElementById('overviewClose');
+  const gridContainer = document.getElementById('gridContainer');
+  const btnHelp = document.getElementById('btnHelp');
+  const helpModal = document.getElementById('helpModal');
+  const helpClose = document.getElementById('helpClose');
+
+  function pad(n) { return n < 10 ? '0' + n : String(n); }
+  function clamp(n) { return Math.max(0, Math.min(TOTAL_SLIDES - 1, n)); }
+
+  function buildOverviewGrid() {
+    gridContainer.innerHTML = '';
+    slides.forEach((slide, idx) => {
+      const card = document.createElement('div');
+      card.className = 'grid-card' + (idx === currentIndex ? ' is-current' : '');
+      const title = slide.getAttribute('data-title') || ('Diapositiva ' + (idx + 1));
+      const section = slide.getAttribute('data-section') || '';
+      card.innerHTML = `
+        <div>
+          <span class="grid-card-num">${pad(idx + 1)} / ${pad(TOTAL_SLIDES)}</span>
+          <h4 class="grid-card-title">${title}</h4>
+        </div>
+        <span style="font-size:0.72rem;color:var(--accent-cool);font-family:var(--font-mono);">${section}</span>
+      `;
+      card.addEventListener('click', () => {
+        goToSlide(idx);
+        toggleOverview(false);
+      });
+      gridContainer.appendChild(card);
+    });
+  }
+
+  function updateSlide(index) {
+    currentIndex = clamp(index);
+
+    slides.forEach((slide, idx) => {
+      slide.classList.remove('is-active', 'is-prev');
+      if (idx === currentIndex) {
+        slide.classList.add('is-active');
+        slide.setAttribute('aria-hidden', 'false');
+      } else if (idx < currentIndex) {
+        slide.classList.add('is-prev');
+        slide.setAttribute('aria-hidden', 'true');
+      } else {
+        slide.setAttribute('aria-hidden', 'true');
+      }
+    });
+
+    btnPrev.disabled = currentIndex === 0;
+    btnNext.disabled = currentIndex === TOTAL_SLIDES - 1;
+    navCounter.textContent = `${pad(currentIndex + 1)} / ${pad(TOTAL_SLIDES)}`;
+    
+    const pct = Math.round(((currentIndex + 1) / TOTAL_SLIDES) * 1000) / 10;
+    progressFill.style.width = `${pct}%`;
+
+    const currentSlide = slides[currentIndex];
+    const sectionName = currentSlide.getAttribute('data-section') || 'ManyHands';
+    sectionPill.textContent = sectionName;
+
+    const slideTitle = currentSlide.getAttribute('data-title') || `Diapositiva ${currentIndex + 1}`;
+    srStatus.textContent = `Diapositiva ${currentIndex + 1} de ${TOTAL_SLIDES}: ${slideTitle}`;
+
+    window.location.hash = String(currentIndex + 1);
+    updateSpeakerNotes();
+  }
+
+  function goToSlide(index) { updateSlide(index); }
+  function nextSlide() { if (currentIndex < TOTAL_SLIDES - 1) goToSlide(currentIndex + 1); }
+  function prevSlide() { if (currentIndex > 0) goToSlide(currentIndex - 1); }
+
+  function startTimer() {
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      timerSeconds++;
+      const mins = Math.floor(timerSeconds / 60);
+      const secs = timerSeconds % 60;
+      timerDisplay.textContent = `${pad(mins)}:${pad(secs)}`;
+    }, 1000);
+  }
+
+  function resetTimer() {
+    timerSeconds = 0;
+    timerDisplay.textContent = '00:00';
+  }
+
+  function updateSpeakerNotes() {
+    speakerSlideNum.textContent = String(currentIndex + 1);
+    const noteObj = SPEAKER_NOTES[currentIndex + 1] || { time: "", html: "<p>Sin notas.</p>" };
+    speakerTargetTime.textContent = noteObj.time;
+    speakerContent.innerHTML = noteObj.html;
+  }
+
+  function toggleSpeakerNotes(force) {
+    const isOpen = speakerDrawer.classList.contains('is-open');
+    const newState = force !== undefined ? force : !isOpen;
+    if (newState) {
+      updateSpeakerNotes();
+      speakerDrawer.classList.add('is-open');
+    } else {
+      speakerDrawer.classList.remove('is-open');
+    }
+  }
+
+  function toggleOverview(force) {
+    const isOpen = overviewModal.classList.contains('is-open');
+    const newState = force !== undefined ? force : !isOpen;
+    if (newState) {
+      buildOverviewGrid();
+      overviewModal.classList.add('is-open');
+    } else {
+      overviewModal.classList.remove('is-open');
+    }
+  }
+
+  function toggleHelp(force) {
+    const isOpen = helpModal.classList.contains('is-open');
+    const newState = force !== undefined ? force : !isOpen;
+    if (newState) {
+      helpModal.classList.add('is-open');
+    } else {
+      helpModal.classList.remove('is-open');
+    }
+  }
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else if (document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    }
+  }
+
+  // Event Listeners
+  btnNext.addEventListener('click', nextSlide);
+  btnPrev.addEventListener('click', prevSlide);
+  btnFullscreen.addEventListener('click', toggleFullscreen);
+  btnNotes.addEventListener('click', () => toggleSpeakerNotes());
+  speakerClose.addEventListener('click', () => toggleSpeakerNotes(false));
+  btnOverview.addEventListener('click', () => toggleOverview());
+  overviewClose.addEventListener('click', () => toggleOverview(false));
+  btnHelp.addEventListener('click', () => toggleHelp(true));
+  helpClose.addEventListener('click', () => toggleHelp(false));
+  timerBadge.addEventListener('click', resetTimer);
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (overviewModal.classList.contains('is-open')) { toggleOverview(false); return; }
+      if (helpModal.classList.contains('is-open')) { toggleHelp(false); return; }
+      if (speakerDrawer.classList.contains('is-open')) { toggleSpeakerNotes(false); return; }
+    }
+
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown' || e.key === 'Enter') {
+      e.preventDefault();
+      nextSlide();
+    } else if (e.key === 'ArrowLeft' || e.key === 'PageUp' || e.key === 'Backspace') {
+      e.preventDefault();
+      prevSlide();
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      goToSlide(0);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      goToSlide(TOTAL_SLIDES - 1);
+    } else if (e.key === 'f' || e.key === 'F') {
+      e.preventDefault();
+      toggleFullscreen();
+    } else if (e.key === 'n' || e.key === 'N') {
+      e.preventDefault();
+      toggleSpeakerNotes();
+    } else if (e.key === 'o' || e.key === 'O') {
+      e.preventDefault();
+      toggleOverview();
+    } else if (e.key === '?' || e.key === 'h' || e.key === 'H') {
+      e.preventDefault();
+      toggleHelp();
+    }
+  });
+
+  // Touch Swipe
+  let touchStartX = 0;
+  let touchStartY = 0;
+  window.addEventListener('touchstart', (e) => {
+    touchStartX = e.changedTouches[0].screenX;
+    touchStartY = e.changedTouches[0].screenY;
+  }, { passive: true });
+
+  window.addEventListener('touchend', (e) => {
+    const diffX = touchStartX - e.changedTouches[0].screenX;
+    const diffY = touchStartY - e.changedTouches[0].screenY;
+    if (Math.abs(diffX) > 45 && Math.abs(diffY) < 60) {
+      if (diffX > 0) nextSlide();
+      else prevSlide();
+    }
+  }, { passive: true });
+
+  function initFromHash() {
+    const hash = window.location.hash.replace('#', '');
+    const num = parseInt(hash, 10);
+    if (!isNaN(num) && num >= 1 && num <= TOTAL_SLIDES) {
+      updateSlide(num - 1);
+    } else {
+      updateSlide(0);
+    }
+  }
+
+  initFromHash();
+  startTimer();
+
+})();
+</script>
+</body>
+</html>

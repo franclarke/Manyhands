@@ -164,7 +164,3 @@ function leaf(key: string, title: string, objective: string, concern: string, in
 function evidence(id: string, reference: string, observation: string) {
   return { id, kind: "path" as const, reference, observation, confidence: 1 };
 }
-
-function flatten(root: WorkBreakdown["root"]): WorkBreakdown["root"][] {
-  return root.kind === "leaf" ? [root] : [root, ...root.children.flatMap(flatten)];
-}

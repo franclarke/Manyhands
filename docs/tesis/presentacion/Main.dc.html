@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }
+
+    :root {
+      --bg: oklch(0.16 0.012 60);
+      --bg-elevated: oklch(0.205 0.014 60);
+      --fg: oklch(0.96 0.008 80);
+      --fg-muted: oklch(0.68 0.014 70);
+      --fg-faint: oklch(0.46 0.012 65);
+      --accent: #e0a458;
+      --accent-cool: oklch(0.75 0.12 210);
+      --warn: oklch(0.72 0.14 40);
+      --line: oklch(0.34 0.012 60);
+      --radius: 16px;
+      --font-head: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+      --font-body: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+      --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: var(--font-body);
+    }
+    a { color: var(--accent); }
+    a:hover { color: var(--fg); }
+
+    .deck-root {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      background: var(--bg);
+      overflow: hidden;
+    }
+
+    .deck { position: relative; width: 100%; height: 100%; }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: clamp(2.2rem, 5vw, 5.5rem) clamp(2.6rem, 7vw, 7rem);
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity .55s cubic-bezier(.22,.61,.36,1), transform .55s cubic-bezier(.22,.61,.36,1);
+      pointer-events: none;
+    }
+    .slide.is-prev { transform: translateY(-28px); }
+    .slide.is-active { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .slide.is-active ~ .slide { z-index: 0; }
+
+    .slide-inner { max-width: 1180px; }
+    .slide-inner.narrow { max-width: 880px; }
+    .slide-inner.center { max-width: 980px; margin: 0 auto; text-align: center; }
+    .slide-center { align-items: center; }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin: 0 0 1.1rem;
+    }
+
+    .h1 {
+      font-family: var(--font-head);
+      font-weight: 600;
+      font-size: clamp(2rem, 3.6vw, 3.1rem);
+      line-height: 1.14;
+      letter-spacing: -0.01em;
+      margin: 0 0 1rem;
+      max-width: 20ch;
+    }
+
+    .lead {
+      font-family: var(--font-body);
+      font-weight: 400;
+      font-size: clamp(1.05rem, 1.7vw, 1.4rem);
+      line-height: 1.5;
+      color: var(--fg-muted);
+      margin: 0 0 0.6rem;
+      max-width: 44ch;
+    }
+
+    .muted { color: var(--fg-faint); }
+    .accent-text { color: var(--accent); font-weight: 500; }
+    .warn-text { color: var(--warn); font-weight: 500; }
+
+    .footnote {
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      color: var(--fg-faint);
+      margin-top: 1.4rem;
+    }
+
+    /* reveal animation */
+    @keyframes revealUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .reveal { opacity: 0; }
+    .slide.is-active .reveal {
+      animation: revealUp .6s cubic-bezier(.22,.61,.36,1) both;
+    }
+    .reveal-list > * { opacity: 0; }
+    .slide.is-active .reveal-list > * {
+      animation: revealUp .55s cubic-bezier(.22,.61,.36,1) both;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .slide, .reveal, .reveal-list > * { transition: none !important; animation: none !important; opacity: 1 !important; transform: none !important; }
+    }
+
+    /* cover / closing */
+    .cover-inner { max-width: 980px; }
+    .cover-title {
+      font-family: var(--font-head);
+      font-weight: 700;
+      font-size: clamp(3.2rem, 8vw, 6.2rem);
+      letter-spacing: -0.02em;
+      margin: 0 0 1.2rem;
+      color: var(--fg);
+    }
+    .cover-subtitle {
+      font-family: var(--font-body);
+      font-size: clamp(1rem, 1.5vw, 1.25rem);
+      color: var(--fg-muted);
+      max-width: 60ch;
+      line-height: 1.55;
+      margin: 0 0 2.4rem;
+    }
+    .cover-meta p { margin: 0.2rem 0; font-family: var(--font-mono); font-size: 0.92rem; color: var(--fg-muted); }
+    .cover-meta .muted { color: var(--fg-faint); }
+
+    .wordmark-reveal { margin-top: 2.4rem; }
+    .wordmark {
+      font-family: var(--font-head);
+      font-weight: 700;
+      font-size: clamp(2.6rem, 6vw, 4.6rem);
+      color: var(--accent);
+      letter-spacing: -0.02em;
+    }
+
+    /* mini mock (gancho slides) */
+    .mini-mock {
+      margin-top: 2.6rem;
+      width: min(420px, 90%);
+      height: 220px;
+      border-radius: var(--radius);
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      position: relative;
+      padding: 1.4rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .mini-mock .mock-line { height: 10px; border-radius: 5px; background: var(--line); }
+    .mini-mock .mock-line.short { width: 55%; }
+    .mini-mock .mock-btn {
+      align-self: flex-start;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: var(--bg);
+      background: var(--accent);
+      padding: 0.5rem 1rem;
+      border-radius: 999px;
+    }
+    .mock-badge {
+      position: absolute;
+      top: -14px; right: -14px;
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--bg);
+    }
+    .mock-badge svg { width: 20px; height: 20px; }
+
+    .mini-mock.scattered { justify-content: center; align-items: center; }
+    .scatter-svg { width: 100%; height: 100%; }
+
+    /* flow diagram */
+    .flow-row {
+      margin-top: 2.4rem;
+      display: flex;
+      align-items: center;
+      gap: 1.1rem;
+      flex-wrap: wrap;
+    }
+    .flow-box {
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      padding: 1rem 1.4rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: var(--bg-elevated);
+      color: var(--fg);
+    }
+    .flow-box.accent-box { border-color: var(--accent); color: var(--accent); }
+    .flow-arrow { width: 26px; height: 26px; color: var(--fg-faint); flex-shrink: 0; }
+
+    /* stepper */
+    .stepper {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 2.2rem;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .stepper-item { display: flex; align-items: center; gap: 0.55rem; color: var(--fg-faint); }
+    .stepper-item.is-current { color: var(--accent); }
+    .stepper-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--fg-faint); flex-shrink: 0; }
+    .stepper-item.is-current .stepper-dot { background: var(--accent); }
+    .stepper-sep { width: 22px; height: 1px; background: var(--line); }
+
+    .example-tag {
+      font-family: var(--font-mono);
+      font-size: clamp(1rem, 1.6vw, 1.25rem);
+      color: var(--fg);
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-left: 2px solid var(--accent);
+      padding: 0.9rem 1.2rem;
+      display: inline-block;
+      border-radius: 4px;
+      margin: 0.4rem 0 2.2rem;
+    }
+
+    /* check list */
+    .check-list { list-style: none; margin: 0.4rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.85rem; }
+    .check-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.7rem;
+      font-size: clamp(1rem, 1.5vw, 1.2rem);
+      color: var(--fg);
+      max-width: 46ch;
+    }
+    .check-list .num {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--accent);
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      width: 26px; height: 26px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+
+    /* split grid */
+    .split-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.2rem; max-width: 780px; margin-top: 0.5rem; }
+    .split-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 1.4rem 1.5rem;
+    }
+    .split-label { font-family: var(--font-mono); font-size: 0.85rem; color: var(--accent-cool); text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 0.5rem; }
+    .split-desc { font-size: 1.02rem; color: var(--fg); margin: 0; line-height: 1.45; }
+
+    .verdict-row { display: flex; gap: 0.7rem; margin-top: 1.3rem; flex-wrap: wrap; }
+    .check-pill {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      font-family: var(--font-mono); font-size: 0.85rem;
+      color: var(--fg);
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 0.42rem 0.85rem 0.42rem 0.6rem;
+    }
+    .check-pill svg { width: 14px; height: 14px; color: var(--accent); }
+    .verdict-line { font-family: var(--font-head); font-weight: 600; font-size: 1.3rem; color: var(--accent); margin-top: 1.2rem; }
+
+    /* feature rows */
+    .feature-rows { display: flex; flex-direction: column; gap: 1.3rem; margin-top: 0.6rem; max-width: 640px; }
+    .feature-row { display: flex; align-items: flex-start; gap: 1rem; }
+    .feature-icon {
+      width: 42px; height: 42px; flex-shrink: 0;
+      border-radius: 10px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--accent);
+    }
+    .feature-icon svg { width: 20px; height: 20px; }
+    .feature-title { font-family: var(--font-head); font-weight: 600; font-size: 1.08rem; margin: 0 0 0.25rem; color: var(--fg); }
+    .feature-desc { font-size: 0.98rem; color: var(--fg-muted); margin: 0; line-height: 1.5; max-width: 52ch; }
+
+    /* video placeholder */
+    .video-placeholder {
+      margin-top: 2rem;
+      width: min(680px, 90%);
+      aspect-ratio: 16 / 9;
+      border-radius: var(--radius);
+      border: 1px dashed var(--line);
+      background: var(--bg-elevated);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.9rem;
+      color: var(--fg-faint);
+    }
+    .video-placeholder .play-circle {
+      width: 62px; height: 62px;
+      border-radius: 50%;
+      border: 1.5px solid var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--accent);
+    }
+    .video-placeholder .play-circle svg { width: 22px; height: 22px; }
+    .video-placeholder p { font-family: var(--font-mono); font-size: 0.85rem; margin: 0; }
+
+    /* lessons */
+    .lesson-list { display: flex; flex-direction: column; gap: 1.6rem; max-width: 760px; }
+    .lesson {
+      font-family: var(--font-head);
+      font-weight: 500;
+      font-size: clamp(1.25rem, 2.2vw, 1.7rem);
+      line-height: 1.4;
+      color: var(--fg);
+      margin: 0;
+      padding-left: 1.2rem;
+      border-left: 2px solid var(--accent);
+    }
+
+    /* brand mark */
+    .brand-mark {
+      position: absolute;
+      top: 1.6rem; left: clamp(2.6rem, 7vw, 7rem);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--fg-faint);
+      z-index: 5;
+    }
+
+    /* nav bar */
+    .nav-bar {
+      position: absolute;
+      bottom: 1.4rem;
+      right: clamp(2.2rem, 6vw, 6rem);
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      z-index: 10;
+    }
+    .nav-btn {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      border: 1px solid var(--line);
+      background: var(--bg-elevated);
+      color: var(--fg);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: border-color .2s, color .2s, opacity .2s;
+    }
+    .nav-btn svg { width: 18px; height: 18px; }
+    .nav-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .nav-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .nav-btn:disabled { opacity: 0.32; cursor: default; }
+    .nav-counter { font-family: var(--font-mono); font-size: 0.85rem; color: var(--fg-faint); min-width: 64px; text-align: center; }
+
+    .nav-progress {
+      position: absolute;
+      left: 0; bottom: 0;
+      width: 100%; height: 3px;
+      background: var(--line);
+      z-index: 9;
+    }
+    .nav-progress-fill {
+      height: 100%;
+      width: 7.14%;
+      background: var(--accent);
+      transition: width .5s cubic-bezier(.22,.61,.36,1);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .nav-progress-fill { transition: none; }
+    }
+  </style>
+</helmet>
+
+<div class="deck-root" style="--accent: {{accentColor}};">
+  <p class="sr-status" aria-live="polite" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;">{{statusText}}</p>
+
+  <div class="deck">
+
+    <section class="slide {{s1cls}}" id="slide-1" aria-hidden="{{s1hidden}}">
+      <div class="cover-inner">
+        <p class="eyebrow reveal">Universidad Nacional del Sur · Ingeniería en Sistemas de Información</p>
+        <h1 class="cover-title reveal" style="animation-delay:.1s">ManyHands</h1>
+        <p class="cover-subtitle reveal" style="animation-delay:.2s">Orquestación de agentes de lenguaje para el desarrollo de software: una política de descomposición adaptativa con verificación basada en evidencia</p>
+        <div class="cover-meta reveal" style="animation-delay:.32s">
+          <p>Francisco Clarke</p>
+          <p class="muted">Dirección: Dra. Ana Gabriela Maguitman · Dr. Federico Martín Schmidt</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide {{s2cls}}" id="slide-2" aria-hidden="{{s2hidden}}">
+      <div class="slide-inner narrow">
+        <p class="eyebrow reveal">Empecemos por algo que ya conocés</p>
+        <h2 class="h1 reveal" style="animation-delay:.08s">Pedile a una IA que te agregue un botón.</h2>
+        <p class="lead reveal accent-text" style="animation-delay:.2s">Lo hace bien. Rápido. Sin drama.</p>
+        <div class="mini-mock reveal" style="animation-delay:.34s">
+          <div class="mock-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 13 10 18 19 7"></polyline></svg>
+          </div>
+          <div class="mock-line"></div>
+          <div class="mock-line short"></div>
+          <span class="mock-btn">Agregar al carrito</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide {{s3cls}}" id="slide-3" aria-hidden="{{s3hidden}}">
+      <div class="slide-inner narrow">
+        <p class="eyebrow reveal">Ahora pedile esto</p>
+        <h2 class="h1 reveal" style="animation-delay:.08s">Pedile que rehaga todo el sistema de pagos.</h2>
+        <p class="lead reveal warn-text" style="animation-delay:.2s">Ahí empieza el problema.</p>
+        <div class="mini-mock scattered reveal" style="animation-delay:.34s">
+          <svg class="scatter-svg" viewBox="0 0 400 200" fill="none">
+            <line x1="60" y1="50" x2="180" y2="140" stroke="var(--line)" stroke-width="1.5"/>
+            <line x1="180" y1="140" x2="300" y2="60" stroke="var(--warn)" stroke-width="1.5"/>
+            <line x1="120" y1="150" x2="260" y2="40" stroke="var(--line)" stroke-width="1.5"/>
+            <line x1="60" y1="50" x2="260" y2="40" stroke="var(--warn)" stroke-width="1.5"/>
+            <circle cx="60" cy="50" r="7" fill="var(--fg-faint)"/>
+            <circle cx="180" cy="140" r="7" fill="var(--warn)"/>
+            <circle cx="300" cy="60" r="7" fill="var(--fg-faint)"/>
+            <circle cx="120" cy="150" r="7" fill="var(--fg-faint)"/>
+            <circle cx="260" cy="40" r="7" fill="var(--warn)"/>
+            <circle cx="340" cy="130" r="7" fill="var(--fg-faint)"/>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide slide-center {{s4cls}}" id="slide-4" aria-hidden="{{s4hidden}}">
+      <div class="slide-inner center">
+        <p class="h1 reveal" style="margin:0 auto;">¿Y si en vez de una sola IA hubiera varias, coordinadas?</p>
+        <div class="wordmark-reveal reveal" style="animation-delay:.4s">
+          <span class="wordmark">ManyHands</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide {{s5cls}}" id="slide-5" aria-hidden="{{s5hidden}}">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">Qué es</p>
+        <h2 class="h1 reveal" style="animation-delay:.08s">Coordina agentes de IA para llevar un objetivo de software de punta a punta.</h2>
+        <p class="lead reveal" style="animation-delay:.2s">Vos definís qué querés lograr. El sistema planifica, ejecuta y valida el resultado — sin que tengas que mirar cada paso.</p>
+        <div class="flow-row reveal" style="animation-delay:.34s">
+          <div class="flow-box">Objetivo</div>
+          <svg class="flow-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="12" x2="20" y2="12"></line><polyline points="13 5 20 12 13 19"></polyline></svg>
+          <div class="flow-box accent-box">ManyHands</div>
+          <svg class="flow-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="12" x2="20" y2="12"></line><polyline points="13 5 20 12 13 19"></polyline></svg>
+          <div class="flow-box">Resultado validado</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide {{s6cls}}" id="slide-6" aria-hidden="{{s6hidden}}">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">Para verlo en concreto</p>
+        <h2 class="h1 reveal" style="animation-delay:.08s">Sigamos un pedido real, de punta a punta:</h2>
+        <p class="example-tag reveal" style="animation-delay:.2s">&ldquo;Agregar inicio de sesión con Google a una app.&rdquo;</p>
+        <div class="stepper reveal" style="animation-delay:.34s">
+          <div class="stepper-item"><span class="stepper-dot"></span>Planificación</div>
+          <div class="stepper-sep"></div>
+          <div class="stepper-item"><span class="stepper-dot"></span>Ejecución</div>
+          <div class="stepper-sep"></div>
+          <div class="stepper-item"><span class="stepper-dot"></span>Integración</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide {{s7cls}}" id="slide-7" aria-hidden="{{s7hidden}}">
+      <div class="slide-inner">
+        <div class="stepper">
+          <div class="stepper-item is-current"><span class="stepper-dot"></span>Planificación</div>
+          <div class="stepper-sep"></div>
+          <div class="stepper-item"><span class="stepper-dot"></span>Ejecución</div>
+          <div class="stepper-sep"></div>
+          <div class="stepper-item"><span class="stepper-dot"></span>Integración</div>
+        </div>
+        <h2 class="h1 reveal" style="animation-delay:.1s">¿Cuándo conviene partir una tarea en piezas más chicas?</h2>
+        <p class="lead reveal" style="animation-delay:.2s">Sin puntajes. Sin umbrales ajustados a mano. Tres preguntas concretas:</p>
+        <ol class="check-list reveal-list">
+          <li style="animation-delay:.32s"><span class="num">1</span>¿Es demasiado grande para resolverla de una sola vez?</li>
+          <li style="animation-delay:.44s"><span class="num">2</span>¿Partirla deja que dos piezas avancen al mismo tiempo?</li>
+          <li style="animation-delay:.56s"><span class="num">3</span>¿Se puede comprobar que cada pieza funciona, por separado?</li>
+        </ol>
+        <p class="footnote reveal" style="animation-delay:.7s">Si ninguna es cierta, no se parte.</p>
+      </div>
+    </section>
+
+    <section class="slide {{s8cls}}" id="slide-8" aria-hidden="{{s8hidden}}">
+      <div class="slide-inner">
+        <div class="stepper">
+          <div class="stepper-item is-current"><span class="stepper-dot"></span>Planificación</div>
+          <div class="stepper-sep"></div>
+          <div class="stepper-item"><span class="stepper-dot"></span>Ejecución</div>
+          <div class="stepper-sep"></div>
+          <div class="stepper-item"><span class="stepper-dot"></span>Integración</div>
+        </div>
+        <h2 class="h1 reveal" style="animation-delay:.08s">Login con Google, a la luz de esas tres preguntas</h2>
+        <div class="split-grid reveal" style="animation-delay:.2s">
+          <div class="split-card">
+            <p class="split-label">Backend</p>
+            <p class="split-desc">Habla con la API de Google y guarda la sesión.</p>
+          </div>
+          <div class="split-card">
+            <p class="split-label">Frontend</p>
+            <p class="split-desc">Muestra el botón y la pantalla de inicio de sesión.</p>
+          </div>
+        </div>
+        <div class="verdict-row reveal" style="animation-delay:.34s">
+          <span class="check-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 13 10 18 19 7"></polyline></svg>avanzan en paralelo</span>
+          <span class="check-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 13 10 18 19 7"></polyline></svg>se prueban por separado</span>
+        </div>
+        <p class="verdict-line reveal" style="animation-delay:.46s">→ Se parte en dos piezas.</p>
+      </div>
+    </section>
+
+    <section class="slide {{s9cls}}" id="slide-9" aria-hidden="{{s9hidden}}">
+      <div class="slide-inner">
+        <div class="stepper">
+          <div class="stepper-item"><span class="stepper-dot"></span>Planificación</div>
+          <div class="stepper-sep"></div>
+          <div class="stepper-item is-current"><span class="stepper-dot"></span>Ejecución</div>
+          <div class="stepper-sep"></div>
+          <div class="stepper-item"><span class="stepper-dot"></span>Integración</div>
+        </div>
+        <h2 class="h1 reveal" style="animation-delay:.08s">Cada pieza corre en su propia copia del código</h2>
+        <div class="feature-rows reveal-list">
+          <div class="feature-row" style="animation-delay:.2s">
+            <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"></path></svg></div>
+            <div><p class="feature-title">Aislamiento real</p><p class="feature-desc">El agente del backend y el del frontend nunca pisan el trabajo del otro.</p></div>
+          </div>
+          <div class="feature-row" style="animation-delay:.34s">
+            <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="8 12.5 10.8 15.5 16 9"></polyline></svg></div>
+            <div><p class="feature-title">Nada se acepta a ciegas</p><p class="feature-desc">Antes de aceptar que un test prueba algo, tiene que fallar contra el código anterior. Si un test siempre da bien, no cuenta como prueba.</p></div>
+          </div>
+          <div class="feature-row" style="animation-delay:.48s">
+            <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"></circle><path d="M11 12l9-9M17 3l3 3M14 6l2.5 2.5"></path></svg></div>
+            <div><p class="feature-title">Credenciales de un solo uso</p><p class="feature-desc">Se generan para ese intento puntual y se descartan al terminar.</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide {{s10cls}}" id="slide-10" aria-hidden="{{s10hidden}}">
+      <div class="slide-inner">
+        <div class="stepper">
+          <div class="stepper-item"><span class="stepper-dot"></span>Planificación</div>
+          <div class="stepper-sep"></div>
+          <div class="stepper-item"><span class="stepper-dot"></span>Ejecución</div>
+          <div class="stepper-sep"></div>
+          <div class="stepper-item is-current"><span class="stepper-dot"></span>Integración</div>
+        </div>
+        <h2 class="h1 reveal" style="animation-delay:.08s">Antes de publicar, se revisa que nada haya cambiado</h2>
+        <p class="lead reveal" style="animation-delay:.2s">Si alguien más movió el código mientras tanto, el sistema no lo pisa: se detiene y vuelve a mirar.</p>
+        <p class="lead reveal" style="animation-delay:.32s">La entrega es todo o nada — nunca queda a mitad de camino.</p>
+      </div>
+    </section>
+
+    <section class="slide slide-center {{s11cls}}" id="slide-11" aria-hidden="{{s11hidden}}">
+      <div class="slide-inner center">
+        <p class="eyebrow reveal">En la práctica</p>
+        <h2 class="h1 reveal" style="margin:0 auto 1rem; animation-delay:.08s">Así se ve corriendo</h2>
+        <div class="video-placeholder reveal" style="animation-delay:.22s">
+          <div class="play-circle">
+            <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="8 5 19 12 8 19 8 5"></polygon></svg>
+          </div>
+          <p>Video del run real — pendiente de grabar</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide {{s12cls}}" id="slide-12" aria-hidden="{{s12hidden}}">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">Con honestidad</p>
+        <h2 class="h1 reveal" style="animation-delay:.08s">¿Puede decidir todo esto completamente solo?</h2>
+        <p class="lead reveal" style="animation-delay:.2s">Sabe decidir <span class="accent-text">si</span> conviene partir una tarea, sin números inventados.</p>
+        <p class="lead reveal" style="animation-delay:.32s">Todavía no sabe imaginar <span class="accent-text">por dónde</span> partirla, si nadie se lo sugiere.</p>
+      </div>
+    </section>
+
+    <section class="slide {{s13cls}}" id="slide-13" aria-hidden="{{s13hidden}}">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">Para llevarse</p>
+        <div class="lesson-list reveal-list">
+          <p class="lesson" style="animation-delay:.16s">Un &ldquo;ya terminé&rdquo; del modelo no alcanza — lo que cuenta es la evidencia real.</p>
+          <p class="lesson" style="animation-delay:.34s">Los acuerdos claros entre agentes escalan mejor que la charla libre.</p>
+          <p class="lesson" style="animation-delay:.52s">Una regla simple le gana a un puntaje complicado e inventado.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide slide-center {{s14cls}}" id="slide-14" aria-hidden="{{s14hidden}}">
+      <div class="slide-inner center">
+        <h2 class="cover-title reveal" style="margin:0 auto 0.8rem;">Gracias.</h2>
+        <p class="lead reveal" style="margin:0 auto 1.6rem; animation-delay:.15s">Preguntas.</p>
+        <p class="cover-meta muted reveal" style="animation-delay:.3s">Francisco Clarke · ManyHands · Universidad Nacional del Sur</p>
+      </div>
+    </section>
+
+  </div>
+
+  <p class="brand-mark">ManyHands · Defensa de tesis</p>
+
+  <nav class="nav-bar" aria-label="Navegación de diapositivas">
+    <button type="button" class="nav-btn nav-prev" aria-label="Diapositiva anterior" onClick="{{prev}}" disabled="{{isFirst}}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="20" y1="12" x2="4" y2="12"></line><polyline points="11 5 4 12 11 19"></polyline></svg>
+    </button>
+    <span class="nav-counter" aria-hidden="true">{{counterText}}</span>
+    <button type="button" class="nav-btn nav-next" aria-label="Diapositiva siguiente" onClick="{{next}}" disabled="{{isLast}}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="12" x2="20" y2="12"></line><polyline points="13 5 20 12 13 19"></polyline></svg>
+    </button>
+  </nav>
+  <div class="nav-progress"><div class="nav-progress-fill" style="width: {{progressPct}}%;"></div></div>
+</div>
+
+</x-dc>
+<script data-dc-script data-props='{"$preview": {"width": 1600, "height": 900}, "accentColor": {"editor": "color", "default": "#e0a458", "section": "Estilo"}}'>
+var TOTAL_SLIDES = 14;
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { index: 0 };
+  }
+
+  renderVals() {
+    var idx = this.state && typeof this.state.index === 'number' ? this.state.index : 0;
+    var self = this;
+    function pad(n) { return n < 10 ? '0' + n : String(n); }
+    function clamp(n) { return Math.max(0, Math.min(TOTAL_SLIDES - 1, n)); }
+
+    var vals = {
+      accentColor: this.props.accentColor ?? '#e0a458',
+      counterText: pad(idx + 1) + ' / ' + pad(TOTAL_SLIDES),
+      progressPct: Math.round(((idx + 1) / TOTAL_SLIDES) * 1000) / 10,
+      isFirst: idx === 0,
+      isLast: idx === TOTAL_SLIDES - 1,
+      statusText: 'Diapositiva ' + (idx + 1) + ' de ' + TOTAL_SLIDES,
+      prev: function () { self.setState({ index: clamp(idx - 1) }); },
+      next: function () { self.setState({ index: clamp(idx + 1) }); }
+    };
+
+    for (var i = 1; i <= TOTAL_SLIDES; i++) {
+      var slidePos = i - 1;
+      vals['s' + i + 'cls'] = slidePos === idx ? 'is-active' : (slidePos < idx ? 'is-prev' : '');
+      vals['s' + i + 'hidden'] = slidePos === idx ? 'false' : 'true';
+    }
+
+    return vals;
+  }
+
+  componentDidMount() {
+    var self = this;
+    function clamp(n) { return Math.max(0, Math.min(TOTAL_SLIDES - 1, n)); }
+    this._onKey = function (e) {
+      var idx = self.state && typeof self.state.index === 'number' ? self.state.index : 0;
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); self.setState({ index: clamp(idx + 1) }); }
+      else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); self.setState({ index: clamp(idx - 1) }); }
+      else if (e.key === 'Home') { e.preventDefault(); self.setState({ index: 0 }); }
+      else if (e.key === 'End') { e.preventDefault(); self.setState({ index: TOTAL_SLIDES - 1 }); }
+    };
+    document.addEventListener('keydown', this._onKey);
+  }
+
+  componentWillUnmount() {
+    if (this._onKey) document.removeEventListener('keydown', this._onKey);
+  }
+}
+</script>
+</body>
+</html>

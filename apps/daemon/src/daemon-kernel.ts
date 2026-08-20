@@ -4,7 +4,8 @@ import type { DigestHasher } from "@manyhands/contracts";
 import {
   IpcJsonValueSchema,
   type IpcCapabilityOsProtection,
-  type IpcJsonValue
+  type IpcJsonValue,
+  type RunProjection
 } from "@manyhands/run-coordinator";
 import {
   DurableRunEngine,
@@ -27,6 +28,8 @@ import {
   type ProcessIdentityProbe
 } from "./installation-lease.js";
 import { ensureInstallationCapability } from "./installation-capability.js";
+import { readNodeActivity } from "./node-activity.js";
+import { purgeAllBrokeredCredentials } from "@manyhands/execution-core";
 import {
   startLocalIpcServer,
   type LocalIpcServer,
@@ -169,6 +172,7 @@ export async function startDaemonKernel(
     // A command that arrives for a run already recovering joins the same actor
     // through the registry's in-flight promise rather than racing it.
     const startupRecovery = (async () => {
+      await purgeAllBrokeredCredentials(path.join(stateRoot, "credential-broker")).catch(() => undefined);
       for (const runId of runIds) await registry.getOrCreate(runId);
     })();
     startupRecovery.catch((error: unknown) => {
@@ -187,6 +191,20 @@ export async function startDaemonKernel(
         async query(input) {
           if (input.query === "projection" && input.arguments === undefined) {
             return asIpcJson(await engine.query(input.runId));
+          }
+          if (input.query === "activity") {
+            const args = input.arguments ?? {};
+            const nodeId = (args as Record<string, unknown>).nodeId;
+            const afterIndex = (args as Record<string, unknown>).afterIndex;
+            if (typeof nodeId !== "string" || nodeId.length === 0) {
+              throw new Error("The activity query requires a nodeId.");
+            }
+            return asIpcJson(readNodeActivity({
+              stateRoot,
+              runId: input.runId,
+              nodeId,
+              afterIndex: typeof afterIndex === "number" ? afterIndex : 0
+            }));
           }
           if (input.query === "list") {
             if (input.runId !== "installation:runs") {
@@ -300,12 +318,22 @@ async function listRunProjections(
   const statuses = optionalStringArray(argumentsRecord.statuses, "statuses");
   const limit = optionalPositiveInteger(argumentsRecord.limit, "limit") ?? 50;
   const runIds = await eventStore.listRunIds({ limit: 100_000 });
-  const projections = await Promise.all(runIds.map((runId) => engine.query(runId)));
-  return projections
-    .filter((projection) => projection.definition !== undefined)
-    .filter((projection) => workspaceId === undefined || projection.definition?.workspaceId === workspaceId)
-    .filter((projection) => includeArchived || projection.archivedAt === undefined)
-    .filter((projection) => statuses === undefined || statuses.includes(projection.lifecycle))
+  const results: RunProjection[] = [];
+  const batchSize = 8;
+  for (let i = 0; i < runIds.length; i += batchSize) {
+    const batch = runIds.slice(i, i + batchSize);
+    const projections = await Promise.all(
+      batch.map((runId) => engine.query(runId).catch(() => undefined))
+    );
+    for (const projection of projections) {
+      if (!projection || projection.definition === undefined) continue;
+      if (workspaceId !== undefined && projection.definition.workspaceId !== workspaceId) continue;
+      if (!includeArchived && projection.archivedAt !== undefined) continue;
+      if (statuses !== undefined && !statuses.includes(projection.lifecycle)) continue;
+      results.push(projection);
+    }
+  }
+  return results
     .sort((left, right) => {
       const leftAt = left.createdAt;
       const rightAt = right.createdAt;

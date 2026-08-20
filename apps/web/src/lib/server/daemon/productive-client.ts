@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { promisify } from "node:util";
 
@@ -73,6 +74,48 @@ export async function readProductRunEvents(
   return {
     events: result.events.map((event) => RunEventSchema.parse(event)),
     nextSequence: result.nextSequence
+  };
+}
+
+export interface NodeActivityEntry {
+  index: number;
+  type: string;
+  timestamp: string;
+  text: string;
+}
+
+export interface NodeActivityPage {
+  entries: NodeActivityEntry[];
+  nextIndex: number;
+}
+
+/**
+ * What the agent behind one node is doing. The daemon owns the traces; this is
+ * a read, so the web never opens the trace file itself.
+ */
+export async function readNodeActivity(
+  runId: string,
+  nodeId: string,
+  afterIndex: number
+): Promise<NodeActivityPage> {
+  const result = await client().query({
+    runId,
+    query: "activity",
+    arguments: { nodeId, afterIndex } as IpcJsonValue & Record<string, IpcJsonValue>
+  });
+  if (!isRecord(result) || !Array.isArray(result.entries)
+    || typeof result.nextIndex !== "number" || !Number.isInteger(result.nextIndex)) {
+    throw new TypeError("Daemon activity response is invalid.");
+  }
+  return {
+    entries: result.entries.flatMap((entry) => isRecord(entry)
+      && typeof entry.index === "number"
+      && typeof entry.type === "string"
+      && typeof entry.timestamp === "string"
+      && typeof entry.text === "string"
+      ? [{ index: entry.index, type: entry.type, timestamp: entry.timestamp, text: entry.text }]
+      : []),
+    nextIndex: result.nextIndex
   };
 }
 
@@ -151,14 +194,26 @@ function replayEnvelope(previous: RunCommandEnvelope, command: ProductRunCommand
   }, sha256Digest);
 }
 
+function resolveStateRoot(): string {
+  if (process.env.MANYHANDS_DAEMON_STATE_ROOT) {
+    return path.resolve(process.env.MANYHANDS_DAEMON_STATE_ROOT);
+  }
+  const direct = path.resolve(".manyhands/daemon");
+  if (existsSync(direct)) return direct;
+  const parent = path.resolve("..", "..", ".manyhands/daemon");
+  if (existsSync(parent)) return parent;
+  return direct;
+}
+
 function client(): LocalIpcClient {
-  const stateRoot = path.resolve(process.env.MANYHANDS_DAEMON_STATE_ROOT ?? ".manyhands/daemon");
+  const stateRoot = resolveStateRoot();
   const endpoint = process.env.MANYHANDS_DAEMON_ENDPOINT ?? defaultEndpoint(stateRoot);
   const helper = optionalAbsoluteEnv("MANYHANDS_WINDOWS_IPC_ACL_HELPER");
   return createLocalIpcClient({
     endpoint,
     capabilityFilePath: path.join(stateRoot, "installation", "ipc-capability"),
     production: process.env.NODE_ENV === "production",
+    socketTimeoutMs: 60_000,
     ...(helper === undefined ? {} : { assertOsRestrictedCapabilityPath: createAclVerifier(helper) })
   });
 }

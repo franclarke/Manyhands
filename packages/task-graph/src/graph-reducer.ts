@@ -15,7 +15,7 @@ export function deepFreeze<T>(obj: T): T {
   if (Object.isFrozen(obj)) return obj;
   Object.freeze(obj);
   for (const key of Object.getOwnPropertyNames(obj)) {
-    const val = (obj as any)[key];
+    const val = Reflect.get(obj as object, key);
     if (val !== null && (typeof val === "object" || typeof val === "function")) {
       deepFreeze(val);
     }

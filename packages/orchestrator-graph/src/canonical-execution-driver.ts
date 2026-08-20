@@ -67,8 +67,24 @@ export type CanonicalNodeExecutionOutcome =
       finalManifestId?: string;
       finalManifest?: FinalArtifactManifest;
     }
-  | { kind: "needs_input"; reason: string; unmaterializedObligationIds: string[] }
+  | {
+    kind: "needs_input";
+    reason: string;
+    unmaterializedObligationIds: string[];
+    unmaterialized?: ExecutionBlocker[];
+  }
   | { kind: "failure"; reason: string; usage?: AttemptUsage };
+
+/**
+ * Why a node could not even start. A blocker is deterministic in the node's
+ * contract: the same attempt run again computes the same answer, so an operator
+ * offered "retry" is offered nothing at all.
+ */
+export interface ExecutionBlocker {
+  obligationId: string;
+  cause: "evidence_missing" | "shared_evidence_invalid" | "capability_missing";
+  detail: string;
+}
 
 export interface CanonicalExecutionDriverOptions {
   coordinator: RunCoordinator;
@@ -273,14 +289,16 @@ export class CanonicalExecutionDriver {
   ): Promise<RunProjection> {
     const at = this.options.now();
     if (outcome.kind === "failure" || outcome.kind === "needs_input") {
+      const blockers = outcome.kind === "needs_input" ? outcome.unmaterialized ?? [] : [];
       return this.options.coordinator.record(run.runId, [
         fact(`${attempt.input.attemptId}:failed`, at, "attempt.failed", {
           attemptId: attempt.input.attemptId,
           nodeId: attempt.input.node.id,
           reason: outcome.reason,
+          ...(blockers.length === 0 ? {} : { blockers }),
           ...(outcome.kind === "failure" && outcome.usage !== undefined ? { usage: outcome.usage } : {})
         }),
-        decisionFact(attempt, at, outcome.reason)
+        decisionFact(attempt, at, outcome.reason, blockers)
       ]);
     }
     // Authority is checked before adoption, not inside the executor: adoption is
@@ -581,7 +599,12 @@ function fact<T extends RunEventInput["type"]>(
  * The decision is addressed to whoever can fix the failure, which for a
  * composite is usually one of its children rather than the composite itself.
  */
-function decisionFact(attempt: PreparedAttempt, at: string, reason: string): RunEventInput {
+function decisionFact(
+  attempt: PreparedAttempt,
+  at: string,
+  reason: string,
+  blockers: readonly ExecutionBlocker[] = []
+): RunEventInput {
   const route = routeRepair({
     failedNodeId: attempt.input.node.id,
     failureReason: reason,
@@ -601,8 +624,17 @@ function decisionFact(attempt: PreparedAttempt, at: string, reason: string): Run
     ...(route.kind === "retry_node" ? [route.nodeId] : [])
   ])].sort();
   const repairTargetNodeId = route.kind === "retry_node" ? route.nodeId : undefined;
-  const kind = route.kind === "amend_plan" ? "approve_amendment" as const : "resolve_conflict" as const;
-  const options = route.kind === "amend_plan"
+  // A blocked node never ran, so there is no attempt to repeat: the check that
+  // stopped it reads the contract and the repository, both unchanged by a
+  // retry. Offering one spends an operator's decision on a certainty.
+  const blocked = blockers.length > 0;
+  const kind = blocked || route.kind === "amend_plan" ? "approve_amendment" as const : "resolve_conflict" as const;
+  const options = blocked
+    ? [
+      { id: "amend", label: "Amend the plan" },
+      { id: "stop", label: "Stop this work" }
+    ]
+    : route.kind === "amend_plan"
     ? [
       { id: "amend", label: "Amend the plan" },
       { id: "stop", label: "Stop this work" }
@@ -620,8 +652,11 @@ function decisionFact(attempt: PreparedAttempt, at: string, reason: string): Run
     decision: {
       id: `${attempt.input.attemptId}:decision`,
       kind,
-      question: `Execution for ${attempt.input.node.title} requires guidance: ${reason}`,
+      question: blocked
+        ? `${attempt.input.node.title} cannot start: ${reason}`
+        : `Execution for ${attempt.input.node.title} requires guidance: ${reason}`,
       options,
+      ...(blocked ? { blockers: [...blockers] } : {}),
       affectedNodeIds,
       ...(repairTargetNodeId === undefined ? {} : { repairTargetNodeId }),
       evidenceRefs: [attempt.input.attemptId, `input-fingerprint:${attempt.input.inputFingerprint}`],

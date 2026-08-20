@@ -34,6 +34,52 @@ const capabilities: RepositoryCapabilities = {
   stack: [{ name: "vitest", confidence: 1, evidence: ["package.json dependency vitest"] }]
 };
 
+/**
+ * A live run stopped every leaf with `Required validation obligations cannot be
+ * materialized: validation:domain-unit.` and offered a retry that could not
+ * change anything. The recipe knew two different reasons — the obligation
+ * carried no usable evidence, or the repository has no command able to run it —
+ * and reported both as a bare list of ids, so the operator saw neither the
+ * cause nor the remedy.
+ */
+describe("Why an obligation cannot be materialized", () => {
+  const unitObligation = {
+    id: "obligation-unit", criterionId: "criterion-unit", layer: "unit", severity: "required",
+    acceptableEvidence: ["test_result"], baselinePolicy: "optional", negativeControl: "not_required",
+    flakyPolicy: "forbid",
+    evidence: { kind: "focused_command", selectors: ["tests/a.test.ts"], references: ["tests/a.test.ts"] }
+  };
+
+  it("reports evidence the plan never attached", () => {
+    const bare = { ...contract, obligations: [{ ...unitObligation, evidence: undefined }] } as ValidationContract;
+    const prepared = prepareValidationRecipe({ contract: bare, capabilities, repositorySnapshotId: "snapshot-1" });
+
+    expect(prepared.unmaterialized).toEqual([{
+      obligationId: "obligation-unit",
+      cause: "evidence_missing",
+      detail: "The plan attached no evidence to this obligation, so there is nothing to execute."
+    }]);
+    expect(prepared.unmaterializedObligationIds).toEqual(["obligation-unit"]);
+  });
+
+  it("reports a repository with no command able to run the obligation", () => {
+    // A greenfield repository has no package manifest, so it has no commands,
+    // and no leaf can ever be validated until one exists.
+    const empty = { ...capabilities, scripts: {}, baselineCommands: [] } as RepositoryCapabilities;
+    const prepared = prepareValidationRecipe({
+      contract: { ...contract, obligations: [unitObligation] } as ValidationContract,
+      capabilities: empty,
+      repositorySnapshotId: "snapshot-1"
+    });
+
+    expect(prepared.unmaterialized).toEqual([{
+      obligationId: "obligation-unit",
+      cause: "capability_missing",
+      detail: "The repository declares no test command, so this obligation has nothing to run."
+    }]);
+  });
+});
+
 describe("compileValidationRecipe", () => {
   it("uses observed repository capabilities and preserves obligation identities", () => {
     const recipe = compileValidationRecipe({ contract, capabilities, repositorySnapshotId: "snapshot-1", candidateCommit: "abc", baselineCommit: "base" });

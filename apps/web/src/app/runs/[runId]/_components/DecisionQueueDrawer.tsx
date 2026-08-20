@@ -11,6 +11,22 @@ import { SideBySideDiffViewer } from "./SideBySideDiffViewer";
 
 type Decision = NonNullable<RunModel["projection"]>["decisions"][string];
 
+/**
+ * What the operator can actually do about a blocker.
+ *
+ * A blocked node never ran, so the failure is not in a candidate to inspect but
+ * in the contract or the repository. Naming the remedy is the difference
+ * between a dialog that informs and one that only restates the error.
+ */
+const BLOCKER_REMEDY: Record<string, string> = {
+  capability_missing:
+    "El repositorio no declara ese comando, así que no hay nada que ejecutar. Necesita un manifiesto con ese script antes de que este nodo pueda validarse.",
+  evidence_missing:
+    "El plan no dijo con qué comando se prueba esta obligación. Hay que enmendar el plan para que la declare.",
+  shared_evidence_invalid:
+    "La evidencia compartida no coincide con todas las obligaciones que cubre. Hay que enmendar el plan para que sea idéntica en cada una."
+};
+
 export function DecisionQueueDrawer({
   decisions,
   model,
@@ -93,6 +109,7 @@ function DecisionDialog({
   onResolve: (optionId: string) => void;
 }): React.ReactElement {
   const blocked = affectedSubgraphNodeIds(model.nodes, decision.affectedNodeIds);
+  const blockers = decision.blockers ?? [];
   const affectedNames = [...blocked].map((nodeId) => model.nodes.find((node) => node.id === nodeId)?.title ?? nodeId);
   const fallbackComparison = useMemo(
     () => candidateComparison(model.events, decision.affectedNodeIds),
@@ -142,7 +159,28 @@ function DecisionDialog({
           </div>
         </section>
 
-        <div>
+        {blockers.length > 0 ? (
+          <section className="rounded-xl border border-[var(--status-blocked-border,var(--color-border))] bg-[var(--color-bg-subtle)] p-3">
+            <h3 className="text-xs font-semibold text-[var(--color-text)]">Por qué no puede empezar</h3>
+            <p className="mt-1 text-micro leading-5 text-[var(--color-text-muted)]">
+              El nodo no llegó a ejecutarse, así que no hay intento que repetir: esta comprobación lee el contrato y el
+              repositorio, y volver a correrla da el mismo resultado.
+            </p>
+            <ul className="mt-2 grid gap-2">
+              {blockers.map((blocker) => (
+                <li key={blocker.obligationId} className="rounded-lg border border-[var(--color-border)] p-3">
+                  <code className="text-micro text-[var(--color-text-subtle)]">{blocker.obligationId}</code>
+                  <p className="mt-1 text-xs leading-5 text-[var(--color-text)]">{blocker.detail}</p>
+                  <p className="mt-1 text-micro leading-5 text-[var(--color-text-muted)]">
+                    {BLOCKER_REMEDY[blocker.cause] ?? "Hay que enmendar el plan."}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        <div hidden={blockers.length > 0}>
           <div className="mb-2 flex items-center gap-2">
             <GitCompareArrows aria-hidden className="h-4 w-4 text-[var(--color-accent)]" />
             <h3 className="text-xs font-semibold">Diff del candidato propuesto</h3>

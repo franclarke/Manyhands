@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import type { ChildProcess, SpawnOptions } from "node:child_process";
+import type { ChildProcess, SpawnOptions, spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
 
 /**
@@ -46,11 +46,11 @@ describe("B-009 decomposer env sanitization", () => {
 
     const decomposer = new ClaudeCodeRecursiveDecomposer({
       cwd: "/tmp/test",
-      spawnFn: makeMockSpawn(capturedEnvs) as any,
+      spawn: makeMockSpawn(capturedEnvs) as unknown as typeof spawn,
       agentEnv: filteredEnv,
       model: "claude-sonnet-4-20250514",
       userPrompt: "test prompt"
-    } as any);
+    });
 
     // Verify the agentEnv is stored (not process.env)
     expect(decomposer).toBeDefined();
@@ -68,11 +68,11 @@ describe("B-009 decomposer env sanitization", () => {
 
     const decomposer = new CodexRecursiveDecomposer({
       cwd: "/tmp/test",
-      spawnFn: vi.fn() as any,
+      spawn: vi.fn() as unknown as typeof spawn,
       agentEnv: filteredEnv,
       model: "codex-mini",
       userPrompt: "test prompt"
-    } as any);
+    });
 
     expect(decomposer).toBeDefined();
   });

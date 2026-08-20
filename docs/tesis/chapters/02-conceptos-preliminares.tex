@@ -1,0 +1,122 @@
+\chapter{Conceptos preliminares}
+\label{cap:preliminares}
+
+Este capítulo presenta los fundamentos teóricos y tecnológicos sobre los cuales se construye la arquitectura de \sistema. Se introducen los modelos de agentes de código basados en modelos de lenguaje, la representación de planes mediante grafos dirigidos acíclicos, los principios del diseño por contratos aplicados a sistemas multi-agente, los mecanismos de aislamiento en control de versiones mediante Git worktrees, la disciplina de verificación basada en evidencia y el patrón de persistencia orientada a eventos (\emph{Event Sourcing}).
+
+\section{Agentes de código basados en modelos de lenguaje}
+
+Un \emph{agente de software basado en LLMs} es un sistema computacional que sitúa a un modelo generativo de lenguaje dentro de un bucle iterativo de percepción, razonamiento y acción en el entorno del sistema operativo \cite{yao2023react,wang2024survey}. A diferencia del paradigma de generación en un único paso (\emph{one-shot prompting}), un agente opera mediante un protocolo interactivo en el cual:
+
+\begin{enumerate}
+  \item \textbf{Percepción:} El agente recibe el estado del entorno a través de observaciones estructuradas (rutas del sistema de archivos, contenidos de archivos fuente, salidas estándar de comandos o diagnósticos de error).
+  \item \textbf{Razonamiento (\emph{Thinking / Chain-of-Thought}):} El modelo genera una traza interna de inferencia que analiza la observación y formula una estrategia de acción \cite{wei2022chain}.
+  \item \textbf{Acción (\emph{Tool Use / Function Calling}):} El modelo emite una llamada formal a una herramienta del sistema (lectura/escritura de archivos, ejecución de comandos en shell, búsqueda mediante patrones o invocación de subprocesos).
+  \item \textbf{Realimentación y reparación (\emph{Reflexion}):} El entorno ejecuta la acción solicitada y retorna su resultado como una nueva observación al agente, permitiéndole corregir errores sintácticos o de compilación de forma autónoma \cite{shinn2023reflexion}.
+\end{enumerate}
+
+En la práctica industrial contemporánea, herramientas como OpenAI Codex CLI o Anthropic Claude Code encapsulan este bucle interactivo a través de la terminal. Sin embargo, como se analizó en el capítulo anterior, el bucle ReAct no resuelve por sí solo los problemas de delimitación de alcance, concurrencia entre tareas ni gobernanza de interfaces cuando múltiples agentes deben colaborar sobre un mismo repositorio. \sistema\ no sustituye a estos agentes especializados, sino que actúa como un \textbf{plano de control y orquestación} que suministra los límites de alcance, los contratos formales y el aislamiento de ejecución necesarios para coordinar múltiples instancias de agentes de forma determinista y segura.
+
+\section{Grafos dirigidos acíclicos de tareas}
+
+La formalización de planes complejos como \emph{Grafos Dirigidos Acíclicos} (DAG, por sus siglas en inglés) es un estándar consolidado en la computación distribuida y la gestión de flujos de trabajo (\emph{workflows}) \cite{kim2024llmcompiler}. Formalmente, un DAG es un grafo $G = (V, E)$ donde $V$ es el conjunto finito de nodos que representan unidades de trabajo y $E \subseteq V \times V$ es el conjunto de aristas dirigidas que representan relaciones de precedencia, tal que no existe ninguna secuencia de aristas que comience y termine en el mismo nodo.
+
+La propiedad fundamental de aciclicidad permite calcular un \emph{orden topológico} sobre los nodos: una secuencia lineal de todos los vértices tal que para cada arista $(u, v) \in E$, la unidad $u$ antecede a la unidad $v$. A partir de esta ordenación, un planificador de ejecución (\emph{scheduler}) puede determinar con exactitud qué nodos poseen todas sus dependencias satisfechas y pueden ejecutarse concurrentemente en paralelo, y cuáles deben permanecer bloqueados en espera.
+
+No obstante, en el dominio de la ingeniería de software multi-agente, una arista genérica de dependencia resulta insuficiente. Una relación entre dos tareas puede implicar:
+\begin{itemize}
+  \item \textbf{Dependencia física de datos/código:} El nodo consumidor requiere el parche o archivo producido por el nodo productor para poder iniciar.
+  \item \textbf{Acuerdo de interfaz lógica:} Dos nodos acuerdan una signatura pública compartida antes de escribir código, lo cual les permite trabajar en paralelo sin esperar el resultado final del otro.
+  \item \textbf{Jerarquía de propiedad e integración:} Un nodo compuesto padre es responsable de integrar y validar los resultados de sus nodos hijos.
+  \item \textbf{Exclusión mutua por recurso:} Dos nodos intentan modificar el mismo archivo físico y deben serializarse para evitar conflictos destructivos de escritura.
+\end{itemize}
+
+Por esta razón, la arquitectura de \sistema\ trasciende el DAG homogéneo tradicional e introduce un \textbf{modelo de grafo híbrido con relaciones canónicas tipadas} (sección~\ref{sec:grafo-hibrido}).
+
+\section{Ingeniería de software guiada por contratos}
+
+El principio de \emph{Diseño por Contratos} (\emph{Design by Contract}, DbC), formulado por Bertrand Meyer \cite{meyer1992dbc}, establece que los elementos de software deben interactuar sobre la base de obligaciones y beneficios mutuos rigurosamente especificados mediante precondiciones, postcondiciones e invariantes. Una precondición define lo que el consumidor debe garantizar antes de invocar un servicio; una postcondición define lo que el proveedor garantiza al finalizar; y un invariante establece las condiciones de consistencia que deben preservarse en todo momento.
+
+En el contexto de la orquestación de agentes generativos, la adopción de contratos formales resulta indispensable por una razón epistemológica: los modelos de lenguaje son intrínsecamente estocásticos y propensos a la deriva semántica. La comunicación no estructurada en lenguaje natural entre agentes (por ejemplo, mediante mensajes de chat libres) acumula ambigüedad y desalineación a medida que avanza la ejecución.
+
+\sistema\ adapta el paradigma de contratos a nivel de arquitectura de tareas:
+\begin{itemize}
+  \item \textbf{Contrato de alcance (\emph{Scope Contract}):} Define el subconjunto cerrado de rutas del sistema de archivos sobre las cuales un agente tiene autorización explícita de lectura o modificación.
+  \item \textbf{Contrato de interfaz (\emph{Seam Contract}):} Inspirado en el concepto de \emph{seam} (costura) de Michael Feathers y la ocultación de información de Parnas \cite{parnas1972criteria}, formaliza una frontera arquitectónica compartida (tipos exportados, firmas de funciones, endpoints de API) acordada antes de la implementación de los módulos.
+  \item \textbf{Contrato de artefacto (\emph{Artifact Contract}):} Especifica la identidad, el formato y el modo de materialización de los entregables producidos por cada nodo.
+  \item \textbf{Obligación de validación (\emph{Validation Obligation}):} Especifica el criterio de aceptación que debe probarse, el comando exacto de ejecución, el nivel de severidad y las políticas de control de regresión.
+\end{itemize}
+
+Al encapsular las expectativas en contratos versionados e inmutables, el orquestador puede verificar matemáticamente la compatibilidad entre componentes antes de despachar trabajo a los agentes.
+
+\section{Aislamiento mediante worktrees de Git}
+
+En un flujo de trabajo de desarrollo de software, ejecutar múltiples agentes concurrentes sobre el mismo directorio de trabajo físico genera condiciones de carrera sobre el sistema de archivos, corrupción del índice de Git y pérdida inadvertida del trabajo del desarrollador.
+
+El sistema de control de versiones Git provee una capacidad nativa denominada \emph{Git worktrees} \cite{chacon2014pro}. Un worktree permite asociar múltiples árboles de trabajo independientes y concurrentes a un único repositorio local (\texttt{.git}). Cada worktree posee su propio directorio raíz, su propio índice (\emph{staging area}) y su propio puntero \texttt{HEAD} apuntando a una rama aislada, pero comparte la base de datos de objetos subyacente (\texttt{.git/objects}) y las referencias del repositorio.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+    box/.style={draw=black!80, fill=black!4, rounded corners=3pt, align=center, font=\small, minimum height=0.9cm},
+    repo/.style={draw=blue!80!black, fill=blue!6, thick, rounded corners=3pt, align=center, font=\small, minimum height=1.2cm},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=black!70}
+  ]
+    \node[repo, text width=5.5cm] (git) {\textbf{Repositorio central Git}\\ Base de objetos compartida (\texttt{.git/objects})};
+    
+    \node[box, text width=3.4cm, below left=1.2cm and 0.5cm of git] (wt1) {\textbf{Worktree 1 (Agente A)}\\ Rama aislada\\ Índice propio (\texttt{index.A})};
+    \node[box, text width=3.4cm, below=1.2cm of git] (wt2) {\textbf{Worktree 2 (Agente B)}\\ Rama aislada\\ Índice propio (\texttt{index.B})};
+    \node[box, text width=3.4cm, below right=1.2cm and 0.5cm of git] (wtn) {\textbf{Worktree $N$ (Worker Pool)}\\ Rama aislada\\ Índice propio (\texttt{index.N})};
+
+    \draw[arrow] (wt1) -- (git);
+    \draw[arrow] (wt2) -- (git);
+    \draw[arrow] (wtn) -- (git);
+  \end{tikzpicture}
+  \caption{Arquitectura de aislamiento concurrente mediante un pool de Git worktrees.}
+  \label{fig:git-worktrees}
+\end{figure}
+
+Como ilustra la figura~\ref{fig:git-worktrees}, esta técnica proporciona un mecanismo de aislamiento sumamente eficiente para un entorno de desarrollo local:
+\begin{enumerate}
+  \item \textbf{Costo de creación y latencia casi nulos:} A diferencia de clonar el repositorio completo (lo cual duplicaría megabytes o gigabytes de historial) o instanciar contenedores de virtualización pesada (como Docker o micro-VMs, que introducen segundos de arranque y capas de virtualización de I/O), crear un worktree solo materializa los archivos del commit de trabajo y reutiliza instantáneamente los objetos ya existentes y las cachés de dependencias del entorno anfitrión (e.g. \texttt{node\_modules} enlazados o compilaciones intermedias).
+  \item \textbf{Inmunidad ante interferencias:} Las modificaciones, eliminaciones o creaciones de archivos realizadas por el agente en su worktree no tienen ningún efecto visible en el directorio del usuario ni en los worktrees de otros agentes concurrentes.
+  \item \textbf{Reutilización mediante pool reciclable:} Para mitigar la sobrecarga de entrada/salida en sistemas de archivos locales, los worktrees se administran mediante un \emph{pool} de trabajadores reciclables, restableciéndose al commit base requerido en milisegundos mediante comandos atómicos (\texttt{git reset --hard} y \texttt{git clean -fdx}).
+\end{enumerate}
+
+\section{Verificación basada en evidencia}
+
+La ingeniería de software moderna, fundamentada en la Integración Continua (\emph{Continuous Integration}, CI) \cite{humble2010continuous} y el Desarrollo Guiado por Pruebas (\emph{Test-Driven Development}, TDD) \cite{beck2002tdd}, establece que la corrección de un cambio no puede asumirse a partir de la intención del desarrollador ni del código de salida de un proceso, sino que debe demostrarse mediante la ejecución reproducible de suites de validación sobre el artefacto de software exacto.
+
+Cuando se evalúa el código generado por modelos de lenguaje, este principio cobra una relevancia crítica. Un agente puede reportar verbalmente que su tarea fue completada con éxito o escribir pruebas triviales (\emph{tautologías}) que aprueban sin validar el comportamiento real. Para garantizar una verificación estricta y reproducible, se requieren los siguientes controles:
+
+\begin{enumerate}
+  \item \textbf{Validación sobre el commit físico exacto:} Las pruebas deben ejecutarse sobre el SHA exacto del commit generado en el worktree, en un entorno limpio sin dependencias residuales de intentos previos.
+  \item \textbf{Matriz de Evidencias (\emph{Evidence Matrix}):} Mapeo explícito y bidireccional entre cada criterio de aceptación del contrato y las pruebas que lo verifican, registrando no solo el estado binario (\texttt{passed} / \texttt{failed}), sino la cobertura de criterios y los registros de salida.
+  \item \textbf{Línea base (\emph{Baseline Policy}):} Verificación de que la suite de pruebas del repositorio se encontraba en estado correcto antes de aplicar los cambios del agente, descartando fallas preexistentes.
+  \item \textbf{Controles negativos (\emph{Negative Controls}):} Evaluación de que la prueba introducida por el agente efectivamente falla cuando se ejecuta contra el código anterior sin el cambio, confirmando que la prueba tiene sensibilidad y no es un falso positivo.
+  \item \textbf{Auditoría de integridad de pruebas:} Detección rigurosa de intentos indebidos de omitir pruebas (como la inclusión de directivas \texttt{test.skip}, debilitamiento de aserciones o alteración de configuraciones del framework de testing).
+\end{enumerate}
+
+\section{Event Sourcing y CQRS en planos de control}
+
+El patrón \emph{Event Sourcing} (Persistencia Basada en Eventos) \cite{fowler2005event,helland2007life} postula que el estado de una entidad no debe almacenarse como un registro mutable que se sobreescribe en base de datos, sino como una secuencia cronológica inmutable y de solo anexión (\emph{append-only log}) de \textbf{eventos de dominio}. Cada evento representa un hecho consumado que tuvo lugar en el sistema (por ejemplo, \texttt{plan.proposed}, \texttt{node.attempt\_started}, \texttt{validation.passed}, \texttt{delivery.published}).
+
+El estado actual del sistema en cualquier instante $t$ se obtiene aplicando una función reductora pura sobre la secuencia histórica de eventos:
+
+\begin{equation}
+\text{Estado}(t) = \text{reducir}\Big(\text{EstadoInicial},\; [e_1, e_2, \dots, e_n]\Big)
+\label{eq:event-sourcing}
+\end{equation}
+
+Complementariamente, el patrón \emph{Command Query Responsibility Segregation} (CQRS) \cite{fowler2002patterns} separa explícitamente las operaciones que mutan el estado (\emph{Commands}) de las operaciones que consultan y presentan la información (\emph{Queries / Projections}):
+
+\begin{itemize}
+  \item \textbf{Frontera de comandos:} Un comando es una intención de cambio (por ejemplo, \texttt{create\_run}, \texttt{approve\_plan}, \texttt{cancel\_node}). El plano de control valida el comando contra el estado actual y, si es válido, emite los correspondientes eventos de dominio en el journal.
+  \item \textbf{Proyecciones inmutables:} La interfaz de usuario y los clientes de consulta leen vistas proyectadas a partir de los eventos. Se pueden construir \emph{snapshots} periódicos para acelerar la carga, pero el snapshot actúa meramente como una caché derivada: la única fuente de verdad jurídica y auditable es el journal de eventos.
+\end{itemize}
+
+Este modelo otorga a \sistema\ propiedades fundamentales de ingeniería:
+\begin{itemize}
+  \item \textbf{Auditabilidad total y reproducibilidad:} Toda decisión, intento de agente, resultado de validación y transición de estado queda registrada con marca temporal y huella criptográfica.
+  \item \textbf{Tolerancia a fallos y recuperación transparente:} Si el proceso del daemon se reinicia abruptamente por un corte de energía o fallo del sistema operativo, el estado en memoria se reconstruye fielmente releyendo el journal de eventos desde el disco.
+  \item \textbf{Desacoplamiento entre telemetría y ciclo de vida:} Las trazas detalladas de inferencia de los LLMs y los registros de depuración se tratan como diagnósticos secundarios y no contaminan el log canónico de eventos del dominio.
+\end{itemize}

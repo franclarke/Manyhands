@@ -200,9 +200,32 @@ async function react(
   const succeeded = observation.terminal.type === "effect.completed";
   if (attempt === "stage3:planning") {
     if (!succeeded) {
+      const payload = observation.terminal.payload as {
+        reason?: string;
+        diagnosticDigest?: string;
+        findings?: Array<{
+          code?: string;
+          message: string;
+          severity?: "error" | "warning" | "advisory";
+          evidenceRefs?: string[];
+        }>;
+      } | undefined;
+      const reason = (typeof payload?.reason === "string" && payload.reason.trim().length > 0)
+        ? payload.reason
+        : "The transitional planning adapter did not produce a successful physical receipt.";
+      const findings = Array.isArray(payload?.findings) && payload.findings.length > 0
+        ? payload.findings.map((f) => ({
+            ...(f.code ? { code: f.code } : {}),
+            message: f.message,
+            severity: f.severity ?? ("error" as const),
+            evidenceRefs: f.evidenceRefs ?? []
+          }))
+        : undefined;
       return {
         domainEvents: [event(options, context.runId, "planning.failed", {
-          reason: "The transitional planning adapter did not produce a successful physical receipt."
+          reason,
+          ...(typeof payload?.diagnosticDigest === "string" ? { diagnosticDigest: payload.diagnosticDigest } : {}),
+          ...(findings ? { findings } : {})
         }, observation.intent.effectId)],
         effects: []
       };

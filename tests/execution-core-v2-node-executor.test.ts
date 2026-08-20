@@ -748,7 +748,7 @@ class RepairIntentGit extends FakeGitRunner {
     return super.diffRange(params);
   }
 
-  override async diffCached(cwd: string): ReturnType<FakeGitRunner["diffCached"]> {
+  override async diffCached(_cwd: string): ReturnType<FakeGitRunner["diffCached"]> {
     this.stagedDiffReads += 1;
     return this.stagedDiffReads === 1
       ? "diff --git a/src/domain/booking.ts b/src/domain/booking.ts\n+export const unrelated = true;"
@@ -938,7 +938,12 @@ describe("ExactCandidateValidatorV2", () => {
           validationContract: { ...contract.task.validation },
           repositorySnapshotId: "snapshot-booking",
           steps: [],
-          unmaterializedObligationIds: [contract.validation.obligations[0]!.id]
+          unmaterializedObligationIds: [contract.validation.obligations[0]!.id],
+          unmaterialized: [{
+            obligationId: contract.validation.obligations[0]!.id,
+            cause: "capability_missing" as const,
+            detail: "The repository declares no test command, so this obligation has nothing to run."
+          }]
         }),
         validate: async (input) => matrix(input.contract, input.candidateCommit)
       },
@@ -952,7 +957,15 @@ describe("ExactCandidateValidatorV2", () => {
     expect(outcome).toMatchObject({
       kind: "needs_input",
       reason: expect.stringContaining("cannot be materialized"),
-      unmaterializedObligationIds: [contract.validation.obligations[0]!.id]
+      unmaterializedObligationIds: [contract.validation.obligations[0]!.id],
+      // The operator has to see which of the two reasons applies: an obligation
+      // the plan left without evidence is amended in the plan, a repository
+      // without a test command is not.
+      unmaterialized: [{
+        obligationId: contract.validation.obligations[0]!.id,
+        cause: "capability_missing",
+        detail: "The repository declares no test command, so this obligation has nothing to run."
+      }]
     });
     expect(agent.calls).toHaveLength(0);
   });

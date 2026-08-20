@@ -28,6 +28,25 @@ export const EntityIdSchema = NonEmptyStringSchema.regex(
 
 export type EntityId = z.infer<typeof EntityIdSchema>;
 
+/**
+ * A reference to a repository resource: either a catalogued resource id or a
+ * locator such as `path:src/domain`.
+ *
+ * Locators carry slashes, which `EntityIdSchema` rejects. A plan could name a
+ * directory in `repositorySurface.resourceRefs`, typed as a plain string, but
+ * not in the matching `resourceIntents[].resourceId` — so a unit could describe
+ * the directory it works in and then had no way to claim it.
+ */
+export const ResourceReferenceSchema = NonEmptyStringSchema.regex(
+  /^[A-Za-z0-9._:/-]+$/,
+  "resource references may contain letters, digits, dots, underscores, colons, hyphens and slashes"
+).refine(
+  (value) => !value.split("/").includes(".."),
+  "resource references may not contain a .. segment"
+);
+
+export type ResourceReference = z.infer<typeof ResourceReferenceSchema>;
+
 export const GranularityPolicyManifestSchema = z.object({
   policyVersion: NonEmptyStringSchema,
   maxLeafContextTokens: z.number().int().nonnegative(),

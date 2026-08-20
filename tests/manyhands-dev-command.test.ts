@@ -31,13 +31,13 @@ async function loadResolver(): Promise<{
 describe("manyhands dev child command", () => {
   it("spawns the pinned pnpm through corepack when corepack is installed", async () => {
     const { resolveDefaultDevSpawn } = await loadResolver();
-    const corepack = path.join("C:\Program Files\nodejs", "corepack.cmd");
-    const standalone = path.join("C:\Users\me\AppData\Local\pnpm", "pnpm.exe");
+    const corepack = path.join("C:\\Program Files\\nodejs", "corepack.cmd");
+    const standalone = path.join("C:\\Users\\me\\AppData\\Local\\pnpm", "pnpm.exe");
     const result = resolveDefaultDevSpawn(["build:packages"], {
       platform: "win32",
       // The standalone pnpm sits earlier, exactly as it does on the machine
       // that produced ERR_PNPM_UNSUPPORTED_ENGINE.
-      pathValue: "C:\Users\me\AppData\Local\pnpm;C:\Program Files\nodejs",
+      pathValue: "C:\\Users\\me\\AppData\\Local\\pnpm;C:\\Program Files\\nodejs",
       comspec: "cmd.exe",
       fileExists: (candidate) => candidate === corepack || candidate === standalone
     });

@@ -134,4 +134,37 @@ describe("Canonical planning prompt", () => {
       expect(obligation.proofStrategyId).toBe(`proof:${obligation.obligationId}`);
     }
   });
+
+  it("binds focused evidence references to the executed selectors", () => {
+    // A live run lost a planning call to `focused evidence references must
+    // exactly match the executed selectors`. For focused evidence the contract
+    // admits exactly one value, so asking the model for it can only introduce a
+    // disagreement the system already knows how to settle.
+    const drifted = structuredClone(CANONICAL_PLAN_EXAMPLE) as {
+      units: Record<string, { validation: Array<{ evidence?: {
+        kind: string;
+        selectors: string[];
+        references: string[];
+      } }> }>;
+    };
+    const leaf = drifted.units["unit:producer"]!.validation[0]!;
+    leaf.evidence!.references = ["docs/unrelated.md"];
+
+    const proposal = parseCanonicalPlanningProposal(
+      JSON.stringify({ kind: "candidate", material: drifted }),
+      request,
+      repositoryView
+    );
+    const units = (proposal as { material: { units: Record<string, {
+      validation: Array<{ evidence?: { kind: string; selectors: string[]; references: string[] } }>;
+    }> } }).material.units;
+
+    const focused = Object.values(units)
+      .flatMap((unit) => unit.validation)
+      .flatMap((obligation) => obligation.evidence === undefined ? [] : [obligation.evidence])
+      .filter((evidence) => evidence.kind === "focused_command");
+
+    expect(focused.length).toBeGreaterThan(0);
+    for (const evidence of focused) expect(evidence.references).toEqual(evidence.selectors);
+  });
 });

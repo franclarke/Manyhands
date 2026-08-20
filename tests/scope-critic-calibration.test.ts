@@ -96,7 +96,7 @@ function createMockInput(options: {
   const contractSpecs = options.contracts ?? [];
   const contracts = contractSpecs.map(c => makeValidBundle(c.nodeId, c.allowedPaths, c.coordinationPaths ?? []));
 
-  const nodes: Record<string, any> = {};
+  const nodes: Record<string, unknown> = {};
   for (const c of contractSpecs) {
     nodes[c.nodeId] = { id: c.nodeId, parentId: "root", kind: "leaf", title: c.nodeId, goal: c.nodeId };
   }
@@ -109,7 +109,7 @@ function createMockInput(options: {
       objective: "obj",
       repositorySnapshotId: "snap",
       acceptanceIntents: [],
-      root: rootUnit as any,
+      root: rootUnit as unknown as CompiledPlanReviewInput["breakdown"]["root"],
       candidateArtifacts: [],
       candidateSeams: [],
       repositoryEvidence: [],
@@ -140,7 +140,7 @@ function createMockInput(options: {
         diagnostics: [],
         metadata: { indexer: "test", deterministic: true, fileCount: (options.indexedPaths ?? []).length, symbolCount: 0, importCount: 0, exportCount: 0 }
       }
-    } as any,
+    } as unknown as CompiledPlanReviewInput["repositorySnapshot"],
     graph: {
       schemaVersion: 2,
       graphId: "g1",
@@ -161,8 +161,8 @@ function createMockInput(options: {
       seamBindings: [],
       legacyOrderingConstraints: [],
       createdAt: "2026-07-22T00:00:00Z"
-    } as any,
-    contracts: contracts as any
+    } as unknown as CompiledPlanReviewInput["graph"],
+    contracts: contracts as unknown as CompiledPlanReviewInput["contracts"]
   };
 }
 

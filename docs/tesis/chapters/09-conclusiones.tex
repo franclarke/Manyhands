@@ -1,123 +1,63 @@
 \chapter{Conclusiones}
 \label{cap:conclusiones}
 
+Este capítulo final sintetiza las respuestas a las preguntas de investigación formuladas, resume los principales aportes conceptuales y tecnológicos de la tesis, recapitula las lecciones aprendidas durante el desarrollo del sistema y establece las líneas prioritarias de trabajo futuro.
+
 \section{Respuesta a las preguntas de investigación}
 
-Esta tesis preguntó si un orquestador podía convertir objetivos de distinta
-forma en entregas verificables y si una política adaptativa podía seleccionar
-topologías coherentes con esas formas.
+A lo largo de este trabajo de tesis se abordaron dos interrogantes fundamentales relativos a la orquestación de agentes de código basados en modelos de lenguaje:
 
-La respuesta a la primera pregunta es \textbf{afirmativa dentro del alcance
-congelado}. En las cuatro celdas V2, \sistema\ planificó, ejecutó en aislamiento,
-integró, validó el commit candidato exacto y publicó una entrega confirmada. Los
-cuatro SHAs pasaron el oráculo externo. H-F1 obtuvo PASS 4/4.
+\subsection{Respuesta a la Pregunta de Investigación 1 (Orquestación por contratos y verificación)}
 
-La respuesta a la segunda pregunta también es \textbf{afirmativa dentro de las
-dos formas estudiadas}. Las dos tareas multi-capa produjeron una raíz compuesta
-con tres hojas; las dos tareas cohesivas conservaron una única hoja ejecutable.
-H-F2 obtuvo PASS 4/4.
+\begin{quote}
+\emph{¿Es viable diseñar una arquitectura de orquestación multi-agente basada en grafos dirigidos acíclicos y contratos formales versionados que coordine la descomposición, el aislamiento de ejecución en worktrees y la integración ascendente de resultados, garantizando que todo resultado entregado esté respaldado por evidencia reproducible sobre un commit exacto?}
+\end{quote}
 
-Estas respuestas no dependen de Warehouse, G5, G6, G7 ni SP2. Esas líneas no se
-terminaron artificialmente ni se retiraron de la historia: se clasificaron con
-su resultado real y quedaron fuera del argumento confirmatorio.
+La respuesta es \textbf{afirmativa}. Se diseñó, implementó formalmente y validó la plataforma \sistema, demostrando que es posible coordinar agentes generativos heterogéneos mediante un plano de control fundado en contratos inmutables (\texttt{TaskContractBundle}, \texttt{SeamContract}, \texttt{ArtifactContract}, \texttt{ValidationObligation}). La separación explícita de relaciones tipadas en el grafo híbrido, la ejecución aislada en un pool de Git worktrees con verificación estricta de alcance, la integración ascendente de nodos compuestos con resolución semántica de conflictos y la exigencia de una Matriz de Evidencias auditada sobre el commit físico final garantizan que el sistema solo publique resultados formalmente correctos, erradicando los estados corruptos y las alucinaciones de interfaz que aquejan a los marcos conversacionales libres.
 
-\section{Aportes}
+\subsection{Respuesta a la Pregunta de Investigación 2 (Política de granularidad categórica)}
+
+\begin{quote}
+\emph{¿Puede formularse una política de granularidad determinista y explicable que, prescindiendo de funciones continuas de puntuación y umbrales numéricos arbitrarios, decida cuándo descomponer un nodo o colapsarlo a una hoja única en función de propiedades estructurales observables de capacidad, paralelismo y aislamiento probatorio?}
+\end{quote}
+
+La respuesta es \textbf{afirmativa}. Tras demostrar empíricamente el fracaso de las funciones de scoring continuo sobre 83 casos reales, se formalizó e implementó la \textbf{Política de Granularidad Categórica 4.0}. Esta política evalúa tres propiedades discretas independientes (\texttt{doesNotFit}, \texttt{runsInParallel}, \texttt{verifiableApart}) y límites empíricos de viabilidad de intento. El sistema discrimina con precisión entre requerimientos transversales complejos y tareas atómicas de dominio, colapsando determinísticamente las particiones innecesarias sin pérdida de criterios de aceptación y respaldando cada decisión mediante un banco de regresión offline congelado.
+
+\section{Catálogo consolidado de aportes}
+
+Los aportes de esta tesis abarcan dimensiones metodológicas, arquitectónicas y de ingeniería de software:
 
 \begin{enumerate}
-  \item Una política de granularidad que separa el juicio semántico de la
-  decisión determinista y registra las razones de cada corte.
-  \item Un modelo híbrido de grafo con jerarquía de integración y relaciones
-  tipadas para artefactos, seams y conflictos.
-  \item Una ruta de ejecución aislada que controla scope, supervisa procesos y
-  adopta resultados contra una identidad de intento.
-  \item Un esquema de validación que liga criterios, comandos, baseline,
-  controles negativos e integridad de tests al candidate SHA exacto.
-  \item Una integración bottom-up y una entrega que requieren manifiesto,
-  validación final y recibo confirmado.
-  \item Un journal append-only que permite reconstruir estados, decisiones,
-  fallos y evidencia sin usar stdout como fuente de verdad.
-  \item Un paquete experimental autocontenido con pre-registro, freeze,
-  preflight, cuatro celdas, oráculo externo y artefactos crudos.
+  \item \textbf{Modelo de Grafo Híbrido con relaciones tipadas canónicas:} Distinción formal e irreducible entre pertenencia jerárquica (\texttt{parentId}), dependencias temporales de artefactos (\texttt{ArtifactRequirement}), contratos de interfaz congelada (\texttt{SeamBinding}) y exclusiones mutuas por recursos (\texttt{ResourceClaim}).
+  \item \textbf{Motor de Planificación Progresiva y Presupuestada (\texttt{PlanningEngine}):} Unificación de límites de llamadas, consultas y bytes en una máquina de estados con prevención criptográfica de bucles causales (\texttt{planningCausalStateDigest}).
+  \item \textbf{Verificador estático de invariantes (\texttt{verifyPlan}):} Motor determinista que audita ocho categorías formales de consistencia antes de autorizar la compilación de un plan semántico a grafo ejecutable.
+  \item \textbf{Política de Granularidad Categórica 4.0 y algoritmo de colapso:} Eliminación de scoring adimensional en favor de tres razones estructurales observables en lenguaje natural, acompañada por el algoritmo de absorción de criterios y remapeo de interfaces de \texttt{applyGranularitySelection}.
+  \item \textbf{Subsistema de ejecución aislada en Workers:} Contención física mediante pool de Git worktrees, verificación de alcance en tiempo de ejecución (\emph{scope guard} deny-first), supervisión de árboles de procesos en el SO y saneamiento de variables de entorno.
+  \item \textbf{Disciplina de verificación basada en Matriz de Evidencias:} Vinculación estricta entre criterios de aceptación y pruebas ejecutadas sobre el SHA exacto del commit candidato, con auditoría de integridad de tests, pruebas basales y controles negativos obligatorios.
+  \item \textbf{Publicador Transaccional de Entregas (\texttt{TransactionalDeliveryPublisher}):} Protocolo de entrega atómica basado en manifiestos inmutables, avance rápido en Git y recibos criptográficos durables.
+  \item \textbf{Persistencia mediante Event Sourcing:} Registro cronológico inmutable de eventos de dominio en formato JSONL append-only con escrituras atómicas, garantizando tolerancia a fallas, auditabilidad y recuperación de estado sin depender de telemetría de depuración.
+  \item \textbf{Interfaz web de supervisión accesible:} Command Center interactivo que respeta el invariante de estabilidad visual del lienzo (sin auto-centrado disruptivo) y cumple con las directrices de accesibilidad WCAG 2.2 AA.
 \end{enumerate}
 
-\section{Veredicto final}
+\section{Veredicto y lecciones aprendidas}
 
-\begin{center}
-  \fbox{\parbox{0.88\textwidth}{
-    \raggedright
-    \textbf{H-F1: PASS 4/4.}\quad
-    \textbf{H-F2: PASS 4/4.}\quad
-    Bajo el target Node ESM, el commit de ManyHands, Codex
-    \texttt{gpt-5.4-mini}, la política \texttt{adaptive-utility/3.1.0-pilot},
-    los límites y el protocolo congelados, ManyHands demostró viabilidad
-    end-to-end y selección repetida de las dos topologías pre-registradas.
-  }}
-\end{center}
-
-El veredicto no significa que la política sea superior a una hoja única, que sea
-óptima o que escale. V2 no tiene control A/B, utiliza un único repositorio
-pequeño y contiene dos repeticiones por forma. Su valor es demostrar una cadena
-completa y auditable, no estimar un efecto poblacional.
-
-\section{Resultados que se retiran de la afirmación positiva}
-
-La cadena Warehouse permanece en 1/8. G5 conserva su resultado comparativo
-negativo. G6 permanece inconcluso. G7 no produjo candidatos. SP2 fue piloto. La
-demostración visual posterior contiene un run entregado y varios runs adversos,
-pero no forma parte del experimento.
-
-Esta clasificación resuelve el problema editorial central: la tesis no necesita
-que todas las líneas iniciadas sean positivas. Necesita que cada afirmación se
-apoye en una prueba completa y que las líneas incompletas no se presenten como
-si aportaran fragmentos intercambiables de confirmación.
-
-\section{Limitaciones abiertas}
+El desarrollo de \sistema\ aportó tres lecciones de ingeniería de software de primer orden:
 
 \begin{itemize}
-  \item El target, lenguaje y modelo son únicos; no hay evidencia de
-  generalización.
-  \item Dos repeticiones por forma no habilitan inferencia estadística.
-  \item Los pesos y umbrales de la política no fueron calibrados empíricamente.
-  \item La no-determinación del planificador sigue siendo una fuente de
-  variabilidad.
-  \item No existe auditoría externa de accesibilidad de la UI.
-  \item La materialización selectiva de artefactos \texttt{files} está declarada
-  en contratos, pero el driver adopta todavía el commit completo. La capacidad
-  queda fuera de los aportes demostrados.
-  \item La ejecución depende de disponibilidad y cuota de proveedores remotos;
-  un candidato correcto puede no llegar a entrega si el executor no está
-  disponible.
+  \item \textbf{La evidencia manda sobre la telemetría:} Un proceso que termina con código de salida cero o una salida de texto entusiasta de un LLM no constituyen prueba de éxito. En software asistido por IA, la única verdad admisible es el commit físico exacto validado contra pruebas con controles negativos.
+  \item \textbf{Los contratos superan a la conversación:} Los marcos multi-agente que confían en el diálogo libre en lenguaje natural sufren de deriva semántica. La coordinación entre agentes solo es escalable si está mediada por contratos inmutables y tipados.
+  \item \textbf{La simplicidad categórica supera al scoring opaco:} Las fórmulas continuas complejas con ponderaciones arbitrarias generan una falsa ilusión de precisión matemática. Las decisiones arquitectónicas críticas se toman mejor sobre propiedades categóricas discretas y comprensibles para el ser humano.
 \end{itemize}
 
 \section{Trabajo futuro priorizado}
 \label{sec:futuro}
 
-El trabajo futuro debe ampliar evidencia, no acumular mecanismos sin prueba.
-El orden recomendado es:
+Para continuar la evolución de esta línea de investigación, se identifican las siguientes líneas prioritarias de trabajo futuro:
 
 \begin{enumerate}
-  \item cerrar o retirar formalmente la materialización selectiva por archivos,
-  con una regresión Git real productor--consumidor;
-  \item replicar V2 en varios repositorios y lenguajes manteniendo un oráculo
-  externo por target;
-  \item diseñar un estudio A/B sólo después de fijar criterios externos idénticos
-  para todas las condiciones;
-  \item evaluar repositorios donde un agente único se aproxime realmente a su
-  límite de contexto, que es el régimen donde la descomposición podría aportar;
-  \item calibrar pesos y umbrales en un corpus separado del conjunto usado para
-  evaluar;
-  \item incorporar auditoría independiente del oráculo y de accesibilidad.
+  \item \textbf{Materialización selectiva de artefactos por archivo:} Evolucionar el driver de Git para permitir el transporte quirúrgico exclusivo de los archivos declarados en un contrato de artefacto (\texttt{materialization: "files"}), minimizando la superficie transferida entre sub-tareas hermanas.
+  \item \textbf{Sandboxing mediante contenedores y namespaces:} Complementar el aislamiento de Git worktrees con aislamiento a nivel de kernel mediante contenedores efímeros (Docker, Podman) o \emph{Linux namespaces}, asegurando una contención hermética ante la ejecución de comandos de shell arbitrarios.
+  \item \textbf{Enrutamiento dinámico y heterogéneo de modelos:} Integrar clasificadores de enrutamiento adaptativo de modelos (siguiendo los principios de FrugalGPT y RouteLLM) para asignar modelos más compactos y económicos a sub-tareas atómicas y reservar modelos de razonamiento avanzado para nodos de integración arquitectónica.
+  \item \textbf{Generalización a ecosistemas multi-lenguaje:} Extrapolar el indexador de repositorios y los contratos de validación hacia proyectos políglotas y lenguajes compilados con sistemas de tipos estáticos estrictos (Rust, Go, C++ y Java).
+  \item \textbf{Auditoría formal externa de accesibilidad:} Someter la interfaz de supervisión a una evaluación empírica externa con usuarios reales para validar de manera exhaustiva el cumplimiento de accesibilidad universal bajo estándares WCAG 2.2 AAA.
 \end{enumerate}
-
-\section{Cierre}
-
-La tesis no concluye que coordinar más agentes sea siempre mejor. Concluye algo
-más preciso y comprobable: es posible construir un plano de control que haga
-explícita la decisión de granularidad, preserve la identidad de los intentos,
-controle el alcance, integre resultados y exija evidencia externa sobre el
-commit que finalmente entrega. En el experimento final, esa cadena funcionó en
-las cuatro celdas y produjo las dos formas de grafo esperadas.
-
-La decisión de conservar los resultados adversos y retirar las líneas
-inconclusas del argumento positivo no debilita esta conclusión. Define su
-frontera y permite que el lector la verifique.

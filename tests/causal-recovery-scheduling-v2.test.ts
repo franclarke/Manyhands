@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { selectReadyWaveV2 } from "@manyhands/scheduler";
 import { RunEventSchema, foldRun } from "@manyhands/run-coordinator";
+import type { LegacyGraphRevisionV2 } from "@manyhands/task-graph";
+import type { ConflictConstraintEvidence } from "@manyhands/conflict-risk";
 
 const graph = {
   schemaVersion: 2,
@@ -18,7 +20,7 @@ const graph = {
   conflictConstraints: [],
   legacyOrderingConstraints: [],
   createdAt: "2026-07-29T12:00:00.000Z"
-} as any;
+} as unknown as LegacyGraphRevisionV2;
 
 const state = {
   adoptedArtifacts: [],
@@ -49,9 +51,9 @@ describe("causal recovery and durable scheduling", () => {
         confidence: 1,
         observedAt: "2026-07-28T12:00:00.000Z",
         expiresAt: "2026-07-29T11:00:00.000Z"
-      } as any],
+      } as unknown as ConflictConstraintEvidence],
       now: "2026-07-29T12:00:00.000Z"
-    } as any);
+    });
 
     expect(result.nodeIds).toEqual(["A", "B"]);
 
@@ -70,8 +72,8 @@ describe("causal recovery and durable scheduling", () => {
         confidence: 1,
         observedAt: "2026-07-28T12:00:00.000Z",
         expiresAt: "2026-07-29T11:00:00.000Z"
-      } as any]
-    } as any);
+      } as unknown as ConflictConstraintEvidence]
+    });
     expect(conservativeWithoutClock.nodeIds).toEqual(["A"]);
   });
 
@@ -92,8 +94,8 @@ describe("causal recovery and durable scheduling", () => {
         confidence: 1,
         observedAt: "2026-07-29T12:00:00.000Z",
         expiresAt: "2026-07-30T12:00:00.000Z"
-      } as any]
-    } as any);
+      } as unknown as ConflictConstraintEvidence]
+    });
     expect(advisory.nodeIds).toEqual(["A", "B"]);
 
     const breaker = selectReadyWaveV2({
@@ -102,7 +104,7 @@ describe("causal recovery and durable scheduling", () => {
       state: { ...state, openCircuitBreakerNodeIds: ["A"] },
       effectiveConfig: { maxParallel: 1 },
       conflictConstraints: []
-    } as any);
+    });
     expect(breaker.nodeIds).toEqual([]);
     expect(breaker.explanations[0]?.reasons).toEqual(expect.arrayContaining([
       expect.objectContaining({ code: "circuit_breaker_open" })
@@ -125,18 +127,18 @@ describe("causal recovery and durable scheduling", () => {
         confidence: 1,
         observedAt: "2026-07-29T12:00:00.000Z",
         expiresAt: "2026-07-30T12:00:00.000Z"
-      } as any],
+      } as unknown as ConflictConstraintEvidence],
       now: "2026-07-29T12:00:00.000Z"
-    } as any);
+    });
     expect(resourceLock.nodeIds).toEqual(["A"]);
 
     const stoppedBranch = selectReadyWaveV2({
-      graph: { ...graph, nodes: { ...graph.nodes, C: { id: "C", parentId: "A", kind: "leaf", title: "C", goal: "C" } } },
+      graph: { ...graph, nodes: { ...graph.nodes, C: { id: "C", parentId: "A", kind: "leaf", title: "C", goal: "C" } } } as unknown as LegacyGraphRevisionV2,
       nodeIds: ["C"],
       state: { ...state, stoppedNodeIds: ["A"] },
       effectiveConfig: { maxParallel: 1 },
       conflictConstraints: []
-    } as any);
+    });
     expect(stoppedBranch.nodeIds).toEqual([]);
     expect(stoppedBranch.explanations[0]?.reasons).toEqual(expect.arrayContaining([
       expect.objectContaining({ code: "branch_stopped" })

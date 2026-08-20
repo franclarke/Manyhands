@@ -29,10 +29,13 @@ export interface PlanProposalExample {
 }
 
 const EVIDENCE_PLACEHOLDER = "evidence:replace-with-a-supplied-reference";
-// New files have no resource of their own, so the write authority is the
-// package that contains them. Both leaves therefore write the same resource and
-// have to be ordered by an artifact.
+// New files have no resource of their own. The authority over one is the
+// directory that contains it, claimed as a `path:` locator, and two leaves
+// holding disjoint directories run at the same time. The package is the wider
+// claim, kept for work that reaches outside any single directory.
 const PACKAGE = "resource:replace-with-a-supplied-package";
+const PRODUCER_DIRECTORY = "path:src/producer";
+const CONSUMER_DIRECTORY = "path:src/consumer";
 
 const EPISTEMIC = {
   state: "known",
@@ -65,7 +68,7 @@ export const CANONICAL_PLAN_EXAMPLE: PlanProposalExample = {
       }],
       repositorySurface: {
         resourceRefs: [PACKAGE],
-        pathHints: ["src/producer.ts", "src/producer.test.ts", "src/consumer.ts", "src/consumer.test.ts"]
+        pathHints: ["src/producer/index.ts", "src/producer/index.test.ts", "src/consumer/index.ts", "src/consumer/index.test.ts"]
       },
       resourceIntents: [],
       consumes: ["artifact:producer-change", "artifact:consumer-change"],
@@ -82,8 +85,8 @@ export const CANONICAL_PLAN_EXAMPLE: PlanProposalExample = {
         flakyPolicy: "forbid",
         evidence: {
           kind: "focused_command",
-          selectors: ["src/producer.test.ts", "src/consumer.test.ts"],
-          references: ["src/producer.test.ts", "src/consumer.test.ts"]
+          selectors: ["src/producer/index.test.ts", "src/consumer/index.test.ts"],
+          references: ["src/producer/index.test.ts", "src/consumer/index.test.ts"]
         }
       }],
       uncertainty: [],
@@ -120,11 +123,11 @@ export const CANONICAL_PLAN_EXAMPLE: PlanProposalExample = {
         sourceCriterionId: "criterion:root-refinement"
       }],
       repositorySurface: {
-        resourceRefs: [PACKAGE],
-        pathHints: ["src/producer.ts", "src/producer.test.ts"]
+        resourceRefs: [PRODUCER_DIRECTORY],
+        pathHints: ["src/producer/index.ts", "src/producer/index.test.ts"]
       },
       resourceIntents: [{
-        resourceId: PACKAGE,
+        resourceId: PRODUCER_DIRECTORY,
         access: "modify",
         ownerPhase: "implementation",
         outputArtifactId: "artifact:producer-change",
@@ -145,8 +148,8 @@ export const CANONICAL_PLAN_EXAMPLE: PlanProposalExample = {
         flakyPolicy: "forbid",
         evidence: {
           kind: "focused_command",
-          selectors: ["src/producer.test.ts"],
-          references: ["src/producer.test.ts"]
+          selectors: ["src/producer/index.test.ts"],
+          references: ["src/producer/index.test.ts"]
         }
       }],
       uncertainty: [],
@@ -175,14 +178,13 @@ export const CANONICAL_PLAN_EXAMPLE: PlanProposalExample = {
         sourceCriterionId: "criterion:root-refinement"
       }],
       repositorySurface: {
-        resourceRefs: [PACKAGE],
-        pathHints: ["src/consumer.ts", "src/consumer.test.ts"]
+        resourceRefs: [CONSUMER_DIRECTORY],
+        pathHints: ["src/consumer/index.ts", "src/consumer/index.test.ts"]
       },
       resourceIntents: [{
-        resourceId: PACKAGE,
+        resourceId: CONSUMER_DIRECTORY,
         access: "modify",
         ownerPhase: "implementation",
-        inputArtifactId: "artifact:producer-change",
         outputArtifactId: "artifact:consumer-change",
         evidenceRefs: [EVIDENCE_PLACEHOLDER],
         epistemic: EPISTEMIC
@@ -201,8 +203,8 @@ export const CANONICAL_PLAN_EXAMPLE: PlanProposalExample = {
         flakyPolicy: "forbid",
         evidence: {
           kind: "focused_command",
-          selectors: ["src/consumer.test.ts"],
-          references: ["src/consumer.test.ts"]
+          selectors: ["src/consumer/index.test.ts"],
+          references: ["src/consumer/index.test.ts"]
         }
       }],
       uncertainty: [],
@@ -238,7 +240,7 @@ export const CANONICAL_PLAN_EXAMPLE: PlanProposalExample = {
       consumerUnitIds: ["unit:consumer", "unit:root"],
       artifactType: "source_change",
       materialization: "patch",
-      expectedPaths: ["src/producer.ts", "src/producer.test.ts"]
+      expectedPaths: ["src/producer/index.ts", "src/producer/index.test.ts"]
     },
     "artifact:consumer-change": {
       id: "artifact:consumer-change",
@@ -246,7 +248,7 @@ export const CANONICAL_PLAN_EXAMPLE: PlanProposalExample = {
       consumerUnitIds: ["unit:root"],
       artifactType: "source_change",
       materialization: "patch",
-      expectedPaths: ["src/consumer.ts", "src/consumer.test.ts"]
+      expectedPaths: ["src/consumer/index.ts", "src/consumer/index.test.ts"]
     }
   },
   decisions: [],
@@ -268,11 +270,13 @@ export const CANONICAL_PLAN_RULES: readonly string[] = [
   "validation[].criterionId names a criterionId declared by the same unit, and every obligationId is unique across the whole plan.",
   "Every artifact has one producer unit that lists it in produces and owns a modify intent whose outputArtifactId is that artifact. Every consumer lists it in consumes, and the artifact lists every consumer.",
   "Every modify intent carries ownerPhase and outputArtifactId. An observe intent carries neither.",
-  "resourceIntents[].resourceId also appears in repositorySurface.resourceRefs of the same unit, and both use supplied resource ids.",
-  "artifacts[].expectedPaths stay inside the write surface of their producer. A file resource authorises only its own exact path, so to create a file that does not exist yet the modify intent must name the package or directory resource that contains it, and repositorySurface.pathHints must list the new paths.",
+  "resourceIntents[].resourceId also appears in repositorySurface.resourceRefs of the same unit. Use a supplied resource id, or a path locator of the form path:<repository-relative-path> for a directory that does not exist yet.",
+  "artifacts[].expectedPaths stay inside the write surface of their producer. A file resource authorises only its own exact path, so to create a file that does not exist yet the modify intent must name the directory or package that contains it, and repositorySurface.pathHints must list the new paths.",
   "Two units may modify overlapping resources only when they are ordered by an artifact: the later unit consumes the artifact of the earlier one and its modify intent carries inputArtifactId set to that artifact. Two units creating files under the same package resource overlap, so they need that ordering.",
   "A package resource contains every file in it, so a unit that creates a new file overlaps every unit that edits an existing one. Order them: give the file-editing unit an inputArtifactId pointing at the creator's artifact, and have it consume that artifact. Consuming the artifact alone is not enough — the modify intent has to name it as the version it starts from.",
   "Claim the narrowest resource that authorises the write. A unit that only changes files which already exist claims those file resources, and two units holding different file resources do not overlap, so they run at the same time. Claiming the package when a file would do forces an ordering the work does not need and turns a wide plan into a chain.",
+  "A directory that does not exist yet is claimable as path:<directory>, and it authorises creating any file under it. Give each sibling module its own directory — path:src/domain, path:src/storage — and claim that instead of the package. Disjoint directories do not overlap, so the siblings need no ordering between them and are built at the same time. In an empty repository this is the difference between a wide plan and a chain, because there every unit creates files.",
+  "Files that sit outside every module directory, such as a manifest at the repository root, still belong to the package, so the unit that creates them claims the package and every unit holding a directory under it has to be ordered against that one.",
   "A seam is declared in seamRefs by its producer and by every consumer, every consumer also consumes the artifactId of the seam, semanticFacts and compatibility.rules are both non-empty, and the artifact of the seam has the same producer.",
   "When one command proves several criteria, every one of those criteria has its own obligation, all of them carry evidence of kind shared_command, and every one lists the same complete criterionIds — identical objects, not overlapping subsets. An obligation naming a criterion whose own obligation declares anything else is rejected. If the same evidence cannot be written on all of them, give each criterion a focused_command instead.",
   "semanticFacts is a flat map of string to string. A fact that is naturally a list — argument names, accepted values — is one string, never an array or a nested object. Every field this contract shows as a string is a string.",
@@ -311,6 +315,7 @@ export function canonicalPlanningContract(): string {
     "Every object is strict: an unexpected key is a rejection, not a warning. Omit an optional field instead of sending null.",
     "Do not send id, revision, goalContract, repositorySnapshot, repositoryView or evidence. The system binds those exactly and discards any value you supply.",
     "Do not send proofStrategyId. The system binds one proof strategy per obligation.",
+    "For focused_command evidence the system sets references to the selectors, so the two always match. Choose the selectors you want executed and do not try to make references differ.",
     "status is always the string ready. Ids match [A-Za-z0-9._:-]+ .",
     "",
     "Rules:",

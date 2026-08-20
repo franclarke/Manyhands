@@ -64,8 +64,8 @@ export async function atomicWriteFile(
     if (!published) {
       try {
         await removeFile(temporary);
-      } catch (error) {
-        if (!isNotFound(error)) throw error;
+      } catch {
+        // Ignorar fallos de limpieza temporal para no enmascarar excepciones de try
       }
     }
   }
@@ -103,10 +103,6 @@ function isDirectorySyncUnsupported(error: unknown): boolean {
   return error instanceof Error
     && "code" in error
     && ["EACCES", "EBADF", "EINVAL", "EPERM"].includes(String(error.code));
-}
-
-function isNotFound(error: unknown): boolean {
-  return error instanceof Error && "code" in error && error.code === "ENOENT";
 }
 
 function delay(milliseconds: number): Promise<void> {

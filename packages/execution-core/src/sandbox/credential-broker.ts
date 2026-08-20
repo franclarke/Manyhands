@@ -30,6 +30,16 @@ export async function discardBrokeredCredentialScope(rootDirectory: string, scop
   await rm(path.join(path.resolve(rootDirectory), digestSegment(scopeId)), { recursive: true, force: true });
 }
 
+/** Purges all residual brokered credential directories during daemon cold startup recovery. */
+export async function purgeAllBrokeredCredentials(rootDirectory: string): Promise<void> {
+  if (!path.isAbsolute(rootDirectory)) throw new Error("Credential broker rootDirectory must be absolute.");
+  try {
+    await rm(path.resolve(rootDirectory), { recursive: true, force: true });
+  } catch {
+    // Ignore if directory doesn't exist
+  }
+}
+
 /**
  * Materializes declared provider authentication into an attempt-local home.
  * It deliberately copies files rather than forwarding HOME/USERPROFILE or

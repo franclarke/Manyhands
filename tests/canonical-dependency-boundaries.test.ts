@@ -63,4 +63,22 @@ describe("canonical dependency boundaries", () => {
       phase: "validation"
     }).success).toBe(true);
   });
+
+  it("enforces that no package or app in the workspace depends on legacy @manyhands/core", async () => {
+    const pkgDirs = (await readdir("packages", { withFileTypes: true }))
+      .filter((d) => d.isDirectory())
+      .map((d) => join("packages", d.name, "package.json"));
+    const appDirs = (await readdir("apps", { withFileTypes: true }))
+      .filter((d) => d.isDirectory())
+      .map((d) => join("apps", d.name, "package.json"));
+
+    for (const pkgPath of [...pkgDirs, ...appDirs]) {
+      const content = JSON.parse(await readFile(pkgPath, "utf8")) as {
+        dependencies?: Record<string, string>;
+        devDependencies?: Record<string, string>;
+      };
+      expect(content.dependencies ?? {}).not.toHaveProperty("@manyhands/core");
+      expect(content.devDependencies ?? {}).not.toHaveProperty("@manyhands/core");
+    }
+  });
 });

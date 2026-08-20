@@ -61,11 +61,6 @@ export class ExactGitManifestMaterializer {
       await this.git.readTree({ cwd: input.cwd, tree: treeSha });
       await this.git.updateRef({ cwd: input.cwd, ref: "HEAD", target: executionBaseCommit, expectedOldOid: input.baseCommit });
       return { treeSha, executionBaseCommit };
-    } catch (error) {
-      // The temporary index is the only mutable materialization state until
-      // the verified tree has been committed. Preserve the managed worktree's
-      // pre-existing state rather than resetting unrelated operator changes.
-      throw error;
     } finally {
       await rm(indexDirectory, { recursive: true, force: true }).catch(() => undefined);
     }

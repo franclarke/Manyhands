@@ -12,6 +12,8 @@ import {
   createWindowsIpcAclVerifier
 } from "./windows-ipc-acl.js";
 
+import { resolveNativePreflight } from "./native-preflight.js";
+
 void main().catch((error: unknown) => {
   process.stderr.write(`${error instanceof Error ? error.stack ?? error.message : String(error)}\n`);
   process.exitCode = 1;
@@ -27,14 +29,19 @@ async function main(): Promise<void> {
     nodeExecutable: process.execPath
   });
 
-  const windowsJobRunnerPath = optionalAbsoluteEnv("MANYHANDS_WINDOWS_JOB_RUNNER");
+  const preflight = resolveNativePreflight({ cwd: process.cwd() });
+  const windowsJobRunnerPath = preflight.windowsJobRunnerPath;
   if (process.platform === "win32" && windowsJobRunnerPath === undefined) {
-    throw new Error("MANYHANDS_WINDOWS_JOB_RUNNER is required for supervised productive execution on Windows.");
+    throw new Error(
+      "MANYHANDS_WINDOWS_JOB_RUNNER is required on Windows. Run \"pnpm build:native\" or set MANYHANDS_WINDOWS_JOB_RUNNER."
+    );
   }
-  const windowsAclHelperPath = optionalAbsoluteEnv("MANYHANDS_WINDOWS_IPC_ACL_HELPER");
+  const windowsAclHelperPath = preflight.windowsAclHelperPath;
   const production = process.env.NODE_ENV === "production";
   if (production && process.platform === "win32" && windowsAclHelperPath === undefined) {
-    throw new Error("MANYHANDS_WINDOWS_IPC_ACL_HELPER is required for production IPC on Windows.");
+    throw new Error(
+      "MANYHANDS_WINDOWS_IPC_ACL_HELPER is required for production IPC on Windows. Run \"pnpm build:native\"."
+    );
   }
   const protect = windowsAclHelperPath === undefined
     ? undefined
@@ -86,11 +93,4 @@ function defaultEndpoint(root: string): string {
   return process.platform === "win32"
     ? `\\\\.\\pipe\\manyhands-daemon-${suffix}`
     : path.join(root, "daemon.sock");
-}
-
-function optionalAbsoluteEnv(name: string): string | undefined {
-  const value = process.env[name];
-  if (value === undefined || value.trim().length === 0) return undefined;
-  if (!path.isAbsolute(value)) throw new Error(`${name} must be an absolute path.`);
-  return path.resolve(value);
 }

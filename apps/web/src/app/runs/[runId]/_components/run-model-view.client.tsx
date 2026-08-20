@@ -15,6 +15,7 @@ import { runUiStatus, statusMeta } from "@/lib/status";
 import { CockpitRunGraph } from "./cockpit-run-graph";
 import { evidenceMatrixForIdentity, isFinalCandidateDeliverable } from "./cockpit-state";
 import { DecisionQueueDrawer } from "./DecisionQueueDrawer";
+import { NodeActivityPanel } from "./NodeActivityPanel";
 import { NODE_KIND_LABEL } from "./task-node-v2";
 
 export function RunModelView({
@@ -204,7 +205,7 @@ export function RunModelView({
               ) : selectedNode === null ? (
                 <RunSummary model={model} canDeliver={canDeliver} />
               ) : (
-                <NodeDetails node={selectedNode} contract={selectedContract} granularity={selectedGranularity} onClose={() => setSelectedNodeId(null)} />
+                <NodeDetails runId={model.run.id} node={selectedNode} contract={selectedContract} granularity={selectedGranularity} onClose={() => setSelectedNodeId(null)} />
               )}
               <Activity events={model.events} />
             </>
@@ -242,6 +243,12 @@ function RunSummary({ model, canDeliver }: { model: ReturnType<typeof useLiveRun
         completedExecutables: summary.completedExecutables
       })}</h2>
       <AutonomyNotice definition={model.projection?.definition} />
+      {model.graphPhase === null ? (
+        // Before a graph exists there is no node to select, and planning is a
+        // single model call that can run for minutes. Without this the whole
+        // phase is one spinner.
+        <NodeActivityPanel runId={model.run.id} nodeId="planning" running={model.run.lifecycle === "planning"} />
+      ) : null}
       {counters ? (
         <>
           <div className="mt-4 grid grid-cols-3 gap-2 text-center">
@@ -417,13 +424,14 @@ function decisionReason(question: string, nodes: ReturnType<typeof useLiveRunMod
   return detail;
 }
 
-function NodeDetails({ node, contract, granularity, onClose }: { node: ReturnType<typeof useLiveRunModel>["model"]["nodes"][number]; contract: ReturnType<typeof useLiveRunModel>["model"]["contracts"][number] | null; granularity: GranularityExplanationView | null; onClose: () => void }): React.ReactElement {
+function NodeDetails({ runId, node, contract, granularity, onClose }: { runId: string; node: ReturnType<typeof useLiveRunModel>["model"]["nodes"][number]; contract: ReturnType<typeof useLiveRunModel>["model"]["contracts"][number] | null; granularity: GranularityExplanationView | null; onClose: () => void }): React.ReactElement {
   return (
     <section className="border-b border-[var(--color-border)] p-5">
       <div className="flex items-start justify-between gap-4"><div><span className="mh-mono text-eyebrow uppercase tracking-[0.12em] text-[var(--color-text-subtle)]">{NODE_KIND_LABEL[node.kind]}</span><h2 className="mt-1 text-sm font-semibold">{node.title}</h2></div><button type="button" onClick={onClose} aria-label="Cerrar detalle"><X className="h-4 w-4" /></button></div>
       <p className="mt-3 text-xs leading-5 text-[var(--color-text-muted)]">{node.goal}</p>
       {granularity !== null ? <GranularityDetails granularity={granularity} /> : null}
       {contract !== null ? <div className="mt-5 space-y-4 text-xs"><Detail label="Alcance" value={`${contract.scope.allowedPaths.length} rutas permitidas`} /><Detail label="Criterios" value={`${contract.task.acceptanceCriteria.length} condiciones verificables`} /><Detail label="Entradas / salidas" value={`${contract.task.consumes.length} / ${contract.task.produces.length}`} /><div><span className="mb-2 block text-eyebrow uppercase tracking-wide text-[var(--color-text-subtle)]">Aceptación</span><ul className="space-y-1.5">{contract.task.acceptanceCriteria.map((criterion) => <li key={criterion.id} className="rounded bg-[var(--color-bg-subtle)] p-2">{criterion.description}</li>)}</ul></div></div> : <p className="mt-4 text-xs text-[var(--color-text-subtle)]">Este nodo agrupa trabajo; sus contratos viven en los nodos ejecutables.</p>}
+      <NodeActivityPanel runId={runId} nodeId={node.id} running={node.status === "running"} />
     </section>
   );
 }

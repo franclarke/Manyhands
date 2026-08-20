@@ -87,6 +87,13 @@ gastar una corrida viva.
   ahí pasa la suite entera y recién explota al levantar el stack de desarrollo,
   que sí compila el daemon. Correr `pnpm --filter @manyhands/daemon build`
   después de tocar `apps/daemon` o cualquier tipo que consuma.
+- El código de salida de `pnpm test` no es el gate: el wrapper puede terminar en
+  0 con archivos en rojo. Leer siempre la línea `Test Files ... failed` del
+  resumen de vitest antes de declarar verde.
+- Un repo destino greenfield no puede ejecutar nada: `RepositoryModel.commands`
+  sale del `package.json`, y sin comandos ninguna obligación se materializa, así
+  que toda hoja falla con `needs_input` antes de invocar al agente. Inicializar
+  el repo con un `package.json` que declare `test` antes de correr un run vivo.
 - La suite completa corre 312 archivos en paralelo y los tests que lanzan
   procesos reales se caen por timeout bajo esa carga. `stage3-daemon-restart-physical`
   ya lo hizo: 90 s de timeout en la suite, 4 s en aislamiento.

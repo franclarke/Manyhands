@@ -45,6 +45,7 @@ export interface CompiledPlanReviewInput {
    * historical, over-strict behaviour, never a silently weaker check.
    */
   writePathsByNodeId?: Record<string, string[]>;
+  options?: { isWin?: boolean };
 }
 
 export function reviewCompiledPlan(input: CompiledPlanReviewInput): PlanReview {
@@ -102,9 +103,9 @@ function reviewDag(input: CompiledPlanReviewInput, findings: PlanFinding[]): voi
 }
 
 function reviewScopes(input: CompiledPlanReviewInput, findings: PlanFinding[]): void {
-  const isWin = (input as any).options?.isWin ?? (process.platform === "win32");
+  const isWin = input.options?.isWin ?? (process.platform === "win32");
   const normalizePath = (p: string) => {
-    const posix = p.replaceAll("\\", "/");
+    const posix = p.replaceAll("\\", "/").replace(/^\/+/u, "");
     return isWin ? posix.toLowerCase() : posix;
   };
   const indexedPathsNormalized = new Set([

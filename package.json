@@ -12,6 +12,7 @@
   "scripts": {
     "build": "pnpm build:packages",
     "build:packages": "pnpm -r --filter \"./packages/*\" build",
+    "build:native": "node scripts/ensure-native-binaries.mjs",
     "dev": "node scripts/manyhands-dev.mjs",
     "web:dev": "node scripts/manyhands-dev.mjs",
     "web:dev:raw": "pnpm build:packages && pnpm --filter @manyhands/web dev",

@@ -112,6 +112,27 @@ describe("ResourceCatalog", () => {
     expect(validateGraphRevision(graph, { resourceOverlap: view.catalog.asOverlapQuery() }).map((finding) => finding.code))
       .toContain("resource_overlap_unknown");
   });
+
+  it("determines disjointness for projected planned paths", async () => {
+    const root = await createRepository({
+      "package.json": JSON.stringify({ name: "app" }),
+      "src/index.ts": "export const main = 1;\n"
+    });
+    await commitAll(root, "initial");
+    const baseCommit = await git(root, ["rev-parse", "HEAD"]);
+    const inspection = await inspectRepositoryModelWithSnapshot({
+      rootPath: root,
+      repositoryId: "app",
+      targetFingerprint: "target:app",
+      baseCommit,
+      capturedAt: "2026-08-13T00:00:00.000Z"
+    });
+    const view = await composeRepositoryView({ rootPath: root, inspection, overlays: [] });
+
+    expect(view.catalog.overlaps("path:src/feature-a.ts", "path:src/feature-b.ts")).toBe("no");
+    expect(view.catalog.overlaps("resource:path:src/feature-a.ts", "resource:path:src/feature-b.ts")).toBe("no");
+    expect(view.catalog.overlaps("path:src/feature-a.ts", "path:src/feature-a.ts")).toBe("yes");
+  });
 });
 
 function graphWithUnknownGitlinkWriter(gitlinkResourceId: string): GraphRevisionMaterial {

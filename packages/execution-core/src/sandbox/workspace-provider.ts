@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { CredentialBroker } from "./credential-broker.js";
+import type { CredentialBroker } from "./credential-broker.js";
 import {
   SandboxUnavailableError,
   satisfiesSandboxProfile,

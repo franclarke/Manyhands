@@ -25,6 +25,7 @@ export * from "./compiler/contract-compiler.js";
 export * from "./compiler/acceptance-allocation.js";
 export * from "./compiler/graph-compiler.js";
 export * from "./compiler/validation-obligations.js";
+export * from "./compiler/json-extractor.js";
 export * from "./critics/review.js";
 export * from "./granularity/repository-context-profile.js";
 export * from "./granularity/granularity-policy.js";

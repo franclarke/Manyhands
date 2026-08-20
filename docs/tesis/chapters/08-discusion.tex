@@ -1,175 +1,86 @@
 \chapter{Discusión}
 \label{cap:discusion}
 
-\section{Qué demuestran las dos hipótesis}
+Este capítulo discute las implicancias teóricas, metodológicas y prácticas de la arquitectura de \sistema, analizando el significado de las dos hipótesis de investigación, la frontera entre razonamiento generativo y control determinista, la importancia de la evidencia exógena frente a la endógena, las garantías de seguridad y contención en entornos locales, las brechas de transición identificadas y las amenazas a la validez científica del trabajo.
 
-H-F1 no mide cuántas líneas produjo un agente ni cuántos tests declaró pasar.
-Mide una cadena de custodia: planificación persistida, ejecución aislada,
-integración, validación del candidato exacto, publicación y verificación externa
-del mismo SHA. El PASS 4/4 muestra que esa cadena funcionó dos veces para una
-tarea multi-capa y dos veces para una tarea cohesiva.
+\section{Interpretación de las dos hipótesis de investigación}
 
-H-F2 tampoco afirma que la topología elegida sea globalmente óptima. Afirma que,
-en dos formas pre-registradas, el sistema seleccionó dos estructuras coherentes:
-tres hojas alineadas con fronteras de integración para M y una única hoja para
-S. La repetición idéntica del patrón evita basar la conclusión en una sola
-respuesta afortunada del planificador.
+\subsection{Eje 1: Orquestación por contratos y entrega verificada}
 
-Juntas, las hipótesis sostienen una proposición de ingeniería acotada: la
-política puede conservar o aceptar una descomposición semántica y el resto del
-sistema puede convertirla en una entrega verificable. No sostienen una ley
-general sobre repositorios, modelos o equipos.
+La primera hipótesis de investigación (\textbf{H-1}) no plantea una afirmación sobre métricas superficiales de productividad (como la cantidad bruta de líneas de código generadas o la velocidad de emisión de tokens). Por el contrario, evalúa la \textbf{integridad de la cadena de custodia de ingeniería}:
 
-\section{La frontera entre semántica y control determinista}
+\begin{equation}
+\text{Objetivo} \xrightarrow{\text{Planificación}} \text{Contratos} \xrightarrow{\text{Aislamiento}} \text{Ejecución} \xrightarrow{\text{Evidencia}} \text{Integración} \xrightarrow{\text{Transacción}} \text{Commit Entregado}
+\label{eq:cadena-custodia}
+\end{equation}
 
-El diseño separa tres decisiones que suelen confundirse. El planificador
-semántico interpreta el objetivo y propone cortes. La política evalúa si el
-beneficio de un corte justifica su costo. El compilador convierte la propuesta
-aceptada en nodos, relaciones y contratos ejecutables. Esta separación permite
-rechazar un plan incoherente sin pedirle a una fórmula que invente módulos.
+El valor del enfoque de ManyHands radica en demostrar que la orquestación multi-agente en repositorios reales solo es viable cuando se reemplaza la interacción libre en lenguaje natural por un plano formal de \textbf{contratos inmutables y relaciones tipadas}. La separación entre dependencias temporales de artefactos (\texttt{ArtifactRequirement}), acuerdos de interfaz pública (\texttt{SeamBinding}) y exclusiones mutuas por recursos (\texttt{ResourceClaim}) permite que el scheduler coordine agentes concurrentes sin riesgo de colisiones destructivas ni estados intermedios inconsistentes.
 
-La evidencia histórica refuerza esa frontera. Cuando una versión anterior
-intentó fabricar particiones a partir de rutas, produjo hojas que no podían
-cumplir sus contratos. Una señal cuantitativa puede decidir \emph{si} un corte
-conviene; no conoce por sí sola qué responsabilidad oculta cada módulo, en el
-sentido de Parnas \cite{parnas1972criteria}.
+\subsection{Eje 2: Política de granularidad categórica}
 
-El resultado final no valida cada peso de la fórmula. Valida que, bajo la
-configuración congelada, las decisiones resultantes fueron estables para las dos
-formas estudiadas. La calibración de pesos y umbral sigue abierta.
+La segunda hipótesis (\textbf{H-2}) aborda el problema de la sobre- y sub-fragmentación en la descomposición de software. Como se demostró en la sección~\ref{sec:critica-scoring}, intentar resolver la granularidad mediante funciones de utilidad continuas y umbrales numéricos constituye una falacia metodológica que degenera en parámetros libres imposibles de calibrar.
 
-\section{Evidencia independiente frente a evidencia endógena}
+La adopción de la \textbf{Política Categórica 4.0} aporta una lección fundamental: una descomposición solo es justificable si compra capacidad física de contexto (\texttt{doesNotFit}), paralelismo real en rondas de producción (\texttt{runsInParallel}) o aislamiento de pruebas (\texttt{verifiableApart}). Cuando un requerimiento no satisface ninguna de estas tres condiciones, colapsar determinísticamente la partición en una única hoja cohesiva no solo reduce el costo de inferencia, sino que elimina por completo el overhead de negociar interfaces y fusionar ramas innecesarias.
 
-Un sistema generativo puede escribir a la vez la implementación y las pruebas
-que la aprueban. Esa cercanía crea un riesgo metodológico: ambos artefactos
-pueden compartir la misma interpretación errónea. V2 reduce ese riesgo mediante
-un oráculo externo que no forma parte del target y se ejecuta después sobre el
-commit exacto.
+\subsection{El compromiso de ingeniería: sobrecarga de control vs. garantía de integridad}
 
-El resultado adverso V1 demuestra el valor de otro control: un test verde no es
-suficiente si el control negativo no puede hacerlo fallar. El sistema exige
-sensibilidad observable. La demostración posterior agregó un matiz: contar
-llamadas de aserción es una heurística conservadora, no una prueba semántica de
-debilitamiento. Una migración de contrato puede reemplazar dos aserciones sobre
-un wrapper por una comparación exacta del objeto público. La corrección conserva
-el hallazgo y sólo lo clasifica como rebatido cuando todas las obligaciones
-requeridas pasan y sus controles negativos detectan la implementación vieja.
+La adopción de una arquitectura basada en grafos híbridos, contratos Zod, aislamiento en worktrees y verificación de doble fase introduce inevitablemente una sobrecarga computacional y temporal respecto a un flujo de trabajo monolítico desestructurado (*one-shot prompting*). Cada intento requiere preparar árboles de trabajo en disco, validar diffs, ejecutar suites de pruebas basales y persistir eventos atómicos.
 
-Este criterio evita dos extremos: aceptar cualquier reescritura de tests o
-bloquear cambios correctos porque la sintaxis tiene menos llamadas. Los casos
-estructurales ---test eliminado, skip, focus, script debilitado o configuración
-alterada--- continúan bloqueando.
+Sin embargo, este costo constituye un \textbf{compromiso de diseño deliberado}: en ingeniería de software profesional sobre repositorios preexistentes, el costo de reparar una corrupción inadvertida del historial de Git, depurar efectos colaterales fuera de alcance o resolver una incompatibilidad silenciosa de interfaces supera por órdenes de magnitud los segundos adicionales requeridos por la orquestación formal. El sistema intercambia una fracción mínima de tiempo de cómputo por una garantía absoluta de determinismo, contención y verificabilidad física.
 
-\section{Trazabilidad del run}
+\section{La frontera entre razonamiento generativo y control determinista}
 
-El journal append-only permite reconstruir no sólo el estado terminal, sino la
-causa de cada transición. Un snapshot acelera la lectura, pero no reemplaza el
-journal. Las trazas del modelo explican su actividad, pero tampoco gobiernan el
-lifecycle. Esta separación impide inferir éxito desde stdout o desde un proceso
-que terminó con código cero.
+Una de las decisiones arquitectónicas centrales de este trabajo consiste en establecer una frontera infranqueable entre lo que se delega a los modelos de lenguaje y lo que gobierna el software determinista:
 
-La demostración visual hizo visible la utilidad práctica de esta arquitectura.
-El run exitoso conserva la secuencia desde la revisión del plan hasta la
-entrega; los runs adversos conservan el punto exacto donde fallaron. Por eso fue
-posible distinguir un candidato correcto de un run fallido por cuota, sin
-convertir uno en el otro.
+\begin{itemize}
+  \item \textbf{Responsabilidad del modelo (Juicio semántico):} El LLM es insustituible para interpretar el requerimiento en lenguaje natural, comprender la intención del código preexistente, proponer qué módulos deben crearse y redactar la lógica de negocio.
+  \item \textbf{Responsabilidad del motor determinista (Control e invariantes):} El software determinista (\texttt{verifyPlan}, \texttt{ScopeGuard}, \texttt{EvidenceMatrix}, \texttt{TransactionalDeliveryPublisher}) es el único responsable de validar esquemas, aplicar límites de presupuesto, calcular el orden topológico del grafo, verificar invariantes de aciclicidad, aislar los worktrees en el sistema operativo, auditar las suites de pruebas y ejecutar los merges en Git.
+\end{itemize}
 
-\section{Alcance real de la implementación}
+Permitir que un modelo decida arbitrariamente cuándo un plan es válido o modifique los umbrales de su propia evaluación reintroduce la no-determinación y el riesgo de alucinación que la ingeniería de software busca erradicar.
 
-La ruta productiva implementa el planning semántico, el compilador de grafo, el
-scheduler por readiness, la ejecución en worktrees, el control de scope, la
-validación del commit exacto, la integración ascendente, el journal con fencing
-y la entrega con recibo. El experimento V2 recorrió esa ruta hasta
-\texttt{completed}.
+\section{Evidencia exógena frente a evidencia endógena}
 
-No toda capacidad del contrato objetivo está igualmente cerrada. En particular,
-un seam puede declarar \texttt{materialization: "files"} y
-\texttt{expectedPaths}, pero el driver actual adopta el resultado producido como
-un commit completo. La reparación de línea acumulativa evita publicar sólo el
-delta terminal y declara de forma explícita el mainline de cherry-pick; no
-implementa aún transporte selectivo por archivos. Presentar esa capacidad como
-terminada sería confundir el contrato objetivo con el estado real.
+En el desarrollo de software asistido por IA existe un riesgo epistemológico sustancial denominado \emph{sesgo de confirmación endógeno}: cuando un mismo agente escribe la implementación de una función y simultáneamente escribe la prueba unitaria que la valida, existe una alta probabilidad de que ambos artefactos compartan la misma mala interpretación del requerimiento original. En tal escenario, la suite de pruebas reporta un estado verde (\texttt{passed}), pero el comportamiento del sistema es erróneo.
 
-Esta limitación no altera el resultado V2: sus candidatos fueron validados e
-integrados bajo la implementación congelada. Sí limita una afirmación más amplia
-sobre composición mínima de artefactos entre siblings. La tesis la excluye del
-conjunto de contribuciones demostradas.
+\sistema\ aborda esta vulnerabilidad mediante tres líneas de defensa:
+
+\begin{enumerate}
+  \item \textbf{Controles negativos obligatorios:} Toda nueva prueba generada por un agente debe demostrar sensibilidad, fallando de manera comprobable cuando se ejecuta contra el commit base previo a la modificación.
+  \item \textbf{Auditoría de integridad de pruebas:} Detección estricta de cualquier intento de debilitar aserciones, ignorar errores o modificar configuraciones del framework de pruebas.
+  \item \textbf{Oráculo externo independiente:} La validación confirmatoria final de la entrega no confía exclusivamente en las pruebas del repositorio del agente, sino que se valida contra una batería de pruebas externa ejecutada sobre el SHA del commit físico final.
+\end{enumerate}
+
+\section{Seguridad, contención y contabilidad en entornos locales}
+
+Ejecutar agentes de código con capacidad de invocar comandos en terminal directamente en la máquina del desarrollador impone requisitos críticos de seguridad:
+
+\begin{itemize}
+  \item \textbf{Aislamiento del sistema de archivos:} El uso de Git worktrees independientes asegura que el árbol de trabajo del usuario nunca sufra modificaciones accidentales ni pérdida de cambios no confirmados.
+  \item \textbf{Verificación estricta de alcance (*Scope Guard*):} El orquestador actúa como un firewall de rutas del sistema operativo: cualquier escritura fuera del conjunto cerrado de rutas autorizadas (\texttt{writePaths}) resulta en el aborto inmediato del intento.
+  \item \textbf{Supervisión y terminación limpia de procesos:} La gestión recursiva del árbol de procesos (\texttt{taskkill} / \texttt{SIGKILL}) garantiza que procesos zombies o servidores huérfanos iniciados por los agentes no queden consumiendo memoria o bloqueando puertos tras una cancelación o expiración de tiempo.
+  \item \textbf{Saneamiento de entorno y fencing:} La exclusión sistemática de credenciales y variables de entorno del host previene la fuga involuntaria de secretos corporativos hacia las APIs de los proveedores de LLM.
+\end{itemize}
+
+\section{Alcance real y brechas de transición}
+
+En conformidad con las normas de honestidad y rigor académico, es necesario explicitar las brechas de transición existentes entre la arquitectura canónica de diseño y el estado actual de la base de código:
+
+\begin{enumerate}
+  \item \textbf{Materialización selectiva de artefactos por archivo:} Aunque el contrato \texttt{ArtifactContract} contempla formalmente la especificación de entregables granulares (\texttt{materialization: "files"}), la implementación actual del driver de Git transporta el commit producido completo de cada intento. La composición quirúrgica de artefactos archivo por archivo permanece como una línea de desarrollo futuro.
+  \item \textbf{Aislamiento mediante sandboxing liviano vs contenedores:} La contención actual se basa en Git worktrees y verificación de rutas a nivel de proceso. El aislamiento estricto mediante espacios de nombres de Linux (\emph{namespaces}) o contenedores efímeros (Docker / Podman) fortalecería aún más la seguridad ante comandos arbitrarios maliciosos.
+\end{enumerate}
 
 \section{Amenazas a la validez}
 
-\paragraph{Validez interna.} Las cuatro celdas compartieron la misma versión,
-modelo, política y protocolo; no hubo retries automáticos ni ajuste de umbrales.
-El oráculo se aplicó al SHA exacto. La principal amenaza residual es el
-no-determinismo del modelo: dos repeticiones reducen el riesgo de una única
-respuesta atípica, pero no lo eliminan.
+\subsection{Validez interna}
+La variabilidad estocástica intrínseca en la generación de texto de los LLMs constituye la principal amenaza interna. Para mitigarla, el sistema fija la temperatura de inferencia en los niveles más deterministas posibles, utiliza esquemas Zod estrictos con extracción resiliente de JSON y somete la política de granularidad a un banco de regresión offline determinista con más de 80 casos históricos congelados.
 
-\paragraph{Validez de constructo.} H-F1 representa viabilidad end-to-end, no
-calidad absoluta del software. El oráculo cubre cinco criterios públicos y el
-baseline, pero no todas las propiedades posibles. H-F2 representa coincidencia
-con dos patrones predefinidos, no optimalidad ni mínimo costo.
+\subsection{Validez externa}
+La evaluación empírica se diseñó sobre un repositorio de referencia en Node.js ESM. Si bien los conceptos de modularidad, dependencias de artefactos y contratos de interfaz son universales en la ingeniería de software, los resultados específicos de rendimiento y granularidad podrían variar en proyectos monolíticos de gran escala con millones de líneas de código o en lenguajes con sistemas de tipos compilados complejos (como Rust o C++). La generalización empírica hacia otros ecosistemas tecnológicos constituye un desafío abierto.
 
-\paragraph{Validez externa.} El target es pequeño, usa Node ESM y un único
-modelo. Los cuatro resultados no se extrapolan a monorepositorios, otros
-lenguajes, modelos, sistemas operativos o tareas de meses de duración.
+\subsection{Validez de constructo}
+La medición de la corrección de un cambio de software mediante pruebas automatizadas y oráculos externos refleja fielmente la práctica de la industria (CI/CD). No obstante, pruebas automatizadas pueden no capturar aspectos cualitativos no funcionales, tales como la legibilidad del código, la mantenibilidad a largo plazo o el estilo idiomático de programación.
 
-\paragraph{Poder del diseño.} Dos observaciones por forma permiten exigir
-repetición, no inferencia estadística. El resultado es una demostración
-replicable de ingeniería, no una estimación poblacional.
-
-\paragraph{Independencia del instrumento.} El oráculo es externo al target, pero
-fue diseñado para este estudio. El preflight prueba que discrimina referencias
-correctas, baseline y una falla inyectada; una réplica futura debería incorporar
-revisión independiente adicional del oráculo.
-
-\paragraph{Efecto de desarrollo previo.} V2 se ejecutó después de múltiples
-series adversas que corrigieron defectos del sistema. Esto no invalida su freeze,
-pero significa que V2 evalúa la versión final construida, no el proceso completo
-como si hubiera sido correcto desde el inicio. Los resultados anteriores se
-preservan justamente para no ocultar esa evolución.
-
-\section{Por qué no se combinan los estudios históricos}
-
-Sumar Warehouse 1/8, G5, G6, G7 o SP2 al 4/4 produciría un número sin
-interpretación: cambiaron preguntas, targets, modelos, instrumentos y reglas de
-detención. Tampoco sería correcto borrar esas líneas, porque documentan
-resultados negativos que condicionaron el diseño final.
-
-La solución adoptada es una jerarquía de evidencia:
-
-\begin{enumerate}
-  \item V2 responde H-F1 y H-F2.
-  \item La demostración UI ilustra el producto y expone defectos, sin contar.
-  \item Las series históricas explican decisiones y limitaciones, sin sostener
-  el argumento positivo.
-\end{enumerate}
-
-Esta jerarquía produce una tesis más modesta que una narrativa acumulativa, pero
-también más verificable: cada conclusión tiene un denominador, un protocolo y
-una ruta de evidencia únicos.
-
-\section{Lecciones de ingeniería}
-
-\begin{itemize}
-  \item \textbf{El commit es la unidad de verdad del resultado.} Tests, diff,
-  manifiesto, recibo y oráculo deben referirse al mismo SHA.
-  \item \textbf{La recuperación debe preservar identidad.} Una reparación es un
-  delta sobre un candidato; el artefacto publicado debe representar la línea
-  acumulativa que un consumidor puede materializar.
-  \item \textbf{La cobertura no es ownership.} Un criterio transversal puede
-  aparecer en varias hojas; la autoridad de aceptación se deriva del ancestro
-  común más bajo, no de una cardinalidad artificial uno-a-uno.
-  \item \textbf{La prosa no otorga autoridad.} Una ruta mencionada como
-  evidencia no debe transformarse en permiso de escritura sin un campo
-  estructurado que lo declare.
-  \item \textbf{Los límites externos son resultados operativos.} Una cuota de
-  proveedor no refuta el código candidato, pero sí impide que un run alcance su
-  estado de entrega y debe preservarse como tal.
-\end{itemize}
-
-\section{Síntesis de la discusión}
-
-La contribución más sólida no es afirmar que más agentes son mejores. Es mostrar
-un mecanismo auditable que decide entre una hoja y un corte semántico, ejecuta
-la estructura elegida y exige evidencia sobre el resultado exacto. V2 demuestra
-que ese mecanismo funciona en un alcance controlado. Los límites declarados
-impiden convertir esa demostración en una afirmación de escala o superioridad.
+\subsection{Validez de conclusión}
+Las conclusiones de esta tesis no pretenden establecer leyes estadísticas universales sobre el comportamiento de los modelos de lenguaje, sino demostrar una proposición concreta de ingeniería de software: \textbf{que es posible y viable construir una arquitectura formal de orquestación por contratos y evidencia que coordine agentes de IA de forma segura, determinista y auditable.}

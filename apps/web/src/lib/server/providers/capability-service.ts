@@ -30,8 +30,15 @@ type StageSelectionInput = {
 export function assertDeclaredStageSelection(
   label: string,
   selection: StageSelectionInput,
-  capability: ExecutorCapability
+  capability: ExecutorCapability,
+  daemonProfile?: string
 ): StageSelection {
+  const profile = daemonProfile ?? process.env.MANYHANDS_DAEMON_PROFILE;
+  if (profile === "sandboxed_live" && (capability === "execution" || capability === "repair") && selection.executorId !== "codex-cli") {
+    throw new RunValidationError(
+      `${label} executor "${selection.executorId}" is not qualified for sandboxed_live execution. Only codex-cli is supported in sandboxed mode.`
+    );
+  }
   const descriptor = findExecutorDescriptor(selection.executorId);
   const model = descriptor === undefined ? undefined : findExecutorModel(selection);
   if (descriptor === undefined || !descriptor.enabled || model === undefined) {

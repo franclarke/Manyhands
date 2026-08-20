@@ -1,0 +1,178 @@
+\chapter{Política de granularidad adaptativa}
+\label{cap:metodologia}
+
+Este capítulo aborda el segundo eje de investigación de esta tesis: el diseño, la evolución y la formalización de la política de granularidad de descomposición. Se analiza críticamente el fracaso de las fórmulas tradicionales basadas en puntuaciones de utilidad continua, se presenta la \textbf{Política de Granularidad Categórica 4.0} fundada en propiedades estructurales observables, se detalla el algoritmo de colapso y remapeo de contratos, y se expone la metodología del banco de regresión offline que garantiza la reproducibilidad de las decisiones.
+
+\section{La tensión fundamental: cuándo y cómo dividir}
+
+Como se estableció en la introducción, descomponer un objetivo de software en unidades de trabajo para agentes autónomos enfrenta la paradoja de la granularidad. Una descomposición no es un fin en sí mismo, sino un mecanismo para hacer viable la ejecución de un agente dentro de sus límites cognitivos y computacionales.
+
+Para formalizar esta decisión, es necesario responder dos preguntas estructurales:
+\begin{enumerate}
+  \item \textbf{¿Cuándo debe mantenerse una unidad como una única hoja cohesiva?} Cuando la tarea puede ser resuelta de manera confiable por un solo agente dentro de sus presupuestos de contexto y tiempo, y dividirla no aporta paralelismo real ni aislamiento en la verificación.
+  \item \textbf{¿Cuándo debe aceptarse una partición en sub-tareas?} Únicamente cuando la división permita que sub-tareas independientes comiencen de forma concurrente, cuando aísle evidencias de prueba para que el fallo de una parte no anule el éxito de otra, o cuando la unidad supere la capacidad operativa de un intento individual.
+\end{enumerate}
+
+\section{Crítica a los modelos continuos de scoring heurístico}
+\label{sec:critica-scoring}
+
+En etapas tempranas del diseño de \sistema\ (versión 3 y anteriores), la decisión de granularidad se modelaba como una función de utilidad continua tradicional. Se definía un \emph{índice de complejidad intrínseca} $\ctask(u) \in [0, 10]$ para cada unidad $u$, calculado como una combinación lineal ponderada de cuatro dimensiones continuas:
+
+\begin{equation}
+\ctask(u) = w_1 S_r(u) + w_2 I_i(u) + w_3 V_s(u) + w_4 T_m(u)
+\label{eq:ctask-legacy}
+\end{equation}
+
+\noindent donde $S_r$ representaba el radio de alcance de archivos, $I_i$ el impacto de interfaz pública, $V_s$ la superficie de validación y $T_m$ la masa de contexto en tokens, con pesos normalizados $w_1 = 0{,}30$, $w_2 = 0{,}25$, $w_3 = 0{,}25$ y $w_4 = 0{,}20$. Dicho índice se comparaba contra un umbral arbitrario $\theta = 3{,}5$: si $\ctask(u) > \theta$ la unidad se dividía; en caso contrario, se preservaba como hoja.
+
+\subsection{El análisis empírico sobre 83 cortes históricos}
+
+Durante la evaluación sistemática de esta fórmula contra un banco de 83 cortes de descomposición registrados en ejecuciones históricas reales, se descubrieron tres fallas metodológicas insalvables:
+
+\begin{enumerate}
+  \item \textbf{Adimensionalidad y falta de significado físico:} El número resultante de la ecuación~\ref{eq:ctask-legacy} era un escalar adimensional sin unidades físicas. No expresaba cuántos tokens se ahorraban, cuántos minutos de reloj se ganaban ni qué probabilidad de fallo se mitigaba. Un corte no podía justificarse formalmente porque el costo de coordinación no tenía la misma unidad que el beneficio de dividir.
+  \item \textbf{Insensibilidad y degeneración del umbral:} Al variar paramétricamente el umbral $\theta$ en todo el rango $[0, 0{,}20]$, el sistema tomó exactamente las mismas decisiones de corte en todos los casos. Un parámetro libre cuyo valor puede variar en un intervalo amplio sin alterar ninguna decisión práctica es un parámetro redundante que no puede calibrarse ni defenderse científicamente.
+  \item \textbf{Efecto difuso e injustificable:} En los 83 casos evaluados, todo el aparato matemático de cuatro dimensiones y pesos solo aportó 10 colapsos de unidades frente a la regla trivial <<dividir siempre que el corte sea viable>>, y ningún factor o dimensión explicaba consistentemente esos colapsos.
+\end{enumerate}
+
+Esta evidencia condujo a una conclusión teórica central: \textbf{la granularidad no es un problema de optimización continua sobre números reales, sino una decisión discreta y estructurada fundamentada en propiedades categóricas del corte y límites empíricos de capacidad operativa.}
+
+\section{La Política de Granularidad Categórica 4.0}
+\label{sec:politica-4}
+
+La versión canónica de la política de granularidad (\texttt{granularity/4.0.0}), implementada en \texttt{@manyhands/decomposer}, elimina los parámetros libres, las ponderaciones y los umbrales numéricos continuos. Cada decisión de partición o colapso se sostiene en **tres razones categóricas independientes**, formulables en lenguaje natural y auditables por el operador:
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+    box/.style={draw=black!70, fill=black!3, rounded corners=4pt, align=center, font=\small, minimum height=1.1cm},
+    reason/.style={draw=blue!70!black, fill=blue!5, thick, rounded corners=4pt, align=center, font=\small, minimum height=1.1cm},
+    decision/.style={draw=green!60!black, fill=green!8, thick, rounded corners=4pt, align=center, font=\small, minimum height=1.1cm},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=black!70}
+  ]
+    \node[box, text width=3.2cm] (bounds) {\textbf{Límites empíricos}\\ $T_{ctx} \le 24\text{k tokens}$\\ $P_{scope} \le 40\text{ rutas}$\\ $P_{plan} \le 12\text{ rutas}$};
+    
+    \node[reason, text width=3.4cm, right=1.2cm of bounds, yshift=1.4cm] (r1) {\textbf{1. doesNotFit}\\ Supera capacidad de un intento};
+    \node[reason, text width=3.4cm, right=1.2cm of bounds] (r2) {\textbf{2. runsInParallel}\\ Concurrencia real en rondas de producción};
+    \node[reason, text width=3.4cm, right=1.2cm of bounds, yshift=-1.4cm] (r3) {\textbf{3. verifiableApart}\\ Criterios de aceptación disjuntos};
+
+    \node[decision, text width=2.8cm, right=1.2cm of r2] (split) {\textbf{Decisión: SPLIT}\\ Se acepta la partición};
+    \node[box, text width=2.8cm, below=0.8cm of split] (leaf) {\textbf{Decisión: LEAF}\\ Se colapsa a hoja};
+
+    \draw[arrow] (bounds) -- (r1);
+    \draw[arrow] (bounds) -- (r2);
+    \draw[arrow] (bounds) -- (r3);
+    \draw[arrow] (r1) -| (split);
+    \draw[arrow] (r2) -- (split);
+    \draw[arrow] (r3) -| (split);
+  \end{tikzpicture}
+  \caption{Estructura de decisión de la Política de Granularidad Categórica 4.0.}
+  \label{fig:granularity-policy}
+\end{figure}
+
+\subsection{Límites empíricos de viabilidad de hoja (\emph{Leaf Feasibility Bounds})}
+
+Los únicos parámetros cuantitativos que permanecen en la política no son ponderaciones subjetivas de juicio, sino cotas empíricas calibradas que describen la capacidad operativa máxima que un único agente puede sostener de forma confiable antes de experimentar degradación atencional:
+
+\begin{equation}
+\text{EsViable}(u) \iff 
+\begin{cases}
+\text{TokensMedidos}(u) \le \text{maxLeafContextTokens} & (24\,000\text{ tokens}) \\
+\text{RutasEnAlcance}(u) \le \text{maxLeafScopePaths} & (40\text{ archivos}) \\
+\text{RutasACrear}(u) \le \text{maxLeafPlannedPaths} & (12\text{ archivos})
+\end{cases}
+\label{eq:feasibility-bounds}
+\end{equation}
+
+\noindent\textbf{Distinción entre lectura y creación de archivos:}  
+La separación explícita entre $\text{RutasEnAlcance}$ (archivos existentes leídos o modificados) y $\text{RutasACrear}$ (archivos nuevos que el agente debe generar) surgió de una lección histórica en la prueba piloto \emph{Warehouse W2}. En dicho escenario, tras una refactorización inicial el repositorio era muy pequeño; por ende, la unidad raíz leía casi nada y cumplía holgadamente los límites de tokens y de alcance existente. Sin embargo, debía crear una aplicación completa desde cero con más de 15 archivos nuevos. El sistema evaluó la tarea como <<hoja viable>>, colapsó la división en tres partes y despachó un único agente que consumió 30 minutos de presupuesto sin lograr entregar código funcional. La inclusión del límite empírico $\text{maxLeafPlannedPaths} = 12$ previene que una tarea de creación masiva sea clasificada erróneamente como una hoja atómica.
+
+\subsection{Las tres razones categóricas de división}
+
+Una unidad compuesta solo se divide si se satisface al menos una de las siguientes tres propiedades categóricas:
+
+\subsubsection{1. No cabe en un intento (\texttt{doesNotFit})}
+La unidad propuesta excede al menos uno de los tres límites físicos de viabilidad de la ecuación~\ref{eq:feasibility-bounds}. En este caso, dividir no es una cuestión de preferencia o calidad: es la única forma de obtener una frontera ejecutable. Si la unidad no cabe y no existe ninguna propuesta viable de corte, el motor emite de inmediato un resultado determinista \texttt{semantic\_replan}.
+
+\subsubsection{2. Ejecución concurrente real (\texttt{runsInParallel})}
+El corte compra tiempo de reloj (*wall-clock*) permitiendo que al menos dos unidades hijas inicien simultáneamente. El cálculo de concurrencia se realiza de forma estricta sobre el grafo de dependencias de artefactos. 
+
+Sean $C = \{c_1, c_2, \dots, c_n\}$ los nodos hijos de la unidad compuesta y $E_{art}$ las dependencias dirigidas inducidas por artefactos materializados entre ellos. Sea $\text{RondasProduccion}(C, E_{art})$ el número mínimo de etapas secuenciales requeridas para completar todas las unidades según su orden topológico. Decimos que el corte ofrece paralelismo real si y solo si:
+
+\begin{equation}
+\text{RondasProduccion}(C, E_{art}) < |C| \quad \land \quad \text{Aciclico}(C, E_{art})
+\label{eq:parallel-rounds}
+\end{equation}
+
+\noindent Si $n$ unidades requieren exactamente $n$ rondas secuenciales (una cadena estricta $c_1 \rightarrow c_2 \rightarrow \dots \rightarrow c_n$), el scheduler deberá ejecutarlas en orden estricto una tras otra. Una cadena puramente secuencial **no compra tiempo de reloj** y suele ser más lenta que un único intento debido al overhead de inicialización de worktrees. Por tanto, una cadena secuencial recibe $\texttt{runsInParallel} = \text{false}$.
+
+\subsubsection{3. Verificación aislada e independiente (\texttt{verifiableApart})}
+Cada unidad hija posee al menos un criterio de aceptación exclusivo que ningún nodo hermano comparte:
+
+\begin{equation}
+\forall c_i \in C, \quad \exists \text{crit} \in \text{Criterios}(c_i) \quad \text{tal que} \quad \forall c_j \in C \setminus \{c_i\}, \; \text{crit} \notin \text{Criterios}(c_j)
+\label{eq:verifiable-apart}
+\end{equation}
+
+\noindent Si un hijo no posee ningún criterio propio, su éxito o fracaso no puede observarse independientemente de sus hermanos: separar dicha unidad no aporta nueva evidencia probatoria. Por el contrario, cuando cada hijo es dueño de una prueba disjunta, el fallo de una sub-tarea no invalida la evidencia verificada de las demás. Esto es exactamente lo que una partición en capas (por ejemplo, dominio $\rightarrow$ aplicación $\rightarrow$ API) compra en lugar de velocidad: **aislamiento de fallas y contención de regresiones**.
+
+\subsection{Regla de decisión determinista}
+
+La regla de decisión de la política 4.0 se formaliza de la siguiente manera:
+
+\begin{equation}
+\text{Decisión}(u) =
+\begin{cases}
+\texttt{split} & \text{si } \text{CorteViable}(u) \land \big(\texttt{doesNotFit} \lor \texttt{runsInParallel} \lor \texttt{verifiableApart}\big) \\
+\texttt{leaf} & \text{si } \text{EsViable}(u) \land \neg\big(\texttt{doesNotFit} \lor \texttt{runsInParallel} \lor \texttt{verifiableApart}\big) \\
+\texttt{semantic\_replan} & \text{si } \neg\text{EsViable}(u) \land \neg\text{CorteViable}(u)
+\end{cases}
+\label{eq:decision-rule}
+\end{equation}
+
+Cada decisión emite automáticamente una explicación en lenguaje natural generada determinísticamente (\texttt{describeDecision}), indicando las razones exactas que sostuvieron el corte o el colapso (por ejemplo: \emph{<<Split because two children can start at the same time; every child owns a criterion no sibling owns>>}).
+
+\section{Algoritmo de colapso y remapeo de planes}
+\label{sec:colapso-plan}
+
+Cuando la política determina que un corte no se justifica ($\text{Decisión}(u) = \texttt{leaf}$), la función pura \texttt{applyGranularitySelection} aplica una poda estructural sobre el árbol del plan semántico (\texttt{SemanticPlan}):
+
+\begin{algorithmbox}{Algoritmo 4.1: Colapso determinista de unidades y remapeo de costuras}
+\label{alg:apply-granularity}
+\small
+\begin{enumerate}
+  \item \textbf{Entrada:} Plan semántico candidato $\mathcal{P}$, Evaluaciones de granularidad $\mathcal{A}$.
+  \item Para cada unidad compuesta $u \in \mathcal{P}$ evaluada como $\texttt{leaf}$:
+    \begin{enumerate}
+      \item Transformar el rol de $u$ a hoja atómica (\texttt{kind: "leaf"}).
+      \item Fusionar y deduplicar en $u$ todas las obligaciones de sus descendientes:
+        $$\text{RutasPlanificadas}(u) \leftarrow \bigcup_{v \in \text{Descendientes}(u)} \text{RutasPlanificadas}(v)$$
+        $$\text{Criterios}(u) \leftarrow \bigcup_{v \in \text{Descendientes}(u)} \text{Criterios}(v)$$
+      \item Eliminar los nodos hijos de la jerarquía.
+    \end{enumerate}
+  \item Para cada costura o contrato de interfaz $s \in \mathcal{P}.\text{seams}$:
+    \begin{enumerate}
+      \item Remapear el productor y los consumidores de $s$ a su ancestro sobreviviente más cercano.
+      \item Si el productor y los consumidores colapsaron en la misma unidad ($u_{prod} == u_{cons}$), \textbf{eliminar la costura $s$} (la interfaz se convirtió en una llamada interna dentro del mismo módulo).
+    \end{enumerate}
+  \item \textbf{Retorno:} Plan semántico podado y validado contra el esquema canónico.
+\end{enumerate}
+\end{algorithmbox}
+
+Este mecanismo preserva el principio fundamental de que \textbf{un criterio de aceptación nunca se pierde durante un colapso}: la hoja resultante hereda la totalidad de los criterios y evidencias que sus hijos debían demostrar.
+
+\section{Frontera entre semántica y control determinista}
+
+Una premisa de diseño esencial en ManyHands es la estricta separación de incumbencias:
+
+\begin{quote}
+\emph{El modelo de lenguaje propone la semántica del corte (qué módulos existen y qué responsabilidades asumen); la política determinista decide si la propuesta se acepta o se colapsa, basándose en capacidad, concurrencia y aislamiento.}
+\end{quote}
+
+Si la política detecta que una unidad es demasiado compleja pero el planificador no propuso sub-unidades, el sistema no sintetiza particiones artificiales dividiendo rutas al azar (estrategia que demostró inducir fallas de alcance en el pasado). En su lugar, el sistema solicita formalmente una replanificación semántica (\texttt{semantic\_replan}) al motor de planificación o eleva una decisión estructurada al operador humano.
+
+\section{Metodología del banco de regresión offline}
+
+Para garantizar que la política de granularidad sea completamente auditable y reproducible sin incurrir en costos continuos de inferencia con modelos LLM, se implementó un \textbf{banco de regresión offline} (\texttt{tests/granularity-regression-bank.test.ts}).
+
+El banco almacena un corpus congelado de más de 80 casos históricos reales (\texttt{granularity-corpus.json}), con sus descomposiciones candidatas y snapshots de repositorio correspondientes. Ante cualquier modificación en el código de la política, una suite determinista reejecuta la evaluación sobre todos los casos y compara las decisiones resultantes contra una tabla base congelada (\texttt{granularity-bank-baseline.json}). Cualquier divergencia en las decisiones produce un fallo en los tests de integración continua y exige una revisión explícita del \texttt{git diff} de decisiones antes de aprobar la nueva versión de la política.

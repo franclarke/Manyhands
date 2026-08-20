@@ -236,28 +236,41 @@ export async function buildRepositoryModelFromTree(input: {
     entry,
     parsed: parseJsonObject(await readBlobObject(entry.oid, input.signal))
   }));
-  const packages: PackageBoundary[] = packageManifests.map(({ entry, parsed }) => {
-    const rootPath = path.posix.dirname(entry.path) === "." ? "" : path.posix.dirname(entry.path);
-    const factEvidence = evidenceFor("file", entry.path, entry);
-    const manifest = parsed.value;
-    const name = typeof manifest?.name === "string" && manifest.name.trim() !== ""
-      ? manifest.name
-      : rootPath === "" ? input.snapshot.repositoryId : path.posix.basename(rootPath);
-    return {
-      id: repositoryFactId("package", { rootPath, name }),
-      name,
-      rootPath,
-      manifestPath: entry.path,
-      entrypoints: packageEntrypoints(manifest),
-      exportTargets: packageExportTargets(manifest),
-      workspacePatterns: workspacePatterns(manifest?.workspaces),
-      scripts: stringRecord(manifest?.scripts),
-      evidenceRefs: [factEvidence.id],
-      epistemic: parsed.error === undefined
-        ? known(factEvidence.id)
-        : partial(undefined, factEvidence.id)
-    };
-  }).sort((left, right) => left.rootPath.localeCompare(right.rootPath));
+  const packages: PackageBoundary[] = packageManifests.length > 0
+    ? packageManifests.map(({ entry, parsed }) => {
+        const rootPath = path.posix.dirname(entry.path) === "." ? "" : path.posix.dirname(entry.path);
+        const factEvidence = evidenceFor("file", entry.path, entry);
+        const manifest = parsed.value;
+        const name = typeof manifest?.name === "string" && manifest.name.trim() !== ""
+          ? manifest.name
+          : rootPath === "" ? input.snapshot.repositoryId : path.posix.basename(rootPath);
+        return {
+          id: repositoryFactId("package", { rootPath, name }),
+          name,
+          rootPath,
+          manifestPath: entry.path,
+          entrypoints: packageEntrypoints(manifest),
+          exportTargets: packageExportTargets(manifest),
+          workspacePatterns: workspacePatterns(manifest?.workspaces),
+          scripts: stringRecord(manifest?.scripts),
+          evidenceRefs: [factEvidence.id],
+          epistemic: parsed.error === undefined
+            ? known(factEvidence.id)
+            : partial(undefined, factEvidence.id)
+        };
+      }).sort((left, right) => left.rootPath.localeCompare(right.rootPath))
+    : [{
+        id: repositoryFactId("package", { rootPath: "", name: input.snapshot.repositoryId }),
+        name: input.snapshot.repositoryId,
+        rootPath: "",
+        manifestPath: "package.json",
+        entrypoints: [],
+        exportTargets: {},
+        workspacePatterns: [],
+        scripts: {},
+        evidenceRefs: [],
+        epistemic: known()
+      }];
 
   const sourceEntries = entries.filter((entry) =>
     (entry.kind === "file" || entry.kind === "executable") && SOURCE_EXTENSION.test(entry.path)

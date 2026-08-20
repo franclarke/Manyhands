@@ -1,11 +1,13 @@
 import { execFile, spawn, type ChildProcess } from "node:child_process";
 import { createHash } from "node:crypto";
 import path from "node:path";
+import { JsonlTraceStore } from "@manyhands/trace-store";
 import { promisify } from "node:util";
 
 import {
   PlanningEngine,
   compilePlan,
+  robustlyParseJson,
   PlanningCapacityError,
   type RepositoryEvidence
 } from "@manyhands/decomposer";
@@ -69,6 +71,11 @@ const PROVIDER_CAPACITY_PATTERN = /rate.?limit|too many requests|overloaded|capa
 
 export interface CurrentLifecycleAdapterOptions {
   readonly clock?: () => string;
+  /**
+   * Where the daemon keeps its traces. Planning is one long model call, and
+   * without somewhere to write its output the UI can only show a spinner.
+   */
+  readonly stateRoot?: string;
   readonly planningStepTimeoutMs?: number;
   readonly spawnProcess?: typeof spawn;
   /**
@@ -181,6 +188,7 @@ export function createCurrentTransitionalUnsafeProfile(
     workerScriptPath: options.workerScriptPath,
     cwd: options.cwd,
     planner: createCurrentPlannerPort({
+      stateRoot: options.stateRoot,
       ...(options.clock === undefined ? {} : { clock: options.clock }),
       ...(options.planningStepTimeoutMs === undefined
         ? {}
@@ -260,6 +268,9 @@ export function createCurrentPlannerPort(
                   request,
                   view: grounding.view,
                   proofStrategies,
+                  ...(options.stateRoot === undefined
+                    ? {}
+                    : { onOutput: planningActivityRecorder(options.stateRoot, runId) }),
                   ...(options.planningStepTimeoutMs === undefined
                     ? {}
                     : { timeoutMs: options.planningStepTimeoutMs }),
@@ -786,6 +797,34 @@ function inspectProductivePlanningRepository(input: {
   };
 }
 
+/**
+ * Planning is a single model call that can run for minutes, and the UI showed
+ * one node as RUNNING with nothing inside it. Writing the call's own output to
+ * the traces gives that node the same activity surface every executed node has.
+ *
+ * The node id is `planning` because planning has no graph node of its own: the
+ * graph is what it produces.
+ */
+export const PLANNING_ACTIVITY_NODE_ID = "planning";
+
+export type PlanningActivityRecorder = (kind: "started" | "output" | "completed", text: string) => void;
+
+function planningActivityRecorder(stateRoot: string, runId: string): PlanningActivityRecorder {
+  const store = new JsonlTraceStore({ runId, directory: path.join(stateRoot, "traces") });
+  return (kind, text) => {
+    try {
+      store.append({
+        type: kind === "output" ? "executor_output" : kind === "started" ? "executor_started" : "executor_completed",
+        actor: "agent",
+        taskId: PLANNING_ACTIVITY_NODE_ID,
+        payload: kind === "output" ? { stream: "stdout", chunk: text } : {}
+      });
+    } catch {
+      // Losing a progress line must never fail the planning call that produced it.
+    }
+  };
+}
+
 async function canonicalPlanningProposal(input: {
   cwd: string;
   selection: ProductRunDefinition["planningSelection"];
@@ -794,11 +833,14 @@ async function canonicalPlanningProposal(input: {
   proofStrategies: ReturnType<typeof productProofStrategies>;
   timeoutMs?: number;
   spawnProcess?: typeof spawn;
+  onOutput?: PlanningActivityRecorder;
 }): Promise<PlanningModelProposal> {
+  input.onOutput?.("started", "");
   const output = await invokePlanningCli({
     cwd: input.cwd,
     selection: input.selection,
     prompt: canonicalPlanningPrompt(input.request, input.view),
+    ...(input.onOutput === undefined ? {} : { onOutput: input.onOutput }),
     ...(input.timeoutMs === undefined ? {} : { timeoutMs: input.timeoutMs }),
     ...(input.spawnProcess === undefined ? {} : { spawnProcess: input.spawnProcess })
   });
@@ -828,15 +870,14 @@ export function parseCanonicalPlanningProposal(
   request: PlanningModelInput,
   view: RepositoryView
 ): PlanningModelProposal {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(unfence(output)) as unknown;
-  } catch {
+  const parseResult = robustlyParseJson(output);
+  if (!parseResult.ok) {
     // Deliberately not a PlanningModelProposal: the engine turns an
     // unsupported result kind into `model_protocol_invalid` with the model's
     // own output preserved in the trace.
     return { kind: "model_protocol_invalid", output: output.slice(0, 2_000) } as unknown as PlanningModelProposal;
   }
+  const parsed = parseResult.value;
   const envelope = objectRecord(parsed);
   const proposal = envelope.kind === "candidate" && "material" in envelope
     ? envelope.material
@@ -853,7 +894,10 @@ export function parseCanonicalPlanningProposal(
       alternatives: envelope.alternatives as never
     };
   }
-  const material = bindSystemOwnedProofStrategies(objectRecord(proposal));
+  const material = bindSystemOwnedResources(
+    bindSystemOwnedProofStrategies(objectRecord(proposal)),
+    view
+  );
   return {
     kind: "candidate",
     material: {
@@ -872,6 +916,60 @@ export function parseCanonicalPlanningProposal(
   };
 }
 
+function bindSystemOwnedResources(material: Record<string, unknown>, view: RepositoryView): Record<string, unknown> {
+  const units = material.units;
+  if (typeof units !== "object" || units === null) return material;
+
+  for (const unit of Object.values(units as Record<string, unknown>)) {
+    if (typeof unit !== "object" || unit === null) continue;
+    const record = unit as Record<string, unknown>;
+    const surface = typeof record.repositorySurface === "object" && record.repositorySurface !== null
+      ? record.repositorySurface as Record<string, unknown>
+      : undefined;
+    const refs = surface !== undefined && Array.isArray(surface.resourceRefs)
+      ? surface.resourceRefs as unknown[]
+      : undefined;
+
+    if (refs !== undefined) {
+      for (const [index, ref] of refs.entries()) {
+        if (typeof ref === "string") refs[index] = boundResourceReference(ref, view);
+      }
+    }
+
+    if (!Array.isArray(record.resourceIntents)) continue;
+    for (const intent of record.resourceIntents) {
+      if (typeof intent !== "object" || intent === null) continue;
+      const intentRecord = intent as Record<string, unknown>;
+      if (typeof intentRecord.resourceId !== "string") continue;
+      const bound = boundResourceReference(intentRecord.resourceId, view);
+      intentRecord.resourceId = bound;
+      // `verifyPlan` requires every claimed resource to sit in the declared
+      // surface of the same unit, and a model that names one and forgets the
+      // other loses the whole planning call to a finding the system can close.
+      if (refs !== undefined && !refs.includes(bound)) refs.push(bound);
+    }
+  }
+  return material;
+}
+
+/**
+ * The reference the catalog can resolve, without inventing authority.
+ *
+ * A reference the catalog already knows — a resource id, a locator, or a
+ * directory a plan declared — is passed through untouched: rewriting a
+ * `path:` locator into an internal id would strip the very path that lets the
+ * catalog resolve it. A bare repository path is given its `path:` scheme,
+ * which is a spelling repair, not a change of meaning. Anything else is left
+ * alone so `verifyPlan` reports it instead of the system silently granting a
+ * unit a write surface nobody asked for.
+ */
+function boundResourceReference(reference: string, view: RepositoryView): string {
+  if (view.catalog.resolve(reference).state === "known") return reference;
+  if (/^[a-z_]+:/u.test(reference)) return reference;
+  const candidate = `path:${reference.replaceAll("\\", "/").replace(/^\.\//u, "").replace(/\/+$/u, "")}`;
+  return view.catalog.resolve(candidate).state === "known" ? candidate : reference;
+}
+
 /**
  * Exported for `tests/planning-prompt-canonical-contract.test.ts`, which proves
  * the embedded example is a plan the schema accepts.
@@ -888,10 +986,30 @@ function bindSystemOwnedProofStrategies(material: Record<string, unknown>): Reco
   for (const unit of Object.values(units as Record<string, unknown>)) {
     if (typeof unit !== "object" || unit === null) continue;
     const record = unit as Record<string, unknown>;
-    if (Array.isArray(record.validation)) for (const obligation of record.validation) bindProofStrategyId(obligation);
+    if (Array.isArray(record.validation)) {
+      for (const obligation of record.validation) {
+        bindProofStrategyId(obligation);
+        bindFocusedEvidenceReferences(obligation);
+      }
+    }
     bindProofStrategyId(record.integration);
   }
   return material;
+}
+
+/**
+ * Focused evidence admits exactly one set of references: the selectors the
+ * command actually ran on. `validateContractBundle` compares them element by
+ * element, so a model that writes anything else loses the whole planning call
+ * to a value the system could have filled in.
+ */
+function bindFocusedEvidenceReferences(value: unknown): void {
+  if (typeof value !== "object" || value === null) return;
+  const evidence = (value as Record<string, unknown>).evidence;
+  if (typeof evidence !== "object" || evidence === null) return;
+  const record = evidence as Record<string, unknown>;
+  if (record.kind !== "focused_command" || !Array.isArray(record.selectors)) return;
+  record.references = [...record.selectors];
 }
 
 function bindProofStrategyId(value: unknown): void {
@@ -916,7 +1034,7 @@ export function canonicalPlanningPrompt(request: PlanningModelInput, view: Repos
     `${criterion.id}: ${criterion.statement}`
   ).join("\n");
   return [
-    "Decompose the goal into a canonical plan. Answer with JSON only, no prose and no code fence.",
+    "Decompose the goal into a canonical plan with a hierarchical structure: a root composite unit integrating multiple distinct, cohesive child leaf units (e.g. domain/logic, storage/persistence, services/API, CLI/reporting), each owning their specific subsystem and disjoint files. Answer with JSON only, no prose and no code fence.",
     canonicalPlanningContract(),
     `Goal:\n${request.goal.goal}`,
     `Criteria:\n${criteria}`,
@@ -989,6 +1107,7 @@ async function invokePlanningCli(input: {
   prompt: string;
   timeoutMs?: number;
   spawnProcess?: typeof spawn;
+  onOutput?: PlanningActivityRecorder;
 }): Promise<string> {
   const isCodex = input.selection.executorId === "codex-cli";
   if (!isCodex && input.selection.executorId !== "claude-code-cli") {
@@ -1028,8 +1147,14 @@ async function invokePlanningCli(input: {
       clearTimeout(timer);
       complete();
     };
-    child.stdout?.on("data", (chunk) => { stdout += String(chunk); });
-    child.stderr?.on("data", (chunk) => { stderr = `${stderr}${String(chunk)}`.slice(-16_384); });
+    child.stdout?.on("data", (chunk) => {
+      stdout += String(chunk);
+      input.onOutput?.("output", String(chunk));
+    });
+    child.stderr?.on("data", (chunk) => {
+      stderr = `${stderr}${String(chunk)}`.slice(-16_384);
+      input.onOutput?.("output", String(chunk));
+    });
     child.once("error", (error) => finish(() => reject(error)));
     child.once("close", (code) => finish(() => {
       if (code !== 0) {
@@ -1039,6 +1164,7 @@ async function invokePlanningCli(input: {
           : new Error(`${input.selection.executorId} planning failed with exit code ${code}: ${message}`));
         return;
       }
+      input.onOutput?.("completed", "");
       try {
         resolve(isCodex ? stdout : claudeResult(stdout));
       } catch (error) {
@@ -1110,19 +1236,6 @@ function codexPlanningArgs(selection: ProductRunDefinition["planningSelection"])
     ...(selection.effort === undefined ? [] : ["-c", `model_reasoning_effort="${selection.effort}"`]),
     "-"
   ];
-}
-
-/**
- * The object inside a markdown code fence, when the model formatted its answer.
- *
- * Claude Code answers with fenced JSON often enough that rejecting a fence made
- * planning fail intermittently against an otherwise correct proposal. Only the
- * first fenced block is considered, and unfenced output is returned untouched
- * so a genuine protocol violation still reads as one.
- */
-function unfence(output: string): string {
-  const fenced = /```[a-zA-Z0-9_-]*([\s\S]*?)```/u.exec(output);
-  return fenced?.[1]?.trim() ?? output;
 }
 
 function claudeResult(stdout: string): string {
