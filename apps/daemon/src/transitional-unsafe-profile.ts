@@ -122,7 +122,10 @@ export function createTransitionalUnsafeProfile(
           "--attempt-id", context.attemptId
         ],
         cwd,
-        env: inheritedWorkerEnvironment()
+        env: {
+          ...inheritedWorkerEnvironment(),
+          MANYHANDS_STAGE8_SANDBOX_SCOPE: context.attemptId
+        }
       };
     }),
     loadPlanningResult: async (effectId: string) => {

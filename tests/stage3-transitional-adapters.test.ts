@@ -239,7 +239,10 @@ describe("Stage 3 transitional unsafe adapters", () => {
         "--state-root", stateRoot,
         "--run-id", "run:profile",
         "--attempt-id", "stage3:execution"
-      ]
+      ],
+      env: {
+        MANYHANDS_STAGE8_SANDBOX_SCOPE: "stage3:execution"
+      }
     });
   });
 
