@@ -77,7 +77,13 @@ export class EphemeralExecutionWorkspaceProvider implements ExecutionWorkspacePr
   async acquire(params: CreateWorktreeParams): Promise<ExecutionWorkspaceHandle> {
     // The id, not the task, makes the path unique: a retry of one task is a
     // different attempt and must never inherit the previous attempt's tree.
-    const workspaceId = `${safeWorktreeSegment(params.taskId)}-${randomUUID().slice(0, 8)}`;
+    // Durable task ids can be arbitrarily descriptive. Keep that identity in
+    // the record, but never copy it into a Windows filesystem path where it
+    // consumes the candidate's own path budget.
+    const workspaceId = createHash("sha256")
+      .update(`${params.taskId}\0${randomUUID()}`)
+      .digest("hex")
+      .slice(0, 32);
     // The shared layout rule decides where a run's workspaces live: on Windows
     // it relocates them under the temp directory when the repository path would
     // push git past its path budget. Inventing a scheme here would reintroduce
