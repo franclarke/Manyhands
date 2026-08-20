@@ -1,7 +1,9 @@
+import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { buildChangeSetManifest, type DigestHasher } from "@manyhands/contracts";
 import { compileGraphRevision } from "@manyhands/decomposer";
 import {
   detectRequiredPublicSurfaceFindings,
@@ -609,6 +611,97 @@ describe("V2NodeExecutor", () => {
     expect(git.opsInvoked().filter((operation) => operation === "restoreManagedWorktree")).toHaveLength(0);
   });
 
+  it("repairs parent validation over an exact child manifest without treating its digest as a commit", async () => {
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
+    const root = compiled.graph.nodes[compiled.graph.rootId]!;
+    const baseTree = "1".repeat(40);
+    const repairCommit = "a".repeat(40);
+    const sha256: DigestHasher = (value) => `sha256:${createHash("sha256").update(value).digest("hex")}`;
+    const manifest = buildChangeSetManifest({
+      id: "artifact:child",
+      contract: { id: "contract-child", revision: 1, digest: sha256("contract-child") },
+      producerNodeId: "node-api",
+      producerAttemptId: "attempt-child",
+      inputFingerprint: `sha256:${"f".repeat(64)}`,
+      repositoryObjectStoreId: "object-store:booking",
+      objectFormat: "sha1",
+      sourceCandidate: { commitOid: "b".repeat(40), treeOid: baseTree },
+      retainedByRef: "refs/manyhands/test/artifact-child",
+      kind: "change_set",
+      baseTreeSha: baseTree,
+      resultTreeSha: baseTree,
+      entries: []
+    }, sha256);
+    const git = new ManifestRepairGit(baseTree, manifest.manifestDigest, {
+      commitSha: repairCommit,
+      diffCached: "semantic integration repair",
+      diffCachedNameOnly: ["src/domain/booking.ts"]
+    });
+    const agent = successfulAgent();
+    let validationPass = 0;
+    const executor = new V2NodeExecutor({
+      git,
+      repoRoot: "C:/repo/booking",
+      traceStore: new InMemoryTraceStore(),
+      executorFactory: new FixedAgentExecutorFactory(agent),
+      validator: {
+        validate: async (input) => {
+          validationPass += 1;
+          const evidence = matrix(input.contract, input.candidateCommit);
+          if (validationPass > 1) return evidence;
+          return {
+            ...evidence,
+            criteria: evidence.criteria.map((criterion) => ({
+              ...criterion,
+              status: "failed" as const,
+              justification: "The composed parent behavior requires one semantic repair."
+            })),
+            outcome: "failed" as const
+          };
+        }
+      },
+      finalCandidate: {
+        prepare: async (input) => ({
+          manifestId: "final-manifest-repair",
+          finalManifest: {
+            commitSha: input.candidateCommit,
+            treeSha: baseTree,
+            graphRevision: input.graphRevision,
+            artifactIds: [...input.artifactIds],
+            evidenceMatrixId: input.evidenceMatrix.matrixId,
+            validationRecipeDigest: input.validationRecipeDigest,
+            deliveryTarget: input.targetBranch
+          }
+        })
+      },
+      worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }),
+      writeInstructions: async () => undefined,
+      now: () => at
+    });
+    const input = request(compiled, root.id);
+    input.consumedArtifacts = [{
+      artifactId: "artifact:child",
+      runId: input.runId,
+      nodeId: "node-api",
+      digest: manifest.manifestDigest,
+      producerAttemptId: "attempt-child",
+      contract: { id: "contract-child", revision: "1" },
+      kind: "manifest",
+      location: manifest.manifestDigest,
+      manifest,
+      adoptedAt: at
+    }];
+
+    const outcome = await executor.execute(input);
+
+    expect(outcome).toMatchObject({ kind: "success", candidateCommit: repairCommit });
+    expect(agent.calls).toHaveLength(1);
+    expect(git.calls).not.toContainEqual(expect.objectContaining({
+      op: "revParse",
+      args: expect.objectContaining({ ref: `${manifest.manifestDigest}^1` })
+    }));
+  });
+
   it("fails closed when a consumed child patch cannot be materialized", async () => {
     const incomingCommit = "b".repeat(40);
     const git = new FakeGitRunner({
@@ -753,6 +846,26 @@ class RepairIntentGit extends FakeGitRunner {
     return this.stagedDiffReads === 1
       ? "diff --git a/src/domain/booking.ts b/src/domain/booking.ts\n+export const unrelated = true;"
       : "diff --git a/src/domain/booking.ts b/src/domain/booking.ts\n+export const required = true;";
+  }
+}
+
+class ManifestRepairGit extends FakeGitRunner {
+  constructor(
+    private readonly baseTree: string,
+    manifestDigest: string,
+    config: ConstructorParameters<typeof FakeGitRunner>[0]
+  ) {
+    super({ ...config, missingRefs: [`${manifestDigest}^1`] });
+  }
+
+  override async revParse(cwd: string, ref: string): Promise<string> {
+    if (ref.endsWith("^{tree}")) return this.baseTree;
+    return super.revParse(cwd, ref);
+  }
+
+  override async writeTree(params: Parameters<FakeGitRunner["writeTree"]>[0]): Promise<string> {
+    await super.writeTree(params);
+    return this.baseTree;
   }
 }
 

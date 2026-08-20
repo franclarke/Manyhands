@@ -668,12 +668,13 @@ export class V2NodeExecutor {
     }
     const expectedHead = await this.options.git.head(worktree.path);
     try {
-      // Verify that each incoming commit is inspectable before spending the
-      // single integration-repair budget. The commit itself is transport;
-      // exact parent validation, not a line-by-line diff comparison, decides
-      // whether the composed behavior is retained.
+      // Historical commit transport still needs an inspectable source parent.
+      // Exact manifests were already validated and materialized from declared
+      // Git objects, so their sha256 identity is not a Git revision.
       for (const artifact of repair.childArtifacts) {
-        await this.options.git.revParse(worktree.path, `${artifact.location}^1`);
+        if (artifact.kind === "commit") {
+          await this.options.git.revParse(worktree.path, `${artifact.location}^1`);
+        }
       }
       await this.writeInstructions(instructionPath, buildV2RepairInstructions(input, repair, prepared));
       const executor = this.options.executorFactory.create(input.repairSelection);
