@@ -1,5 +1,4 @@
-import { execFile } from "node:child_process";
-import type { ChildProcess, spawn } from "node:child_process";
+import { execFile, spawn, type ChildProcess } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -108,6 +107,45 @@ describe("Stage 4 productive repository grounding", () => {
       .toMatchObject({ semanticPlan: expect.objectContaining({ id: expect.stringMatching(/^plan:/u) }) });
     expect(result.events.find((event) => event.type === "graph.compiled")?.payload.evidenceAuthority)
       .toMatchObject({ goal: expect.objectContaining({ digest: expect.stringMatching(/^sha256:/u) }) });
+  });
+
+  it("terminates the planning CLI process when the planning signal is aborted", async () => {
+    const root = await createRepository({
+      "package.json": JSON.stringify({ name: "cancel-planning", scripts: { test: "node --test" } }),
+      "src/index.js": "export const ready = true;\n"
+    });
+    const baseCommit = await commitAll(root, "initial");
+    const controller = new AbortController();
+    let notifySpawned: (() => void) | undefined;
+    const spawned = new Promise<void>((resolve) => { notifySpawned = resolve; });
+    let childExit: Promise<{ code: number | null; signal: NodeJS.Signals | null }> | undefined;
+    const planner = createCurrentPlannerPort({
+      planningStepTimeoutMs: 10_000,
+      spawnProcess: ((_command: string, _args: readonly string[]) => {
+        const child = spawn(process.execPath, ["-e", "setInterval(() => {}, 1_000)"], {
+          cwd: root,
+          stdio: ["pipe", "pipe", "pipe"],
+          detached: process.platform !== "win32"
+        });
+        childExit = new Promise((resolve) => {
+          child.once("exit", (code, signal) => resolve({ code, signal }));
+        });
+        notifySpawned?.();
+        return child;
+      }) as typeof spawn
+    });
+
+    const pending = planner.plan({
+      runId: "run:stage4:cancel-planning",
+      definition: definition(root, baseCommit),
+      events: [],
+      signal: controller.signal
+    });
+    await spawned;
+    controller.abort("operation.cancel_requested is durable");
+
+    await expect(pending).rejects.toThrow(/planning was cancelled/u);
+    expect(await childExit).toMatchObject({ code: expect.anything() });
   });
 });
 

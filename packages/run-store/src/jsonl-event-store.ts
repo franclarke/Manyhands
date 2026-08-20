@@ -19,7 +19,7 @@ import {
 } from "./event-store.js";
 import { CURRENT_EVENT_SCHEMA_VERSION, upcastEventToCurrent } from "./event-upcaster.js";
 import { readCompactedGeneration } from "./compactor.js";
-import { atomicWriteJson, durableWritesEnabled } from "./durable-file.js";
+import { atomicWriteFile, atomicWriteJson, durableWritesEnabled } from "./durable-file.js";
 import { acquireDurableLock } from "./durable-lock.js";
 import { foldRunEvents, reduceRunEvents } from "./projection-fold.js";
 
@@ -270,7 +270,11 @@ export class JsonlRunEventStore implements FencedRunEventStore {
       if (inspection.status === "degraded") {
         await truncateIncompleteTrailingLine(this.eventLogPath(runId));
       }
-      await appendDurableEvents(this.eventLogPath(runId), appended);
+      await appendDurableEvents(
+        this.eventLogPath(runId),
+        appended,
+        inspection.events.length === 0
+      );
       inspection.events.push(...appended);
       inspection.status = "ok";
       delete inspection.reason;
@@ -426,12 +430,20 @@ function corrupt(events: RunEvent[], reason: string): RunEventLogInspection {
   return { events, status: "corrupt", reason };
 }
 
-async function appendDurableEvents(filePath: string, events: readonly RunEvent[]): Promise<void> {
+async function appendDurableEvents(
+  filePath: string,
+  events: readonly RunEvent[],
+  publishAtomically: boolean
+): Promise<void> {
   const contents = JSON.stringify({
     schemaVersion: CURRENT_EVENT_SCHEMA_VERSION,
     events: [...events],
     checksum: checksumFor(events)
   } satisfies DurableEventBatchEnvelope);
+  if (publishAtomically) {
+    await atomicWriteFile(filePath, `${contents}\n`);
+    return;
+  }
   await mkdir(path.dirname(filePath), { recursive: true });
   await appendAndFlush(filePath, `${contents}\n`);
 }

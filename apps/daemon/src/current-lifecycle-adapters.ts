@@ -242,8 +242,9 @@ export function createCurrentPlannerPort(
 ): TransitionalPlannerPort {
   const now = options.clock ?? (() => new Date().toISOString());
   return {
-    async plan({ runId, definition }): Promise<TransitionalLifecycleResult> {
+    async plan({ runId, definition, signal }): Promise<TransitionalLifecycleResult> {
       const repoPath = absoluteTargetPath(definition);
+      const planningSignal = signal ?? new AbortController().signal;
       return withTransitionalRepositoryLease({ repoRoot: repoPath, runId }, async () => {
       const grounding = await buildProductiveRepositoryView({
         rootPath: repoPath,
@@ -268,6 +269,7 @@ export function createCurrentPlannerPort(
                   request,
                   view: grounding.view,
                   proofStrategies,
+                  signal: planningSignal,
                   ...(options.stateRoot === undefined
                     ? {}
                     : { onOutput: planningActivityRecorder(options.stateRoot, runId) }),
@@ -303,7 +305,7 @@ export function createCurrentPlannerPort(
         repositoryView: grounding.view,
         proofStrategies,
         budget: PRODUCTIVE_PLANNING_BUDGET
-      }, new AbortController().signal);
+      }, planningSignal);
       const baseEvents: RunEventInput[] = [
         fact(`repository:${grounding.snapshot.snapshotId}:inspection`, now(), "repository.inspected", {
           snapshotId: grounding.snapshot.snapshotId,
@@ -831,6 +833,7 @@ async function canonicalPlanningProposal(input: {
   request: PlanningModelInput;
   view: RepositoryView;
   proofStrategies: ReturnType<typeof productProofStrategies>;
+  signal: AbortSignal;
   timeoutMs?: number;
   spawnProcess?: typeof spawn;
   onOutput?: PlanningActivityRecorder;
@@ -840,6 +843,7 @@ async function canonicalPlanningProposal(input: {
     cwd: input.cwd,
     selection: input.selection,
     prompt: canonicalPlanningPrompt(input.request, input.view),
+    signal: input.signal,
     ...(input.onOutput === undefined ? {} : { onOutput: input.onOutput }),
     ...(input.timeoutMs === undefined ? {} : { timeoutMs: input.timeoutMs }),
     ...(input.spawnProcess === undefined ? {} : { spawnProcess: input.spawnProcess })
@@ -1105,6 +1109,7 @@ async function invokePlanningCli(input: {
   cwd: string;
   selection: ProductRunDefinition["planningSelection"];
   prompt: string;
+  signal: AbortSignal;
   timeoutMs?: number;
   spawnProcess?: typeof spawn;
   onOutput?: PlanningActivityRecorder;
@@ -1122,6 +1127,9 @@ async function invokePlanningCli(input: {
   const invocation = resolveCliProcessInvocation(binary, args);
   const spawnProcess = input.spawnProcess ?? spawn;
   const timeoutMs = positive(input.timeoutMs ?? Number(process.env.MANYHANDS_PLANNING_STEP_TIMEOUT_MS ?? 600_000));
+  if (input.signal.aborted) {
+    throw new Error(`${input.selection.executorId} planning was cancelled before it started.`);
+  }
   return new Promise((resolve, reject) => {
     const child = spawnProcess(invocation.command, invocation.args, {
       cwd: input.cwd,
@@ -1136,16 +1144,24 @@ async function invokePlanningCli(input: {
     let stdout = "";
     let stderr = "";
     let settled = false;
+    let terminationError: Error | undefined;
     const timer = setTimeout(() => {
-      void terminateTree(child).finally(() => finish(() => reject(
-        new Error(`${input.selection.executorId} planning timed out after ${timeoutMs}ms.`)
-      )));
+      terminateWith(new Error(`${input.selection.executorId} planning timed out after ${timeoutMs}ms.`));
     }, timeoutMs);
     const finish = (complete: () => void) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      input.signal.removeEventListener("abort", abortPlanning);
       complete();
+    };
+    const terminateWith = (error: Error) => {
+      if (settled || terminationError !== undefined) return;
+      terminationError = error;
+      void terminateTree(child).finally(() => finish(() => reject(error)));
+    };
+    const abortPlanning = () => {
+      terminateWith(new Error(`${input.selection.executorId} planning was cancelled.`));
     };
     child.stdout?.on("data", (chunk) => {
       stdout += String(chunk);
@@ -1155,22 +1171,29 @@ async function invokePlanningCli(input: {
       stderr = `${stderr}${String(chunk)}`.slice(-16_384);
       input.onOutput?.("output", String(chunk));
     });
-    child.once("error", (error) => finish(() => reject(error)));
-    child.once("close", (code) => finish(() => {
-      if (code !== 0) {
-        const message = `${stderr}\n${stdout}`.trim();
-        reject(PROVIDER_CAPACITY_PATTERN.test(message)
-          ? new PlanningCapacityError(`${input.selection.executorId} was throttled by the provider.`)
-          : new Error(`${input.selection.executorId} planning failed with exit code ${code}: ${message}`));
-        return;
-      }
-      input.onOutput?.("completed", "");
-      try {
-        resolve(isCodex ? stdout : claudeResult(stdout));
-      } catch (error) {
-        reject(error);
-      }
-    }));
+    child.once("error", (error) => {
+      if (terminationError === undefined) finish(() => reject(error));
+    });
+    child.once("close", (code) => {
+      if (terminationError !== undefined) return;
+      finish(() => {
+        if (code !== 0) {
+          const message = `${stderr}\n${stdout}`.trim();
+          reject(PROVIDER_CAPACITY_PATTERN.test(message)
+            ? new PlanningCapacityError(`${input.selection.executorId} was throttled by the provider.`)
+            : new Error(`${input.selection.executorId} planning failed with exit code ${code}: ${message}`));
+          return;
+        }
+        input.onOutput?.("completed", "");
+        try {
+          resolve(isCodex ? stdout : claudeResult(stdout));
+        } catch (error) {
+          reject(error);
+        }
+      });
+    });
+    input.signal.addEventListener("abort", abortPlanning, { once: true });
+    if (input.signal.aborted) abortPlanning();
     child.stdin?.end(input.prompt);
   });
 }

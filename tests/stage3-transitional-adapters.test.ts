@@ -55,6 +55,56 @@ afterEach(async () => {
 });
 
 describe("Stage 3 transitional unsafe adapters", () => {
+  it("aborts an active planning call when its durable intent becomes invalid", async () => {
+    const root = await temporaryRoot();
+    const runId = "run:stage3:cancel-active-planning";
+    const store = new MemoryLifecycleResultStore();
+    const invalidation = { reason: undefined as string | undefined };
+    let observedSignal: AbortSignal | undefined;
+    let notifyStarted: (() => void) | undefined;
+    const started = new Promise<void>((resolve) => { notifyStarted = resolve; });
+    const profile = createTransitionalUnsafeProfile({
+      stateRoot: root,
+      nodeExecutable: process.execPath,
+      workerScriptPath: path.resolve("apps/daemon/dist/transitional-unsafe-worker.js"),
+      cwd: process.cwd(),
+      resultStore: store,
+      planner: {
+        async plan(input) {
+          observedSignal = (input as typeof input & { signal?: AbortSignal }).signal;
+          notifyStarted?.();
+          if (observedSignal === undefined) throw new Error("Planner did not receive a cancellation signal.");
+          return new Promise<TransitionalLifecycleResult>((_resolve, reject) => {
+            observedSignal?.addEventListener("abort", () => reject(new Error("planning aborted")), { once: true });
+          });
+        }
+      },
+      delivery: { async publish() { return deliveredReceipt(); } }
+    });
+    const adapter = profile.adapters.find((candidate) => candidate.kind === "model_call");
+    if (adapter === undefined) throw new Error("Missing model_call adapter.");
+    const effect = recoveryEffect("model_call", runId);
+    await seedRecoveryRun(root, runId, "model_call");
+    const records: PhysicalEffectObservationInput[] = [];
+    const pending = adapter.execute(effect.intent, {
+      observerDaemonEpoch: "daemon:stage3:cancel",
+      inputSpec: effect.inputSpec,
+      priorReceipts: [],
+      invalidationReason: async () => invalidation.reason,
+      async record(observation) {
+        records.push(structuredClone(observation));
+        return {} as PhysicalEffectReceipt;
+      }
+    });
+
+    await started;
+    invalidation.reason = "operation.cancel_requested is durable";
+    await pending;
+
+    expect(observedSignal?.aborted).toBe(true);
+    expect(records).toEqual([]);
+  });
+
   it.each(["model_call", "delivery"] as const)(
     "does not restart invalidated %s recovery when its durable sidecar is absent",
     async (kind) => {

@@ -27,6 +27,8 @@ export interface TransitionalLifecycleResult {
   readonly events: readonly RunEventInput[];
 }
 
+const PLANNING_INVALIDATION_POLL_MS = 250;
+
 export interface TransitionalLifecycleResultStore {
   writePlanning(effectId: string, result: TransitionalLifecycleResult): Promise<void>;
   readPlanning(effectId: string): Promise<TransitionalLifecycleResult | undefined>;
@@ -49,6 +51,7 @@ export interface TransitionalPlannerPort {
     runId: string;
     definition: ProductRunDefinition;
     events: readonly ReturnType<typeof RunEventSchema.parse>[];
+    signal?: AbortSignal;
   }): Promise<TransitionalLifecycleResult>;
 }
 
@@ -208,13 +211,17 @@ function createPlanningAdapter(input: {
         throw new Error(`Run ${intent.runId} has no immutable definition for planning.`);
       }
       if (await context.invalidationReason?.() !== undefined) return;
+      const planningCancellation = new AbortController();
+      const stopWatchingInvalidation = watchInvalidation(context, planningCancellation);
       try {
         result = normalizedResult(await input.planner.plan({
           runId: intent.runId,
           definition: projection.definition,
-          events
+          events,
+          signal: planningCancellation.signal
         }));
       } catch (error) {
+        if (await context.invalidationReason?.() !== undefined) return;
         // A planning failure is this attempt's outcome, so it has to become a
         // durable observation. Rethrowing instead leaves the run at
         // effect.requested with no event, no diagnostic and no way back: the
@@ -226,7 +233,10 @@ function createPlanningAdapter(input: {
           observedAt: input.clock()
         });
         return;
+      } finally {
+        stopWatchingInvalidation();
       }
+      if (await context.invalidationReason?.() !== undefined) return;
       await input.results.writePlanning(intent.effectId, result);
     }
     await context.record({
@@ -330,6 +340,33 @@ function createCleanupAdapter(clock: () => string): PhysicalEffectAdapter {
 
 function terminalRecorded(context: PhysicalEffectAdapterContext): boolean {
   return context.priorReceipts.some((receipt) => receipt.observation !== "started");
+}
+
+function watchInvalidation(
+  context: PhysicalEffectAdapterContext,
+  controller: AbortController
+): () => void {
+  let stopped = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const poll = async () => {
+    if (stopped || controller.signal.aborted) return;
+    try {
+      const reason = await context.invalidationReason?.();
+      if (reason !== undefined) {
+        controller.abort(reason);
+        return;
+      }
+    } catch (error) {
+      controller.abort(error);
+      return;
+    }
+    if (!stopped) timer = setTimeout(() => { void poll(); }, PLANNING_INVALIDATION_POLL_MS);
+  };
+  void poll();
+  return () => {
+    stopped = true;
+    if (timer !== undefined) clearTimeout(timer);
+  };
 }
 
 function normalizedResult(result: TransitionalLifecycleResult): TransitionalLifecycleResult {
