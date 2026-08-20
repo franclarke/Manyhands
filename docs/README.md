@@ -221,7 +221,7 @@ El diseño y desarrollo de ManyHands se rige por una jerarquía estricta de auto
 | **Stage 8** | Sandboxed Leaf Execution | `in_review` | [`audits/stage-8/`](audits/stage-8/) (Evidencia R0/R10/R14/R17). |
 | **Stage 9** | Composite Integration Attempt | `in_review` | [`audits/stage-9/`](audits/stage-9/) (Propiedad de convergencia paralelo-secuencial). |
 | **Stage 10** | Transactional CAS Delivery | `in_review` | [`audits/stage-10/README.md`](audits/stage-10/README.md) (7 invariantes de entrega y 5 celdas de restart; no cierra antes de GLeaf y GI). |
-| **Stages 11–13** | Observability, Architecture & Prod | `not_started` | [`plans/2026-08-15-remaining-stages-to-gprod.md`](plans/2026-08-15-remaining-stages-to-gprod.md) (Stage 11 remains `not_started`). |
+| **Stages 11–13** | Observability, Architecture & Prod | `in_progress` | [`plans/2026-08-15-remaining-stages-to-gprod.md`](plans/2026-08-15-remaining-stages-to-gprod.md) (Stages 11/GObs and 12/GArch passed; Stage 13/GProd is active). |
 
 ### Handoffs de Transición Históricos y Estudios
 
@@ -233,3 +233,4 @@ Los siguientes documentos registran los límites de continuación formal entre e
 - [`handoffs/2026-08-13-stage-5-to-stage-6.md`](handoffs/2026-08-13-stage-5-to-stage-6.md): Límite de continuación histórica para iniciar Stage 6.
 - [`handoffs/2026-08-14-stage-6-to-stage-7.md`](handoffs/2026-08-14-stage-6-to-stage-7.md): Límite de continuación formal para iniciar Stage 7 / GA.
 - [`plans/2026-08-13-exploratory-longitudinal-study.md`](plans/2026-08-13-exploratory-longitudinal-study.md): Estudio exploratorio longitudinal post-GProd (dos corridas visuales obligatorias y una condicional).
+- [`experiments/2026-08-20-viaje-en-familia-final.md`](experiments/2026-08-20-viaje-en-familia-final.md): Protocolo congelado del experimento final R19, sus oráculos y el loop de repositorios/workspaces descartables.
