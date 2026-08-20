@@ -638,6 +638,8 @@ describe("V2NodeExecutor", () => {
       diffCachedNameOnly: ["src/domain/booking.ts"]
     });
     const agent = successfulAgent();
+    const sandboxRequests: unknown[] = [];
+    let sandboxDisposed = false;
     let validationPass = 0;
     const executor = new V2NodeExecutor({
       git,
@@ -674,6 +676,48 @@ describe("V2NodeExecutor", () => {
           }
         })
       },
+      sandbox: {
+        provider: {
+          capabilities: () => ({
+            filesystem: "workspace_write",
+            network: "none",
+            hostIdentity: "brokered",
+            tooling: "declared_only",
+            enforcement: "executor_native"
+          }),
+          create: async (request) => {
+            sandboxRequests.push(request);
+            return {
+              capabilities: {
+                filesystem: "workspace_write",
+                network: "none",
+                hostIdentity: "brokered",
+                tooling: "declared_only",
+                enforcement: "executor_native"
+              },
+              environment: { CODEX_HOME: "C:/brokered/codex-home" },
+              receipt: {
+                attemptId: request.attemptId,
+                profile: request.profile,
+                capabilities: {
+                  filesystem: "workspace_write",
+                  network: "none",
+                  hostIdentity: "brokered",
+                  tooling: "declared_only",
+                  enforcement: "executor_native"
+                },
+                environmentDigest: "sha256:sandbox-environment",
+                createdAt: at
+              },
+              dispose: async () => { sandboxDisposed = true; }
+            };
+          }
+        },
+        profile: "workspace",
+        credentials: [],
+        credentialScopeId: "run-v2-repair-scope",
+        windowsSandbox: "unelevated"
+      },
       worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }),
       writeInstructions: async () => undefined,
       now: () => at
@@ -696,6 +740,18 @@ describe("V2NodeExecutor", () => {
 
     expect(outcome).toMatchObject({ kind: "success", candidateCommit: repairCommit });
     expect(agent.calls).toHaveLength(1);
+    expect(sandboxRequests).toEqual([expect.objectContaining({
+      attemptId: `${input.attemptId}:repair:1`,
+      credentialScopeId: "run-v2-repair-scope",
+      profile: "workspace"
+    })]);
+    expect(agent.calls[0]).toMatchObject({
+      bypassApprovals: false,
+      env: { CODEX_HOME: "C:/brokered/codex-home" },
+      isolatedEnvironment: true,
+      windowsSandbox: "unelevated"
+    });
+    expect(sandboxDisposed).toBe(true);
     expect(git.calls).not.toContainEqual(expect.objectContaining({
       op: "revParse",
       args: expect.objectContaining({ ref: `${manifest.manifestDigest}^1` })

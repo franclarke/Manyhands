@@ -663,6 +663,7 @@ export class V2NodeExecutor {
     prepared?: PreparedValidationRecipe
   ): Promise<{ success: boolean; candidateSha?: string; evidenceRefs: string[] }> {
     const instructionPath = instructionFilePath(input, "repair");
+    let sandboxSession: SandboxSession | undefined;
     if (await this.options.git.cherryPickHead(worktree.path) !== undefined) {
       await this.options.git.cherryPickAbort(worktree.path);
     }
@@ -676,6 +677,17 @@ export class V2NodeExecutor {
           await this.options.git.revParse(worktree.path, `${artifact.location}^1`);
         }
       }
+      if (this.options.sandbox !== undefined) {
+        sandboxSession = await this.options.sandbox.provider.create({
+          attemptId: `${input.attemptId}:repair:${repair.pass}`,
+          ...(this.options.sandbox.credentialScopeId === undefined
+            ? {}
+            : { credentialScopeId: this.options.sandbox.credentialScopeId }),
+          workspacePath: worktree.path,
+          profile: this.options.sandbox.profile,
+          credentials: this.options.sandbox.credentials
+        });
+      }
       await this.writeInstructions(instructionPath, buildV2RepairInstructions(input, repair, prepared));
       const executor = this.options.executorFactory.create(input.repairSelection);
       const outcome = await executor.execute({
@@ -683,7 +695,14 @@ export class V2NodeExecutor {
         instructionFilePath: instructionPath,
         model: input.repairSelection.model,
         timeoutMs: input.config.integrationTimeoutMs,
-        bypassApprovals: true,
+        bypassApprovals: sandboxSession === undefined,
+        ...(sandboxSession === undefined ? {} : {
+          env: { ...sandboxSession.environment },
+          isolatedEnvironment: true,
+          ...(this.options.sandbox?.windowsSandbox === undefined
+            ? {}
+            : { windowsSandbox: this.options.sandbox.windowsSandbox })
+        }),
         processOwnerId: input.runId,
         attemptId: stableUuid(`${input.attemptId}:repair:${repair.pass}`),
         ...(input.repairSelection.effort !== undefined ? { reasoningEffort: input.repairSelection.effort } : {}),
@@ -712,6 +731,7 @@ export class V2NodeExecutor {
       };
     } finally {
       await rm(instructionPath, { force: true }).catch(() => undefined);
+      await sandboxSession?.dispose();
     }
   }
 
