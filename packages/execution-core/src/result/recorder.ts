@@ -137,6 +137,15 @@ export class ResultRecorder {
       });
       return this.finalize({ ...base, status: "timeout", currentHead: baseHead, diff: "", changedFiles: [], scopeCheck: passedScope });
     }
+    if (executorOutcome.failureDiagnosis !== undefined) {
+      execError("result", "leaf failed: executor reported a fatal condition", {
+        task: taskId,
+        kind: executorOutcome.failureDiagnosis.kind,
+        durationMs: executorOutcome.durationMs,
+        stderrTail: base.stderrTail ?? base.stdoutTail
+      });
+      return this.finalize({ ...base, status: "executor_error", currentHead: baseHead, diff: "", changedFiles: [], scopeCheck: passedScope });
+    }
     if (executorOutcome.exitCode !== 0) {
       execError("result", "leaf failed: executor exited non-zero", {
         task: taskId,

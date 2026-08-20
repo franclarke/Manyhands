@@ -979,7 +979,7 @@ export function leafFailureObservation(outcome: { reason: string; failureCause?:
   if (["transient", "network", "timeout"].includes(code ?? "")) {
     return { source: "executor", code, timedOut: code === "timeout", message: outcome.reason };
   }
-  if (["auth", "binary_missing", "quota", "executor_unavailable", "model_not_found"].includes(code ?? "")) {
+  if (["auth", "binary_missing", "quota", "executor_unavailable", "model_not_found", "sandbox_unavailable"].includes(code ?? "")) {
     return { source: "executor", code, message: outcome.reason };
   }
   if (outcome.reason.includes("SANDBOX_UNAVAILABLE:")) {

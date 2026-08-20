@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { DigestHasher, EffectKind } from "@manyhands/contracts";
 import {
   CredentialBroker,
+  discardBrokeredCredentialScope,
   readProcessSupervisorReceipts,
   SimpleGitRunner,
   WorktreeManager
@@ -435,6 +436,168 @@ describe("Stage 3 productive daemon boundary", () => {
       await kernel.close().catch(() => undefined);
     }
   }, 60_000);
+
+  physicalIt("serializes cleanup when cancellation races the recovery process final", async () => {
+    const root = await temporaryRoot();
+    const runId = "run:stage3:recovery-cancel-cleanup-race";
+    const recoveryAttemptId = "stage3:execution:recovery:1";
+    const laterAttemptId = "stage3:execution:recovery:2";
+    const recoveryScope = executionCredentialScopeId(runId, recoveryAttemptId);
+    const { repositoryRoot, baseSha } = await initializeRepository(root);
+    const credentialSource = path.join(root, "codex-auth.json");
+    await writeFile(credentialSource, "{}", "utf8");
+    const windowsJobRunnerPath = await windowsJobRunnerFor(root);
+    const revocationEntered = deferred<void>();
+    const releaseRevocation = deferred<void>();
+    const activeScopes = new Set<string>();
+    const discardedScopes: string[] = [];
+    const discardCredentialScope = async (rootDirectory: string, scopeId: string): Promise<void> => {
+      discardedScopes.push(scopeId);
+      if (scopeId !== recoveryScope) {
+        await discardBrokeredCredentialScope(rootDirectory, scopeId);
+        return;
+      }
+      if (activeScopes.has(scopeId)) {
+        throw Object.assign(new Error("Synthetic concurrent credential revocation collision."), { code: "EPERM" });
+      }
+      activeScopes.add(scopeId);
+      revocationEntered.resolve();
+      await releaseRevocation.promise;
+      try {
+        await discardBrokeredCredentialScope(rootDirectory, scopeId);
+      } finally {
+        activeScopes.delete(scopeId);
+      }
+    };
+    const daemonOptions = {
+      stateRoot: root,
+      endpoint: endpointFor("recovery-cancel-cleanup-race"),
+      processStartIdentity: "process:test:recovery-cancel-cleanup-race",
+      processIdentityProbe: { probe: async () => "dead" as const },
+      createDaemonEpoch: () => "daemon:recovery-cancel-cleanup-race:test",
+      clock: () => at,
+      production: false,
+      ...(windowsJobRunnerPath === undefined ? {} : { windowsJobRunnerPath }),
+      discardCredentialScope,
+      profile: {
+        kind: "transitional_unsafe" as const,
+        adapters: adapters(new Map()).filter((adapter) =>
+          adapter.kind !== "process_spawn" && adapter.kind !== "process_terminate"),
+        loadPlanningResult: async (effectId: string) => deterministicPlanningResult(effectId),
+        loadExecutionResult: async (_loadedRunId: string, attemptId: string): Promise<RunEventInput[]> => (
+          attemptId === "stage3:execution" ? [recoveryDecision()] : []
+        ),
+        executionProcess: (_definition: ProductRunDefinition, context?: { attemptId: string }) => ({
+          executable: process.execPath,
+          argv: context?.attemptId === "stage3:execution"
+            ? ["-e", "process.exit(0)"]
+            : ["-e", "setInterval(() => undefined, 1_000)"],
+          cwd: process.cwd(),
+          env: workerEnvironment(),
+          timeoutMs: 30_000
+        })
+      }
+    };
+    const kernel = await startProductiveDaemon(daemonOptions);
+    try {
+      await kernel.startupRecovery;
+      await kernel.engine.submit(buildRunCommandEnvelope({
+        commandId: "command:create:recovery-cancel-cleanup-race",
+        runId,
+        expectedRevision: 0,
+        submittedAt: at,
+        command: {
+          type: "create_run",
+          definition: definitionForTarget(repositoryRoot, baseSha)
+        } as unknown as RunCommandPayload
+      }, sha256));
+      await kernel.drainEffects();
+
+      let projection = await kernel.engine.query(runId);
+      const approvalId = Object.values(projection.decisions).find((decision) =>
+        decision.kind === "approve_plan" && decision.status === "pending")?.id;
+      if (approvalId === undefined) throw new Error("Missing plan approval decision.");
+      await kernel.engine.submit(buildRunCommandEnvelope({
+        commandId: "command:approve:recovery-cancel-cleanup-race",
+        runId,
+        expectedRevision: projection.sequence,
+        submittedAt: at,
+        command: { type: "resolve_decision", decisionId: approvalId, optionId: "approve" }
+      }, sha256));
+      await kernel.drainEffects();
+
+      projection = await kernel.engine.query(runId);
+      const recoveryDecisionId = Object.values(projection.decisions).find((decision) =>
+        decision.kind === "resolve_conflict" && decision.status === "pending")?.id;
+      if (recoveryDecisionId === undefined) throw new Error("Missing recovery decision.");
+      const orphan = await createOrphanWorktree(repositoryRoot, baseSha, runId);
+      const broker = new CredentialBroker({
+        rootDirectory: path.join(root, "credential-broker")
+      });
+      const recoveryBrokered = await broker.create(
+        "leaf:recovery",
+        [{ provider: "codex", sourcePath: credentialSource }],
+        recoveryScope
+      );
+      const laterBrokered = await broker.create(
+        "leaf:later",
+        [{ provider: "codex", sourcePath: credentialSource }],
+        executionCredentialScopeId(runId, laterAttemptId)
+      );
+
+      await kernel.engine.submit(buildRunCommandEnvelope({
+        commandId: "command:retry:recovery-cancel-cleanup-race",
+        runId,
+        expectedRevision: projection.sequence,
+        submittedAt: at,
+        command: { type: "resolve_decision", decisionId: recoveryDecisionId, optionId: "retry" }
+      }, sha256));
+      const running = await waitForStartedProcess(kernel, root, runId, recoveryAttemptId);
+      projection = running.projection;
+
+      await kernel.engine.submit(buildRunCommandEnvelope({
+        commandId: "command:cancel:recovery-cancel-cleanup-race",
+        runId,
+        expectedRevision: projection.sequence,
+        submittedAt: at,
+        command: { type: "cancel_run", reason: "race recovery cleanup" }
+      }, sha256));
+      const drained = kernel.drainEffects();
+      await withTimeout(revocationEntered.promise, "Recovery credential revocation did not start.");
+      await new Promise<void>((resolve) => setImmediate(resolve));
+
+      const cancelling = await kernel.engine.query(runId);
+      const termination = Object.values(cancelling.effectIntents).find((intent) =>
+        intent.kind === "process_terminate" && intent.attemptId === "stage3:cancel:terminate");
+      expect(termination).toBeDefined();
+      expect(cancelling.lifecycle).toBe("cancelling");
+      expect(cancelling.effectTerminals[running.spawn.effectId]).toBeUndefined();
+      expect(cancelling.effectTerminals[termination!.effectId]).toBeUndefined();
+      expect(await readProcessSupervisorReceipts(path.join(root, "processes"), running.spawn.effectId))
+        .toEqual([
+          expect.objectContaining({ phase: "started" }),
+          expect.objectContaining({ phase: "final", outcome: "terminated" })
+        ]);
+
+      releaseRevocation.resolve();
+      await drained;
+
+      const interrupted = await kernel.engine.query(runId);
+      expect(interrupted.lifecycle).toBe("interrupted");
+      expect(interrupted.effectTerminals[running.spawn.effectId]).toMatchObject({ status: "interrupted" });
+      expect(interrupted.effectTerminals[termination!.effectId]).toMatchObject({ status: "completed" });
+      expect(discardedScopes.filter((scopeId) => scopeId === recoveryScope)).toHaveLength(1);
+      expect(await git(repositoryRoot, "worktree", "list", "--porcelain"))
+        .not.toContain(orphan.path.replaceAll("\\", "/"));
+      await expect(readFile(path.join(recoveryBrokered.homeDirectory, ".codex", "auth.json"), "utf8"))
+        .rejects.toMatchObject({ code: "ENOENT" });
+      expect(await readFile(path.join(laterBrokered.homeDirectory, ".codex", "auth.json"), "utf8"))
+        .toBe("{}");
+    } finally {
+      releaseRevocation.resolve();
+      await kernel.close().catch(() => undefined);
+    }
+  }, 60_000);
 });
 
 function definition(): ProductRunDefinition {
@@ -538,6 +701,26 @@ function deterministicPlanningResult(effectId: string): RunEventInput[] {
   ];
 }
 
+function recoveryDecision(): RunEventInput {
+  return {
+    eventId: "decision:stage3:recovery-cancel-cleanup-race",
+    occurredAt: at,
+    type: "decision.raised",
+    payload: {
+      decision: {
+        id: "decision:stage3:recovery-cancel-cleanup-race",
+        kind: "resolve_conflict",
+        question: "Retry execution after the recoverable failure?",
+        options: [{ id: "retry", label: "Retry" }, { id: "stop", label: "Stop" }],
+        affectedNodeIds: ["node:stage3"],
+        evidenceRefs: ["attempt:stage3:execution"],
+        impact: "behavior",
+        raisedAtGraphRevision: 1
+      }
+    }
+  };
+}
+
 async function temporaryRoot(): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "mh-stage3-product-"));
   roots.push(root);
@@ -577,12 +760,14 @@ async function createOrphanWorktree(repositoryRoot: string, baseSha: string, run
 async function waitForStartedProcess(
   kernel: Awaited<ReturnType<typeof startProductiveDaemon>>,
   stateRoot: string,
-  runId: string
+  runId: string,
+  attemptId?: string
 ) {
   let last: unknown;
   for (let attempt = 0; attempt < 400; attempt += 1) {
     const projection = await kernel.engine.query(runId);
-    const spawn = Object.values(projection.effectIntents).find((intent) => intent.kind === "process_spawn");
+    const spawn = Object.values(projection.effectIntents).find((intent) =>
+      intent.kind === "process_spawn" && (attemptId === undefined || intent.attemptId === attemptId));
     if (spawn !== undefined) {
       const receipts = await readProcessSupervisorReceipts(path.join(stateRoot, "processes"), spawn.effectId);
       last = { lifecycle: projection.lifecycle, receipts };
@@ -591,6 +776,31 @@ async function waitForStartedProcess(
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
   throw new Error(`Supervised process did not start: ${JSON.stringify(last)}`);
+}
+
+function deferred<T>(): {
+  promise: Promise<T>;
+  resolve(value: T | PromiseLike<T>): void;
+} {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((settle) => {
+    resolve = settle;
+  });
+  return { promise, resolve };
+}
+
+async function withTimeout<T>(promise: Promise<T>, message: string): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), 5_000);
+      })
+    ]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
 }
 
 async function windowsJobRunnerFor(root: string): Promise<string | undefined> {

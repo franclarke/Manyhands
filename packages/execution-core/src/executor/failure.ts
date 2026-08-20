@@ -1,5 +1,7 @@
 import { ABORTED_EXIT_CODE, SPAWN_FAILURE_EXIT_CODE } from "./process";
-import type { ExecutorRunOutcome } from "./types";
+import type { ExecutorFailureDiagnosis, ExecutorRunOutcome } from "./types";
+
+export type { ExecutorFailureDiagnosis, ExecutorFailureKind } from "./types";
 
 /**
  * Provider-agnostic classification of why an agent CLI invocation failed.
@@ -7,27 +9,6 @@ import type { ExecutorRunOutcome } from "./types";
  * different executor for quota, surface an actionable hint for auth/binary
  * problems) instead of treating every non-zero exit as an opaque failure.
  */
-export type ExecutorFailureKind =
-  | "timeout"
-  | "aborted"
-  | "binary_missing"
-  | "auth"
-  | "quota"
-  | "model_not_found"
-  | "unknown";
-
-export interface ExecutorFailureDiagnosis {
-  kind: ExecutorFailureKind;
-  /** Actionable, human-readable hint surfaced in traces and the UI. */
-  hint: string;
-  /**
-   * Whether retrying the same instructions on a DIFFERENT executor/model could
-   * plausibly succeed (true for quota/timeouts, false for auth/binary issues
-   * that would also need operator action).
-   */
-  retryableOnOtherExecutor: boolean;
-}
-
 const AUTH_PATTERN = /(401|403|unauthor|forbidden|invalid api key|api key not|authentication|not logged in|please (run|use).*(login|auth)|credit balance)/i;
 // `(session|usage|message|token) limit` covers how the two CLIs the study drives
 // actually announce exhaustion ("You've hit your session limit · resets 2pm").
@@ -38,13 +19,14 @@ const MODEL_PATTERN = /(model\s+\S+\s+(not|isn't|is not)\s+(found|supported|avai
 const BINARY_PATTERN = /(enoent|not recognized as an internal or external command|command not found|no se reconoce)/i;
 
 /**
- * Classify a failed executor outcome. Returns undefined for clean exits so the
- * caller can write `const failure = classifyExecutorFailure(outcome)` and only
- * branch when something actually went wrong.
+ * Classify an executor outcome. A profile diagnosis may fail closed even after
+ * exit zero; otherwise clean exits return undefined so callers only branch
+ * when something actually went wrong.
  */
 export function classifyExecutorFailure(
-  outcome: Pick<ExecutorRunOutcome, "exitCode" | "stdout" | "stderr" | "timedOut">
+  outcome: Pick<ExecutorRunOutcome, "exitCode" | "stdout" | "stderr" | "timedOut" | "failureDiagnosis">
 ): ExecutorFailureDiagnosis | undefined {
+  if (outcome.failureDiagnosis !== undefined) return outcome.failureDiagnosis;
   if (outcome.exitCode === 0) {
     return undefined;
   }

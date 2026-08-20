@@ -447,7 +447,7 @@ describe.skipIf(!enabled || process.platform !== "win32")("Stage 8 live Codex le
 });
 
 function stage8WindowsSandbox(): "elevated" | "unelevated" {
-  const value = process.env.MANYHANDS_STAGE8_WINDOWS_SANDBOX ?? "elevated";
+  const value = process.env.MANYHANDS_STAGE8_WINDOWS_SANDBOX ?? "unelevated";
   if (value === "elevated" || value === "unelevated") return value;
   throw new Error("MANYHANDS_STAGE8_WINDOWS_SANDBOX must be elevated or unelevated.");
 }
@@ -463,8 +463,8 @@ function definition(
     userPrompt: overrides.userPrompt ?? "Modify the existing src/stage8-probe.js so its exported stage8Probe function returns the exact string stage8-ok. Update the existing src/stage8-probe.test.js to verify that value with node:test. Do not add files or directories; change only those two existing files.",
     acceptanceCriteria: ["src/stage8-probe.js returns stage8-ok and node --test passes"],
     planningSelection: { executorId: "codex-cli", model: "gpt-5.5" },
-    executionSelection: { executorId: "codex-cli", model: "gpt-5.5" },
-    repairSelection: { executorId: "codex-cli", model: "gpt-5.5" },
+    executionSelection: { executorId: "codex-cli", model: "gpt-5.4-mini", effort: "medium" },
+    repairSelection: { executorId: "codex-cli", model: "gpt-5.4-mini", effort: "medium" },
     executionConfig: overrides.executionConfig ?? { leafTimeoutMs: 600_000, scopePolicy: "strict" },
     targetContext: {
       fingerprint: "stage8-live-clean-clone",

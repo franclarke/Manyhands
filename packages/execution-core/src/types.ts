@@ -129,6 +129,7 @@ export const AgentExecutionResultSchema = z.object({
       z.literal("auth"),
       z.literal("quota"),
       z.literal("model_not_found"),
+      z.literal("sandbox_unavailable"),
       z.literal("unknown")
     ])
     .optional(),

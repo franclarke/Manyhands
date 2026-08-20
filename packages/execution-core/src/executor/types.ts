@@ -1,5 +1,23 @@
 import type { AgentExecutorOptions } from "../types";
 
+export type ExecutorFailureKind =
+  | "timeout"
+  | "aborted"
+  | "binary_missing"
+  | "auth"
+  | "quota"
+  | "model_not_found"
+  | "sandbox_unavailable"
+  | "unknown";
+
+export interface ExecutorFailureDiagnosis {
+  kind: ExecutorFailureKind;
+  /** Actionable, human-readable hint surfaced in traces and the UI. */
+  hint: string;
+  /** Whether another executor/model could plausibly succeed without operator action. */
+  retryableOnOtherExecutor: boolean;
+}
+
 /**
  * Raw outcome of a single agent-executor (Gemini CLI) invocation. The
  * orchestrator never trusts stdout to determine *what changed* (D5 — git diff is
@@ -21,6 +39,8 @@ export interface ExecutorRunOutcome {
    */
   tokensTotal?: number;
   costUsd?: number;
+  /** A provider profile may report a fatal condition even when its CLI exits zero. */
+  failureDiagnosis?: ExecutorFailureDiagnosis;
 }
 
 /**

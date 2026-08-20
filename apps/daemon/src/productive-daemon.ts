@@ -96,6 +96,8 @@ export interface StartProductiveDaemonOptions {
   readonly windowsPipeAclHelperPath?: string;
   readonly createDaemonEpoch?: () => string;
   readonly clock?: () => string;
+  /** Revokes one attempt-scoped credential home after its supervised process is physically final. */
+  readonly discardCredentialScope?: typeof discardBrokeredCredentialScope;
   readonly ipcNow?: () => number;
   readonly onIpcError?: (error: Error) => void;
 }
@@ -113,6 +115,7 @@ export async function startProductiveDaemon(
       : { windowsJobRunnerPath: options.windowsJobRunnerPath })
   });
   const hasher = sha256Digest;
+  const discardCredentialScope = options.discardCredentialScope ?? discardBrokeredCredentialScope;
   const liveProfile = options.profile.kind === "deterministic_fake"
     ? undefined
     : options.profile;
@@ -120,6 +123,7 @@ export async function startProductiveDaemon(
     ? undefined
     : new JsonlRunEventStore({ directory: path.join(options.stateRoot, "runs") });
   const liveGcTasks = new Map<string, Promise<void>>();
+  const liveCleanupTasks = new Map<string, Promise<void>>();
   const cleanupExecutionRunOnce = liveRunEvents === undefined
     ? undefined
     : async (runId: string) => {
@@ -133,12 +137,12 @@ export async function startProductiveDaemon(
         if (liveGcTasks.get(runId) === cleanup) liveGcTasks.delete(runId);
       }
     };
-  const cleanupLiveExecution = cleanupExecutionRunOnce === undefined
+  const reclaimLiveExecution = cleanupExecutionRunOnce === undefined
     ? undefined
     : async (runId: string, attemptId: string) => {
       const failures: unknown[] = [];
       try {
-        await discardBrokeredCredentialScope(
+        await discardCredentialScope(
           path.join(options.stateRoot, "credential-broker"),
           executionCredentialScopeId(runId, attemptId)
         );
@@ -152,6 +156,20 @@ export async function startProductiveDaemon(
       }
       if (failures.length > 0) {
         throw new AggregateError(failures, `Failed to reclaim execution resources for ${runId}/${attemptId}.`);
+      }
+    };
+  const cleanupLiveExecution = reclaimLiveExecution === undefined
+    ? undefined
+    : async (runId: string, attemptId: string) => {
+      const cleanupKey = executionCredentialScopeId(runId, attemptId);
+      const active = liveCleanupTasks.get(cleanupKey);
+      if (active !== undefined) return active;
+      const cleanup = reclaimLiveExecution(runId, attemptId);
+      liveCleanupTasks.set(cleanupKey, cleanup);
+      try {
+        await cleanup;
+      } finally {
+        if (liveCleanupTasks.get(cleanupKey) === cleanup) liveCleanupTasks.delete(cleanupKey);
       }
     };
   const adapters = options.profile.kind === "deterministic_fake"

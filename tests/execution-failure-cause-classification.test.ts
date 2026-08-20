@@ -82,6 +82,20 @@ describe("leafFailureObservation", () => {
     expect(classifyFailure(observation)).toBe("environment_auth_executor");
   });
 
+  it("fails closed when the executor reports a runtime sandbox mismatch", async () => {
+    const { executionFailureReasonForTest } = await import("@manyhands/execution-core");
+    const reason = executionFailureReasonForTest({
+      status: "executor_error",
+      failureKind: "sandbox_unavailable",
+      failureHint: "Codex started read-only, but ManyHands required workspace-write."
+    });
+
+    const observation = leafFailureObservation({ reason });
+
+    expect(observation).toMatchObject({ source: "executor", code: "sandbox_unavailable" });
+    expect(classifyFailure(observation)).toBe("environment_auth_executor");
+  });
+
   it("keeps the full reason as the message so evidence is not lost", () => {
     const reason = "scope_violation: touched tests/expense.test.ts";
 

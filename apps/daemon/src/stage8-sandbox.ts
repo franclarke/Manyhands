@@ -57,7 +57,7 @@ export function stage8SandboxFor(input: {
 }
 
 export function stage8WindowsSandbox(env: NodeJS.ProcessEnv = process.env): "elevated" | "unelevated" {
-  const value = env.MANYHANDS_STAGE8_WINDOWS_SANDBOX ?? "elevated";
+  const value = env.MANYHANDS_STAGE8_WINDOWS_SANDBOX ?? "unelevated";
   if (value === "elevated" || value === "unelevated") return value;
   throw new Error("Unsupported Stage 8 Windows sandbox; refusing unattended execution.");
 }

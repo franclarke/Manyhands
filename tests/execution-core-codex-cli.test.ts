@@ -2,15 +2,20 @@ import { EventEmitter } from "node:events";
 import { join } from "node:path";
 import { PassThrough } from "node:stream";
 import type { SpawnOptions } from "node:child_process";
+import { InMemoryTraceStore } from "@manyhands/trace-store";
 import { describe, expect, it } from "vitest";
 import {
   CODEX_EXECUTOR_ID,
   CODEX_PROFILE,
   CliAgentExecutor,
+  ResultRecorder,
   buildCodexArgs,
   getExecutorDescriptor,
-  type AgentExecutorOptions
+  type AgentExecutorOptions,
+  type WorktreeRecord
 } from "@manyhands/execution-core";
+
+import { FakeGitRunner } from "./helpers/fake-git-runner";
 
 function optionsFor(cwd: string, overrides: Partial<AgentExecutorOptions> = {}): AgentExecutorOptions {
   return {
@@ -48,12 +53,13 @@ function depsFor(child: ReturnType<typeof fakeChild>) {
 describe("buildCodexArgs", () => {
   it("runs codex exec headless with a writable sandbox and stdin prompt", () => {
     expect(buildCodexArgs(optionsFor("/repo"))).toEqual([
+      "--ask-for-approval",
+      "never",
+      "exec",
       "--sandbox",
       "workspace-write",
       "-c",
       'sandbox_mode="workspace-write"',
-      "--ask-for-approval",
-      "never",
       "-c",
       "sandbox_workspace_write.network_access=false",
       "-c",
@@ -62,7 +68,6 @@ describe("buildCodexArgs", () => {
       "/repo",
       "--add-dir",
       "/repo",
-      "exec",
       "--model",
       "gpt-5-codex",
       "--color",
@@ -76,12 +81,13 @@ describe("buildCodexArgs", () => {
 
   it("swaps the sandbox for full bypass when approvals are bypassed", () => {
     expect(buildCodexArgs(optionsFor("/repo", { bypassApprovals: true }))).toEqual([
+      "--ask-for-approval",
+      "never",
+      "exec",
       "--sandbox",
       "danger-full-access",
       "-c",
       'sandbox_mode="danger-full-access"',
-      "--ask-for-approval",
-      "never",
       "-c",
       "sandbox_workspace_write.network_access=false",
       "-c",
@@ -90,7 +96,6 @@ describe("buildCodexArgs", () => {
       "/repo",
       "--add-dir",
       "/repo",
-      "exec",
       "--model",
       "gpt-5-codex",
       "--color",
@@ -149,6 +154,102 @@ describe("CliAgentExecutor with the Codex profile (injected spawn)", () => {
     child.emit("error", new Error("spawn codex ENOENT"));
 
     await expect(promise).resolves.toMatchObject({ exitCode: 127, timedOut: false });
+  });
+
+  it("fails as sandbox_unavailable when Codex exits zero after starting read-only", async () => {
+    const child = fakeChild();
+    const executor = new CliAgentExecutor(CODEX_PROFILE, depsFor(child));
+    const promise = executor.execute(optionsFor("/repo", { windowsSandbox: "elevated" }));
+    child.stderr.emit("data", Buffer.from([
+      "OpenAI Codex v0.148.0",
+      "sandbox: read-only",
+      "patch rejected: writing is blocked by read-only sandbox; rejected by user approval settings"
+    ].join("\n")));
+    child.emit("close", 0);
+
+    const executorOutcome = await promise;
+    const git = new FakeGitRunner({ heads: { "/repo": "BASE_SHA" }, diffCachedNameOnly: [] });
+    const recorder = new ResultRecorder({ git, traceStore: new InMemoryTraceStore() });
+    const worktree: WorktreeRecord = {
+      taskId: "task:sandbox-probe",
+      runId: "run:sandbox-probe",
+      kind: "leaf",
+      path: "/repo",
+      branch: "mh/run-sandbox-probe/task-sandbox-probe",
+      baseCommit: "BASE_SHA",
+      status: "active",
+      createdAt: "2026-08-20T00:00:00.000Z"
+    };
+
+    const result = await recorder.record({ worktree, executorOutcome });
+
+    expect(result).toMatchObject({
+      status: "executor_error",
+      failureKind: "sandbox_unavailable",
+      executorExitCode: 0
+    });
+    expect(git.calls).toHaveLength(0);
+  });
+
+  it("does not mistake sandbox text echoed from the user prompt for the Codex preamble", async () => {
+    const child = fakeChild();
+    const executor = new CliAgentExecutor(CODEX_PROFILE, depsFor(child));
+    const promise = executor.execute(optionsFor("/repo", { windowsSandbox: "elevated" }));
+    child.stderr.emit("data", Buffer.from([
+      "OpenAI Codex v0.148.0",
+      "sandbox: workspace-write [workdir]",
+      "--------",
+      "user",
+      "Diagnose this historical line without treating it as the current sandbox:",
+      "sandbox: read-only"
+    ].join("\n")));
+    child.emit("close", 0);
+
+    const outcome = await promise;
+    expect(outcome.exitCode).toBe(0);
+    expect(outcome.failureDiagnosis).toBeUndefined();
+  });
+
+  it("reports sandbox_unavailable when native Windows sandbox setup cannot launch", async () => {
+    const child = fakeChild();
+    const executor = new CliAgentExecutor(CODEX_PROFILE, depsFor(child));
+    const promise = executor.execute(optionsFor("/repo", { windowsSandbox: "elevated" }));
+    child.stderr.emit("data", Buffer.from([
+      "sandbox setup required: sandbox users missing or incompatible with marker version",
+      "orchestrator_helper_launch_canceled: ShellExecuteExW failed to launch setup helper: 1223"
+    ].join("\n")));
+    child.emit("close", 1);
+
+    await expect(promise).resolves.toMatchObject({
+      exitCode: 1,
+      failureDiagnosis: {
+        kind: "sandbox_unavailable",
+        retryableOnOtherExecutor: false
+      }
+    });
+  });
+
+  it("reports sandbox_unavailable when the native Windows sandbox cannot create its logon process", async () => {
+    const child = fakeChild();
+    const executor = new CliAgentExecutor(CODEX_PROFILE, depsFor(child));
+    const promise = executor.execute(optionsFor("/repo", { windowsSandbox: "elevated" }));
+    child.stderr.emit("data", Buffer.from([
+      "OpenAI Codex v0.148.0",
+      "sandbox: workspace-write [workdir]",
+      "--------",
+      "user",
+      "Implement the requested change.",
+      "ERROR codex_core::tools::router: apply_patch failed: windows sandbox failed: CreateProcessWithLogonW failed: 2147942522"
+    ].join("\n")));
+    child.emit("close", 0);
+
+    await expect(promise).resolves.toMatchObject({
+      exitCode: 0,
+      failureDiagnosis: {
+        kind: "sandbox_unavailable",
+        retryableOnOtherExecutor: false
+      }
+    });
   });
 
   it("runs Windows batch shims through explicit cmd.exe without shell:true", async () => {

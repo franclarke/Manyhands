@@ -173,6 +173,10 @@ specifications. See `CONTEXT-MAP.md` and `docs/agents/domain.md`.
 - Before a live daemon/worker qualification, rebuild every changed workspace
   package imported by that worker. Vitest source tests do not prove the
   compiled `dist` dependency path used by the spawned process.
+- When a Windows Stage 8 worker resolves to `read-only`, reproduce the exact
+  `codex exec` invocation before changing credential or ACL infrastructure.
+  Keep global approval options before `exec` and sandbox/config options after
+  it, then require one real writable leaf as the gate.
 - During the frozen Viaje en Familia experiment loop, cleanup of a failed
   attempt is pre-authorized once its processes are quiescent and compact
   evidence exists. Delete its workspace through the UI and only its resolved
