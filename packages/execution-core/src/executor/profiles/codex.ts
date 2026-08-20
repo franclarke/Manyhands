@@ -9,9 +9,14 @@ import { conservativeCostForTotalTokens } from "../../pricing";
  * the trailing `-` makes Codex read the full prompt from stdin.
  */
 export function buildCodexArgs(options: AgentExecutorOptions): string[] {
+  const sandboxMode = options.bypassApprovals ? "danger-full-access" : "workspace-write";
   return [
     "--sandbox",
-    options.bypassApprovals ? "danger-full-access" : "workspace-write",
+    sandboxMode,
+    // Codex 0.148 can ignore the flag when user config is disabled, so keep
+    // the legacy config override aligned with the requested sandbox mode.
+    "-c",
+    `sandbox_mode="${sandboxMode}"`,
     "--ask-for-approval",
     "never",
     "-c",

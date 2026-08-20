@@ -50,6 +50,8 @@ describe("buildCodexArgs", () => {
     expect(buildCodexArgs(optionsFor("/repo"))).toEqual([
       "--sandbox",
       "workspace-write",
+      "-c",
+      'sandbox_mode="workspace-write"',
       "--ask-for-approval",
       "never",
       "-c",
@@ -76,6 +78,8 @@ describe("buildCodexArgs", () => {
     expect(buildCodexArgs(optionsFor("/repo", { bypassApprovals: true }))).toEqual([
       "--sandbox",
       "danger-full-access",
+      "-c",
+      'sandbox_mode="danger-full-access"',
       "--ask-for-approval",
       "never",
       "-c",
