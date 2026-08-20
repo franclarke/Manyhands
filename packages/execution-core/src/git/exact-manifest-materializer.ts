@@ -33,20 +33,29 @@ export class ExactGitManifestMaterializer {
     if (await this.git.cherryPickHead(input.cwd) !== undefined) {
       throw new Error("Cannot materialize an artifact while a Git cherry-pick is active.");
     }
-    const baseTree = await this.git.revParse(input.cwd, `${input.baseCommit}^{tree}`);
-    if (baseTree !== input.manifest.baseTreeSha) {
-      throw new Error(`Artifact base tree mismatch: expected ${input.manifest.baseTreeSha}, found ${baseTree}.`);
-    }
+    const currentTree = await this.git.revParse(input.cwd, `${input.baseCommit}^{tree}`);
     for (const entry of input.manifest.entries) assertOwned(entry, input.allowedPaths);
 
     const indexDirectory = await mkdtemp(join(tmpdir(), "mh-artifact-index-"));
-    const indexFile = join(indexDirectory, "index");
+    const declaredIndexFile = join(indexDirectory, "declared-index");
     try {
-      await this.git.readTree({ cwd: input.cwd, tree: input.manifest.baseTreeSha, indexFile });
-      for (const entry of input.manifest.entries) await this.applyEntry(input.cwd, input.manifest.baseTreeSha, entry, indexFile);
-      const treeSha = await this.git.writeTree({ cwd: input.cwd, indexFile });
-      if (treeSha !== input.manifest.resultTreeSha) {
-        throw new Error(`Artifact materialization tree mismatch: expected ${input.manifest.resultTreeSha}, found ${treeSha}.`);
+      await this.git.readTree({ cwd: input.cwd, tree: input.manifest.baseTreeSha, indexFile: declaredIndexFile });
+      for (const entry of input.manifest.entries) {
+        await this.applyEntry(input.cwd, input.manifest.baseTreeSha, entry, declaredIndexFile);
+      }
+      const declaredTree = await this.git.writeTree({ cwd: input.cwd, indexFile: declaredIndexFile });
+      if (declaredTree !== input.manifest.resultTreeSha) {
+        throw new Error(`Artifact materialization tree mismatch: expected ${input.manifest.resultTreeSha}, found ${declaredTree}.`);
+      }
+
+      let treeSha = declaredTree;
+      if (currentTree !== input.manifest.baseTreeSha) {
+        const overlayIndexFile = join(indexDirectory, "overlay-index");
+        await this.git.readTree({ cwd: input.cwd, tree: currentTree, indexFile: overlayIndexFile });
+        for (const entry of input.manifest.entries) {
+          await this.applyEntry(input.cwd, currentTree, entry, overlayIndexFile);
+        }
+        treeSha = await this.git.writeTree({ cwd: input.cwd, indexFile: overlayIndexFile });
       }
       const executionBaseCommit = await this.git.commitTree({
         cwd: input.cwd,

@@ -173,6 +173,10 @@ specifications. See `CONTEXT-MAP.md` and `docs/agents/domain.md`.
 - Before a live daemon/worker qualification, rebuild every changed workspace
   package imported by that worker. Vitest source tests do not prove the
   compiled `dist` dependency path used by the spawned process.
+- When integrating sibling change-set manifests produced from one base tree,
+  compose them only when every touched path still has its declared preimage.
+  Preserve already-applied disjoint paths, and fail closed on an overlapping
+  preimage instead of requiring whole-tree equality or retrying an agent.
 - When a Windows Stage 8 worker resolves to `read-only`, reproduce the exact
   `codex exec` invocation before changing credential or ACL infrastructure.
   Keep global approval options before `exec` and sandbox/config options after
