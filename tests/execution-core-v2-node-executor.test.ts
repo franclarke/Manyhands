@@ -752,6 +752,9 @@ describe("V2NodeExecutor", () => {
       expect(prompts[0]).toContain(`- ${allowedPath}`);
     }
     expect(prompts[0]).toContain("No additional files may be created outside those exact patterns.");
+    expect(prompts[0]).toContain("A listed directory path does not authorize files beneath it.");
+    expect(prompts[0]).toContain("This contract declares no output roots, so create only exact file paths listed above.");
+    expect(prompts[0]).toContain("If the only creatable path is a test file, prove the integration in that test without inventing a production module.");
     expect(sandboxRequests).toEqual([expect.objectContaining({
       attemptId: `${input.attemptId}:repair:1`,
       credentialScopeId: "run-v2-repair-scope",

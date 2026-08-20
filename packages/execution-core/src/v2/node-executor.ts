@@ -1088,7 +1088,12 @@ function buildV2RepairInstructions(
     ""
   ];
   const creationScope = input.contract.scope.outputRoots.length === 0
-    ? ["No additional files may be created outside those exact patterns."]
+    ? [
+      "No additional files may be created outside those exact patterns.",
+      "A listed directory path does not authorize files beneath it.",
+      "This contract declares no output roots, so create only exact file paths listed above.",
+      "If the only creatable path is a test file, prove the integration in that test without inventing a production module."
+    ]
     : [
       "New files may be created only under these declared output roots:",
       ...input.contract.scope.outputRoots.map((outputRoot) => `- ${outputRoot}`)

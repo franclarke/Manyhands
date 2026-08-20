@@ -272,9 +272,7 @@ function compileScope(input: CompilePlanInput, unit: WorkUnit, revision: string)
     .filter((candidate) => !forbiddenPaths.some((forbidden) => pathsOverlap(candidate, forbidden)));
   const outputRoots = normalizedPaths(Object.values(input.plan.artifacts)
     .filter((artifact) => artifact.producerUnitId === unit.id)
-    .flatMap((artifact) => artifact.expectedPaths)
-    .map(outputRootFor)
-    .filter((root): root is string => root !== undefined));
+    .flatMap((artifact) => outputRootsFor(artifact.expectedPaths)));
   return {
     schemaVersion: 2,
     id: `scope:${unit.id}`,
@@ -288,11 +286,14 @@ function compileScope(input: CompilePlanInput, unit: WorkUnit, revision: string)
   };
 }
 
-function outputRootFor(candidate: string): string | undefined {
-  const normalized = normalizePath(candidate);
-  if (normalized.includes("*")) return undefined;
-  const ownedSurface = normalized.slice(0, normalized.lastIndexOf("/"));
-  return ownedSurface === "" || ownedSurface === "." ? undefined : ownedSurface;
+function outputRootsFor(expectedPaths: readonly string[]): string[] {
+  const exactPaths = normalizedPaths(expectedPaths).filter((path) => !path.includes("*"));
+  return normalizedPaths(exactPaths.map((candidate) => {
+    if (exactPaths.some((other) => other !== candidate && other.startsWith(`${candidate}/`))) {
+      return candidate;
+    }
+    return candidate.slice(0, candidate.lastIndexOf("/"));
+  }));
 }
 
 function compileValidation(unit: WorkUnit, revision: string): ValidationContract {

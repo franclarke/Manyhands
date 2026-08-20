@@ -59,6 +59,27 @@ describe("Stage 5 direct compiler", () => {
     });
   });
 
+  it("derives the narrow artifact directory when a planned path contains its focused test", () => {
+    const fixture = groundedFixture();
+    const material = structuredClone(fixture.plan);
+    Reflect.deleteProperty(material, "digest");
+    material.units["unit:a"]!.repositorySurface = {
+      resourceRefs: ["path:src/module-a"],
+      pathHints: ["src/module-a"]
+    };
+    material.units["unit:a"]!.resourceIntents[0]!.resourceId = "path:src/module-a";
+    material.artifacts["artifact:a"]!.expectedPaths = [
+      "src/module-a",
+      "src/module-a/module-a.test.ts"
+    ];
+    const plan = buildSemanticPlan(material, stage5Sha256);
+
+    const compiled = compilePlan({ ...fixture, plan, hasher: stage5Sha256, idFactory: ids });
+
+    if (!compiled.ok) throw new Error(JSON.stringify(compiled.findings));
+    expect(compiled.contracts.taskBundles["unit:a"]?.scope.outputRoots).toEqual(["src/module-a"]);
+  });
+
   it("is deterministic across semantically equivalent set order", () => {
     const fixture = groundedFixture();
     const material = structuredClone(fixture.plan);
