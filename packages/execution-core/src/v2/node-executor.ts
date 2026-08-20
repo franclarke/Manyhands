@@ -661,7 +661,7 @@ export class V2NodeExecutor {
     },
     signal: AbortSignal,
     prepared?: PreparedValidationRecipe
-  ): Promise<{ success: boolean; candidateSha?: string; evidenceRefs: string[] }> {
+  ): Promise<{ success: boolean; candidateSha?: string; evidenceRefs: string[]; failureReason?: string }> {
     const instructionPath = instructionFilePath(input, "repair");
     let sandboxSession: SandboxSession | undefined;
     if (await this.options.git.cherryPickHead(worktree.path) !== undefined) {
@@ -706,7 +706,9 @@ export class V2NodeExecutor {
         processOwnerId: input.runId,
         attemptId: stableUuid(`${input.attemptId}:repair:${repair.pass}`),
         ...(input.repairSelection.effort !== undefined ? { reasoningEffort: input.repairSelection.effort } : {}),
-        signal
+        signal,
+        onOutput: (chunk) => this.options.traceStore.append({ type: "executor_output", actor: "agent", taskId: input.node.id, payload: chunk }),
+        onAgentStatus: (status) => this.options.traceStore.append({ type: "agent_status", actor: "agent", taskId: input.node.id, payload: { ...status } })
       });
       const result = await this.recorder.record({
         worktree,
@@ -719,11 +721,24 @@ export class V2NodeExecutor {
         usageSource: usageSourceForSelection(input.repairSelection)
       });
       const evidenceRefs = [`repair:${input.attemptId}:${repair.pass}`, ...repair.conflictFiles.map((file) => `file:${file}`)];
-      if (result.status !== "success" || result.commitSha === undefined) return { success: false, evidenceRefs };
+      if (result.status !== "success" || result.commitSha === undefined) {
+        const changedFiles = result.changedFiles.slice(0, 8);
+        const violations = result.scopeCheck.violations.slice(0, 8);
+        return {
+          success: false,
+          evidenceRefs,
+          failureReason: [
+            `Integration repair rejected: ${result.status}.`,
+            ...(changedFiles.length === 0 ? [] : [`Changed files: ${changedFiles.join(", ")}.`]),
+            ...(violations.length === 0 ? [] : [`Scope violations: ${violations.join(" | ")}.`])
+          ].join(" ")
+        };
+      }
       return { success: true, candidateSha: result.commitSha, evidenceRefs };
     } catch {
       return {
         success: false,
+        failureReason: "Integration repair failed before a candidate could be recorded.",
         evidenceRefs: [
           `repair:${input.attemptId}:${repair.pass}`,
           "physical-intent:source-diff-unavailable"
@@ -1043,7 +1058,7 @@ export function buildV2NodeInstructions(
 }
 
 function buildV2RepairInstructions(
-  input: Pick<V2PhysicalNodeExecutionInput, "node" | "contract">,
+  input: Pick<V2PhysicalNodeExecutionInput, "node" | "contract" | "priorFailure">,
   repair: {
     artifactId: string;
     conflictFiles: string[];
@@ -1064,6 +1079,12 @@ function buildV2RepairInstructions(
     "Repair the composed behavior, not the validation command or its configuration.",
     ...repair.parentValidation.failedCriteria.map((criterion) => `- ${criterion.criterionId}/${criterion.obligationId}: ${criterion.justification}`)
   ];
+  const previousFailure = input.priorFailure === undefined ? [] : [
+    "Previous integration attempt failed; address this observed cause before finishing:",
+    `- Attempt: ${input.priorFailure.attemptId}`,
+    `- Failure: ${input.priorFailure.reason}`,
+    ""
+  ];
   return [
     repair.cause === "parent_validation_failed"
       ? `Repair the semantically invalid integrated candidate for ${input.node.title}.`
@@ -1071,9 +1092,14 @@ function buildV2RepairInstructions(
     "",
     `Parent objective: ${input.contract.task.goal}`,
     `Repair cause: ${repair.cause}`,
+    ...previousFailure,
     `Conflicting artifact: ${repair.artifactId}`,
     "Conflict files:",
     ...repair.conflictFiles.map((file) => `- ${file}`),
+    "",
+    "Change only these declared parent-scope paths:",
+    ...input.contract.scope.allowedPaths.map((allowedPath) => `- ${allowedPath}`),
+    "Do not modify an upstream child artifact to make the parent integration pass; repair only the parent-owned integration surface.",
     "",
     ...semanticFailure,
     "Preserve every child intent and the shared contracts below:",

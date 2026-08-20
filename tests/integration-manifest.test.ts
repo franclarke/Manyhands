@@ -214,6 +214,27 @@ describe("IntegrationManifestExecutor", () => {
     });
   });
 
+  it("preserves the repair rejection reason when parent validation still fails", async () => {
+    const git = new FakeGitRunner({
+      heads: { "/wt": "BASE" },
+      cherryPickResultShas: ["PICK_A"]
+    });
+    const built = request([artifact("a", "node-a", "SHA_A")], ["a"]);
+    const failureReason = "Integration repair rejected: scope_violation; outside allowed paths: public/storage/storage.mjs.";
+    const result = await new IntegrationManifestExecutor({
+      allowCommitTransport: true,
+      git,
+      repair: async () => ({ success: false, evidenceRefs: ["repair:semantic"], failureReason }),
+      validate: async () => ({ matrixId: "matrix-failed", outcome: "failed" as const }),
+      digestCandidate: async () => "digest-parent"
+    }).integrate({ request: built, worktreePath: "/wt" });
+
+    expect(result.disposition).toBe("failed");
+    expect(result.errors).toEqual([
+      expect.objectContaining({ code: "parent_validation_failed", message: failureReason })
+    ]);
+  });
+
   it("recovers after persisting a repair commit without launching that repair twice", async () => {
     const journalDirectory = await mkdtemp(join(tmpdir(), "mh-integration-repair-journal-"));
     try {

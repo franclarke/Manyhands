@@ -639,6 +639,7 @@ describe("V2NodeExecutor", () => {
     });
     const agent = successfulAgent();
     const sandboxRequests: unknown[] = [];
+    const prompts: string[] = [];
     let sandboxDisposed = false;
     let validationPass = 0;
     const executor = new V2NodeExecutor({
@@ -719,10 +720,14 @@ describe("V2NodeExecutor", () => {
         windowsSandbox: "unelevated"
       },
       worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }),
-      writeInstructions: async () => undefined,
+      writeInstructions: async (_path, content) => { prompts.push(content); },
       now: () => at
     });
     const input = request(compiled, root.id);
+    input.priorFailure = {
+      attemptId: "attempt-parent-previous",
+      reason: "Integration repair rejected: scope_violation; public/storage/storage.mjs is outside allowed paths."
+    };
     input.consumedArtifacts = [{
       artifactId: "artifact:child",
       runId: input.runId,
@@ -740,6 +745,11 @@ describe("V2NodeExecutor", () => {
 
     expect(outcome).toMatchObject({ kind: "success", candidateCommit: repairCommit });
     expect(agent.calls).toHaveLength(1);
+    expect(prompts[0]).toContain("Previous integration attempt failed");
+    expect(prompts[0]).toContain(input.priorFailure.reason);
+    for (const allowedPath of input.contract.scope.allowedPaths) {
+      expect(prompts[0]).toContain(`- ${allowedPath}`);
+    }
     expect(sandboxRequests).toEqual([expect.objectContaining({
       attemptId: `${input.attemptId}:repair:1`,
       credentialScopeId: "run-v2-repair-scope",

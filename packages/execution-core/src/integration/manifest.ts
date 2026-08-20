@@ -108,6 +108,7 @@ export interface IntegrationManifest {
     outcome: "succeeded" | "failed";
     candidateSha?: string;
     evidenceRefs: string[];
+    failureReason?: string;
   };
   candidateSha?: string;
   candidateDigest?: string;
@@ -135,7 +136,7 @@ export interface IntegrationManifestExecutorDeps {
     pass: 1;
     cause: "materialization_conflict" | "parent_validation_failed";
     parentValidation?: { matrixId: string; outcome: "unverified" | "failed"; failedCriteria: Array<{ criterionId: string; obligationId: string; justification: string }> };
-  }): Promise<{ success: boolean; candidateSha?: string; evidenceRefs: string[] }>;
+  }): Promise<{ success: boolean; candidateSha?: string; evidenceRefs: string[]; failureReason?: string }>;
   digestCandidate(input: { candidateSha: string; worktreePath: string }): Promise<string>;
   /**
    * Replays a child by cherry-picking its commit instead of materializing its
@@ -419,7 +420,8 @@ export class IntegrationManifestExecutor {
           artifactId: "parent-validation",
           outcome: repaired.success ? "succeeded" : "failed",
           ...(repaired.candidateSha === undefined ? {} : { candidateSha: repaired.candidateSha }),
-          evidenceRefs: repaired.evidenceRefs
+          evidenceRefs: repaired.evidenceRefs,
+          ...(repaired.failureReason === undefined ? {} : { failureReason: repaired.failureReason })
         };
         if (journalOperation !== undefined) {
           journalOperation = await input.integrationOperation!.journal.update(journalOperation, { state: "repair_finished", finalSha: repaired.candidateSha ?? candidateSha, repairAttempt });
@@ -434,7 +436,7 @@ export class IntegrationManifestExecutor {
         }
       }
       if (parentEvidence.outcome !== "verified") {
-        const failed = { ...base, operations, ...(repairAttempt !== undefined ? { repairAttempt } : {}), candidateSha, parentEvidence, disposition: "failed" as const, errors: [{ code: "parent_validation_failed" as const, message: `Parent validation outcome is ${parentEvidence.outcome}.` }] };
+        const failed = { ...base, operations, ...(repairAttempt !== undefined ? { repairAttempt } : {}), candidateSha, parentEvidence, disposition: "failed" as const, errors: [{ code: "parent_validation_failed" as const, message: repairAttempt?.failureReason ?? `Parent validation outcome is ${parentEvidence.outcome}.` }] };
         if (journalOperation !== undefined) await input.integrationOperation!.journal.update(journalOperation, { state: "failed", finalSha: candidateSha });
         return failed;
       }
