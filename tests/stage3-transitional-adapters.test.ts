@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -11,11 +11,11 @@ import {
   buildEffectIntent,
   type DigestHasher,
   type EffectInputSpec,
-  type EffectKind,
   type PhysicalEffectReceipt,
   type RecoveryDiagnostic
 } from "@manyhands/contracts";
 import { compileGraphRevision } from "@manyhands/decomposer";
+import { readProcessSupervisorReceipts } from "@manyhands/execution-core";
 import {
   buildRunCommandEnvelope,
   type DeliveryReceipt,
@@ -25,7 +25,6 @@ import {
   type RunProjection
 } from "@manyhands/run-coordinator";
 import type {
-  PhysicalEffectAdapter,
   PhysicalEffectAdapterContext,
   PhysicalEffectObservationInput
 } from "@manyhands/run-engine";
@@ -49,6 +48,7 @@ const at = "2026-08-13T05:00:00.000Z";
 const sha256: DigestHasher = (value) =>
   `sha256:${createHash("sha256").update(value).digest("hex")}`;
 const execFileAsync = promisify(execFile);
+const physicalIt = process.platform === "win32" ? it : it.skip;
 
 afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
@@ -241,14 +241,15 @@ describe("Stage 3 transitional unsafe adapters", () => {
         "--attempt-id", "stage3:execution"
       ],
       env: {
-        MANYHANDS_STAGE8_SANDBOX_SCOPE: "stage3:execution"
+        MANYHANDS_STAGE8_SANDBOX_SCOPE: JSON.stringify(["run:profile", "stage3:execution"])
       }
     });
   });
 
-  it("preserves current planning, execution evidence, candidate and delivery outputs", async () => {
+  physicalIt("preserves current planning, execution evidence, candidate and delivery outputs", async () => {
     const root = await temporaryRoot();
     const runId = "run:stage3:transitional";
+    const windowsJobRunnerPath = await windowsJobRunnerFor(root);
     const store = new MemoryLifecycleResultStore();
     await store.writeExecution(runId, "stage3:execution", executionResult());
     let planningCalls = 0;
@@ -275,11 +276,10 @@ describe("Stage 3 transitional unsafe adapters", () => {
       },
       executionProcess: () => ({
         executable: process.execPath,
-        argv: ["-e", ""],
+        argv: ["-e", "process.exit(0)"],
         cwd: process.cwd(),
-        env: {}
-      }),
-      processAdapters: successfulProcessAdapters()
+        env: workerEnvironment()
+      })
     });
     expect(profile.kind).toBe("transitional_unsafe");
 
@@ -291,6 +291,7 @@ describe("Stage 3 transitional unsafe adapters", () => {
       createDaemonEpoch: () => "daemon:transitional:test",
       clock: () => at,
       production: false,
+      ...(windowsJobRunnerPath === undefined ? {} : { windowsJobRunnerPath }),
       profile
     });
     try {
@@ -319,6 +320,17 @@ describe("Stage 3 transitional unsafe adapters", () => {
       }));
       await kernel.drainEffects();
       projection = await kernel.engine.query(runId);
+      if (projection.lifecycle === "failed") {
+        const spawn = Object.values(projection.effectIntents).find((intent) => intent.kind === "process_spawn");
+        const receipts = spawn === undefined
+          ? []
+          : await readProcessSupervisorReceipts(path.join(root, "processes"), spawn.effectId);
+        const stderrPath = receipts.find((receipt) => receipt.phase === "started")?.stderrPath;
+        const stderr = stderrPath === undefined
+          ? undefined
+          : await readFile(stderrPath, "utf8").catch(() => undefined);
+        throw new Error(`Transitional process failed: ${JSON.stringify({ receipts, stderr })}`);
+      }
       expect(projection).toMatchObject({
         lifecycle: "result_ready",
         outcomes: { execution: "succeeded", artifact: "verified", delivery: "ready" },
@@ -517,28 +529,6 @@ function deliveredReceipt(): DeliveryReceipt {
   };
 }
 
-function successfulProcessAdapters(): PhysicalEffectAdapter[] {
-  const kinds: EffectKind[] = ["process_spawn", "process_terminate"];
-  return kinds.map((kind) => ({
-    kind,
-    execute: async (intent, context) => {
-      await context.record({
-        observation: "succeeded",
-        resultDigest: sha256(`${kind}:${intent.effectId}`),
-        observedAt: at
-      });
-    },
-    reconcile: async (intent, context) => {
-      if (context.priorReceipts.some((receipt) => receipt.observation !== "started")) return;
-      await context.record({
-        observation: "succeeded",
-        resultDigest: sha256(`${kind}:${intent.effectId}`),
-        observedAt: at
-      });
-    }
-  }));
-}
-
 function command(
   commandId: string,
   runId: string,
@@ -570,6 +560,29 @@ async function temporaryRoot(): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "mh-stage3-transitional-"));
   roots.push(root);
   return root;
+}
+
+async function windowsJobRunnerFor(root: string): Promise<string | undefined> {
+  if (process.platform !== "win32") return undefined;
+  const configured = process.env.MANYHANDS_WINDOWS_JOB_RUNNER;
+  if (configured !== undefined) return path.resolve(configured);
+  const helperPath = path.join(root, "manyhands-windows-job-runner.exe");
+  await execFileAsync("rustc.exe", [
+    "--edition=2021",
+    path.resolve("native/windows-job-runner/src/main.rs"),
+    "-O",
+    "-o",
+    helperPath
+  ], { windowsHide: true });
+  return helperPath;
+}
+
+function workerEnvironment(): Record<string, string> {
+  const names = ["PATH", "PATHEXT", "SystemRoot", "WINDIR", "TEMP", "TMP"];
+  return Object.fromEntries(names.flatMap((name) => {
+    const value = process.env[name];
+    return value === undefined ? [] : [[name, value]];
+  }));
 }
 
 async function invalidatedRecoveryHarness(

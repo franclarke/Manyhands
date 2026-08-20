@@ -1,11 +1,14 @@
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { access, mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
+import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
 import {
   WorktreeError,
   WorktreeManager,
+  SimpleGitRunner,
   runWorktreesRootFor,
   safeWorktreeSegment,
   worktreePathFor,
@@ -16,6 +19,7 @@ import { FakeGitRunner } from "./helpers/fake-git-runner";
 
 const REPO_ROOT = "/repo";
 const WORKTREES_ROOT = "/repo/.manyhands/worktrees";
+const execFileAsync = promisify(execFile);
 
 function makeManager(git: FakeGitRunner): WorktreeManager {
   return new WorktreeManager({
@@ -185,6 +189,169 @@ describe("WorktreeManager.clean", () => {
   });
 });
 
+describe("WorktreeManager.gcRun", () => {
+  it("retries a physical removal failure without orphaning worktree metadata or its branch", async () => {
+    const { root, repoRoot, baseCommit } = await initializePhysicalRepository("mh-wt-gc-retry-");
+    try {
+      const manager = new WorktreeManager({ git: new FailOnceWorktreeRemoveGit(), repoRoot });
+      const record = await manager.create({
+        taskId: "task-a",
+        runId: "run-a",
+        kind: "leaf",
+        baseCommit
+      });
+
+      expect(await manager.gcRun("run-a")).toEqual({ removed: [], failed: ["task-a"] });
+      expect(await manager.gcRun("run-a")).toEqual({ removed: ["task-a"], failed: [] });
+
+      await expectPhysicalWorktreeGone(repoRoot, record);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not treat a non-ENOENT run-root read failure as an empty run", async () => {
+    const root = await mkdtemp(join(tmpdir(), "mh-wt-gc-read-error-"));
+    const worktreesRoot = join(root, "worktrees");
+    try {
+      await mkdir(worktreesRoot, { recursive: true });
+      await writeFile(join(worktreesRoot, safeWorktreeSegment("run-error")), "not a directory", "utf8");
+      const manager = new WorktreeManager({
+        git: new FakeGitRunner(),
+        repoRoot: join(root, "repo"),
+        worktreesRoot
+      });
+
+      await expect(manager.gcRun("run-error")).rejects.toMatchObject({ code: "ENOTDIR" });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("surfaces a run-root removal failure instead of publishing false cleanup success", async () => {
+    const root = await mkdtemp(join(tmpdir(), "mh-wt-gc-root-remove-"));
+    const worktreesRoot = join(root, "worktrees");
+    const runRoot = join(worktreesRoot, safeWorktreeSegment("run-root-remove"));
+    try {
+      await mkdir(join(runRoot, "task-a"), { recursive: true });
+      const manager = new WorktreeManager({
+        git: new FakeGitRunner(),
+        repoRoot: join(root, "repo"),
+        worktreesRoot,
+        removePath: async (target) => {
+          if (target.replaceAll("\\", "/") === runRoot.replaceAll("\\", "/")) {
+            throw new Error("simulated run-root lock");
+          }
+          await rm(target, { recursive: true, force: true });
+        }
+      });
+
+      await expect(manager.gcRun("run-root-remove")).rejects.toThrow(/run-root lock/u);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("surfaces worktree-prune failure instead of publishing false cleanup success", async () => {
+    const root = await mkdtemp(join(tmpdir(), "mh-wt-gc-prune-error-"));
+    const worktreesRoot = join(root, "worktrees");
+    const runRoot = join(worktreesRoot, safeWorktreeSegment("run-prune-error"));
+    try {
+      await mkdir(join(runRoot, "task-a"), { recursive: true });
+      const manager = new WorktreeManager({
+        git: new FakeGitRunner({
+          failOperations: { worktreePrune: new Error("simulated prune failure") }
+        }),
+        repoRoot: join(root, "repo"),
+        worktreesRoot
+      });
+
+      await expect(manager.gcRun("run-prune-error")).rejects.toThrow(/prune failure/u);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("persists a branch-only retry when branch deletion fails after physical worktree removal", async () => {
+    const { root, repoRoot, baseCommit } = await initializePhysicalRepository("mh-wt-gc-branch-retry-");
+    try {
+      const manager = new WorktreeManager({ git: new FailOnceBranchDeleteGit(), repoRoot });
+      const record = await manager.create({
+        taskId: "task-a",
+        runId: "run-a",
+        kind: "leaf",
+        baseCommit
+      });
+
+      expect(await manager.gcRun("run-a")).toEqual({ removed: [], failed: ["task-a"] });
+      expect(await manager.gcRun("run-a")).toEqual({ removed: ["task-a"], failed: [] });
+
+      await expectPhysicalWorktreeGone(repoRoot, record);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("persists branch cleanup before physical removal so crash recovery cannot orphan the branch", async () => {
+    const { root, repoRoot, baseCommit } = await initializePhysicalRepository("mh-wt-gc-crash-window-");
+    try {
+      const crashGit = new CrashAfterPhysicalWorktreeRemovalGit();
+      const manager = new WorktreeManager({ git: crashGit, repoRoot });
+      const record = await manager.create({
+        taskId: "task-a",
+        runId: "run-a",
+        kind: "leaf",
+        baseCommit
+      });
+
+      expect(await manager.gcRun("run-a")).toEqual({ removed: [], failed: ["task-a"] });
+      expect(crashGit.obligationObservedBeforeRemove).toBe(true);
+
+      const restartedManager = new WorktreeManager({ git: new SimpleGitRunner(), repoRoot });
+      expect(await restartedManager.gcRun("run-a")).toEqual({ removed: ["task-a"], failed: [] });
+      await expectPhysicalWorktreeGone(repoRoot, record);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("accepts an ambiguous branch-delete error only when the branch ref is confirmed absent", async () => {
+    const { root, repoRoot, baseCommit } = await initializePhysicalRepository("mh-wt-gc-branch-absent-");
+    try {
+      const manager = new WorktreeManager({ git: new DeleteThenThrowBranchGit(), repoRoot });
+      const record = await manager.create({
+        taskId: "task-a",
+        runId: "run-a",
+        kind: "leaf",
+        baseCommit
+      });
+
+      expect(await manager.gcRun("run-a")).toEqual({ removed: ["task-a"], failed: [] });
+
+      await expectPhysicalWorktreeGone(repoRoot, record);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("propagates an unclassifiable branch-ref probe failure instead of assuming absence", async () => {
+    const { root, repoRoot, baseCommit } = await initializePhysicalRepository("mh-wt-gc-branch-probe-");
+    try {
+      const manager = new WorktreeManager({ git: new FailBranchAndRefProbeGit(), repoRoot });
+      await manager.create({
+        taskId: "task-a",
+        runId: "run-a",
+        kind: "leaf",
+        baseCommit
+      });
+
+      await expect(manager.gcRun("run-a")).rejects.toThrow(/simulated ref probe I\/O failure/u);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("win32 long-path relocation ('$GIT_DIR' too big / Filename too long)", () => {
   // git-for-windows dies with `fatal: '$GIT_DIR' too big` when a worktree's
   // gitdir path exceeds PATH_MAX(260) - 40 = 220 chars, and with "Filename too
@@ -351,3 +518,100 @@ describe("WorktreeManager.detectUnexpectedCommit", () => {
     expect(detection).toEqual({ committed: true, sha: "AGENT_SHA" });
   });
 });
+
+async function git(root: string, ...args: string[]): Promise<string> {
+  const { stdout } = await execFileAsync("git", args, {
+    cwd: root,
+    windowsHide: true,
+    encoding: "utf8"
+  });
+  return stdout.trim();
+}
+
+async function initializePhysicalRepository(prefix: string): Promise<{
+  root: string;
+  repoRoot: string;
+  baseCommit: string;
+}> {
+  const root = await mkdtemp(join(tmpdir(), prefix));
+  const repoRoot = join(root, "repo");
+  await mkdir(repoRoot, { recursive: true });
+  await git(repoRoot, "init", "-b", "main");
+  await git(repoRoot, "config", "user.email", "worktree@example.test");
+  await git(repoRoot, "config", "user.name", "Worktree Test");
+  await writeFile(join(repoRoot, "README.md"), "base\n", "utf8");
+  await git(repoRoot, "add", "README.md");
+  await git(repoRoot, "commit", "-m", "base");
+  return { root, repoRoot, baseCommit: await git(repoRoot, "rev-parse", "HEAD") };
+}
+
+async function expectPhysicalWorktreeGone(repoRoot: string, record: WorktreeRecord): Promise<void> {
+  expect(await git(repoRoot, "worktree", "list", "--porcelain"))
+    .not.toContain(record.path.replaceAll("\\", "/"));
+  expect(await git(repoRoot, "branch", "--list", record.branch)).toBe("");
+  const metadata = await readdir(join(repoRoot, ".git", "worktrees")).catch((error: unknown) => {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw error;
+  });
+  expect(metadata).toEqual([]);
+  expect(await git(repoRoot, "status", "--porcelain=v1", "--untracked-files=all")).toBe("");
+}
+
+class FailOnceWorktreeRemoveGit extends SimpleGitRunner {
+  private failNextRemove = true;
+
+  override async worktreeRemove(params: Parameters<SimpleGitRunner["worktreeRemove"]>[0]): Promise<void> {
+    if (this.failNextRemove) {
+      this.failNextRemove = false;
+      throw new Error("simulated transient worktree lock");
+    }
+    await super.worktreeRemove(params);
+  }
+}
+
+class FailOnceBranchDeleteGit extends SimpleGitRunner {
+  private failNextDelete = true;
+
+  override async branchDelete(params: Parameters<SimpleGitRunner["branchDelete"]>[0]): Promise<void> {
+    if (this.failNextDelete) {
+      this.failNextDelete = false;
+      throw new Error("simulated transient branch lock");
+    }
+    await super.branchDelete(params);
+  }
+}
+
+class CrashAfterPhysicalWorktreeRemovalGit extends SimpleGitRunner {
+  obligationObservedBeforeRemove = false;
+
+  override async worktreeRemove(params: Parameters<SimpleGitRunner["worktreeRemove"]>[0]): Promise<void> {
+    const markerPath = join(
+      dirname(params.worktreePath),
+      ".manyhands-branch-cleanup",
+      basename(params.worktreePath)
+    );
+    this.obligationObservedBeforeRemove = await access(markerPath).then(
+      () => true,
+      () => false
+    );
+    await super.worktreeRemove(params);
+    throw new Error("simulated daemon crash after physical worktree removal");
+  }
+}
+
+class DeleteThenThrowBranchGit extends SimpleGitRunner {
+  override async branchDelete(params: Parameters<SimpleGitRunner["branchDelete"]>[0]): Promise<void> {
+    await super.branchDelete(params);
+    throw new Error("simulated ambiguous branch deletion result");
+  }
+}
+
+class FailBranchAndRefProbeGit extends SimpleGitRunner {
+  override async branchDelete(): Promise<void> {
+    throw new Error("simulated branch deletion failure");
+  }
+
+  override async revParse(): Promise<string> {
+    throw new Error("simulated ref probe I/O failure");
+  }
+}

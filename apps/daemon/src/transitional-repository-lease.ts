@@ -46,16 +46,30 @@ export async function withTransitionalRepositoryLease<T>(
     leaseLoss = new Error(`Repository lease for ${input.runId} was lost: ${reason}.`);
     controller.abort(leaseLoss);
   });
+  let outcome: { ok: true; value: T } | { ok: false; error: unknown };
   try {
     await assertCurrent(lease);
     const result = await operation(controller.signal);
     if (leaseLoss !== undefined) throw leaseLoss;
     await assertCurrent(lease);
-    return result;
-  } finally {
-    stopHeartbeat();
-    await release(lease).catch(() => undefined);
+    outcome = { ok: true, value: result };
+  } catch (error) {
+    outcome = { ok: false, error };
   }
+  stopHeartbeat();
+  try {
+    await release(lease);
+  } catch (releaseError) {
+    if (!outcome.ok) {
+      throw new AggregateError(
+        [outcome.error, releaseError],
+        `Repository operation and lease release both failed for ${input.runId}.`
+      );
+    }
+    throw releaseError;
+  }
+  if (!outcome.ok) throw outcome.error;
+  return outcome.value;
 }
 
 async function acquire(input: {
@@ -174,11 +188,23 @@ async function release(lease: TransitionalRepositoryLease): Promise<void> {
   const owner = await readOwner(lease.lockDir);
   if (owner?.token !== lease.token) return;
   const quarantine = `${lease.lockDir}.released-${lease.token.slice(0, 8)}`;
-  await rename(lease.lockDir, quarantine);
+  try {
+    await rename(lease.lockDir, quarantine);
+  } catch (releaseError) {
+    try {
+      await markRelinquished(lease);
+    } catch (markerError) {
+      throw new AggregateError(
+        [releaseError, markerError],
+        `Repository lease release and relinquish marker both failed for ${lease.runId}.`
+      );
+    }
+    throw releaseError;
+  }
   const captured = await readOwner(quarantine);
   if (captured !== undefined && captured.token !== lease.token) {
-    await rename(quarantine, lease.lockDir).catch(() => undefined);
-    return;
+    await rename(quarantine, lease.lockDir);
+    throw new Error(`Repository lease for ${lease.runId} changed owner during release.`);
   }
   await rm(quarantine, { recursive: true, force: true });
 }
@@ -187,6 +213,7 @@ async function ownerIsLive(
   lockDir: string,
   owner: RepositoryLeaseOwner
 ): Promise<boolean> {
+  if (await wasRelinquished(lockDir, owner.token)) return false;
   // A heartbeat records that the owner was alive when it wrote the file; it
   // cannot keep a crashed process alive for the full stale window. Check the
   // physical owner first so restart recovery can reclaim a fresh orphaned lock.
@@ -204,6 +231,33 @@ async function ownerIsLive(
     // A pre-heartbeat owner is still live while its physical process exists.
   }
   return true;
+}
+
+async function markRelinquished(lease: TransitionalRepositoryLease): Promise<void> {
+  const owner = await readOwner(lease.lockDir);
+  if (owner?.token !== lease.token) {
+    throw new Error(`Repository lease for ${lease.runId} changed owner before relinquish.`);
+  }
+  await writeAtomic(relinquishedPath(lease.lockDir, lease.token), {
+    token: lease.token,
+    at: new Date().toISOString()
+  });
+}
+
+async function wasRelinquished(lockDir: string, token: string): Promise<boolean> {
+  try {
+    const marker = JSON.parse(await readFile(relinquishedPath(lockDir, token), "utf8")) as {
+      token?: unknown;
+    };
+    return marker.token === token;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT" || error instanceof SyntaxError) return false;
+    throw error;
+  }
+}
+
+function relinquishedPath(lockDir: string, token: string): string {
+  return path.join(lockDir, `released-${token}.json`);
 }
 
 async function lockBase(repoRoot: string): Promise<string> {

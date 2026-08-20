@@ -160,11 +160,13 @@ specifications. See `CONTEXT-MAP.md` and `docs/agents/domain.md`.
   oracles. A minimal standard-library target and source-pattern checks are only
   control-plane smoke evidence, never proof of rich decomposition or usable
   software.
-- For sandboxed live workers, scope brokered credentials to the supervised
-  process identity and remove that scope from the supervisor on every verified
-  terminal outcome. A worker `finally` is not sufficient after timeout,
-  cancellation or daemon crash; qualify the invariant with a live no-auth-file
-  check after each path.
+- For every live execution profile, scope brokered credentials collision-
+  resistently to the run and attempt identity. Reclaim credentials and
+  worktrees from the daemon only after a verified physical final receipt, and
+  make recovery retry that cleanup from the durable receipt without a global
+  pre-final purge. A worker `finally` is not sufficient after timeout,
+  cancellation or daemon crash; qualify every path with live auth, process and
+  worktree checks.
 - In Windows PowerShell automation, never use the reserved `$PID` variable as a
   loop or task identifier; use a descriptive name such as `$processId` so cleanup
   commands execute rather than fail before acting.

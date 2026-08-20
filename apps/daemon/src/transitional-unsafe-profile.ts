@@ -22,6 +22,7 @@ import type {
 import { JsonlRunEventStore, atomicWriteJson } from "@manyhands/run-store";
 
 import type { TransitionalUnsafeExecutionProfile } from "./productive-daemon.js";
+import { executionCredentialScopeId } from "./process-effect-adapters.js";
 
 export interface TransitionalLifecycleResult {
   readonly events: readonly RunEventInput[];
@@ -124,7 +125,7 @@ export function createTransitionalUnsafeProfile(
         cwd,
         env: {
           ...inheritedWorkerEnvironment(),
-          MANYHANDS_STAGE8_SANDBOX_SCOPE: context.attemptId
+          MANYHANDS_STAGE8_SANDBOX_SCOPE: executionCredentialScopeId(context.runId, context.attemptId)
         }
       };
     }),

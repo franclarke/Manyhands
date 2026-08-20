@@ -1,6 +1,7 @@
 import path from "node:path";
 
 import type { DigestHasher } from "@manyhands/contracts";
+import { purgeLegacyBrokeredCredentials } from "@manyhands/execution-core";
 import {
   IpcJsonValueSchema,
   type IpcCapabilityOsProtection,
@@ -29,7 +30,6 @@ import {
 } from "./installation-lease.js";
 import { ensureInstallationCapability } from "./installation-capability.js";
 import { readNodeActivity } from "./node-activity.js";
-import { purgeAllBrokeredCredentials } from "@manyhands/execution-core";
 import {
   startLocalIpcServer,
   type LocalIpcServer,
@@ -172,8 +172,8 @@ export async function startDaemonKernel(
     // A command that arrives for a run already recovering joins the same actor
     // through the registry's in-flight promise rather than racing it.
     const startupRecovery = (async () => {
-      await purgeAllBrokeredCredentials(path.join(stateRoot, "credential-broker")).catch(() => undefined);
       for (const runId of runIds) await registry.getOrCreate(runId);
+      await purgeLegacyBrokeredCredentials(path.join(stateRoot, "credential-broker"));
     })();
     startupRecovery.catch((error: unknown) => {
       options.onStartupRecoveryError?.(error instanceof Error ? error : new Error(String(error)));

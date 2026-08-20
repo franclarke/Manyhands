@@ -9,17 +9,21 @@ import {
 } from "@manyhands/contracts";
 import {
   ProcessSupervisor,
+  SimpleGitRunner,
+  WorktreeManager,
   type ProcessSupervisorFinalReceipt,
   ProcessSupervisorStartedReceiptSchema,
   discardBrokeredCredentialScope
 } from "@manyhands/execution-core";
-import type {
-  DeliveryReceipt,
-  IpcCapabilityOsProtection,
-  ProductRunDefinition,
-  RunEventInput
+import {
+  foldRun,
+  type DeliveryReceipt,
+  type IpcCapabilityOsProtection,
+  type ProductRunDefinition,
+  type RunEventInput
 } from "@manyhands/run-coordinator";
 import type { PhysicalEffectAdapter } from "@manyhands/run-engine";
+import { JsonlRunEventStore } from "@manyhands/run-store";
 
 import {
   startDaemonKernel,
@@ -28,12 +32,14 @@ import {
 import type { ProcessIdentityProbe } from "./installation-lease.js";
 import {
   createProcessSpawnPhysicalEffectAdapter,
-  createProcessTerminatePhysicalEffectAdapter
+  createProcessTerminatePhysicalEffectAdapter,
+  executionCredentialScopeId
 } from "./process-effect-adapters.js";
 import {
   createProductRunApplication,
   type ActiveProductProcess
 } from "./product-run-application.js";
+import { withTransitionalRepositoryLease } from "./transitional-repository-lease.js";
 
 export interface DeterministicFakeExecutionProfile {
   readonly kind: "deterministic_fake";
@@ -98,6 +104,7 @@ export interface StartProductiveDaemonOptions {
 export async function startProductiveDaemon(
   options: StartProductiveDaemonOptions
 ): Promise<DaemonKernel> {
+  assertDaemonOwnedProcessAdapters(options.profile);
   const clock = options.clock ?? (() => new Date().toISOString());
   const processSupervisor = new ProcessSupervisor({
     receiptRoot: path.join(options.stateRoot, "processes"),
@@ -106,28 +113,76 @@ export async function startProductiveDaemon(
       : { windowsJobRunnerPath: options.windowsJobRunnerPath })
   });
   const hasher = sha256Digest;
-  const discardSandboxedAttempt = options.profile.kind !== "sandboxed_live"
+  const liveProfile = options.profile.kind === "deterministic_fake"
     ? undefined
-    : async (attemptId: string) => discardBrokeredCredentialScope(
-      path.join(options.stateRoot, "credential-broker"),
-      attemptId
-    );
+    : options.profile;
+  const liveRunEvents = liveProfile === undefined
+    ? undefined
+    : new JsonlRunEventStore({ directory: path.join(options.stateRoot, "runs") });
+  const liveGcTasks = new Map<string, Promise<void>>();
+  const cleanupExecutionRunOnce = liveRunEvents === undefined
+    ? undefined
+    : async (runId: string) => {
+      const active = liveGcTasks.get(runId);
+      if (active !== undefined) return active;
+      const cleanup = cleanupExecutionRun(liveRunEvents, runId);
+      liveGcTasks.set(runId, cleanup);
+      try {
+        await cleanup;
+      } finally {
+        if (liveGcTasks.get(runId) === cleanup) liveGcTasks.delete(runId);
+      }
+    };
+  const cleanupLiveExecution = cleanupExecutionRunOnce === undefined
+    ? undefined
+    : async (runId: string, attemptId: string) => {
+      const failures: unknown[] = [];
+      try {
+        await discardBrokeredCredentialScope(
+          path.join(options.stateRoot, "credential-broker"),
+          executionCredentialScopeId(runId, attemptId)
+        );
+      } catch (error) {
+        failures.push(error);
+      }
+      try {
+        await cleanupExecutionRunOnce(runId);
+      } catch (error) {
+        failures.push(error);
+      }
+      if (failures.length > 0) {
+        throw new AggregateError(failures, `Failed to reclaim execution resources for ${runId}/${attemptId}.`);
+      }
+    };
   const adapters = options.profile.kind === "deterministic_fake"
     ? deterministicAdapters(processSupervisor, hasher, clock)
     : transitionalAdapters(
       options.profile.adapters,
       processSupervisor,
-      discardSandboxedAttempt === undefined
+      cleanupLiveExecution === undefined
         ? undefined
         : async (intent) => {
-          if (intent.attemptId === undefined) throw new Error("Sandboxed live process has no attempt identity.");
-          await discardSandboxedAttempt(intent.attemptId);
+          if (intent.attemptId === undefined) throw new Error("Live process has no attempt identity.");
+          await cleanupLiveExecution(intent.runId, intent.attemptId);
         },
-      discardSandboxedAttempt === undefined
+      cleanupLiveExecution === undefined
         ? undefined
-        : async (attemptId) => discardSandboxedAttempt(attemptId)
+        : async (runId, attemptId) => cleanupLiveExecution(runId, attemptId)
     );
-  const executionProcess = executionProcessFor(options.profile);
+  const baseExecutionProcess = executionProcessFor(options.profile);
+  const executionProcess: TransitionalUnsafeExecutionProfile["executionProcess"] = liveProfile === undefined
+    ? baseExecutionProcess
+    : (definition, context) => {
+      if (context === undefined) throw new Error("Live execution requires run and attempt identity.");
+      const invocation = baseExecutionProcess(definition, context);
+      return {
+        ...invocation,
+        env: {
+          ...invocation.env,
+          MANYHANDS_STAGE8_SANDBOX_SCOPE: executionCredentialScopeId(context.runId, context.attemptId)
+        }
+      };
+    };
   const application = createProductRunApplication({
     hasher,
     clock,
@@ -199,24 +254,52 @@ function transitionalAdapters(
   configured: readonly PhysicalEffectAdapter[],
   processSupervisor: ProcessSupervisor,
   afterTerminal?: (intent: EffectIntent, final: ProcessSupervisorFinalReceipt) => Promise<void>,
-  afterTermination?: (attemptId: string, final: ProcessSupervisorFinalReceipt) => Promise<void>
+  afterTermination?: (runId: string, attemptId: string, final: ProcessSupervisorFinalReceipt) => Promise<void>
 ): PhysicalEffectAdapter[] {
-  const kinds = new Set(configured.map((adapter) => adapter.kind));
   return [
-    ...(kinds.has("process_spawn")
-      ? []
-      : [createProcessSpawnPhysicalEffectAdapter({
-        supervisor: processSupervisor,
-        ...(afterTerminal === undefined ? {} : { afterTerminal })
-      })]),
-    ...(kinds.has("process_terminate")
-      ? []
-      : [createProcessTerminatePhysicalEffectAdapter({
-        supervisor: processSupervisor,
-        ...(afterTermination === undefined ? {} : { afterTermination })
-      })]),
+    createProcessSpawnPhysicalEffectAdapter({
+      supervisor: processSupervisor,
+      ...(afterTerminal === undefined ? {} : { afterTerminal })
+    }),
+    createProcessTerminatePhysicalEffectAdapter({
+      supervisor: processSupervisor,
+      ...(afterTermination === undefined ? {} : { afterTermination })
+    }),
     ...configured
   ];
+}
+
+function assertDaemonOwnedProcessAdapters(profile: ProductiveDaemonProfile): void {
+  if (profile.kind === "deterministic_fake") return;
+  const configured = profile.adapters
+    .filter((adapter) => adapter.kind === "process_spawn" || adapter.kind === "process_terminate")
+    .map((adapter) => adapter.kind);
+  if (configured.length > 0) {
+    throw new Error(
+      `Live process adapters must remain daemon-owned; configured overrides are forbidden: ${configured.join(", ")}.`
+    );
+  }
+}
+
+async function cleanupExecutionRun(events: JsonlRunEventStore, runId: string): Promise<void> {
+  const projection = foldRun(await events.load(runId));
+  if (projection.definition === undefined) {
+    throw new Error(`Run ${runId} has no immutable definition for execution cleanup.`);
+  }
+  const sourceRealPath = projection.definition.targetContext.sourceRealPath;
+  if (typeof sourceRealPath !== "string") {
+    throw new Error(`Run ${runId} has no targetContext.sourceRealPath for execution cleanup.`);
+  }
+  const repoRoot = assertAbsolute(sourceRealPath, "targetContext.sourceRealPath");
+  const sweep = await withTransitionalRepositoryLease({ repoRoot, runId }, async () => (
+    new WorktreeManager({
+      git: new SimpleGitRunner(),
+      repoRoot
+    }).gcRun(runId)
+  ));
+  if (sweep.failed.length > 0) {
+    throw new Error(`Run ${runId} retained worktrees: ${sweep.failed.join(", ")}.`);
+  }
 }
 
 function executionProcessFor(profile: ProductiveDaemonProfile): TransitionalUnsafeExecutionProfile["executionProcess"] {

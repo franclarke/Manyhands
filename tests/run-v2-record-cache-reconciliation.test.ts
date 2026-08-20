@@ -42,7 +42,12 @@ beforeEach(async () => {
       kind: "transitional_unsafe",
       adapters: adapters(),
       loadPlanningResult: async (effectId) => deterministicPlanningResult(effectId),
-      executionProcess: () => ({ executable: process.execPath, argv: ["-e", ""], cwd: process.cwd(), env: {} })
+      executionProcess: () => ({
+        executable: process.execPath,
+        argv: ["-e", "process.exit(0)"],
+        cwd: process.cwd(),
+        env: workerEnvironment()
+      })
     }
   });
 });
@@ -115,7 +120,7 @@ function definition(): ProductRunDefinition {
 
 function adapters(): PhysicalEffectAdapter[] {
   const kinds: EffectKind[] = [
-    "model_call", "process_spawn", "process_terminate", "sandbox_create", "git_mutation",
+    "model_call", "sandbox_create", "git_mutation",
     "artifact_materialize", "validation", "delivery", "cleanup"
   ];
   return kinds.map((kind) => ({
@@ -185,6 +190,14 @@ function endpoint(): string {
   return process.platform === "win32"
     ? `\\\\.\\pipe\\mh-stage3-pure-get-${randomUUID()}`
     : path.join(os.tmpdir(), `mh-stage3-pure-get-${randomUUID()}.sock`);
+}
+
+function workerEnvironment(): Record<string, string> {
+  const names = ["PATH", "PATHEXT", "SystemRoot", "WINDIR", "TEMP", "TMP"];
+  return Object.fromEntries(names.flatMap((name) => {
+    const value = process.env[name];
+    return value === undefined ? [] : [[name, value]];
+  }));
 }
 
 function restore(name: string, value: string | undefined): void {
