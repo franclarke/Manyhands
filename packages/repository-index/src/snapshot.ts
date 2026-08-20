@@ -50,6 +50,8 @@ export interface RepositorySnapshotRecord<TIndex extends RepositoryIndexLike = R
 export interface RepositorySnapshotBuilderInput {
   rootPath: string;
   repositoryId?: string;
+  /** Optional external root for reconstructible repository-index cache entries. */
+  cacheRoot?: string;
   targetFingerprint: string;
   baseCommit: string;
   capturedAt?: string;

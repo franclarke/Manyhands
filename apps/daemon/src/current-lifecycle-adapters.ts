@@ -132,11 +132,13 @@ export interface ProductiveRepositoryView {
 
 export async function buildProductiveRepositoryView(input: {
   rootPath: string;
+  cacheRoot?: string;
   targetFingerprint: string;
   baseCommit: string;
 }): Promise<ProductiveRepositoryView> {
   const inspection = await inspectRepositoryModelWithSnapshot({
     rootPath: input.rootPath,
+    ...(input.cacheRoot === undefined ? {} : { cacheRoot: input.cacheRoot }),
     targetFingerprint: input.targetFingerprint,
     baseCommit: input.baseCommit
   });
@@ -151,6 +153,7 @@ export async function buildProductiveRepositoryView(input: {
 /** Stage 4 boundary: exact Git facts and bounded queries consumed by the transitional planner. */
 export async function buildProductiveRepositoryGrounding(input: {
   rootPath: string;
+  cacheRoot?: string;
   targetFingerprint: string;
   baseCommit: string;
   goal: string;
@@ -246,9 +249,13 @@ export function createCurrentPlannerPort(
       const repoPath = absoluteTargetPath(definition);
       const planningSignal = signal ?? new AbortController().signal;
       return withTransitionalRepositoryLease({ repoRoot: repoPath, runId }, async () => {
+      const targetFingerprint = stringField(definition.targetContext, "fingerprint");
       const grounding = await buildProductiveRepositoryView({
         rootPath: repoPath,
-        targetFingerprint: stringField(definition.targetContext, "fingerprint"),
+        ...(options.stateRoot === undefined
+          ? {}
+          : { cacheRoot: productiveRepositoryCacheRoot(options.stateRoot, targetFingerprint) }),
+        targetFingerprint,
         baseCommit: stringField(definition.targetContext, "sourceBaseCommit")
       });
       const goal = productGoal(runId, definition, grounding.view);
@@ -400,6 +407,14 @@ export function createCurrentPlannerPort(
       });
     }
   };
+}
+
+function productiveRepositoryCacheRoot(stateRoot: string, targetFingerprint: string): string {
+  return path.join(
+    path.resolve(stateRoot),
+    "repository-index-cache",
+    createHash("sha256").update(targetFingerprint).digest("hex")
+  );
 }
 
 /** Current compare-and-publish delivery semantics, now invoked only by the daemon adapter. */

@@ -1,6 +1,7 @@
 import { execFile, spawn, type ChildProcess } from "node:child_process";
+import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { PassThrough } from "node:stream";
@@ -107,6 +108,51 @@ describe("Stage 4 productive repository grounding", () => {
       .toMatchObject({ semanticPlan: expect.objectContaining({ id: expect.stringMatching(/^plan:/u) }) });
     expect(result.events.find((event) => event.type === "graph.compiled")?.payload.evidenceAuthority)
       .toMatchObject({ goal: expect.objectContaining({ digest: expect.stringMatching(/^sha256:/u) }) });
+  });
+
+  it("keeps productive planner index caches in daemon state and reuses the target namespace", async () => {
+    const root = await createRepository({
+      "package.json": JSON.stringify({ name: "clean-target", scripts: { test: "vitest run" } }),
+      "src/index.ts": "export const ready = true;\n"
+    });
+    const baseCommit = await commitAll(root, "initial");
+    const stateRoot = await mkdtemp(path.join(os.tmpdir(), "manyhands-planner-state-"));
+    tempRoots.push(stateRoot);
+    let prompt = "";
+    const planner = createCurrentPlannerPort({
+      stateRoot,
+      spawnProcess: fakePlanningSpawn(() => canonicalResponse(prompt), (value) => { prompt = value; })
+    });
+    const cacheRoot = path.join(
+      stateRoot,
+      "repository-index-cache",
+      createHash("sha256").update("target:visual-todo").digest("hex")
+    );
+    const cachePath = path.join(cacheRoot, `index-${baseCommit}.json`);
+
+    await planner.plan({
+      runId: "run:external-cache-first",
+      definition: definition(root, baseCommit),
+      events: []
+    });
+
+    expect(await git(root, ["status", "--porcelain=v1", "--untracked-files=all"])).toBe("");
+    const firstCache = JSON.parse(await readFile(cachePath, "utf8")) as Record<string, unknown>;
+    const firstModifiedAt = (await stat(cachePath, { bigint: true })).mtimeNs;
+    expect(firstCache).toMatchObject({
+      rootPath: path.resolve(root),
+      repositoryId: path.basename(root),
+      baseCommit
+    });
+
+    await planner.plan({
+      runId: "run:external-cache-second",
+      definition: definition(root, baseCommit),
+      events: []
+    });
+
+    expect((await stat(cachePath, { bigint: true })).mtimeNs).toBe(firstModifiedAt);
+    expect(await git(root, ["status", "--porcelain=v1", "--untracked-files=all"])).toBe("");
   });
 
   it("terminates the planning CLI process when the planning signal is aborted", async () => {
