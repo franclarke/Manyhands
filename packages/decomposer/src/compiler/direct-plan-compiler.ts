@@ -270,6 +270,11 @@ function compileScope(input: CompilePlanInput, unit: WorkUnit, revision: string)
     ...catalogPaths
   ])
     .filter((candidate) => !forbiddenPaths.some((forbidden) => pathsOverlap(candidate, forbidden)));
+  const outputRoots = normalizedPaths(Object.values(input.plan.artifacts)
+    .filter((artifact) => artifact.producerUnitId === unit.id)
+    .flatMap((artifact) => artifact.expectedPaths)
+    .map(outputRootFor)
+    .filter((root): root is string => root !== undefined));
   return {
     schemaVersion: 2,
     id: `scope:${unit.id}`,
@@ -279,8 +284,15 @@ function compileScope(input: CompilePlanInput, unit: WorkUnit, revision: string)
     allowedPaths,
     forbiddenPaths,
     coordinationPaths: [],
-    outputRoots: []
+    outputRoots
   };
+}
+
+function outputRootFor(candidate: string): string | undefined {
+  const normalized = normalizePath(candidate);
+  if (normalized.includes("*")) return undefined;
+  const ownedSurface = normalized.slice(0, normalized.lastIndexOf("/"));
+  return ownedSurface === "" || ownedSurface === "." ? undefined : ownedSurface;
 }
 
 function compileValidation(unit: WorkUnit, revision: string): ValidationContract {

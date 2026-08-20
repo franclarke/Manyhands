@@ -724,13 +724,15 @@ export class V2NodeExecutor {
       if (result.status !== "success" || result.commitSha === undefined) {
         const changedFiles = result.changedFiles.slice(0, 8);
         const violations = result.scopeCheck.violations.slice(0, 8);
+        const outOfScope = result.scopeCheck.outOfScope.slice(0, 8);
         return {
           success: false,
           evidenceRefs,
           failureReason: [
             `Integration repair rejected: ${result.status}.`,
             ...(changedFiles.length === 0 ? [] : [`Changed files: ${changedFiles.join(", ")}.`]),
-            ...(violations.length === 0 ? [] : [`Scope violations: ${violations.join(" | ")}.`])
+            ...(violations.length === 0 ? [] : [`Scope violations: ${violations.join(" | ")}.`]),
+            ...(outOfScope.length === 0 ? [] : [`Out-of-scope files: ${outOfScope.join(" | ")}.`])
           ].join(" ")
         };
       }
@@ -1085,6 +1087,12 @@ function buildV2RepairInstructions(
     `- Failure: ${input.priorFailure.reason}`,
     ""
   ];
+  const creationScope = input.contract.scope.outputRoots.length === 0
+    ? ["No additional files may be created outside those exact patterns."]
+    : [
+      "New files may be created only under these declared output roots:",
+      ...input.contract.scope.outputRoots.map((outputRoot) => `- ${outputRoot}`)
+    ];
   return [
     repair.cause === "parent_validation_failed"
       ? `Repair the semantically invalid integrated candidate for ${input.node.title}.`
@@ -1099,6 +1107,7 @@ function buildV2RepairInstructions(
     "",
     "Change only these declared parent-scope paths:",
     ...input.contract.scope.allowedPaths.map((allowedPath) => `- ${allowedPath}`),
+    ...creationScope,
     "Do not modify an upstream child artifact to make the parent integration pass; repair only the parent-owned integration surface.",
     "",
     ...semanticFailure,

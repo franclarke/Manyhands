@@ -724,6 +724,7 @@ describe("V2NodeExecutor", () => {
       now: () => at
     });
     const input = request(compiled, root.id);
+    input.contract.scope.outputRoots = [];
     input.priorFailure = {
       attemptId: "attempt-parent-previous",
       reason: "Integration repair rejected: scope_violation; public/storage/storage.mjs is outside allowed paths."
@@ -750,6 +751,7 @@ describe("V2NodeExecutor", () => {
     for (const allowedPath of input.contract.scope.allowedPaths) {
       expect(prompts[0]).toContain(`- ${allowedPath}`);
     }
+    expect(prompts[0]).toContain("No additional files may be created outside those exact patterns.");
     expect(sandboxRequests).toEqual([expect.objectContaining({
       attemptId: `${input.attemptId}:repair:1`,
       credentialScopeId: "run-v2-repair-scope",

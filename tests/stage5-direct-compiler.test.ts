@@ -25,6 +25,7 @@ describe("Stage 5 direct compiler", () => {
     })).toEqual([]);
     expect(compiled.contracts.taskBundles["unit:a"]?.task.goal).toBe("Implement module A.");
     expect(compiled.contracts.artifacts["artifact:a"]?.expectedPaths).toEqual(["src/a.ts"]);
+    expect(compiled.contracts.taskBundles["unit:a"]?.scope.outputRoots).toEqual(["src"]);
     expect(compiled.contracts.seams["seam:a-b"]?.semanticFacts).toEqual({ return: "Feature" });
     expect(compiled.contracts.validationObligations["validation:a"]?.proofStrategy)
       .toEqual(expect.objectContaining({ id: "proof:a", digest: fixture.proofStrategies[1]!.digest }));
