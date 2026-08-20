@@ -171,3 +171,8 @@ specifications. See `CONTEXT-MAP.md` and `docs/agents/domain.md`.
 - Before a live daemon/worker qualification, rebuild every changed workspace
   package imported by that worker. Vitest source tests do not prove the
   compiled `dist` dependency path used by the spawned process.
+- During the frozen Viaje en Familia experiment loop, cleanup of a failed
+  attempt is pre-authorized once its processes are quiescent and compact
+  evidence exists. Delete its workspace through the UI and only its resolved
+  `C:\mh-exp\viaje-familia\attempt-NNN` directory without requesting another
+  confirmation; never delete the separate evidence root or a broader path.
