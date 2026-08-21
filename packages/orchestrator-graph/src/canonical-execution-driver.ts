@@ -484,10 +484,12 @@ function verifyExactEvidenceAuthority(
     if (binding === undefined) throw new Error(`Evidence matrix ${outcome.evidenceMatrix.matrixId} is missing ${criterion.obligationId}.`);
     const obligation = authority.validationObligations[criterion.obligationId];
     const strategy = obligation === undefined ? undefined : authority.proofStrategies[obligation.proofStrategy.id];
+    const selectorDigest = strategy?.selectorDigest
+      ?? (obligation?.required === false ? sha256(JSON.stringify([])) : undefined);
     if (
       obligation === undefined ||
       strategy === undefined ||
-      strategy.selectorDigest === undefined ||
+      selectorDigest === undefined ||
       strategy.revision !== obligation.proofStrategy.revision ||
       strategy.digest !== obligation.proofStrategy.digest
     ) {
@@ -504,7 +506,7 @@ function verifyExactEvidenceAuthority(
       proofStrategyDigest: strategy.digest,
       recipeDigest: requiredRecipeDigest(outcome.evidenceMatrix),
       environmentDigest: strategy.environmentPolicyDigest,
-      selectorDigest: strategy.selectorDigest,
+      selectorDigest,
       outputDigest: binding.outputDigest
     }, sha256);
     if (!freshness.ok) throw new Error(`Evidence binding ${binding.id} is stale: ${freshness.issues.map(({ code }) => code).join(", ")}.`);

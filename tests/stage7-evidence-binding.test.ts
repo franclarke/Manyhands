@@ -107,7 +107,7 @@ describe("Stage 7 exact evidence binding", () => {
     }, sha256)).toThrow(/selector digest/i);
   });
 
-  it("does not require selector authority for an advisory criterion without an exact observation", () => {
+  it("binds an advisory criterion without an exact observation as inconclusive", () => {
     const goal = buildGoalContract({
       id: "goal:advisory", revision: 1, goal: "Keep advisory evidence optional.", constraints: [], qualityAttributes: [],
       acceptanceCriteria: [
@@ -145,8 +145,12 @@ describe("Stage 7 exact evidence binding", () => {
       }
     }, sha256);
 
-    expect(bindings).toHaveLength(1);
-    expect(bindings[0]?.obligationId).toBe("obligation:required");
+    expect(bindings).toHaveLength(2);
+    expect(bindings.find((binding) => binding.obligationId === "obligation:required")?.outcome).toBe("satisfied");
+    expect(bindings.find((binding) => binding.obligationId === "obligation:advisory")).toEqual(expect.objectContaining({
+      outcome: "inconclusive",
+      selectorDigest: selectorDigest([])
+    }));
   });
 });
 
