@@ -40,7 +40,14 @@ export function bindExactEvidence(input: {
   if (recipeDigest === undefined) {
     throw new Error(`Evidence matrix ${input.matrix.matrixId} has no exact validation recipe digest.`);
   }
-  return input.matrix.criteria.map((criterion) => {
+  return input.matrix.criteria.flatMap((criterion) => {
+    const observation = input.matrix.observations.find((candidate) =>
+      candidate.criterionIds.includes(criterion.criterionId)
+      && candidate.obligationIds.includes(criterion.obligationId)
+    );
+    // An advisory criterion with no command observation remains visible in the
+    // matrix, but cannot produce an exact evidence binding.
+    if (observation === undefined) return [];
     const obligation = input.validationObligations[criterion.obligationId];
     if (obligation === undefined) throw new Error(`Evidence criterion ${criterion.obligationId} has no canonical validation obligation.`);
     const strategy = input.proofStrategies[obligation.proofStrategy.id];
@@ -56,13 +63,6 @@ export function bindExactEvidence(input: {
     }
     if (strategy.selectorDigest === undefined) {
       throw new Error(`ProofStrategy ${strategy.id} has no selector digest for exact evidence.`);
-    }
-    const observation = input.matrix.observations.find((candidate) =>
-      candidate.criterionIds.includes(criterion.criterionId)
-      && candidate.obligationIds.includes(criterion.obligationId)
-    );
-    if (observation === undefined) {
-      throw new Error(`Evidence criterion ${criterion.obligationId} has no exact command observation.`);
     }
     const selectorDigest = digestSelectors(observation.references);
     if (strategy.selectorDigest !== selectorDigest) {
