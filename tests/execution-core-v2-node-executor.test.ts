@@ -97,6 +97,8 @@ describe("V2NodeExecutor", () => {
     expect(instructions).toContain("Previous attempt failed; repair that observed failure before finishing:");
     expect(instructions).toContain("npm test failed: expected HTTP 200");
     expect(instructions).toContain("Do not repeat the same implementation without addressing it.");
+    expect(instructions).toContain("spawn EPERM");
+    expect(instructions).toContain("Do not change product code in response to that infrastructure failure.");
   });
 
   it("executes a leaf directly from its V2 bundle and validates the exact orchestrator commit", async () => {
@@ -409,10 +411,13 @@ describe("V2NodeExecutor", () => {
       now: () => at
     });
 
-    await expect(executor.execute(request(compiled, node.id))).resolves.toMatchObject({
+    const outcome = await executor.execute(request(compiled, node.id));
+
+    expect(outcome).toMatchObject({
       kind: "failure",
       reason: expect.stringContaining(`validation_failed: exact candidate ${candidate}`)
     });
+    expect(outcome).toMatchObject({ reason: expect.stringContaining("Focused oracle failed.") });
     expect(git.opsInvoked()).not.toContain("createIntegrationHandoff");
   });
 
@@ -744,7 +749,15 @@ describe("V2NodeExecutor", () => {
 
     const outcome = await executor.execute(input);
 
-    expect(outcome).toMatchObject({ kind: "success", candidateCommit: repairCommit });
+    expect(outcome).toMatchObject({
+      kind: "success",
+      candidateCommit: repairCommit,
+      artifactBaseCommit: "MATERIALIZED"
+    });
+    expect(git.calls).toContainEqual({
+      op: "diffRangeNameOnly",
+      args: expect.objectContaining({ from: "MATERIALIZED", to: repairCommit })
+    });
     expect(agent.calls).toHaveLength(1);
     expect(prompts[0]).toContain("Previous integration attempt failed");
     expect(prompts[0]).toContain(input.priorFailure.reason);

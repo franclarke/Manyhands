@@ -409,7 +409,7 @@ export class V2NodeExecutor {
         if (this.options.deferValidationRepair === true) {
           return {
             kind: "failure",
-            reason: `validation_failed: exact candidate ${candidateCommit} failed matrix ${evidenceMatrix.matrixId}.`,
+            reason: validationFailureReason(candidateCommit, evidenceMatrix),
             usage: usageOf(result)
           };
         }
@@ -571,9 +571,13 @@ export class V2NodeExecutor {
             `Integration ended as ${manifest.disposition}.`
         };
       }
+      const artifactBaseCommit = [...manifest.operations]
+        .reverse()
+        .find((operation) => operation.outcome === "applied")?.resultSha
+        ?? base.manifest.resultingCommit;
       const changedFiles = await this.options.git.diffRangeNameOnly({
         cwd: base.worktree.path,
-        from: base.manifest.resultingCommit,
+        from: artifactBaseCommit,
         to: manifest.candidateSha
       });
       let finalManifestId: string | undefined;
@@ -602,7 +606,7 @@ export class V2NodeExecutor {
       }
       return {
         ...successOutcome(manifest.candidateSha, changedFiles, evidenceMatrix),
-        artifactBaseCommit: base.manifest.resultingCommit,
+        artifactBaseCommit,
         integrationManifestId: manifest.manifestId,
         ...(repairObservations !== undefined ? { repairObservations } : {}),
         ...(finalManifestId !== undefined ? { finalManifestId } : {}),
@@ -1051,6 +1055,7 @@ export function buildV2NodeInstructions(
     "Before implementing a consumer leaf, inspect the current canonical producer implementation and its tests; do not reimplement behavior already supplied by that producer.",
     "Use the canonical producer's returned state and exported operations as the only source for shared state; never add a consumer-side exception fallback or duplicate map or store.",
     "Verify the repository using the validation command selected by the orchestrator from the frozen repository snapshot. Do not substitute a package manager, add scripts, or modify configuration to invent a command.",
+    ...SANDBOX_VALIDATION_GUIDANCE,
     "",
     AGENT_STATUS_PROTOCOL_INSTRUCTIONS,
     "",
@@ -1142,6 +1147,7 @@ function buildV2RepairInstructions(
     "Before staging, verify the structural result: the incoming commits were inspected, the worktree contains the intended files, and no sibling contract was discarded. The parent validator will decide semantic retention on the exact candidate.",
     "Before finishing, run git diff --check and verify that no <<<<<<<, =======, or >>>>>>> conflict markers remain.",
     "The orchestrator will run the frozen validation program on the exact candidate; do not invent a build or test command in this repair.",
+    ...SANDBOX_VALIDATION_GUIDANCE,
     ...validationProgramInstructions(prepared),
     "Do not create or modify AGENTS.md, CLAUDE.md, CODEX.md, or other agent-instruction files; report a durable lesson in your final summary instead.",
     "",
@@ -1151,6 +1157,11 @@ function buildV2RepairInstructions(
     "Resolve the files and leave the worktree ready to commit. Do not commit; the orchestrator commits."
   ].join("\n");
 }
+
+const SANDBOX_VALIDATION_GUIDANCE = [
+  "If the frozen validation command cannot start its test process because the executor sandbox reports `spawn EPERM`, report that exact infrastructure failure and stop rerunning the command.",
+  "Do not change product code in response to that infrastructure failure. The orchestrator will still run the frozen validation program outside the agent sandbox on the exact candidate."
+] as const;
 
 export function buildV2CodeRepairInstructions(
   input: Pick<V2PhysicalNodeExecutionInput, "node" | "contract">,
@@ -1258,6 +1269,16 @@ function instructionFilePath(input: Pick<V2PhysicalNodeExecutionInput, "runId" |
 }
 
 export const executionFailureReasonForTest = executionFailureReason;
+
+function validationFailureReason(candidateCommit: string, matrix: V2ExecutionEvidenceMatrix): string {
+  const failedCriteria = matrix.criteria
+    .filter((criterion) => criterion.status !== "satisfied")
+    .map((criterion) => `${criterion.obligationId}: ${criterion.justification}`);
+  const detail = failedCriteria.length === 0
+    ? ""
+    : ` Failed criteria: ${failedCriteria.join(" | ")}`;
+  return `validation_failed: exact candidate ${candidateCommit} failed matrix ${matrix.matrixId}.${detail}`;
+}
 
 function executionFailureReason(result: {
   status: string;
