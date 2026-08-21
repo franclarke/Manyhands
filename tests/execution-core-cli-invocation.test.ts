@@ -179,7 +179,7 @@ describe("secure CLI process invocation", () => {
     expect(directKill).not.toHaveBeenCalled();
   });
 
-  it("does not resolve the Windows kill barrier before taskkill and the original handle settle", async () => {
+  it("accepts successful Windows tree termination even when the Node close event lags", async () => {
     const root = Object.assign(new EventEmitter(), {
       pid: 4242,
       exitCode: null,
@@ -193,13 +193,11 @@ describe("secure CLI process invocation", () => {
       kill: vi.fn()
     });
     const spawn = vi.fn(() => taskkill as never);
-    let alive = true;
     let resolved = false;
 
     const pending = killCliProcessTree(root, spawn, "win32", {
       verifyTimeoutMs: 200,
-      pollIntervalMs: 1,
-      isProcessAlive: () => alive
+      pollIntervalMs: 1
     }).then((value) => {
       resolved = true;
       return value;
@@ -209,12 +207,8 @@ describe("secure CLI process invocation", () => {
     expect(resolved).toBe(false);
     (taskkill as { exitCode: number | null }).exitCode = 0;
     taskkill.emit("close", 0);
-    await Promise.resolve();
-    expect(resolved).toBe(false);
-    alive = false;
-    root.emit("close", null, "SIGKILL");
-
     await expect(pending).resolves.toBe(true);
+    expect(resolved).toBe(true);
     expect(spawn).toHaveBeenCalledTimes(1);
   });
 
@@ -246,7 +240,6 @@ describe("secure CLI process invocation", () => {
       signalCode: null as NodeJS.Signals | null,
       kill: vi.fn()
     });
-    const isAlive = vi.fn(() => true);
     const spawn = vi.fn(() => {
       queueMicrotask(() => {
         taskkill.exitCode = 1;
@@ -259,12 +252,10 @@ describe("secure CLI process invocation", () => {
 
     await expect(
       killCliProcessTree(root, spawn, "win32", {
-        verifyTimeoutMs: 100,
-        isProcessAlive: isAlive
+        verifyTimeoutMs: 100
       })
     ).resolves.toBe(false);
 
     expect(spawn).toHaveBeenCalledTimes(1);
-    expect(isAlive).not.toHaveBeenCalled();
   });
 });

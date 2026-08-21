@@ -41,8 +41,7 @@ export interface KillCliProcessTreeOptions {
   /** Maximum time to wait for the tree and its process handle to settle. */
   verifyTimeoutMs?: number;
   pollIntervalMs?: number;
-  /** Injectable liveness probes for deterministic tests. */
-  isProcessAlive?: (pid: number) => boolean;
+  /** Injectable process-group probe for deterministic POSIX tests. */
   isProcessGroupAlive?: (pid: number) => boolean;
 }
 
@@ -104,10 +103,10 @@ export function resolveCliProcessInvocation(
 }
 
 /**
- * Kill a CLI and its descendants after timeout/cancellation, then wait until
- * the OS command and the original process handle have settled. Returning from
- * a timeout before this barrier lets a stale agent keep writing while its
- * caller reads git diff, retries, or removes the worktree.
+ * Kill a CLI and its descendants after timeout/cancellation, then verify the
+ * platform tree-termination barrier. Returning before this barrier lets a
+ * stale agent keep writing while its caller reads git diff, retries, or removes
+ * the worktree.
  */
 export async function killCliProcessTree(
   child: KillableCliProcess,
@@ -117,7 +116,6 @@ export async function killCliProcessTree(
 ): Promise<boolean> {
   const verifyTimeoutMs = options.verifyTimeoutMs ?? 3_000;
   const pollIntervalMs = options.pollIntervalMs ?? 50;
-  const isAlive = options.isProcessAlive ?? defaultIsProcessAlive;
   const isGroupAlive = options.isProcessGroupAlive ?? defaultIsProcessGroupAlive;
 
   if (typeof child.pid !== "number") {
@@ -131,38 +129,27 @@ export async function killCliProcessTree(
   if (child.signalCode !== null && child.signalCode !== undefined) return true;
 
   if (platform === "win32") {
-    const childClosed = waitForChildClose(child, verifyTimeoutMs);
-    // taskkill /t owns descendant enumeration. A zero exit plus the original
-    // handle settling is the Windows tree-termination barrier.
+    // taskkill /t owns descendant enumeration. A zero exit means Windows
+    // accepted forced termination for the complete tree. Node's `close` event
+    // may lag while stdio handles drain inside a parent Job Object, so it is
+    // not an additional liveness oracle after taskkill itself succeeded.
     const firstTaskkillSucceeded = await runWindowsTaskkill(pid, spawnFn, verifyTimeoutMs);
+    if (firstTaskkillSucceeded) return true;
+    const childClosed = waitForChildClose(child, verifyTimeoutMs);
     // Once the original Node process handle closes, it proves our process is
     // gone and releases the PID for reuse. Never probe or taskkill that numeric
     // PID again after this point: it may already identify somebody else's
     // process. (Before close, Windows keeps the process object/ID pinned.)
     const closed = (await childClosed) || (await waitForChildClose(child, 0));
-    if (closed) return firstTaskkillSucceeded;
+    if (closed) return false;
 
-    if (!firstTaskkillSucceeded) {
-      // The original handle is still open, so Windows has not reused this PID.
-      const retrySucceeded = await runWindowsTaskkill(pid, spawnFn, verifyTimeoutMs);
-      if (!retrySucceeded) safeDirectKill(child);
-      const closedAfterRetry = await waitForChildClose(child, verifyTimeoutMs);
-      return retrySucceeded && closedAfterRetry;
-    }
-
-    const dead = await waitUntil(() => !isAlive(pid), verifyTimeoutMs, pollIntervalMs);
-    if (dead) {
-      return waitForChildClose(child, verifyTimeoutMs);
-    }
-
-    if (!dead) {
-      // Retry once. A transient taskkill failure must not silently turn a hard
-      // timeout into a stale writer racing the orchestrator.
-      const retrySucceeded = await runWindowsTaskkill(pid, spawnFn, verifyTimeoutMs);
-      if (!retrySucceeded) safeDirectKill(child);
-    }
-    const closedAfterRetry = await waitForChildClose(child, verifyTimeoutMs);
-    if (closedAfterRetry) return true;
+    // The original handle is still open, so Windows has not reused this PID.
+    // Retry once. A transient taskkill failure must not silently turn a hard
+    // timeout into a stale writer racing the orchestrator.
+    const retrySucceeded = await runWindowsTaskkill(pid, spawnFn, verifyTimeoutMs);
+    if (retrySucceeded) return true;
+    safeDirectKill(child);
+    await waitForChildClose(child, verifyTimeoutMs);
     return false;
   }
 
@@ -208,15 +195,6 @@ function safeDirectKill(child: KillableCliProcess): void {
   } catch {
     // Verification below remains authoritative; killing an already-dead
     // process commonly throws and is still a successful terminal state.
-  }
-}
-
-function defaultIsProcessAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
   }
 }
 
