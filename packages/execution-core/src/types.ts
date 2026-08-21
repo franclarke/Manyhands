@@ -355,7 +355,7 @@ export const ExecutionConfigSchema = z.object({
   maxParallel: z.number().int().positive().default(6),
   scopePolicy: ScopePolicySchema.default("strict"),
   leafTimeoutMs: z.number().int().positive().default(600_000),
-  integrationTimeoutMs: z.number().int().positive().default(600_000),
+  integrationTimeoutMs: z.number().int().positive().default(1_800_000),
   /** Maximum diagnostic bytes retained per supervised subprocess stream. */
   maxOutputBytes: z.number().int().positive().default(65_536),
   /** Upper bound for declared validation commands at each validation boundary. */

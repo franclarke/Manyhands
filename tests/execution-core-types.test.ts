@@ -253,7 +253,7 @@ describe("ExecutionConfigSchema", () => {
     const parsed = ExecutionConfigSchema.parse({});
     expect(parsed.maxParallel).toBe(6);
     expect(parsed.leafTimeoutMs).toBe(600_000);
-    expect(parsed.integrationTimeoutMs).toBe(600_000);
+    expect(parsed.integrationTimeoutMs).toBe(1_800_000);
     expect(parsed.unexpectedCommitPolicy).toBe("reject");
   });
 

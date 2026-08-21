@@ -525,6 +525,7 @@ export class V2NodeExecutor {
     }
 
     let candidateToAnchor: string | undefined;
+    let repairCheckpoint: Extract<V2PhysicalNodeExecutionOutcome, { kind: "failure" }>["checkpoint"];
     try {
       const integrationTimeout = AbortSignal.timeout(input.config.integrationTimeoutMs);
       const integrationSignal = input.signal === undefined
@@ -582,7 +583,14 @@ export class V2NodeExecutor {
             })
           };
         },
-        repair: async (repair) => this.repairIntegration(input, base.worktree, repair, integrationSignal, prepared),
+        repair: async (repair) => {
+          const result = await this.repairIntegration(input, base.worktree, repair, integrationSignal, prepared);
+          if (result.checkpoint !== undefined) {
+            repairCheckpoint = result.checkpoint;
+            candidateToAnchor = result.checkpoint.candidateCommit;
+          }
+          return result;
+        },
         digestCandidate: async ({ candidateSha }) => digest(candidateSha)
       });
       let manifest: IntegrationManifest;
@@ -599,6 +607,7 @@ export class V2NodeExecutor {
           kind: "failure",
           integrationManifestId: `integration-result-${request.manifestId}`,
           ...(evidenceMatrix === undefined ? {} : { evidenceMatrix }),
+          ...(repairCheckpoint === undefined ? {} : { checkpoint: repairCheckpoint }),
           reason: describe(error)
         };
       }
@@ -619,6 +628,7 @@ export class V2NodeExecutor {
           integrationManifestId: manifest.manifestId,
           ...(manifest.candidateSha === undefined ? {} : { candidateCommit: manifest.candidateSha }),
           ...(evidenceMatrix === undefined ? {} : { evidenceMatrix }),
+          ...(repairCheckpoint === undefined ? {} : { checkpoint: repairCheckpoint }),
           ...(repairObservations !== undefined ? { repairObservations } : {}),
           reason:
             manifest.errors.map((error) => error.message).join("; ") ||
@@ -719,14 +729,33 @@ export class V2NodeExecutor {
     },
     signal: AbortSignal,
     prepared?: PreparedValidationRecipe
-  ): Promise<{ success: boolean; candidateSha?: string; evidenceRefs: string[]; failureReason?: string }> {
+  ): Promise<{
+    success: boolean;
+    candidateSha?: string;
+    evidenceRefs: string[];
+    failureReason?: string;
+    checkpoint?: Extract<V2PhysicalNodeExecutionOutcome, { kind: "failure" }>["checkpoint"];
+  }> {
     const instructionPath = instructionFilePath(input, "repair");
     let sandboxSession: SandboxSession | undefined;
     if (await this.options.git.cherryPickHead(worktree.path) !== undefined) {
       await this.options.git.cherryPickAbort(worktree.path);
     }
-    const expectedHead = await this.options.git.head(worktree.path);
     try {
+      if (input.priorFailure?.checkpointCommit !== undefined) {
+        const checkpoint = await this.options.git.cherryPick({
+          cwd: worktree.path,
+          commitSha: input.priorFailure.checkpointCommit,
+          mainline: 1
+        });
+        if (!checkpoint.ok) {
+          if (await this.options.git.cherryPickHead(worktree.path) !== undefined) {
+            await this.options.git.cherryPickAbort(worktree.path);
+          }
+          throw new Error(`Integration checkpoint ${input.priorFailure.checkpointCommit} could not be materialized: ${checkpoint.output}`);
+        }
+      }
+      const expectedHead = await this.options.git.head(worktree.path);
       // Historical commit transport still needs an inspectable source parent.
       // Exact manifests were already validated and materialized from declared
       // Git objects, so their sha256 identity is not a Git revision.
@@ -775,11 +804,25 @@ export class V2NodeExecutor {
         scopeContract: input.contract.scope,
         scopePolicy: input.config.scopePolicy,
         unexpectedCommitPolicy: input.config.unexpectedCommitPolicy,
-        commitMessage: `mh-v2-repair: ${input.node.id}`,
+        commitMessage: outcome.timedOut
+          ? `mh-v2-checkpoint: ${input.node.id}`
+          : `mh-v2-repair: ${input.node.id}`,
         usageSource: usageSourceForSelection(input.repairSelection)
       });
       const evidenceRefs = [`repair:${input.attemptId}:${repair.pass}`, ...repair.conflictFiles.map((file) => `file:${file}`)];
       if (result.status !== "success" || result.commitSha === undefined) {
+        if (result.status === "timeout" && result.commitSha !== undefined) {
+          return {
+            success: false,
+            checkpoint: {
+              candidateCommit: result.commitSha,
+              outputDigest: digest(result.commitSha),
+              changedFiles: [...result.changedFiles]
+            },
+            evidenceRefs,
+            failureReason: executionFailureReason(result)
+          };
+        }
         const changedFiles = result.changedFiles.slice(0, 8);
         const violations = result.scopeCheck.violations.slice(0, 8);
         const outOfScope = result.scopeCheck.outOfScope.slice(0, 8);

@@ -711,6 +711,118 @@ describe("V2NodeExecutor", () => {
     expect(git.opsInvoked().filter((operation) => operation === "restoreManagedWorktree")).toHaveLength(0);
   });
 
+  it("continues a composite retry from an in-scope integration timeout checkpoint", async () => {
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
+    const root = compiled.graph.nodes[compiled.graph.rootId]!;
+    const childCommit = "b".repeat(40);
+    const firstMaterialized = "6".repeat(40);
+    const secondMaterialized = "7".repeat(40);
+    const restoredCheckpoint = "8".repeat(40);
+    const checkpointCommit = "9".repeat(40);
+    const repairedCommit = "a".repeat(40);
+    const changedFile = root.id === compiled.graph.rootId ? "src/ui/BookingForm.tsx" : "src/domain/booking.ts";
+    const git = new FakeGitRunner({
+      cherryPickResultShas: [firstMaterialized, secondMaterialized, restoredCheckpoint],
+      commitShas: [checkpointCommit, repairedCommit],
+      diffCached: "partial integration diff",
+      diffCachedNameOnly: [changedFile],
+      diffRangeNameOnly: [changedFile]
+    });
+    let invocation = 0;
+    const agent: AgentExecutor = {
+      execute: async () => {
+        invocation += 1;
+        return invocation === 1
+          ? { exitCode: 124, stdout: "partial", stderr: "", timedOut: true, terminationVerified: true, durationMs: 600_000 }
+          : { exitCode: 0, stdout: "done", stderr: "", timedOut: false, durationMs: 1 };
+      }
+    };
+    let validationPass = 0;
+    const executor = new V2NodeExecutor({
+      git,
+      repoRoot: "C:/repo/booking",
+      traceStore: new InMemoryTraceStore(),
+      executorFactory: new FixedAgentExecutorFactory(agent),
+      validator: {
+        validate: async (input) => {
+          validationPass += 1;
+          const evidence = matrix(input.contract, input.candidateCommit);
+          if (validationPass === 3) return evidence;
+          return {
+            ...evidence,
+            criteria: evidence.criteria.map((criterion) => ({
+              ...criterion,
+              status: "failed" as const,
+              justification: "The composed parent behavior requires one semantic repair."
+            })),
+            outcome: "failed" as const
+          };
+        }
+      },
+      finalCandidate: {
+        prepare: async (input) => ({
+          manifestId: "final-timeout-checkpoint",
+          finalManifest: {
+            commitSha: input.candidateCommit,
+            treeSha: "tree-timeout-checkpoint",
+            graphRevision: input.graphRevision,
+            artifactIds: [...input.artifactIds],
+            evidenceMatrixId: input.evidenceMatrix.matrixId,
+            validationRecipeDigest: input.validationRecipeDigest,
+            deliveryTarget: input.targetBranch
+          }
+        })
+      },
+      worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }),
+      writeInstructions: async () => undefined,
+      now: () => at
+    });
+    const first = request(compiled, root.id);
+    first.consumedArtifacts = [{
+      artifactId: "adopted-child",
+      runId: first.runId,
+      nodeId: "node-api",
+      digest: "sha256:child",
+      producerAttemptId: "attempt-child",
+      contract: { id: "contract-child", revision: "r1" },
+      kind: "commit",
+      location: childCommit,
+      adoptedAt: at
+    }];
+
+    const firstOutcome = await executor.execute(first);
+
+    expect(firstOutcome).toMatchObject({
+      kind: "failure",
+      checkpoint: {
+        candidateCommit: checkpointCommit,
+        changedFiles: [changedFile]
+      }
+    });
+
+    const retry = request(compiled, root.id);
+    retry.attemptId = `run-v2-physical:attempt:${root.id}:2`;
+    retry.consumedArtifacts = first.consumedArtifacts;
+    retry.priorFailure = {
+      attemptId: first.attemptId,
+      reason: "timeout: hard deadline",
+      checkpointCommit
+    };
+
+    const retryOutcome = await executor.execute(retry);
+
+    expect(retryOutcome).toMatchObject({
+      kind: "success",
+      candidateCommit: repairedCommit,
+      finalManifestId: "final-timeout-checkpoint"
+    });
+    expect(git.calls.filter((call) => call.op === "cherryPick").map((call) => call.args.commitSha)).toEqual([
+      childCommit,
+      childCommit,
+      checkpointCommit
+    ]);
+  });
+
   it("repairs parent validation over an exact child manifest without treating its digest as a commit", async () => {
     const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
     const root = compiled.graph.nodes[compiled.graph.rootId]!;
