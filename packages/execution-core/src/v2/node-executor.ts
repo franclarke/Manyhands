@@ -82,6 +82,11 @@ export interface V2ExecutionEvidenceMatrix {
     detectedFailure: boolean;
     outputDigest: string;
   }>;
+  /** Bounded candidate-only output for the next repair attempt; not evidence. */
+  repairDiagnostics?: Array<{
+    obligationId: string;
+    output: string;
+  }>;
 }
 
 export interface V2NodeValidationPort {
@@ -1391,7 +1396,24 @@ function validationFailureReason(candidateCommit: string, matrix: V2ExecutionEvi
   const detail = failedCriteria.length === 0
     ? ""
     : ` Failed criteria: ${failedCriteria.join(" | ")}`;
-  return `validation_failed: exact candidate ${candidateCommit} failed matrix ${matrix.matrixId}.${detail}`;
+  const diagnostics = matrix.repairDiagnostics
+    ?.slice(0, 3)
+    .map((diagnostic) => `${diagnostic.obligationId}: ${boundedValidationOutput(diagnostic.output)}`)
+    .filter((diagnostic) => diagnostic.length > 0) ?? [];
+  const diagnosticDetail = diagnostics.length === 0
+    ? ""
+    : ` Candidate validation output: ${diagnostics.join(" | ")}`;
+  return `validation_failed: exact candidate ${candidateCommit} failed matrix ${matrix.matrixId}.${detail}${diagnosticDetail}`;
+}
+
+function boundedValidationOutput(output: string): string {
+  const normalized = output
+    // eslint-disable-next-line no-control-regex
+    .replace(/\u001B\[[0-?]*[ -/]*[@-~]/gu, "")
+    .replace(/\r\n?/gu, "\n")
+    .trim();
+  const maximumLength = 1_200;
+  return normalized.length <= maximumLength ? normalized : normalized.slice(-maximumLength);
 }
 
 function executionFailureReason(result: {

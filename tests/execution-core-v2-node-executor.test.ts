@@ -546,7 +546,11 @@ describe("V2NodeExecutor", () => {
             ...criterion,
             status: "failed" as const,
             justification: "Focused oracle failed."
-          }))
+          })),
+          repairDiagnostics: [{
+            obligationId: "validation:booking-api",
+            output: "AssertionError: expected reorderStops() to preserve the selected stop."
+          }]
         })
       },
       deferValidationRepair: true,
@@ -561,6 +565,7 @@ describe("V2NodeExecutor", () => {
       reason: expect.stringContaining(`validation_failed: exact candidate ${candidate}`)
     });
     expect(outcome).toMatchObject({ reason: expect.stringContaining("Focused oracle failed.") });
+    expect(outcome).toMatchObject({ reason: expect.stringContaining("AssertionError: expected reorderStops() to preserve the selected stop.") });
     expect(git.opsInvoked()).not.toContain("createIntegrationHandoff");
   });
 
@@ -1347,6 +1352,35 @@ describe("ExactCandidateValidatorV2", () => {
     expect(evidence.criteria.every((criterion) => criterion.status === "satisfied")).toBe(true);
     expect(git.opsInvoked().filter((operation) => operation === "worktreeAdd")).toHaveLength(2);
     expect(git.opsInvoked().filter((operation) => operation === "worktreeRemove")).toHaveLength(2);
+  });
+
+  it("carries the final exact-candidate failure output into bounded repair diagnostics", async () => {
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
+    const contract = compiled.contracts.find((bundle) => bundle.task.nodeId === "node-api")!;
+    const candidate = "d".repeat(40);
+    const git = new FakeGitRunner();
+    const failureOutput = `${"unrelated runner noise\n".repeat(100)}AssertionError: expected an existing stop id after reorder.`;
+    const validator = new ExactCandidateValidatorV2({
+      git,
+      workspaces: fakeWorkspaceProvider(git),
+      repoRoot: "C:/repo/booking",
+      repositorySnapshot: bookingSnapshot(),
+      runner: { run: async () => ({ passed: false, exitCode: 1, output: failureOutput }) }
+    });
+
+    const evidence = await validator.validate({
+      runId: "run-v2-validation",
+      attemptId: "attempt-api-repair-diagnostics",
+      contract,
+      candidateCommit: candidate,
+      baselineCommit: compiled.graph.baseCommit
+    });
+
+    expect(evidence.repairDiagnostics).toEqual([expect.objectContaining({
+      obligationId: contract.validation.obligations[0]!.id,
+      output: expect.stringContaining("AssertionError: expected an existing stop id after reorder.")
+    })]);
+    expect(evidence.repairDiagnostics![0]!.output).toHaveLength(1_200);
   });
 
   it("rejects a prepared recipe whose contract identity no longer matches the candidate contract", async () => {
