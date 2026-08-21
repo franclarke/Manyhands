@@ -1125,6 +1125,8 @@ export function buildV2NodeInstructions(
       ...(input.priorFailure.checkpointCommit === undefined
         ? []
         : [`- Restored checkpoint: ${input.priorFailure.checkpointCommit}`, "Continue from the restored worktree; do not recreate completed work."]),
+      "Treat the recorded failure as the first and smallest repair target.",
+      "Do not expand the feature, redesign the UI, or add unrelated behavior unless the recorded failure requires it.",
       "Do not repeat the same implementation without addressing it."
     );
   }

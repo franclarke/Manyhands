@@ -100,6 +100,8 @@ describe("V2NodeExecutor", () => {
     expect(instructions).toContain("npm test failed: expected HTTP 200");
     expect(instructions).toContain("Repair the status assertion without changing the endpoint contract.");
     expect(instructions).toContain("Do not repeat the same implementation without addressing it.");
+    expect(instructions).toContain("Treat the recorded failure as the first and smallest repair target.");
+    expect(instructions).toContain("Do not expand the feature, redesign the UI, or add unrelated behavior unless the recorded failure requires it.");
     expect(instructions).toContain("spawn EPERM");
     expect(instructions).toContain("Do not change product code in response to that infrastructure failure.");
   });
