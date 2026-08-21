@@ -344,7 +344,27 @@ export function summarizeRunNodes(nodes: readonly RunNodeView[]): {
   };
 }
 
-export function eventPresentation(type: string): { label: string; diagnostic: boolean } {
+export function eventPresentation(
+  type: string,
+  payload: Record<string, unknown> = {}
+): { label: string; diagnostic: boolean } {
+  const automaticRecovery = type === "failure.classified"
+    && typeof payload.automaticRetryBudget === "number"
+    && payload.automaticRetryBudget > 0
+    && Array.isArray(payload.allowedActions)
+    && payload.allowedActions.some((action) => typeof action === "string" && (action.includes("repair") || action.includes("retry")));
+  if (automaticRecovery) {
+    return { label: "Fallo recuperable · reparación programada", diagnostic: false };
+  }
+  if (type === "attempt.started" && typeof payload.retryOfAttemptId === "string") {
+    return { label: "Reparación iniciada", diagnostic: false };
+  }
+  if (type === "attempt.repair_attempted") {
+    return { label: "Reparación del intento en curso", diagnostic: false };
+  }
+  if (type === "decision.resolved" && payload.optionId === "retry") {
+    return { label: "Reparación autorizada", diagnostic: false };
+  }
   const labels: Record<string, string> = {
     "run.created": "Objetivo registrado",
     "repository.inspected": "Repositorio comprendido",
@@ -363,6 +383,7 @@ export function eventPresentation(type: string): { label: string; diagnostic: bo
     "wave.selected": "Nueva ola de trabajo",
     "attempt.started": "Agente iniciado",
     "attempt.candidate_created": "Cambio candidato creado",
+    "attempt.repair_attempted": "Reparación del intento en curso",
     "attempt.failed": "Intento fallido",
     "validation.completed": "Validación completada",
     "failure.classified": "Fallo clasificado",

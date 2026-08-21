@@ -1,6 +1,7 @@
 import type { RunEvent } from "@manyhands/run-coordinator";
 
 import { adaptCoordinatorEvent } from "@/lib/run-model/sse-adapter";
+import { serializeHeartbeat } from "@/lib/run-model/sse-frames";
 import { readProductRunEvents } from "@/lib/server/daemon/productive-client";
 import { daemonQueryErrorResponse } from "@/lib/server/daemon/route-errors";
 
@@ -38,7 +39,8 @@ export async function GET(request: Request, context: RouteContext): Promise<Resp
               controller.enqueue(encoder.encode(serialize(event)));
             }
             if (Date.now() - lastHeartbeatAt >= HEARTBEAT_MS) {
-              controller.enqueue(encoder.encode(`: heartbeat ${new Date().toISOString()}\n\n`));
+              await waitForCapacity(controller);
+              controller.enqueue(encoder.encode(serializeHeartbeat(lastSentSequence, new Date().toISOString())));
               lastHeartbeatAt = Date.now();
             }
           } catch (error) {
@@ -48,7 +50,7 @@ export async function GET(request: Request, context: RouteContext): Promise<Resp
           await delay(POLL_MS);
         }
       };
-      controller.enqueue(encoder.encode(`: connected ${new Date().toISOString()}\n\n`));
+      controller.enqueue(encoder.encode(`retry: 1000\n: connected ${new Date().toISOString()}\n\n`));
       void pump();
     },
     cancel() {

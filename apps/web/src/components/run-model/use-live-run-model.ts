@@ -3,13 +3,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { buildRunModel } from "@/lib/run-model/reducer";
+import {
+  openRunEventStream,
+  type RunEventSourceLike,
+  type RunEventStreamConnection,
+  type RunEventStreamScheduler
+} from "@/lib/run-model/live-event-stream";
 import type { RunEvent, RunModel, RunSeed } from "@/lib/run-model/types";
 
 export interface LiveRunModel {
   model: RunModel;
   events: RunEvent[];
   connected: boolean;
-  connection: "connecting" | "connected" | "reconnecting" | "degraded" | "disconnected";
+  connection: RunEventStreamConnection;
   lastSeq: number;
 }
 
@@ -36,55 +42,18 @@ export function useLiveRunModel(
 
   useEffect(() => {
     if (disabled || typeof window === "undefined") return;
-    let source: EventSource | null = null;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    let disposed = false;
-    let attempts = 0;
-    let lastSeen = initialCursor;
-    const seen = new Set(initialEvents.map((event) => event.eventId));
-
-    const connect = (): void => {
-      if (disposed) return;
-      setConnection(attempts === 0 ? "connecting" : "reconnecting");
-      source = new EventSource(`/api/runs/${encodeURIComponent(seed.id)}/run-events?afterSeq=${lastSeen}`);
-      source.onopen = () => {
-        attempts = 0;
-        setConnection("connected");
-      };
-      source.onmessage = (message) => {
-        try {
-          const event = JSON.parse(message.data) as RunEvent;
-          if (seen.has(event.eventId) || event.seq <= lastSeen) return;
-          if (event.seq !== lastSeen + 1) {
-            setConnection("degraded");
-            source?.close();
-            timer = setTimeout(connect, 250);
-            return;
-          }
-          seen.add(event.eventId);
-          lastSeen = event.seq;
-          buffer.current = [...buffer.current, event];
-          setStreamEvents(buffer.current);
-        } catch {
-          setConnection("degraded");
-        }
-      };
-      source.onerror = () => {
-        source?.close();
-        attempts += 1;
-        setConnection("reconnecting");
-        const delay = Math.min(30_000, 500 * 2 ** Math.min(attempts, 6));
-        timer = setTimeout(connect, delay);
-      };
-    };
-
-    connect();
-    return () => {
-      disposed = true;
-      source?.close();
-      if (timer !== undefined) clearTimeout(timer);
-      setConnection("disconnected");
-    };
+    return openRunEventStream({
+      runId: seed.id,
+      initialCursor,
+      initialEventIds: initialEvents.map((event) => event.eventId),
+      createEventSource: (url) => new EventSource(url) as unknown as RunEventSourceLike,
+      scheduler: browserScheduler,
+      onConnection: setConnection,
+      onEvent(event) {
+        buffer.current = [...buffer.current, event];
+        setStreamEvents(buffer.current);
+      }
+    });
   }, [disabled, initialCursor, initialEvents, seed.id]);
 
   const current = useMemo(() => buildLiveRunModel(streamEvents, seed, initialEvents), [initialEvents, seed, streamEvents]);
@@ -95,6 +64,15 @@ export function useLiveRunModel(
     lastSeq: maxSeq(current.events)
   };
 }
+
+const browserScheduler: RunEventStreamScheduler = {
+  setTimeout(callback, delayMs) {
+    return window.setTimeout(callback, delayMs);
+  },
+  clearTimeout(handle) {
+    window.clearTimeout(handle as number);
+  }
+};
 
 function maxSeq(events: readonly RunEvent[]): number {
   return events.reduce((maximum, event) => Math.max(maximum, event.seq), 0);

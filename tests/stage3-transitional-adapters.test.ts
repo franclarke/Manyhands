@@ -241,6 +241,7 @@ describe("Stage 3 transitional unsafe adapters", () => {
         "--attempt-id", "stage3:execution"
       ],
       env: {
+        MANYHANDS_EXECUTION_LEAF_TIMEOUT_MS: "600000",
         MANYHANDS_STAGE8_SANDBOX_SCOPE: JSON.stringify(["run:profile", "stage3:execution"])
       }
     });

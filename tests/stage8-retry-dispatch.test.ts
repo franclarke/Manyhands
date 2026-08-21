@@ -64,6 +64,41 @@ describe("Stage 8 recovery decision dispatch", () => {
     expect(spawnedAttempts).toEqual(["stage3:execution", "stage3:execution:recovery:1"]);
   });
 
+  it("extends a timed-out leaf retry to the bounded recovery timeout", async () => {
+    const observedTimeouts: unknown[] = [];
+    const application = createProductRunApplication({
+      hasher: sha256,
+      clock: () => at,
+      executionProcess: (definition) => {
+        observedTimeouts.push(definition.executionConfig.leafTimeoutMs);
+        return { executable: process.execPath, argv: ["-e", ""], cwd: process.cwd(), env: {} };
+      }
+    });
+    const timedOut: RunProjection = {
+      ...projection("waiting_for_input"),
+      attempts: {
+        "attempt:stage8:timeout": {
+          attemptId: "attempt:stage8:timeout",
+          nodeId: "node:stage8",
+          inputFingerprint: "sha256:timeout",
+          kind: "execution",
+          status: "failed",
+          repairPasses: 0,
+          failureReason: "timeout: The agent hit the hard timeout."
+        }
+      },
+      decisions: { [timeoutRetryDecision.id]: timeoutRetryDecision }
+    };
+
+    await application.decide(command("timeout-retry", 2, {
+      type: "resolve_decision",
+      decisionId: timeoutRetryDecision.id,
+      optionId: "retry"
+    }), context(timedOut));
+
+    expect(observedTimeouts).toEqual([1_800_000]);
+  });
+
   it("recovers only the durably identified daemon-loss interruption", async () => {
     const application = createProductRunApplication({
       hasher: sha256,
@@ -134,6 +169,12 @@ const retryDecision: Decision = {
   status: "pending"
 };
 
+const timeoutRetryDecision: Decision = {
+  ...retryDecision,
+  id: "decision:stage8:timeout-retry",
+  question: "Retry after the artifact materialization failure."
+};
+
 function projection(lifecycle: RunProjection["lifecycle"]): RunProjection {
   return { ...foldRun([created()]), lifecycle };
 }
@@ -159,7 +200,7 @@ function definition(): ProductRunDefinition {
     planningSelection: { executorId: "codex-cli", model: "gpt-test" },
     executionSelection: { executorId: "codex-cli", model: "gpt-test" },
     repairSelection: { executorId: "codex-cli", model: "gpt-test" },
-    executionConfig: {},
+    executionConfig: { leafTimeoutMs: 600_000 },
     targetContext: {
       fingerprint: "target:stage8",
       sourceBaseCommit: "base:stage8",

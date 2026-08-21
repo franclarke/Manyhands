@@ -30,6 +30,10 @@ export class ExactGitManifestMaterializer {
   }): Promise<ExactMaterializationResult> {
     const identity = validateManifestIdentity(input.manifest, this.hasher);
     if (!identity.ok) throw new Error(`Invalid artifact manifest: ${identity.issues.map((issue) => issue.code).join(", ")}.`);
+    const sourceTree = await this.git.revParse(input.cwd, `${input.manifest.sourceCandidate.commitOid}^{tree}`);
+    if (sourceTree !== input.manifest.sourceCandidate.treeOid) {
+      throw new Error("Artifact source candidate tree does not match its retained commit.");
+    }
     if (await this.git.cherryPickHead(input.cwd) !== undefined) {
       throw new Error("Cannot materialize an artifact while a Git cherry-pick is active.");
     }
@@ -44,7 +48,8 @@ export class ExactGitManifestMaterializer {
         await this.applyEntry(input.cwd, input.manifest.baseTreeSha, entry, declaredIndexFile);
       }
       const declaredTree = await this.git.writeTree({ cwd: input.cwd, indexFile: declaredIndexFile });
-      if (declaredTree !== input.manifest.resultTreeSha) {
+      const legacyPartitionedManifest = input.manifest.sourceCandidate.treeOid === input.manifest.resultTreeSha;
+      if (declaredTree !== input.manifest.resultTreeSha && !legacyPartitionedManifest) {
         throw new Error(`Artifact materialization tree mismatch: expected ${input.manifest.resultTreeSha}, found ${declaredTree}.`);
       }
 

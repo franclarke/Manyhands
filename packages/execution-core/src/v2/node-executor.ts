@@ -125,7 +125,7 @@ export interface V2PhysicalNodeExecutionInput {
   runId: string;
   attemptId: string;
   inputFingerprint: string;
-  priorFailure?: { attemptId: string; reason: string; checkpointCommit?: string };
+  priorFailure?: { attemptId: string; reason: string; checkpointCommit?: string; guidance?: string };
   graph: ExecutionGraphContext;
   node: ExecutionGraphNode;
   contract: TaskContractBundle;
@@ -1064,6 +1064,7 @@ export class CanonicalNodeExecutor {
           repositoryObjectStoreId: `object-store:${input.target.sourceTargetFingerprint}`,
           baseCommit: baseCommit!,
           candidateCommit: outcome.candidateCommit,
+          candidateAllowedPaths: outputArtifacts.flatMap((output) => output.expectedPaths),
           allowedPaths: artifact.expectedPaths
         });
         return [artifact.id, manifest] as const;
@@ -1115,6 +1116,7 @@ export function buildV2NodeInstructions(
       "Previous attempt failed; repair that observed failure before finishing:",
       `- Attempt: ${input.priorFailure.attemptId}`,
       `- Failure: ${input.priorFailure.reason}`,
+      ...(input.priorFailure.guidance === undefined ? [] : [`- Operator guidance: ${input.priorFailure.guidance}`]),
       ...(input.priorFailure.checkpointCommit === undefined
         ? []
         : [`- Restored checkpoint: ${input.priorFailure.checkpointCommit}`, "Continue from the restored worktree; do not recreate completed work."]),
@@ -1129,6 +1131,17 @@ export function buildV2NodeInstructions(
       "You may also CREATE new files, but only directly under these directories:",
       ...scope.outputRoots.map((root) => `- ${root}/`),
       "Creating a file anywhere else, or editing an existing file not listed above, fails this task."
+    );
+  }
+  const producedArtifacts = input.contract.artifacts.filter(
+    (artifact) => artifact.producerNodeId === input.node.id && artifact.expectedPaths.length > 0
+  );
+  if (producedArtifacts.length > 0) {
+    lines.push(
+      "",
+      "You must produce only the following declared artifact paths:",
+      ...producedArtifacts.map((artifact) => `- ${artifact.id}@${artifact.revision}: ${artifact.expectedPaths.join(", ")}`),
+      "Do not create additional files under an allowed directory unless they are listed above."
     );
   }
   if (scope.forbiddenPaths.length > 0) lines.push("", "Never modify these paths:", ...scope.forbiddenPaths.map((path) => `- ${path}`));
@@ -1190,6 +1203,7 @@ function buildV2RepairInstructions(
     "Previous integration attempt failed; address this observed cause before finishing:",
     `- Attempt: ${input.priorFailure.attemptId}`,
     `- Failure: ${input.priorFailure.reason}`,
+    ...(input.priorFailure.guidance === undefined ? [] : [`- Operator guidance: ${input.priorFailure.guidance}`]),
     ""
   ];
   const creationScope = input.contract.scope.outputRoots.length === 0

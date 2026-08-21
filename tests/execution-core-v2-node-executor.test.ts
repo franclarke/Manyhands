@@ -85,20 +85,68 @@ describe("V2NodeExecutor", () => {
       contract: {
         task: { goal: "Implement a recipe HTTP server.", acceptanceCriteria: [], constraints: [] },
         scope: { allowedPaths: ["src/index.js"], outputRoots: [], forbiddenPaths: [] },
-        seams: []
+        seams: [],
+        artifacts: []
       },
       consumedArtifacts: [],
       priorFailure: {
         attemptId: "run-1:attempt:node-server:1",
-        reason: "npm test failed: expected HTTP 200"
+        reason: "npm test failed: expected HTTP 200",
+        guidance: "Repair the status assertion without changing the endpoint contract."
       }
     } as never);
 
     expect(instructions).toContain("Previous attempt failed; repair that observed failure before finishing:");
     expect(instructions).toContain("npm test failed: expected HTTP 200");
+    expect(instructions).toContain("Repair the status assertion without changing the endpoint contract.");
     expect(instructions).toContain("Do not repeat the same implementation without addressing it.");
     expect(instructions).toContain("spawn EPERM");
     expect(instructions).toContain("Do not change product code in response to that infrastructure failure.");
+  });
+
+  it("lists each produced artifact's exact paths so a leaf does not create an unadoptable sibling file", () => {
+    const instructions = buildV2NodeInstructions({
+      node: { id: "node-dashboard", title: "Dashboard" },
+      contract: {
+        task: {
+          goal: "Build the dashboard.",
+          acceptanceCriteria: [],
+          constraints: [],
+          produces: [
+            { id: "artifact:dashboard-change", revision: "1" },
+            { id: "artifact:dashboard-ui-change", revision: "1" }
+          ]
+        },
+        scope: { allowedPaths: ["src/dashboard", "public"], outputRoots: ["src/dashboard", "public"], forbiddenPaths: [] },
+        seams: [],
+        artifacts: [
+          {
+            id: "artifact:dashboard-change",
+            revision: "1",
+            producerNodeId: "node-dashboard",
+            consumerNodeIds: [],
+            artifactType: "files",
+            materialization: "files",
+            expectedPaths: ["src/dashboard/dashboard.mjs", "src/dashboard/dashboard.test.mjs"]
+          },
+          {
+            id: "artifact:dashboard-ui-change",
+            revision: "1",
+            producerNodeId: "node-dashboard",
+            consumerNodeIds: [],
+            artifactType: "files",
+            materialization: "files",
+            expectedPaths: ["public/index.html", "public/main.mjs", "public/styles.css"]
+          }
+        ]
+      },
+      consumedArtifacts: []
+    } as never);
+
+    expect(instructions).toContain("You must produce only the following declared artifact paths:");
+    expect(instructions).toContain("- artifact:dashboard-change@1: src/dashboard/dashboard.mjs, src/dashboard/dashboard.test.mjs");
+    expect(instructions).toContain("- artifact:dashboard-ui-change@1: public/index.html, public/main.mjs, public/styles.css");
+    expect(instructions).toContain("Do not create additional files under an allowed directory unless they are listed above.");
   });
 
   it("executes a leaf directly from its V2 bundle and validates the exact orchestrator commit", async () => {
@@ -939,7 +987,8 @@ describe("V2NodeExecutor", () => {
     input.contract.scope.outputRoots = [];
     input.priorFailure = {
       attemptId: "attempt-parent-previous",
-      reason: "Integration repair rejected: scope_violation; public/storage/storage.mjs is outside allowed paths."
+      reason: "Integration repair rejected: scope_violation; public/storage/storage.mjs is outside allowed paths.",
+      guidance: "Preserve the declared storage artifact and repair only the parent integration test."
     };
     input.consumedArtifacts = [{
       artifactId: "artifact:child",
@@ -968,6 +1017,7 @@ describe("V2NodeExecutor", () => {
     expect(agent.calls).toHaveLength(1);
     expect(prompts[0]).toContain("Previous integration attempt failed");
     expect(prompts[0]).toContain(input.priorFailure.reason);
+    expect(prompts[0]).toContain(input.priorFailure.guidance);
     for (const allowedPath of input.contract.scope.allowedPaths) {
       expect(prompts[0]).toContain(`- ${allowedPath}`);
     }

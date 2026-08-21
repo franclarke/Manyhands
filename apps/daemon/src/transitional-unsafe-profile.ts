@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { RecoveryDiagnosticSchema, type RecoveryDiagnostic } from "@manyhands/contracts";
-import { DeliveryRecoveryError } from "@manyhands/execution-core";
+import { DeliveryRecoveryError, ExecutionConfigSchema } from "@manyhands/execution-core";
 
 import {
   DeliveryReceiptSchema,
@@ -109,11 +109,12 @@ export function createTransitionalUnsafeProfile(
   return Object.freeze({
     kind: "transitional_unsafe",
     adapters,
-    executionProcess: options.executionProcess ?? ((_definition: ProductRunDefinition, context: {
+    executionProcess: options.executionProcess ?? ((definition: ProductRunDefinition, context: {
       runId: string;
       attemptId: string;
     } | undefined) => {
       if (context === undefined) throw new Error("Transitional execution requires run and attempt identity.");
+      const config = ExecutionConfigSchema.parse(definition.executionConfig);
       return {
         executable: nodeExecutable,
         argv: [
@@ -125,6 +126,7 @@ export function createTransitionalUnsafeProfile(
         cwd,
         env: {
           ...inheritedWorkerEnvironment(),
+          MANYHANDS_EXECUTION_LEAF_TIMEOUT_MS: String(config.leafTimeoutMs),
           MANYHANDS_STAGE8_SANDBOX_SCOPE: executionCredentialScopeId(context.runId, context.attemptId)
         }
       };

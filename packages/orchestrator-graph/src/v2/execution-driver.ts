@@ -45,7 +45,7 @@ export interface V2NodeExecutionInput {
   attemptId: string;
   inputFingerprint: string;
   /** Immutable diagnostic from the failed attempt this retry replaces. */
-  priorFailure?: { attemptId: string; reason: string; checkpointCommit?: string };
+  priorFailure?: { attemptId: string; reason: string; checkpointCommit?: string; guidance?: string };
   graph: LegacyGraphRevisionV2;
   node: LegacyTaskNodeV2;
   contract: TaskContractBundle;
@@ -813,12 +813,14 @@ function createAttempt(
   const previousAttempt = Object.values(state.attempts)
     .filter((attempt) => attempt.nodeId === nodeId && ["failed", "discarded", "stale"].includes(attempt.status))
     .at(-1);
-  const inputFingerprint = fingerprintForNode(run, state, nodeId, previousAttempt);
+  const guidance = previousAttempt === undefined ? undefined : retryGuidanceFor(state, previousAttempt.attemptId, nodeId);
+  const inputFingerprint = fingerprintForNode(run, state, nodeId, previousAttempt, guidance);
   const priorFailure = previousAttempt?.status === "failed" && previousAttempt.failureReason !== undefined
     ? {
         attemptId: previousAttempt.attemptId,
         reason: previousAttempt.failureReason,
-        ...(previousAttempt.candidateCommit === undefined ? {} : { checkpointCommit: previousAttempt.candidateCommit })
+        ...(previousAttempt.candidateCommit === undefined ? {} : { checkpointCommit: previousAttempt.candidateCommit }),
+        ...(guidance === undefined ? {} : { guidance })
       }
     : undefined;
   const ordinal = Object.values(state.attempts).filter((attempt) => attempt.nodeId === nodeId).length + 1;
@@ -858,7 +860,8 @@ function fingerprintForNode(
   run: PreparedExecutionRunInput,
   state: RunProjection,
   nodeId: string,
-  previousAttempt?: { attemptId: string; inputFingerprint: string; failureReason?: string; candidateCommit?: string }
+  previousAttempt?: { attemptId: string; inputFingerprint: string; failureReason?: string; candidateCommit?: string },
+  guidance?: string
 ): string {
   const node = run.graph.nodes[nodeId]!;
   const contract = run.contractsByNodeId.get(nodeId)!;
@@ -897,14 +900,25 @@ function fingerprintForNode(
         attemptId: previousAttempt.attemptId,
         inputFingerprint: previousAttempt.inputFingerprint,
         failureReason: priorFailureReason,
-        ...(previousAttempt.candidateCommit === undefined ? {} : { checkpointCommit: previousAttempt.candidateCommit })
+        ...(previousAttempt.candidateCommit === undefined ? {} : { checkpointCommit: previousAttempt.candidateCommit }),
+        ...(guidance === undefined ? {} : { guidance })
       })
     })
   });
 }
 
-function recoveryContextDigest(input: { attemptId: string; inputFingerprint: string; failureReason: string; checkpointCommit?: string }): string {
+function recoveryContextDigest(input: { attemptId: string; inputFingerprint: string; failureReason: string; checkpointCommit?: string; guidance?: string }): string {
   return `sha256:${createHash("sha256").update(JSON.stringify(input)).digest("hex")}`;
+}
+
+function retryGuidanceFor(state: RunProjection, attemptId: string, nodeId: string): string | undefined {
+  const decision = state.decisions[`${attemptId}:decision`];
+  if (
+    decision?.status !== "resolved"
+    || !decision.affectedNodeIds.includes(nodeId)
+    || decision.resolution?.optionId !== "retry"
+  ) return undefined;
+  return decision.resolution.answer;
 }
 
 /**

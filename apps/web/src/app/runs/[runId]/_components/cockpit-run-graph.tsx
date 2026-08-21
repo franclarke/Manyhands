@@ -28,6 +28,7 @@ import {
   type GraphRelationView
 } from "@/lib/run-model/presentation";
 import { activatedNodeId, graphNodeAccessibleName } from "@/lib/run-model/graph-keyboard";
+import { nodeRecoveryPresentation } from "@/lib/run-model/node-live-presentation";
 import { affectedSubgraphNodeIds, lifecycleMedalForNode, relationDisplayName } from "./cockpit-state";
 import { fallbackStatus } from "./task-node-v2";
 import { InteractiveRelationEdge, type InteractiveRelationEdgeData } from "./InteractiveRelationEdge";
@@ -291,6 +292,12 @@ function graphElements(
       evidenceMatrices: model.evidenceMatrices,
       delivered: model.run.lifecycle === "completed"
     });
+    const recovery = nodeRecoveryPresentation({
+      nodeId: node.id,
+      nodeStatus: node.status,
+      runLifecycle: model.run.lifecycle,
+      events: model.events
+    });
     return {
       id: node.id,
       type: "taskNodeV2",
@@ -300,7 +307,7 @@ function graphElements(
       ariaLabel: graphNodeAccessibleName({
         title: node.title,
         kind: node.kind,
-        status: medal.badge.length === 0 ? fallbackStatus(node.status) : medal.badge,
+        status: recovery?.label ?? (medal.badge.length === 0 ? fallbackStatus(node.status) : medal.badge),
         ...(flow === undefined || node.topologicalLevel === undefined
           ? {}
           : { bandLevel: node.topologicalLevel })
@@ -309,6 +316,7 @@ function graphElements(
       data: {
         node,
         medal,
+        recovery,
         selected: selectedNodeId === node.id,
         dimmed: selectedNodeId !== null && !neighborhood.has(node.id),
         blocked: decisionIds.length > 0,

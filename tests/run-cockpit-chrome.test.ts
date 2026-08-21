@@ -54,4 +54,15 @@ describe("run cockpit chrome", () => {
 
     expect(cockpit).toContain('model.run.lifecycle === "result_ready" && model.projection?.finalCandidate !== undefined && !canDeliver');
   });
+
+  it("makes running and repairing nodes visually active without relying on color or motion", () => {
+    const taskNode = source("apps/web/src/app/runs/[runId]/_components/task-node-v2.tsx");
+
+    expect(taskNode).toContain("LoaderCircle");
+    expect(taskNode).toContain("border-amber-400");
+    expect(taskNode).toContain("bg-amber-50");
+    expect(taskNode).toContain("animate-spin");
+    expect(taskNode).toContain("motion-reduce:animate-none");
+    expect(taskNode).toContain("runtime.label");
+  });
 });

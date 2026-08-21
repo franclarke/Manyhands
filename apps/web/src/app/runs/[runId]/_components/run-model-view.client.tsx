@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { StatusPill } from "@/components/ui/status-pill";
 import { autonomyDisclosure, eventDetail, eventPresentation, granularityStrategyExplanation, objectiveHeadline, planningFailureFindings, recoveryDiagnosticView, showsExecutionCounters, summarizeRunNodes, type GranularityExplanationView } from "@/lib/run-model/presentation";
+import { runEventStreamConnectionLabel } from "@/lib/run-model/live-event-stream";
 import type { RunEvent, RunSeed } from "@/lib/run-model/types";
 import { runUiStatus, statusMeta } from "@/lib/status";
 import { CockpitRunGraph } from "./cockpit-run-graph";
@@ -131,7 +132,7 @@ export function RunModelView({
             {model.run.goal.trim() !== model.run.title.trim() && !model.run.title.startsWith(model.run.goal.slice(0, 40))
               ? <><p className="truncate">{model.run.goal}</p><span aria-hidden className="shrink-0 text-[var(--color-text-subtle)]">·</span></>
               : null}
-            <span className="shrink-0 text-[var(--color-text-subtle)]">{fixture ? "historial de muestra" : live.connected ? "sincronizado" : live.connection}</span>
+            <span className="shrink-0 text-[var(--color-text-subtle)]">{fixture ? "Historial de muestra" : runEventStreamConnectionLabel(live.connected ? "connected" : live.connection)}</span>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -473,7 +474,7 @@ function GranularityDetails({ granularity }: { granularity: GranularityExplanati
 function Detail({ label, value }: { label: string; value: string }): React.ReactElement { return <div><span className="block text-eyebrow uppercase tracking-wide text-[var(--color-text-subtle)]">{label}</span><span className="mt-1 block">{value}</span></div>; }
 
 function Activity({ events }: { events: readonly RunEvent[] }): React.ReactElement {
-  const presented = events.map((event) => ({ event, presentation: eventPresentation(event.type) }));
+  const presented = events.map((event) => ({ event, presentation: eventPresentation(event.type, event.payload) }));
   const operational = presented.filter((entry) => !entry.presentation.diagnostic).slice(-12).reverse();
   const diagnostic = presented.filter((entry) => entry.presentation.diagnostic).reverse();
   return (
