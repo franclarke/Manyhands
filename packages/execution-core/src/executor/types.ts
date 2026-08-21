@@ -28,6 +28,8 @@ export interface ExecutorRunOutcome {
   stdout: string;
   stderr: string;
   timedOut: boolean;
+  /** Physical process-tree barrier observed after timeout or abort. */
+  terminationVerified?: boolean;
   durationMs: number;
   /** Diagnostic command line used to spawn the executor. Never used as a source of code changes. */
   commandLine?: string;

@@ -79,7 +79,15 @@ describe("V2ExecutionDriver", () => {
         attempts += 1;
         retryContexts.push(input.priorFailure);
         fingerprints.push(input.inputFingerprint);
-        if (attempts === 1) return { kind: "failure", reason: "transient: provider disconnected" };
+        if (attempts === 1) return {
+          kind: "failure",
+          reason: "transient: provider disconnected",
+          checkpoint: {
+            candidateCommit: "checkpoint-commit",
+            outputDigest: "sha256:checkpoint",
+            changedFiles: ["src/domain.ts"]
+          }
+        };
         return { ...(success(input) as Extract<V2NodeExecutionOutcome, { kind: "success" }>), finalManifestId: "retry-final" };
       }
     });
@@ -104,8 +112,20 @@ describe("V2ExecutionDriver", () => {
     expect(retried?.retryOfAttemptId).toBeDefined();
     expect(retryContexts).toEqual([
       undefined,
-      { attemptId: retried!.retryOfAttemptId, reason: "transient: provider disconnected" }
+      {
+        attemptId: retried!.retryOfAttemptId,
+        reason: "transient: provider disconnected",
+        checkpointCommit: "checkpoint-commit"
+      }
     ]);
+    const failed = Object.values(state.attempts).find((attempt) => attempt.attemptId === retried?.retryOfAttemptId);
+    expect(failed?.candidateCommit).toBe("checkpoint-commit");
+    expect(harness.events()).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: "attempt.candidate_created",
+        payload: expect.objectContaining({ candidateCommit: "checkpoint-commit" })
+      })
+    ]));
     expect(new Set(fingerprints).size).toBe(2);
     expect(retried?.inputFingerprint).not.toBe(
       Object.values(state.attempts).find((attempt) => attempt.attemptId === retried?.retryOfAttemptId)?.inputFingerprint

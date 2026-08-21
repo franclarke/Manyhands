@@ -119,3 +119,18 @@ describe("scope violation reasons name the offending paths", () => {
     expect(leafFailureObservation({ reason }).code).toBe("scope_violation");
   });
 });
+
+describe("timeout reasons stay actionable", () => {
+  it("keeps executor output in traces instead of embedding a diff in the decision", async () => {
+    const { executionFailureReasonForTest } = await import("@manyhands/execution-core");
+    const reason = executionFailureReasonForTest({
+      status: "timeout",
+      failureKind: "timeout",
+      failureHint: "The agent hit the hard timeout.",
+      stdoutTail: "+ an enormous partial diff that belongs in diagnostics"
+    });
+
+    expect(reason).toBe("timeout: timeout: The agent hit the hard timeout.");
+    expect(reason).not.toContain("partial diff");
+  });
+});

@@ -125,7 +125,7 @@ export interface V2PhysicalNodeExecutionInput {
   runId: string;
   attemptId: string;
   inputFingerprint: string;
-  priorFailure?: { attemptId: string; reason: string };
+  priorFailure?: { attemptId: string; reason: string; checkpointCommit?: string };
   graph: ExecutionGraphContext;
   node: ExecutionGraphNode;
   contract: TaskContractBundle;
@@ -196,6 +196,11 @@ export type V2PhysicalNodeExecutionOutcome =
       candidateCommit?: string;
       evidenceMatrix?: V2ExecutionEvidenceMatrix;
       failureCause?: V2FailureCause;
+      checkpoint?: {
+        candidateCommit: string;
+        outputDigest: string;
+        changedFiles: string[];
+      };
       repairObservations?: Array<{ kind: "code" | "integration"; pass: number; evidenceRefs: string[] }>;
     };
 
@@ -300,14 +305,34 @@ export class V2NodeExecutor {
     const instructionPath = instructionFilePath(input, "execute");
     let candidateToAnchor: string | undefined;
     let sandboxSession: SandboxSession | undefined;
+    let executionWorktree = base.worktree;
+    let restoredCheckpointCommit: string | undefined;
     try {
+      if (input.priorFailure?.checkpointCommit !== undefined) {
+        const checkpoint = await this.options.git.cherryPick({
+          cwd: executionWorktree.path,
+          commitSha: input.priorFailure.checkpointCommit,
+          mainline: 1
+        });
+        if (!checkpoint.ok) {
+          if (await this.options.git.cherryPickHead(executionWorktree.path) !== undefined) {
+            await this.options.git.cherryPickAbort(executionWorktree.path);
+          }
+          throw new Error(`Retry checkpoint ${input.priorFailure.checkpointCommit} could not be materialized: ${checkpoint.output}`);
+        }
+        restoredCheckpointCommit = await this.options.git.head(executionWorktree.path);
+        executionWorktree = {
+          ...executionWorktree,
+          baseCommit: restoredCheckpointCommit
+        };
+      }
       if (this.options.sandbox !== undefined) {
         sandboxSession = await this.options.sandbox.provider.create({
           attemptId: input.attemptId,
           ...(this.options.sandbox.credentialScopeId === undefined
             ? {}
             : { credentialScopeId: this.options.sandbox.credentialScopeId }),
-          workspacePath: base.worktree.path,
+          workspacePath: executionWorktree.path,
           profile: this.options.sandbox.profile,
           credentials: this.options.sandbox.credentials
         });
@@ -315,7 +340,7 @@ export class V2NodeExecutor {
       await this.writeInstructions(instructionPath, buildV2NodeInstructions(input, prepared));
       const executor = this.options.executorFactory.create(input.selection);
       const executorOutcome = await executor.execute({
-        cwd: base.worktree.path,
+        cwd: executionWorktree.path,
         instructionFilePath: instructionPath,
         model: input.selection.model,
         timeoutMs: input.config.leafTimeoutMs,
@@ -335,15 +360,44 @@ export class V2NodeExecutor {
         onAgentStatus: (status) => this.options.traceStore.append({ type: "agent_status", actor: "agent", taskId: input.node.id, payload: { ...status } })
       });
       const result = await this.recorder.record({
-        worktree: base.worktree,
+        worktree: executionWorktree,
         executorOutcome,
         scopeContract: input.contract.scope,
         scopePolicy: input.config.scopePolicy,
         unexpectedCommitPolicy: input.config.unexpectedCommitPolicy,
-        commitMessage: `mh-v2: ${input.node.id}`,
+        commitMessage: executorOutcome.timedOut
+          ? `mh-v2-checkpoint: ${input.node.id}`
+          : `mh-v2: ${input.node.id}`,
         usageSource: usageSourceForSelection(input.selection)
       });
       if (result.status !== "success") {
+        if (result.status === "timeout" && result.commitSha !== undefined) {
+          const checkpointCommit = await this.options.git.createIntegrationHandoff({
+            cwd: executionWorktree.path,
+            baseCommit: base.manifest.resultingCommit,
+            message: `mh-v2-checkpoint-handoff: ${input.node.id}`,
+            appliedCommitShas: [
+              ...(restoredCheckpointCommit === undefined ? [] : [restoredCheckpointCommit]),
+              result.commitSha
+            ]
+          });
+          const changedFiles = await this.options.git.diffRangeNameOnly({
+            cwd: executionWorktree.path,
+            from: base.manifest.resultingCommit,
+            to: checkpointCommit
+          });
+          candidateToAnchor = checkpointCommit;
+          return {
+            kind: "failure",
+            reason: executionFailureReason(result),
+            usage: usageOf(result),
+            checkpoint: {
+              candidateCommit: checkpointCommit,
+              outputDigest: digest(checkpointCommit),
+              changedFiles
+            }
+          };
+        }
         // An empty diff is not automatically a failed leaf. A sibling whose
         // declared scope overlaps this one can legitimately have implemented
         // the work already, leaving this agent nothing to do. Rather than guess
@@ -415,7 +469,7 @@ export class V2NodeExecutor {
         }
         const repaired = await this.repairLeaf(
           input,
-          base.worktree,
+          executionWorktree,
           candidateCommit,
           evidenceMatrix,
           prepared,
@@ -1018,6 +1072,9 @@ export function buildV2NodeInstructions(
       "Previous attempt failed; repair that observed failure before finishing:",
       `- Attempt: ${input.priorFailure.attemptId}`,
       `- Failure: ${input.priorFailure.reason}`,
+      ...(input.priorFailure.checkpointCommit === undefined
+        ? []
+        : [`- Restored checkpoint: ${input.priorFailure.checkpointCommit}`, "Continue from the restored worktree; do not recreate completed work."]),
       "Do not repeat the same implementation without addressing it."
     );
   }
@@ -1305,6 +1362,11 @@ function executionFailureReason(result: {
       ? `changed files outside the declared scope: ${[...new Set(rejected)].join(", ")}`
       : "the agent changed files outside the declared scope";
     return `${result.status}: ${detail}`;
+  }
+  if (result.status === "timeout" || result.failureKind === "timeout") {
+    return [result.failureKind, result.status, result.failureHint]
+      .filter((value) => value !== undefined && value.length > 0)
+      .join(": ");
   }
   return [result.failureKind, result.status, result.failureHint, result.stderrTail, result.stdoutTail]
     .filter((value) => value !== undefined && value.length > 0)

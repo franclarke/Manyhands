@@ -151,6 +151,101 @@ describe("V2NodeExecutor", () => {
     expect(prompts[0]).toContain("Do not commit");
   });
 
+  it("continues a retry from an in-scope timeout checkpoint", async () => {
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
+    const node = compiled.graph.nodes["node-api"]!;
+    const contract = compiled.contracts.find((bundle) => bundle.task.nodeId === node.id)!;
+    const changedFile = contract.scope.allowedPaths[0]!;
+    const partialCommit = "2".repeat(40);
+    const checkpointCommit = "3".repeat(40);
+    const resumedCheckpoint = "4".repeat(40);
+    const finalCommit = "5".repeat(40);
+    const git = new FakeGitRunner({
+      diffCached: "diff",
+      diffCachedNameOnly: [changedFile],
+      diffRangeNameOnly: [changedFile],
+      commitShas: [partialCommit, finalCommit],
+      integrationHandoffSha: checkpointCommit,
+      cherryPickResultShas: [resumedCheckpoint]
+    });
+    const releases: WorktreeReleaseOutcome[] = [];
+    let workspaceOrdinal = 0;
+    const baseBuilder = new ExecutionBaseBuilder({
+      git,
+      workspaceProvider: {
+        acquire: async (params) => {
+          workspaceOrdinal += 1;
+          const worktreePath = `C:/repo/booking/.manyhands/worktrees/checkpoint-${workspaceOrdinal}`;
+          git.heads[worktreePath] = params.baseCommit;
+          return {
+            worktree: {
+              ...params,
+              path: worktreePath,
+              branch: `manyhands/checkpoint-${workspaceOrdinal}`,
+              status: "active" as const,
+              createdAt: at
+            },
+            release: async (outcome = { kind: "discard" as const }) => { releases.push(outcome); }
+          };
+        }
+      }
+    });
+    let invocation = 0;
+    const agent: AgentExecutor = {
+      execute: async () => {
+        invocation += 1;
+        return invocation === 1
+          ? { exitCode: 124, stdout: "partial", stderr: "", timedOut: true, terminationVerified: true, durationMs: 600_000 }
+          : { exitCode: 0, stdout: "done", stderr: "", timedOut: false, durationMs: 1 };
+      }
+    };
+    const executor = new V2NodeExecutor({
+      git,
+      repoRoot: "C:/repo/booking",
+      traceStore: new InMemoryTraceStore(),
+      executorFactory: new FixedAgentExecutorFactory(agent),
+      validator: { validate: async (input) => matrix(input.contract, input.candidateCommit) },
+      baseBuilder,
+      writeInstructions: async () => undefined,
+      now: () => at
+    });
+
+    const first = await executor.execute(request(compiled, node.id));
+    expect(first).toMatchObject({
+      kind: "failure",
+      checkpoint: {
+        candidateCommit: checkpointCommit,
+        changedFiles: [changedFile]
+      }
+    });
+
+    const retry = request(compiled, node.id);
+    retry.attemptId = `run-v2-physical:attempt:${node.id}:2`;
+    retry.priorFailure = {
+      attemptId: `run-v2-physical:attempt:${node.id}:1`,
+      reason: "timeout: hard deadline",
+      checkpointCommit
+    };
+    const second = await executor.execute(retry);
+
+    expect(second).toMatchObject({ kind: "success", candidateCommit: finalCommit });
+    expect(git.calls).toContainEqual({
+      op: "cherryPick",
+      args: expect.objectContaining({ commitSha: checkpointCommit, mainline: 1 })
+    });
+    expect(git.calls).toContainEqual({
+      op: "createIntegrationHandoff",
+      args: expect.objectContaining({
+        baseCommit: compiled.graph.baseCommit,
+        appliedCommitShas: [partialCommit]
+      })
+    });
+    expect(releases).toEqual([
+      expect.objectContaining({ kind: "candidate", candidateCommit: checkpointCommit }),
+      expect.objectContaining({ kind: "candidate", candidateCommit: finalCommit })
+    ]);
+  });
+
   it("fails closed when a leaf candidate omits an explicitly declared artifact path", async () => {
     const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
     const node = compiled.graph.nodes["node-api"]!;

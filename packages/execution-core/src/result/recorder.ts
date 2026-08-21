@@ -127,17 +127,20 @@ export class ResultRecorder {
 
     const passedScope: ScopeCheckResult = { passed: true, violations: [], outOfScope: [] };
 
-    // 1. Executor-level failures short-circuit before any git inspection. The
-    // stderr/stdout tails in `base` preserve the actionable cause.
-    if (executorOutcome.timedOut) {
-      execWarn("result", "leaf failed: executor timed out", {
+    // A timeout is different from other executor failures: the process is dead,
+    // but it may have left useful work in the owned worktree. Continue through
+    // Git inspection so an in-scope diff can be anchored as a failed checkpoint.
+    // Non-timeout failures still short-circuit; their partial writes are not a
+    // bounded, intentional recovery input.
+    if (executorOutcome.timedOut && executorOutcome.terminationVerified !== true) {
+      execWarn("result", "leaf failed: executor timeout termination was not verified", {
         task: taskId,
         durationMs: executorOutcome.durationMs,
         stderrTail: base.stderrTail
       });
       return this.finalize({ ...base, status: "timeout", currentHead: baseHead, diff: "", changedFiles: [], scopeCheck: passedScope });
     }
-    if (executorOutcome.failureDiagnosis !== undefined) {
+    if (!executorOutcome.timedOut && executorOutcome.failureDiagnosis !== undefined) {
       execError("result", "leaf failed: executor reported a fatal condition", {
         task: taskId,
         kind: executorOutcome.failureDiagnosis.kind,
@@ -146,7 +149,7 @@ export class ResultRecorder {
       });
       return this.finalize({ ...base, status: "executor_error", currentHead: baseHead, diff: "", changedFiles: [], scopeCheck: passedScope });
     }
-    if (executorOutcome.exitCode !== 0) {
+    if (!executorOutcome.timedOut && executorOutcome.exitCode !== 0) {
       execError("result", "leaf failed: executor exited non-zero", {
         task: taskId,
         exitCode: executorOutcome.exitCode,
@@ -210,7 +213,16 @@ export class ResultRecorder {
         commitSha: head,
         changedFiles: changedFiles.length
       });
-      return this.finalize({ ...base, status: "success", currentHead: head, agentCommittedUnexpectedly: true, diff, changedFiles, commitSha: head, scopeCheck });
+      return this.finalize({
+        ...base,
+        status: executorOutcome.timedOut ? "timeout" : "success",
+        currentHead: head,
+        agentCommittedUnexpectedly: true,
+        diff,
+        changedFiles,
+        commitSha: head,
+        scopeCheck
+      });
     }
 
     // 3. Normal path: stage, inspect, scope-check, and (on success) commit.
@@ -221,6 +233,14 @@ export class ResultRecorder {
     this.appendOversizedChangeAdvisory(taskId, changedFiles.length);
 
     if (changedFiles.length === 0) {
+      if (executorOutcome.timedOut) {
+        execWarn("result", "leaf failed: executor timed out without a checkpoint", {
+          task: taskId,
+          durationMs: executorOutcome.durationMs,
+          stderrTail: base.stderrTail
+        });
+        return this.finalize({ ...base, status: "timeout", currentHead: baseHead, diff: "", changedFiles: [], scopeCheck: passedScope });
+      }
       // An empty diff is normally a failure ("execute did nothing"). But it is a
       // legitimate NO-OP when the grounding baseline already fully satisfies the
       // leaf's contract — e.g. a barrel/re-export the scaffolder produced in full,
@@ -302,7 +322,15 @@ export class ResultRecorder {
     });
 
     this.appendScopeAdvisory(taskId, scopeCheck.outOfScope);
-    return this.finalize({ ...base, status: "success", currentHead: commitSha, diff, changedFiles, commitSha, scopeCheck });
+    return this.finalize({
+      ...base,
+      status: executorOutcome.timedOut ? "timeout" : "success",
+      currentHead: commitSha,
+      diff,
+      changedFiles,
+      commitSha,
+      scopeCheck
+    });
   }
 
   /**

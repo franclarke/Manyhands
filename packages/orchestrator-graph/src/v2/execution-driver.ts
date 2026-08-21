@@ -45,7 +45,7 @@ export interface V2NodeExecutionInput {
   attemptId: string;
   inputFingerprint: string;
   /** Immutable diagnostic from the failed attempt this retry replaces. */
-  priorFailure?: { attemptId: string; reason: string };
+  priorFailure?: { attemptId: string; reason: string; checkpointCommit?: string };
   graph: LegacyGraphRevisionV2;
   node: LegacyTaskNodeV2;
   contract: TaskContractBundle;
@@ -91,6 +91,11 @@ export type V2NodeExecutionOutcome =
       candidateCommit?: string;
       evidenceMatrix?: EvidenceMatrixRecord;
       failureCause?: V2FailureCause;
+      checkpoint?: {
+        candidateCommit: string;
+        outputDigest: string;
+        changedFiles: string[];
+      };
       repairObservations?: V2RepairObservation[];
       decision?: DecisionInput;
     };
@@ -376,6 +381,16 @@ export class V2ExecutionDriver {
         : fact(`${attempt.attemptId}:code-repair:${repair.pass}`, at, "attempt.repair_attempted", payload));
     }
     if (outcome.kind === "failure") {
+      if (outcome.checkpoint !== undefined) {
+        facts.push(fact(`${attempt.attemptId}:checkpoint`, at, "attempt.candidate_created", {
+          attemptId: attempt.attemptId,
+          nodeId: attempt.nodeId,
+          candidateCommit: outcome.checkpoint.candidateCommit,
+          outputDigest: outcome.checkpoint.outputDigest,
+          changedFiles: [...outcome.checkpoint.changedFiles],
+          ...(outcome.usage === undefined ? {} : { usage: outcome.usage })
+        }));
+      }
       if ((outcome.repairObservations?.length ?? 0) === 0) {
         const observation: FailureObservation = isComposite
           ? { source: "integration", code: "integration_failed", message: outcome.reason }
@@ -800,7 +815,11 @@ function createAttempt(
     .at(-1);
   const inputFingerprint = fingerprintForNode(run, state, nodeId, previousAttempt);
   const priorFailure = previousAttempt?.status === "failed" && previousAttempt.failureReason !== undefined
-    ? { attemptId: previousAttempt.attemptId, reason: previousAttempt.failureReason }
+    ? {
+        attemptId: previousAttempt.attemptId,
+        reason: previousAttempt.failureReason,
+        ...(previousAttempt.candidateCommit === undefined ? {} : { checkpointCommit: previousAttempt.candidateCommit })
+      }
     : undefined;
   const ordinal = Object.values(state.attempts).filter((attempt) => attempt.nodeId === nodeId).length + 1;
   const attemptId = `${run.runId}:attempt:${nodeId}:${ordinal}`;
@@ -839,7 +858,7 @@ function fingerprintForNode(
   run: PreparedExecutionRunInput,
   state: RunProjection,
   nodeId: string,
-  previousAttempt?: { attemptId: string; inputFingerprint: string; failureReason?: string }
+  previousAttempt?: { attemptId: string; inputFingerprint: string; failureReason?: string; candidateCommit?: string }
 ): string {
   const node = run.graph.nodes[nodeId]!;
   const contract = run.contractsByNodeId.get(nodeId)!;
@@ -877,13 +896,14 @@ function fingerprintForNode(
       recoveryContextDigest: recoveryContextDigest({
         attemptId: previousAttempt.attemptId,
         inputFingerprint: previousAttempt.inputFingerprint,
-        failureReason: priorFailureReason
+        failureReason: priorFailureReason,
+        ...(previousAttempt.candidateCommit === undefined ? {} : { checkpointCommit: previousAttempt.candidateCommit })
       })
     })
   });
 }
 
-function recoveryContextDigest(input: { attemptId: string; inputFingerprint: string; failureReason: string }): string {
+function recoveryContextDigest(input: { attemptId: string; inputFingerprint: string; failureReason: string; checkpointCommit?: string }): string {
   return `sha256:${createHash("sha256").update(JSON.stringify(input)).digest("hex")}`;
 }
 
