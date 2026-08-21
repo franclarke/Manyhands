@@ -22,7 +22,8 @@ const sha256: DigestHasher = (value) =>
 describe("Stage 3 resumed execution identity", () => {
   for (const scenario of [
     { command: "resume_run" as const, lifecycle: "paused" as const },
-    { command: "restart_run" as const, lifecycle: "interrupted" as const }
+    { command: "restart_run" as const, lifecycle: "interrupted" as const },
+    { command: "restart_run" as const, lifecycle: "failed" as const }
   ]) {
     it(`${scenario.command} cannot reuse a prior execution effect or sidecar`, async () => {
       const spawnedAttempts: string[] = [];

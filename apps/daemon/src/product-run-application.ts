@@ -137,7 +137,9 @@ async function decide(
     }
     case "restart_run": {
       const projection = requireProjection(context);
-      if (projection.lifecycle !== "interrupted") throw new Error(`Cannot restart while ${projection.lifecycle}.`);
+      if (projection.lifecycle !== "interrupted" && projection.lifecycle !== "failed") {
+        throw new Error(`Cannot restart while ${projection.lifecycle}.`);
+      }
       return {
         eventsAfterAcceptance: [event(options, context.runId, "run.restart_requested", {
           reason: command.reason

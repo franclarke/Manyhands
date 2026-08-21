@@ -223,7 +223,7 @@ function RunActions({ lifecycle, busy, canDeliver, onCommand, onDeliver }: { lif
     <div className="flex items-center gap-1">
       {lifecycle === "running" || lifecycle === "waiting_for_input" ? <Button size="sm" busy={busy === "pause"} onClick={() => void onCommand("pause", { reason: "Pausado por el operador" })}><Pause className="h-3.5 w-3.5" />Pausar</Button> : null}
       {lifecycle === "paused" ? <Button size="sm" busy={busy === "resume"} onClick={() => void onCommand("resume", { reason: "Reanudado por el operador" })}><Play className="h-3.5 w-3.5" />Continuar</Button> : null}
-      {lifecycle === "interrupted" ? <Button size="sm" busy={busy === "restart"} onClick={() => void onCommand("restart")}><RotateCcw className="h-3.5 w-3.5" />Reintentar</Button> : null}
+      {lifecycle === "interrupted" || lifecycle === "failed" ? <Button size="sm" busy={busy === "restart"} onClick={() => void onCommand("restart")}><RotateCcw className="h-3.5 w-3.5" />Reintentar</Button> : null}
       {lifecycle === "result_ready" ? <Button variant="primary" size="sm" busy={busy === "deliver"} disabled={!canDeliver} title={canDeliver ? undefined : "La matriz final exacta todavía no está verificada."} onClick={onDeliver}><Send className="h-3.5 w-3.5" />Publicar resultado</Button> : null}
       {["planning", "needs_approval", "running", "waiting_for_input", "paused", "result_ready"].includes(lifecycle) ? <Button variant="danger" size="icon" busy={busy === "cancel"} onClick={() => void onCommand("cancel")} aria-label="Cancelar run"><CircleStop className="h-4 w-4" /></Button> : null}
     </div>

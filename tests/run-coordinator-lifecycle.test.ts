@@ -177,6 +177,29 @@ describe("RunCoordinator lifecycle", () => {
     expect(state.outcomes.execution).toBe("pending");
   });
 
+  it("recovers an execution failure without leaving its unfinished leaf active", () => {
+    const state = foldRun([
+      event(1, "run.created", { goal: "Build it" }),
+      event(2, "graph.revision.proposed", { graphId: "graph-1", revision: 1 }),
+      event(3, "graph.revision.approved", { graphId: "graph-1", revision: 1 }),
+      event(4, "attempt.started", {
+        attemptId: "attempt-dashboard-1",
+        nodeId: "dashboard",
+        inputFingerprint: "sha256:dashboard",
+        executorProfile: { id: "codex-cli", revision: "sha256:profile" }
+      }),
+      event(5, "run.failed", { reason: "The validator stopped before recording the leaf result.", area: "execution" }),
+      event(6, "run.restart_requested", { reason: "Retry only the unfinished leaf" })
+    ]);
+
+    expect(state.lifecycle).toBe("running");
+    expect(state.outcomes.execution).toBe("pending");
+    expect(state.attempts["attempt-dashboard-1"]).toMatchObject({
+      status: "failed",
+      failureReason: "Interrupted by failed run; restarted by operator."
+    });
+  });
+
   it("previews domain validity before appending a command event", async () => {
     const events: RunEvent[] = [
       event(1, "run.created", { goal: "Build it" }),

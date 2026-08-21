@@ -178,6 +178,22 @@ Los directorios grandes de intentos fallidos no se conservan. El diagnóstico
 compacto evita ocultar la causa y permite atribuir la corrección sin retener el
 workspace completo.
 
+## Recuperación durable durante la ejecución
+
+Una falla de ejecución no exige reiniciar la planificación ni los nodos que ya
+fueron verificados. El operador puede solicitar **Reintentar** desde la UI para
+un run `interrupted` o `failed`. La transición registra `run.restart_requested`,
+conserva los eventos y artefactos ya adoptados y cierra como fallidos los
+intentos que habían quedado en estado `running` cuando el run falló. El nuevo
+efecto de ejecución usa una identidad de recuperación nueva, por lo que el
+planificador reabre únicamente los nodos todavía no adoptados.
+
+Esta recuperación no convierte un resultado no verificado en éxito: el
+candidate vuelve a pasar por su matriz exacta y los criterios requeridos siguen
+siendo bloqueantes. Los criterios advisory sin observación permanecen
+inconclusos, no sustituyen una validación requerida ni habilitan entrega por sí
+solos.
+
 ## Evidencia del intento exitoso
 
 El intento declarado exitoso conserva:
