@@ -177,6 +177,10 @@ specifications. See `CONTEXT-MAP.md` and `docs/agents/domain.md`.
 - In PowerShell, delimit variables inside Git refspecs with `$()` (or format the
   full string explicitly); an expression such as `$tag:refs/...` is parsed as a
   scoped variable and corrupts the refspec before Git can push it.
+- When PowerShell command output may contain one or many lines, wrap the filtered
+  result in `@(...)` before indexing or iterate it explicitly; indexing a scalar
+  string returns a character and can turn a valid remote SHA into a false
+  verification mismatch.
 - Before a live daemon/worker qualification, rebuild every changed workspace
   package imported by that worker. Vitest source tests do not prove the
   compiled `dist` dependency path used by the spawned process.

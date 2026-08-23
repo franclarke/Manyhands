@@ -56,8 +56,10 @@ estados o terminología del momento en que fueron escritos.
 [`SOURCE_SNAPSHOT.md`](SOURCE_SNAPSHOT.md) fija el commit, tree y tag del código
 integrado que permiten consultar las rutas retiradas del checkout documental.
 El tag canónico del archivo documental es
-`thesis-documentation-archive-2026-08-23-v4`; el sufijo conserva los tags
+`thesis-documentation-archive-2026-08-23-v5`; el sufijo conserva los tags
 publicados durante la calificación y distingue la revisión que fija los bytes
 frente a la conversión de finales de línea de Windows, además de incluir los
 logs allowlisted que una regla `*.log` había omitido del índice Git y los
-repositorios target históricos descubiertos en el inventario final.
+repositorios target históricos descubiertos en el inventario final. La revisión
+`v5` agrega las salvaguardas de PowerShell aprendidas durante la publicación,
+sin modificar el contenido de evidencia de `v4`.
