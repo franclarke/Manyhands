@@ -49,6 +49,5 @@ autoridad sigue siendo `PRODUCT.md`, el plan canónico de rediseño y la evidenc
 posterior y atribuible. Los registros históricos pueden conservar rutas, links,
 estados o terminología del momento en que fueron escritos.
 
-`SOURCE_SNAPSHOT.md` se agregará después de integrar el código de la rama de
-experimento en `main`; allí quedarán fijados el commit, tree y tag finales que
-permiten consultar el código retirado del checkout documental.
+[`SOURCE_SNAPSHOT.md`](SOURCE_SNAPSHOT.md) fija el commit, tree y tag del código
+integrado que permiten consultar las rutas retiradas del checkout documental.
