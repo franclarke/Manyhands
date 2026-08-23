@@ -6,6 +6,10 @@
 /docs/tesis/evidence/warehouse/** -text
 /docs/tesis/evidence/scripts/** -text
 
+# The Viaje en Familia archive is verified by the SHA-256 manifest committed
+# beside it. A Windows checkout must reproduce the exact Git blob bytes.
+/docs/tesis/evidence/viaje-en-familia/** -text
+
 # Imported by `oracle-core.mjs` to spawn pnpm, so it is part of the pinned
 # instrument surface for the same reason.
 /scripts/manyhands-dev-command.mjs -text

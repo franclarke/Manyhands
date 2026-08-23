@@ -51,3 +51,7 @@ estados o terminología del momento en que fueron escritos.
 
 [`SOURCE_SNAPSHOT.md`](SOURCE_SNAPSHOT.md) fija el commit, tree y tag del código
 integrado que permiten consultar las rutas retiradas del checkout documental.
+El tag canónico del archivo documental es
+`thesis-documentation-archive-2026-08-23-v2`; el sufijo conserva el primer tag
+publicado y distingue la revisión que fija los bytes del manifiesto frente a la
+conversión de finales de línea de checkouts Windows.
