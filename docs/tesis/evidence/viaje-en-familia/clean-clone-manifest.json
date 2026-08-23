@@ -35,9 +35,9 @@
   },
   "bundle": {
     "path": "git/viaje-en-familia-final.bundle",
-    "byteLength": 124932,
-    "sha256": "cd92afd8fdddf66c69b9bafd92052d3974ab2d51e8c882500f90d5ddf8bc4998",
-    "refCount": 71,
+    "byteLength": 125446,
+    "sha256": "3bf2428e7ae0bbf493c4cddacc8870cb02b3df6b3593309fd3ce69d5e0af230f",
+    "refCount": 75,
     "history": "complete",
     "objectFormat": "sha1",
     "verified": true,

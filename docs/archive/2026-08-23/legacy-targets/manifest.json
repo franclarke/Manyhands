@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "createdOn": "2026-08-23",
+  "classification": "historical-target-repositories",
+  "securityScan": {
+    "commitVisitsAcrossBundles": 241,
+    "uniqueReachableCommits": 169,
+    "highConfidenceSecretHits": 0,
+    "sensitiveFilenames": 0,
+    "blobsOver10MiB": 0
+  },
+  "bundles": [
+    {
+      "name": "qa-throwaway-1",
+      "path": "git/qa-throwaway-1.bundle",
+      "head": "3be5806f823afa0b930bfd5e74517be733771881",
+      "tree": "217069bee850c7e361a87815e72b95ae0233ce7d",
+      "commits": 8,
+      "refs": 11,
+      "bytes": 5314,
+      "sha256": "a907e5068999d2910c27151e98e44788a1a55791c3924a9bab02b1e4471038d7"
+    },
+    {
+      "name": "qa-throwaway-2",
+      "path": "git/qa-throwaway-2.bundle",
+      "head": "ed0fadfba4b200e7ef6d067e78e96429ed66b223",
+      "tree": "3fc7a95ccb3407a59f92ba41c1b7aea766342e75",
+      "commits": 15,
+      "refs": 15,
+      "bytes": 8813,
+      "sha256": "f9cc2e1a591f02765013f0b0166282bdf95225f2967166d58dc8a66d36af950c"
+    },
+    {
+      "name": "qa-throwaway-3",
+      "path": "git/qa-throwaway-3.bundle",
+      "head": "9be19c87c90e8150b52ae16e2cb82abb2066306f",
+      "tree": "7978343569a534ab140e0b90f825848afe840946",
+      "commits": 14,
+      "refs": 21,
+      "bytes": 13029,
+      "sha256": "72a473748fb45ef19d2030cead9359e734fa754d394ba243c7cf6db0fb60ee67"
+    },
+    {
+      "name": "expense-splitter",
+      "path": "git/expense-splitter.bundle",
+      "head": "01a1f640c089f9e122f99e7ff2c54eda48427255",
+      "tree": "27da9e75d318df57268274ad4e0fda929d985baa",
+      "commits": 72,
+      "refs": 82,
+      "bytes": 91864,
+      "sha256": "4c40aa86583576bf508e81c5f5f19aaea13fbf57d1587ae0df13f77354419118"
+    },
+    {
+      "name": "c2-stability-1",
+      "path": "git/c2-stability-1.bundle",
+      "head": "f86c5c71ddfec064b53f4473477d7bdd8099ad42",
+      "tree": "8391ebfcf8ee8aefacc8673e085d74942a545082",
+      "commits": 31,
+      "refs": 29,
+      "bytes": 53630,
+      "sha256": "6e68826c9ec7dd597c69ed3e1488a0038ff1a3a70a1560e3754bea9925055eac"
+    },
+    {
+      "name": "c2-stability-2",
+      "path": "git/c2-stability-2.bundle",
+      "head": "cf0810b535f8ba4bfd43b8081640a5fa28aed4ad",
+      "tree": "37b771fa2202825e41bf32f5dfb8c8b4d9432272",
+      "commits": 31,
+      "refs": 29,
+      "bytes": 53695,
+      "sha256": "b551a531fcbbc1425fba8ab4c13c7c4af46a37acadb134f0e102820ac80bbca1"
+    },
+    {
+      "name": "mh8-r0-sandbox",
+      "path": "git/mh8-r0-sandbox.bundle",
+      "head": "603e5b9a9c3398135fc3a16123884a829e35da21",
+      "tree": "4d86e71ee4c88f1c5d0f6b4a8304739c7648790c",
+      "commits": 56,
+      "refs": 95,
+      "bytes": 32391,
+      "sha256": "3891763995ba8e1cdc2f2794655ad74507197b4f2cb88910485c0ec0d28482c6"
+    },
+    {
+      "name": "stage8-live-target-4",
+      "path": "git/stage8-live-target-4.bundle",
+      "head": "603e5b9a9c3398135fc3a16123884a829e35da21",
+      "tree": "4d86e71ee4c88f1c5d0f6b4a8304739c7648790c",
+      "commits": 13,
+      "refs": 15,
+      "bytes": 10338,
+      "sha256": "75a952ce2f04bb5197aacdd194cbaea5fd121672ad3fcbcd5852a8404d7c9846"
+    },
+    {
+      "name": "codex-sandbox-probe",
+      "path": "git/codex-sandbox-probe.bundle",
+      "head": "d2053627848c63aca1d597e6f31ec55652139d0b",
+      "tree": "4b825dc642cb6eb9a060e54bf8d69288fbee4904",
+      "commits": 1,
+      "refs": 2,
+      "bytes": 291,
+      "sha256": "6ec520f27fd3e503c1682045ce56d49b716e166c558350abde84d2d238e07d5f"
+    }
+  ]
+}

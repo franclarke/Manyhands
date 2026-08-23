@@ -107,8 +107,8 @@
     {
       "archivedPath": "docs/tesis/evidence/viaje-en-familia/build-manifest.mjs",
       "originalSource": "archive-generated",
-      "bytes": 6314,
-      "sha256": "b7204ad4d6b5273717a4af8e6d642b506cef6d7c3cb85f017d97565e832069e8",
+      "bytes": 6599,
+      "sha256": "8637a179b0a8482383d98d2374a258e7af24004b79f1be19569f0c05246037f4",
       "classification": "archive-documentation",
       "redactions": []
     },
@@ -356,7 +356,7 @@
       "archivedPath": "docs/tesis/evidence/viaje-en-familia/clean-clone-manifest.json",
       "originalSource": "archive-generated",
       "bytes": 1876,
-      "sha256": "143b68f75dddad0fd762e943fc775a93ed47fb1fa9a79cb46fffa9826cf8ee28",
+      "sha256": "3c9b7e89ed416adcd1821c03417ddb60604800d30e8f81d3d3d755829cbc4b02",
       "classification": "archive-documentation",
       "redactions": []
     },
@@ -993,10 +993,34 @@
       "redactions": []
     },
     {
+      "archivedPath": "docs/tesis/evidence/viaje-en-familia/git/viaje-en-familia-attempt-005.bundle",
+      "originalSource": "C:/mh-exp/viaje-familia/attempt-005/repo (git bundle --all)",
+      "bytes": 1895,
+      "sha256": "d570745cc5c37767b768a58459ae62442c17bfd07195882a81035b2f871262b3",
+      "classification": "prior-attempt-git-bundle",
+      "redactions": []
+    },
+    {
+      "archivedPath": "docs/tesis/evidence/viaje-en-familia/git/viaje-en-familia-attempt-009.bundle",
+      "originalSource": "C:/mh-exp/viaje-familia/attempt-009/repo (git bundle --all)",
+      "bytes": 76371,
+      "sha256": "e15cdf08c8bb80d019bae7e3bf7e6ec2b8940b9d6eef27c2ff5b78952e49b329",
+      "classification": "prior-attempt-git-bundle",
+      "redactions": []
+    },
+    {
+      "archivedPath": "docs/tesis/evidence/viaje-en-familia/git/viaje-en-familia-attempt-011.bundle",
+      "originalSource": "C:/mh-exp/viaje-familia/attempt-011/repo (git bundle --all)",
+      "bytes": 103174,
+      "sha256": "813f0b155e059aac85b5ca67c98d027562f143f60fc69c6b08246936a0c29de3",
+      "classification": "prior-attempt-git-bundle",
+      "redactions": []
+    },
+    {
       "archivedPath": "docs/tesis/evidence/viaje-en-familia/git/viaje-en-familia-final.bundle",
       "originalSource": "C:/mh-exp/viaje-familia/attempt-012/repo (git bundle --all)",
-      "bytes": 124932,
-      "sha256": "cd92afd8fdddf66c69b9bafd92052d3974ab2d51e8c882500f90d5ddf8bc4998",
+      "bytes": 125446,
+      "sha256": "3bf2428e7ae0bbf493c4cddacc8870cb02b3df6b3593309fd3ce69d5e0af230f",
       "classification": "exact-candidate-git-bundle",
       "redactions": []
     },
@@ -4523,8 +4547,8 @@
     {
       "archivedPath": "docs/tesis/evidence/viaje-en-familia/README.md",
       "originalSource": "archive-generated",
-      "bytes": 5289,
-      "sha256": "76817099fd0c118ec2a56880b07c85f0957779b85867952735b8fb32115e3398",
+      "bytes": 6035,
+      "sha256": "e47a072674212337ea15be8a532f72044bb0fa110a89e7acb0d69b147b0e8092",
       "classification": "archive-documentation",
       "redactions": []
     },

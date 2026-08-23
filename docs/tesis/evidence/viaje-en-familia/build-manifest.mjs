@@ -107,6 +107,13 @@ function metadataFor(relativePath) {
       originalSource: "C:/mh-exp/viaje-familia/attempt-012/repo (git bundle --all)",
     };
   }
+  const attemptBundle = relativePath.match(/^git\/viaje-en-familia-(attempt-\d{3})\.bundle$/);
+  if (attemptBundle) {
+    return {
+      classification: "prior-attempt-git-bundle",
+      originalSource: `C:/mh-exp/viaje-familia/${attemptBundle[1]}/repo (git bundle --all)`,
+    };
+  }
   if (relativePath.startsWith("browser-post-hoc/")) {
     return {
       classification: "post-hoc-browser-observation",

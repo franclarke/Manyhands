@@ -45,7 +45,12 @@ no sustituyen el oracle de navegador que exigía el protocolo congelado.
   del run final.
 - `candidate-source/`: copia legible del árbol entregado, sin su `.git` local.
 - `git/viaje-en-familia-final.bundle`: historia Git autocontenida del candidato,
-  incluidos los refs internos de artefactos de ManyHands.
+  incluidos los refs internos de artefactos de ManyHands y cuatro trees
+  recuperables que todavía no tenían un ref.
+- `git/viaje-en-familia-attempt-{005,009,011}.bundle`: historia Git
+  autocontenida de tres intentos anteriores que no formaban parte del object
+  database final. Conservan también los commits y trees recuperables que
+  todavía no tenían refs; no se atribuyen al candidato final.
 - `intermediate-runs/`: estado y artefactos seleccionados de `attempt-009` y
   `attempt-011`, útiles para estudiar fallos y recuperación anteriores al cierre.
 - `prior-attempts/`: diagnósticos, capturas y estado durable seleccionado de los
@@ -53,7 +58,7 @@ no sustituyen el oracle de navegador que exigía el protocolo congelado.
 - `browser-post-hoc/`: logs y snapshots de accesibilidad obtenidos después del
   run; se preservan explícitamente como evidencia post-hoc.
 - [`manifest.json`](manifest.json): tamaño, SHA-256, procedencia y clasificación
-  de los 565 archivos archivados. Se regenera con `node build-manifest.mjs` y se
+  de los 568 archivos archivados. Se regenera con `node build-manifest.mjs` y se
   comprueba con `node verify-manifest.mjs`.
 
 Las capturas visuales seleccionadas para tesis y presentación se encuentran en
@@ -89,9 +94,9 @@ El bundle archivado tiene estas propiedades verificadas localmente:
 | Propiedad | Valor |
 |---|---|
 | Archivo | `git/viaje-en-familia-final.bundle` |
-| Tamaño | `124932` bytes |
-| SHA-256 | `cd92afd8fdddf66c69b9bafd92052d3974ab2d51e8c882500f90d5ddf8bc4998` |
-| Refs | `71` |
+| Tamaño | `125446` bytes |
+| SHA-256 | `3bf2428e7ae0bbf493c4cddacc8870cb02b3df6b3593309fd3ce69d5e0af230f` |
+| Refs | `75` |
 | Historia | completa, object format `sha1` |
 | `HEAD` restaurado | `62a0d3571f9a03e670eaca7560f11915a6d4c9d7` |
 | Tree restaurado | `58dd2f7648eb2c0fef7d6950cb71dce741d49022` |
@@ -109,3 +114,10 @@ git -C restored-candidate fsck --full
 La rama remota `archive/viaje-familia-final` fue publicada y verificada contra
 GitHub el 23 de agosto de 2026. Resuelve exactamente al candidate commit
 `62a0d3571f9a03e670eaca7560f11915a6d4c9d7`.
+
+Los bundles anteriores se verifican del mismo modo. Sus `HEAD` históricos son
+`e83bafa0e9799984a752e7be7c767334c8e1a41a` (attempt 005),
+`68300b3e50785c27fa6e298cbec1ebd288e80f66` (attempt 009) y
+`0c264d5d34a64eb141f0f159e1a62718695e1b83` (attempt 011). Para restaurar los
+refs de recuperación no convencionales puede usarse, después del clone,
+`git fetch <bundle> 'refs/archive/*:refs/archive/*'`.
