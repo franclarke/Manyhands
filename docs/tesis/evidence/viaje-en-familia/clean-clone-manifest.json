@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "experiment": "viaje-en-familia",
+  "attempt": "attempt-012",
+  "runId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0",
+  "candidate": {
+    "commitSha": "62a0d3571f9a03e670eaca7560f11915a6d4c9d7",
+    "treeSha": "58dd2f7648eb2c0fef7d6950cb71dce741d49022",
+    "evidenceMatrixId": "matrix-da779f2d70dfd21c",
+    "internalRunStates": [
+      "verified",
+      "delivered"
+    ]
+  },
+  "environment": {
+    "node": "v24.16.0",
+    "npm": "11.13.0"
+  },
+  "cleanCloneQualification": {
+    "headSha": "62a0d3571f9a03e670eaca7560f11915a6d4c9d7",
+    "treeSha": "58dd2f7648eb2c0fef7d6950cb71dce741d49022",
+    "worktreeClean": true,
+    "tests": {
+      "command": "npm test",
+      "passed": 32,
+      "failed": 0,
+      "total": 32,
+      "outcome": "pass"
+    },
+    "gitFsck": {
+      "command": "git fsck --full",
+      "errors": 0,
+      "outcome": "pass"
+    }
+  },
+  "bundle": {
+    "path": "git/viaje-en-familia-final.bundle",
+    "byteLength": 124932,
+    "sha256": "cd92afd8fdddf66c69b9bafd92052d3974ab2d51e8c882500f90d5ddf8bc4998",
+    "refCount": 71,
+    "history": "complete",
+    "objectFormat": "sha1",
+    "verified": true,
+    "cloneResolvedToCandidate": true
+  },
+  "plannedRemoteRef": "archive/viaje-familia-final",
+  "publicationStatus": "planned",
+  "experimentVerdict": {
+    "fullPass": false,
+    "classification": "not_full_pass",
+    "reasons": [
+      "La superficie final del producto es un dashboard de solo lectura; la mutación está cubierta por tests y no por un oracle completo de interacción en navegador.",
+      "Las capturas finales del navegador son post-hoc y no tienen un manifest contemporáneo que las vincule inequívocamente al candidate SHA."
+    ]
+  }
+}

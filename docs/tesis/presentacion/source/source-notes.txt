@@ -1,0 +1,41 @@
+ManyHands oral presentation — source ledger
+
+Primary written sources
+- PRODUCT.md
+- docs/plans/2026-08-12-correctness-first-system-redesign.md
+- docs/tesis/chapters/04-granularidad-adaptativa.tex
+- docs/tesis/chapters/05-arquitectura.tex
+- docs/tesis/chapters/06-implementacion.tex
+- docs/tesis/chapters/07-evaluacion.tex
+- docs/tesis/chapters/08-discusion.tex
+- docs/tesis/chapters/09-conclusiones.tex
+
+Experiment primary evidence
+- docs/tesis/evidence/viaje-en-familia/final-run/run.events.v2.jsonl
+- docs/tesis/evidence/viaje-en-familia/final-run/delivery.json
+- Git branch `archive/viaje-familia-final`
+- docs/tesis/evidence/viaje-en-familia/git/viaje-en-familia-final.bundle
+
+Visual evidence
+- docs/tesis/assets/viaje-en-familia/manyhands-execution-flow.png — prior attempt; used only to illustrate the ManyHands graph UI.
+- docs/tesis/assets/viaje-en-familia/manyhands-recovery-retained-work.png — prior attempt; used only to illustrate retained verified work during recovery.
+- docs/tesis/assets/viaje-en-familia/manyhands-config-before-start.png — prior attempt; used only to illustrate the configured intake.
+- docs/tesis/assets/viaje-en-familia/viaje-final-dashboard-viewport.png — current capture of the delivered candidate dashboard with representative localStorage data.
+- docs/tesis/assets/viaje-en-familia/viaje-final-dashboard-mobile.png — current mobile-width capture of the same delivered candidate dashboard.
+- docs/tesis/assets/uns-emblema.png — Universidad Nacional del Sur emblem supplied by the user.
+
+Verified experiment facts suitable for slides
+- 13 nodes: 1 root, 3 composites, 9 leaves.
+- Composites: Ruta e itinerario, Organización, Recuerdos.
+- 22 frontier selections; maximum observed parallel frontier width: 3.
+- All three composite integrations completed before the root integration.
+- Final commit: 62a0d3571f9a03e670eaca7560f11915a6d4c9d7.
+- Final tree: 58dd2f7648eb2c0fef7d6950cb71dce741d49022.
+- Final matrix: matrix-da779f2d70dfd21c.
+- 32/32 tests passed on the target and 32/32 on the clean clone.
+- Target and clean clone resolved the same HEAD/tree and were clean.
+
+Required caveats
+- Do not claim six agents actually ran in parallel; six was the limit and three was the observed maximum.
+- Do not claim a complete browser oracle for attempt-012.
+- The delivered product surface is a read-only dashboard. Mutation behavior is covered by domain and integration tests, not by a full interactive browser flow.

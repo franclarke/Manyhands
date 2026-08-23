@@ -1,0 +1,552 @@
+{
+  "events": [
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:readiness.observed:155",
+      "occurredAt": "2026-08-21T11:30:27.043Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:dashboard"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:dashboard",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-logic-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-ui-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:stops",
+            "unit:agenda",
+            "unit:search",
+            "unit:organization",
+            "unit:budget",
+            "unit:packing",
+            "unit:memories",
+            "unit:notes",
+            "unit:favorites",
+            "unit:dashboard"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:stops",
+            "unit:agenda",
+            "unit:search",
+            "unit:organization",
+            "unit:budget",
+            "unit:packing",
+            "unit:memories",
+            "unit:notes",
+            "unit:favorites",
+            "unit:dashboard"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T11:30:26.870Z"
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:wave.selected:156",
+      "occurredAt": "2026-08-21T11:30:27.645Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:wave:14",
+        "nodeIds": [
+          "unit:dashboard"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-logic-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-ui-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-21T11:30:27.432Z"
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:6:started",
+      "occurredAt": "2026-08-21T11:30:28.057Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:6",
+        "nodeId": "unit:dashboard",
+        "inputFingerprint": "sha256:acbfbc529daab26c4416298d019081cfb32824ab7770406c7eca2ffd3076590f",
+        "retryOfAttemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:5",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:6:failed",
+      "occurredAt": "2026-08-21T11:40:00.321Z",
+      "type": "attempt.failed",
+      "payload": {
+        "attemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:6",
+        "nodeId": "unit:dashboard",
+        "reason": "validation_failed: exact candidate 4945eacc13e56ae68c868ef48faa40570a285651 failed matrix matrix-a1c00961ada83b99. Failed criteria: validation:dashboard-a11y: No acceptable evidence is linked to this obligation. | validation:dashboard-unit: Validation fails, but the same failure exists in the baseline. Candidate validation output: validation:dashboard-unit: unner/test:1372:12)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:897:7) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: { trip: { name: 'Viaje en familia', startDate: '2026-09-02', endDate: '2026-09-10', dateLabel: '2 de sept de 2026 - 10 de sept de 2026' }, upcomingEvents: [ [Object], [Object] ], budget: { total: 1000, spent: 550, available: 450, byCategory: [Object], categories: [Array], ratio: 0.55, spentLabel: '550', totalLabel: '1000', availableLabel: '450' }, packing: { completed: 1, total: 2, ratio: 0.5, label: '1/2' }, memories: { notes: [Array], favorites: [Array], highlights: [Array] } },\n    expected: { trip: { name: 'Viaje en familia', startDate: '2026-09-02', endDate: '2026-09-10', dateLabel: '2 sept 2026 - 10 sept 2026' }, upcomingEvents: [ [Object], [Object] ], budget: { total: 1000, spent: 550, available: 450, byCategory: [Object], categories: [Array], ratio: 0.55, spentLabel: '550', totalLabel: '1000', availableLabel: '450' }, packing: { completed: 1, total: 2, ratio: 0.5, label: '1/2' }, memories: { notes: [Array], favorites: [Array], highlights: [Array] } },\n    operator: 'deepStrictEqual',\n    diff: 'simple'\n  }",
+        "usage": {
+          "tokensTotal": 100798,
+          "costUsd": 0.45359099999999997,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:6:decision",
+      "occurredAt": "2026-08-21T11:40:00.321Z",
+      "type": "decision.raised",
+      "payload": {
+        "decision": {
+          "id": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:6:decision",
+          "kind": "resolve_conflict",
+          "question": "Execution for Dashboard y presentación requires guidance: validation_failed: exact candidate 4945eacc13e56ae68c868ef48faa40570a285651 failed matrix matrix-a1c00961ada83b99. Failed criteria: validation:dashboard-a11y: No acceptable evidence is linked to this obligation. | validation:dashboard-unit: Validation fails, but the same failure exists in the baseline. Candidate validation output: validation:dashboard-unit: unner/test:1372:12)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:897:7) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: { trip: { name: 'Viaje en familia', startDate: '2026-09-02', endDate: '2026-09-10', dateLabel: '2 de sept de 2026 - 10 de sept de 2026' }, upcomingEvents: [ [Object], [Object] ], budget: { total: 1000, spent: 550, available: 450, byCategory: [Object], categories: [Array], ratio: 0.55, spentLabel: '550', totalLabel: '1000', availableLabel: '450' }, packing: { completed: 1, total: 2, ratio: 0.5, label: '1/2' }, memories: { notes: [Array], favorites: [Array], highlights: [Array] } },\n    expected: { trip: { name: 'Viaje en familia', startDate: '2026-09-02', endDate: '2026-09-10', dateLabel: '2 sept 2026 - 10 sept 2026' }, upcomingEvents: [ [Object], [Object] ], budget: { total: 1000, spent: 550, available: 450, byCategory: [Object], categories: [Array], ratio: 0.55, spentLabel: '550', totalLabel: '1000', availableLabel: '450' }, packing: { completed: 1, total: 2, ratio: 0.5, label: '1/2' }, memories: { notes: [Array], favorites: [Array], highlights: [Array] } },\n    operator: 'deepStrictEqual',\n    diff: 'simple'\n  }",
+          "options": [
+            {
+              "id": "retry",
+              "label": "Retry with guidance"
+            },
+            {
+              "id": "stop",
+              "label": "Stop this work"
+            }
+          ],
+          "affectedNodeIds": [
+            "unit:dashboard"
+          ],
+          "repairTargetNodeId": "unit:dashboard",
+          "evidenceRefs": [
+            "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:6",
+            "input-fingerprint:sha256:acbfbc529daab26c4416298d019081cfb32824ab7770406c7eca2ffd3076590f"
+          ],
+          "impact": "behavior",
+          "raisedAtGraphRevision": 1
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:readiness.observed:160",
+      "occurredAt": "2026-08-21T11:40:00.728Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [],
+        "pendingDecisionIds": [
+          "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:6:decision"
+        ],
+        "explanations": [
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:6:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-logic-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-ui-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:stops",
+            "unit:agenda",
+            "unit:search",
+            "unit:organization",
+            "unit:budget",
+            "unit:packing",
+            "unit:memories",
+            "unit:notes",
+            "unit:favorites",
+            "unit:dashboard"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:stops",
+            "unit:agenda",
+            "unit:search",
+            "unit:organization",
+            "unit:budget",
+            "unit:packing",
+            "unit:memories",
+            "unit:notes",
+            "unit:favorites",
+            "unit:dashboard"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T11:40:00.608Z"
+      }
+    }
+  ]
+}

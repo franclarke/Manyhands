@@ -221,7 +221,7 @@ El diseño y desarrollo de ManyHands se rige por una jerarquía estricta de auto
 | **Stage 8** | Sandboxed Leaf Execution | `in_review` | [`audits/stage-8/`](audits/stage-8/) (Evidencia R0/R10/R14/R17). |
 | **Stage 9** | Composite Integration Attempt | `in_review` | [`audits/stage-9/`](audits/stage-9/) (Propiedad de convergencia paralelo-secuencial). |
 | **Stage 10** | Transactional CAS Delivery | `in_review` | [`audits/stage-10/README.md`](audits/stage-10/README.md) (7 invariantes de entrega y 5 celdas de restart; no cierra antes de GLeaf y GI). |
-| **Stages 11–13** | Observability, Architecture & Prod | `in_progress` | [`plans/2026-08-15-remaining-stages-to-gprod.md`](plans/2026-08-15-remaining-stages-to-gprod.md) (Stages 11/GObs and 12/GArch passed; Stage 13/GProd is active). |
+| **Stages 11–13** | Observability, Architecture & Prod | `in_progress` | [`plans/2026-08-15-remaining-stages-to-gprod.md`](plans/2026-08-15-remaining-stages-to-gprod.md) (Stage 11/GObs and 12/GArch passed; 13/GProd is active). |
 
 ### Handoffs de Transición Históricos y Estudios
 
@@ -234,3 +234,25 @@ Los siguientes documentos registran los límites de continuación formal entre e
 - [`handoffs/2026-08-14-stage-6-to-stage-7.md`](handoffs/2026-08-14-stage-6-to-stage-7.md): Límite de continuación formal para iniciar Stage 7 / GA.
 - [`plans/2026-08-13-exploratory-longitudinal-study.md`](plans/2026-08-13-exploratory-longitudinal-study.md): Estudio exploratorio longitudinal post-GProd (dos corridas visuales obligatorias y una condicional).
 - [`experiments/2026-08-20-viaje-en-familia-final.md`](experiments/2026-08-20-viaje-en-familia-final.md): Protocolo congelado del experimento final R19, sus oráculos y el loop de repositorios/workspaces descartables.
+
+---
+
+## 7. Archivo documental del 23 de agosto de 2026
+
+El índice de preservación está en
+[`archive/2026-08-23/README.md`](archive/2026-08-23/README.md). El
+[`SOURCE_SNAPSHOT.md`](archive/2026-08-23/SOURCE_SNAPSHOT.md) fija el commit y
+el árbol contra los que deben resolverse las referencias a `apps/`, `packages/`,
+`native/`, `scripts/` y `tests/` cuando esas rutas no están materializadas en el
+checkout documental local.
+
+La preregistración de *Viaje en Familia* se conserva sin reescribir su estado
+histórico. El resultado, sus límites y la evidencia curada se leen en
+[`tesis/evidence/viaje-en-familia/`](tesis/evidence/viaje-en-familia/). En
+particular, la entrega técnica interna del candidato no equivale por sí sola a
+haber satisfecho el oráculo completo de producto preregistrado.
+
+Los estados del plan canónico del 12 de agosto son un ledger normativo en su
+punto temporal. Los cierres posteriores se documentan en el plan del 15 de
+agosto, los audits y la evidencia experimental; no se retroescriben sobre el
+documento anterior.

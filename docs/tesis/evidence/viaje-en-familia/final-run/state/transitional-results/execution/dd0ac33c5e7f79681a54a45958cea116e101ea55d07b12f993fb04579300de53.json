@@ -1,0 +1,335 @@
+{
+  "events": [
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:readiness.observed:213",
+      "occurredAt": "2026-08-21T12:45:05.949Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:dashboard"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:dashboard",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-logic-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-ui-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:stops",
+            "unit:agenda",
+            "unit:search",
+            "unit:organization",
+            "unit:budget",
+            "unit:packing",
+            "unit:memories",
+            "unit:notes",
+            "unit:favorites",
+            "unit:dashboard"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:stops",
+            "unit:agenda",
+            "unit:search",
+            "unit:organization",
+            "unit:budget",
+            "unit:packing",
+            "unit:memories",
+            "unit:notes",
+            "unit:favorites",
+            "unit:dashboard"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T12:45:05.752Z"
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:wave.selected:214",
+      "occurredAt": "2026-08-21T12:45:06.570Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:wave:19",
+        "nodeIds": [
+          "unit:dashboard"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-logic-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-ui-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-21T12:45:06.375Z"
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:11:started",
+      "occurredAt": "2026-08-21T12:45:06.998Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:11",
+        "nodeId": "unit:dashboard",
+        "inputFingerprint": "sha256:201e183d2060390a4df4f4c778f83fce710eae4de3f8afa5e9cbffb8c092562e",
+        "retryOfAttemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:10",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:execution:failed:216",
+      "occurredAt": "2026-08-21T12:49:52.294Z",
+      "type": "run.failed",
+      "payload": {
+        "reason": "[\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"payload\",\n      \"matrix\",\n      \"outcome\"\n    ],\n    \"message\": \"verified matrix cannot contain failed or uncovered criteria\"\n  }\n]",
+        "area": "execution"
+      }
+    }
+  ]
+}

@@ -40,9 +40,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# LaTeX build products. The PDF is a build artifact of docs/tesis/main.tex;
-# regenerate it with the commands in docs/tesis/README.md rather than tracking
-# a binary that changes on every compile.
+# LaTeX intermediates. The compiled thesis PDF is intentionally tracked as an
+# archival deliverable; regenerate it with docs/tesis/README.md when sources
+# change.
 docs/tesis/*.aux
 docs/tesis/*.bbl
 docs/tesis/*.blg
@@ -52,8 +52,10 @@ docs/tesis/*.out
 docs/tesis/*.toc
 docs/tesis/*.fls
 docs/tesis/*.fdb_latexmk
-docs/tesis/main.pdf
 docs/tesis/*.nav
 docs/tesis/*.snm
 docs/tesis/*.vrb
 docs/tesis/presentacion.pdf
+docs/tesis/presentacion/source/.generated/
+docs/tesis/presentacion/source/node_modules/
+docs/tesis/evidence/viaje-en-familia/git/*.tmp.tar

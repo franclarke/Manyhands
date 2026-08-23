@@ -1,0 +1,1 @@
+{"kind":"delivery","payload":{"candidateCommitSha":"62a0d3571f9a03e670eaca7560f11915a6d4c9d7","candidateTreeSha":"58dd2f7648eb2c0fef7d6950cb71dce741d49022","destinationRef":"main","expectedHeadSha":"c9ae12ac14f44e23c1e5243fd055a1c438904af4","expectedTreeSha":"58dd2f7648eb2c0fef7d6950cb71dce741d49022"},"schemaVersion":1}

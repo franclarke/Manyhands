@@ -1,0 +1,208 @@
+{
+  "events": [
+    {
+      "eventId": "repository:sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310:inspection",
+      "occurredAt": "2026-08-16T07:27:33.518Z",
+      "type": "repository.inspected",
+      "payload": {
+        "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+        "disposition": "complete",
+        "snapshot": {
+          "schemaVersion": 1,
+          "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+          "repositoryId": "mh8-r0-sandbox",
+          "rootPath": "C:\\Users\\franc\\Documents\\mh8-r0-sandbox",
+          "targetFingerprint": "c8384b3ee9e9ad12",
+          "baseCommit": "3b84716162e45788027d3f017f7fd3ff4a5f8820",
+          "indexSchemaVersion": 1,
+          "capturedAt": "2026-08-16T07:23:05.198Z",
+          "inspectionDisposition": "complete",
+          "capabilities": {
+            "scripts": {
+              "test": "node --test"
+            },
+            "baselineCommands": [
+              {
+                "kind": "test",
+                "command": "npm",
+                "args": [
+                  "test"
+                ],
+                "sourceScript": "test"
+              }
+            ],
+            "languages": [
+              {
+                "language": "javascript",
+                "coverage": "structural",
+                "confidence": 0.95,
+                "evidence": [
+                  "src/stage8-probe.js",
+                  "src/stage8-probe.test.js",
+                  "src/tokenizer.js",
+                  "src/tokenizer.test.js",
+                  "src/word-count.js",
+                  "src/word-count.test.js"
+                ]
+              }
+            ],
+            "stack": []
+          },
+          "diagnostics": [],
+          "indexHash": "47faa9a8e544de3f24f834e1a9a32baca7bbac57963f032469f8facb69a56b81",
+          "index": {
+            "repositoryId": "mh8-r0-sandbox",
+            "rootPath": "C:\\Users\\franc\\Documents\\mh8-r0-sandbox",
+            "indexedAt": "2026-08-16T07:23:05.198Z",
+            "files": [
+              {
+                "path": "src/stage8-probe.js",
+                "kind": "source",
+                "contentHash": "c9b1c56919970057d1d1f7aaf2ab4923e6a5f72b9600ebba836a1f1d57fee40b",
+                "byteSize": 58,
+                "lineCount": 4,
+                "exportedSymbols": [
+                  "stage8Probe"
+                ],
+                "importedSymbols": [],
+                "declaredSymbols": [
+                  "stage8Probe"
+                ]
+              },
+              {
+                "path": "src/stage8-probe.test.js",
+                "kind": "test",
+                "contentHash": "113ce62f8d3e3668f7154d2cc0b616ddeab027ef260660eaf8444c20e9c59a88",
+                "byteSize": 228,
+                "lineCount": 9,
+                "exportedSymbols": [],
+                "importedSymbols": [],
+                "declaredSymbols": []
+              },
+              {
+                "path": "src/tokenizer.js",
+                "kind": "source",
+                "contentHash": "b666a7ea08b1c6f73b6f03b9a30223a70510eb4a6a835d5ebe5bed3da9f48322",
+                "byteSize": 209,
+                "lineCount": 9,
+                "exportedSymbols": [
+                  "tokenize"
+                ],
+                "importedSymbols": [],
+                "declaredSymbols": [
+                  "tokenize"
+                ]
+              },
+              {
+                "path": "src/tokenizer.test.js",
+                "kind": "test",
+                "contentHash": "0d770e23c26a95613c4dd362690608102e2f27155632ce33cba6c18a6181266a",
+                "byteSize": 1246,
+                "lineCount": 53,
+                "exportedSymbols": [],
+                "importedSymbols": [],
+                "declaredSymbols": []
+              },
+              {
+                "path": "src/word-count.js",
+                "kind": "source",
+                "contentHash": "25efd522d30050f1a1f5ee8b4d5ae59dd0da52c589892705ae9e0be814b344e5",
+                "byteSize": 243,
+                "lineCount": 13,
+                "exportedSymbols": [
+                  "countWords"
+                ],
+                "importedSymbols": [],
+                "declaredSymbols": [
+                  "countWords"
+                ]
+              },
+              {
+                "path": "src/word-count.test.js",
+                "kind": "test",
+                "contentHash": "e3f08ce46865d12c11340c35f5843afad4c724972a25419f3b71af81fc86358a",
+                "byteSize": 1095,
+                "lineCount": 47,
+                "exportedSymbols": [],
+                "importedSymbols": [],
+                "declaredSymbols": []
+              }
+            ],
+            "symbols": [
+              {
+                "name": "stage8Probe",
+                "kind": "function",
+                "filePath": "src/stage8-probe.js",
+                "exported": true,
+                "line": 1
+              },
+              {
+                "name": "tokenize",
+                "kind": "function",
+                "filePath": "src/tokenizer.js",
+                "exported": true,
+                "line": 1
+              },
+              {
+                "name": "countWords",
+                "kind": "function",
+                "filePath": "src/word-count.js",
+                "exported": true,
+                "line": 3
+              }
+            ],
+            "imports": [],
+            "exports": [
+              {
+                "filePath": "src/stage8-probe.js",
+                "exportedSymbols": [
+                  "stage8Probe"
+                ]
+              },
+              {
+                "filePath": "src/tokenizer.js",
+                "exportedSymbols": [
+                  "tokenize"
+                ]
+              },
+              {
+                "filePath": "src/word-count.js",
+                "exportedSymbols": [
+                  "countWords"
+                ]
+              }
+            ],
+            "diagnostics": [],
+            "metadata": {
+              "indexer": "ripgrep-native-v2",
+              "deterministic": true,
+              "fileCount": 6,
+              "symbolCount": 3,
+              "importCount": 0,
+              "exportCount": 3
+            }
+          }
+        },
+        "repositoryModelDigest": "sha256:69a472eb3b36bbcd478ef269b833e9faee7f7a807e9b123d66e17dd4bb01f489",
+        "repositoryView": {
+          "digest": "sha256:ea3a7da0fcfb7619727fb669dbdc6a810141097b627b1beafaa6b18013e3baf9",
+          "treeSha": "5d33daec17568a5ba47c8f5fa4130902cb418b43",
+          "resourceCatalogDigest": "sha256:c6e9550a987bcf361ee5acd0849d7b377f17c5ad85d8e42db7635546f44eee61"
+        },
+        "queryDigests": [
+          "sha256:6f28d05c9a74dee6d406a314d9a3f41d108e1226bfb9837803d422e56fded1c1",
+          "sha256:fdf1afc1ca98fd3eedafd71fe012f3c9335ba17f8bc5e16933bf9e232c179913",
+          "sha256:ac7d34064ae4764065ff123b85a4273bd0c9883b309feeefa1b5a5d37a070833"
+        ]
+      }
+    },
+    {
+      "eventId": "planning:run:3df3cac518ea57cb410727c88811f35ad16fe2aa668830a60d012f6d09506f66:failed",
+      "occurredAt": "2026-08-16T07:27:33.530Z",
+      "type": "planning.failed",
+      "payload": {
+        "reason": "graph_resource_double_writer: Writers unit:cli and unit:sentence-length are not version-ordered. | graph_resource_double_writer: Writers unit:cli and unit:top-words are not version-ordered. | graph_resource_double_writer: Writers unit:cli and unit:word-total are not version-ordered. | graph_resource_double_writer: Writers unit:reading-time and unit:top-words are not version-ordered. | graph_resource_double_writer: Writers unit:reading-time and unit:word-total are not version-ordered. | graph_resource_double_writer: Writers unit:sentence-length and unit:word-total are not version-ordered."
+      }
+    }
+  ]
+}

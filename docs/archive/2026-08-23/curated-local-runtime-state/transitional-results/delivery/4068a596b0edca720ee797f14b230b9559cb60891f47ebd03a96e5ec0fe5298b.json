@@ -1,0 +1,12 @@
+{
+  "receiptId": "delivery:run:e57c00763674f0ca0520253ac976d2b552c5dac26df609f6f2384d2588674450:final-7fe0f6bd527d73c4:3b84716162e45788027d3f017f7fd3ff4a5f8820",
+  "requestFingerprint": "e41a0ec0ceb11e9412e8826a51146a69312fec92e3b07af38fa3ac2c578d837b",
+  "manifestId": "final-7fe0f6bd527d73c4",
+  "finalSha": "3b84716162e45788027d3f017f7fd3ff4a5f8820",
+  "targetBranch": "main",
+  "targetHeadBefore": "00273f055e7d4a7bdb706d02a90e88f65d9a370c",
+  "targetHeadAfter": "3b84716162e45788027d3f017f7fd3ff4a5f8820",
+  "disposition": "delivered",
+  "destination": "main",
+  "confirmed": true
+}

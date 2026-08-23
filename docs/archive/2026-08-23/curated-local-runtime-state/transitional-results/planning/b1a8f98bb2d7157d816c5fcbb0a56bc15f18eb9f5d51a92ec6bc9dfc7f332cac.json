@@ -1,0 +1,130 @@
+{
+  "events": [
+    {
+      "eventId": "repository:sha256:f10cdda1239d4ea7c77dc4c14ac27ab5d74e45947ff3d07b59f0c3f4ad121c3c:inspection",
+      "occurredAt": "2026-08-15T04:28:25.553Z",
+      "type": "repository.inspected",
+      "payload": {
+        "snapshotId": "sha256:f10cdda1239d4ea7c77dc4c14ac27ab5d74e45947ff3d07b59f0c3f4ad121c3c",
+        "disposition": "complete",
+        "snapshot": {
+          "schemaVersion": 1,
+          "snapshotId": "sha256:f10cdda1239d4ea7c77dc4c14ac27ab5d74e45947ff3d07b59f0c3f4ad121c3c",
+          "repositoryId": "mh8-r0-sandbox",
+          "rootPath": "C:\\Users\\franc\\Documents\\mh8-r0-sandbox",
+          "targetFingerprint": "1230c021466b8529",
+          "baseCommit": "00273f055e7d4a7bdb706d02a90e88f65d9a370c",
+          "indexSchemaVersion": 1,
+          "capturedAt": "2026-08-15T04:25:47.240Z",
+          "inspectionDisposition": "complete",
+          "capabilities": {
+            "scripts": {
+              "test": "node --test"
+            },
+            "baselineCommands": [
+              {
+                "kind": "test",
+                "command": "npm",
+                "args": [
+                  "test"
+                ],
+                "sourceScript": "test"
+              }
+            ],
+            "languages": [
+              {
+                "language": "javascript",
+                "coverage": "structural",
+                "confidence": 0.95,
+                "evidence": [
+                  "src/stage8-probe.js",
+                  "src/stage8-probe.test.js"
+                ]
+              }
+            ],
+            "stack": []
+          },
+          "diagnostics": [],
+          "indexHash": "b5a59d675f86204b9a4da82a17327792d6fbc2390a4c02b11fb98a7431d66d6e",
+          "index": {
+            "repositoryId": "mh8-r0-sandbox",
+            "rootPath": "C:\\Users\\franc\\Documents\\mh8-r0-sandbox",
+            "indexedAt": "2026-08-15T03:50:33.570Z",
+            "files": [
+              {
+                "path": "src/stage8-probe.js",
+                "kind": "source",
+                "contentHash": "c9b1c56919970057d1d1f7aaf2ab4923e6a5f72b9600ebba836a1f1d57fee40b",
+                "byteSize": 58,
+                "lineCount": 4,
+                "exportedSymbols": [
+                  "stage8Probe"
+                ],
+                "importedSymbols": [],
+                "declaredSymbols": [
+                  "stage8Probe"
+                ]
+              },
+              {
+                "path": "src/stage8-probe.test.js",
+                "kind": "test",
+                "contentHash": "113ce62f8d3e3668f7154d2cc0b616ddeab027ef260660eaf8444c20e9c59a88",
+                "byteSize": 228,
+                "lineCount": 9,
+                "exportedSymbols": [],
+                "importedSymbols": [],
+                "declaredSymbols": []
+              }
+            ],
+            "symbols": [
+              {
+                "name": "stage8Probe",
+                "kind": "function",
+                "filePath": "src/stage8-probe.js",
+                "exported": true,
+                "line": 1
+              }
+            ],
+            "imports": [],
+            "exports": [
+              {
+                "filePath": "src/stage8-probe.js",
+                "exportedSymbols": [
+                  "stage8Probe"
+                ]
+              }
+            ],
+            "diagnostics": [],
+            "metadata": {
+              "indexer": "ripgrep-native-v2",
+              "deterministic": true,
+              "fileCount": 2,
+              "symbolCount": 1,
+              "importCount": 0,
+              "exportCount": 1
+            }
+          }
+        },
+        "repositoryModelDigest": "sha256:b6cfb321fe29b69f1d4d40f45fcf78f0b29e2fca6f7f1f386c118525eb41c6c6",
+        "repositoryView": {
+          "digest": "sha256:ad7a03837f75f4ccd6022c7e8acd0bc056e1864a900a7ae3ccd142b727380977",
+          "treeSha": "4230d720c666487a35a71858ab0a58edf26b65e5",
+          "resourceCatalogDigest": "sha256:396826c626607c6cd6dc9b44dd1fee02144d216661f2937f0f6828b4f4920f13"
+        },
+        "queryDigests": [
+          "sha256:64f00069af08b1107ffce02ccfc16890bae5e4ee61af6ca7ec83f6ad03411318",
+          "sha256:39e3064a22daf712e534f774108c74a30c8fe72cb116d503916842cfc62569e4",
+          "sha256:7e93f5781739af8f4cdbd74433cad9ae1031489e2da424cef9d7daa64f24a8b4"
+        ]
+      }
+    },
+    {
+      "eventId": "planning:run:c8dda720e7f345a531fb5a4132c5e07f2873a34228b229dc79de60fdb68f5326:failed",
+      "occurredAt": "2026-08-15T04:28:25.553Z",
+      "type": "planning.failed",
+      "payload": {
+        "reason": "model_protocol_invalid: Planning model returned an unsupported result kind."
+      }
+    }
+  ]
+}

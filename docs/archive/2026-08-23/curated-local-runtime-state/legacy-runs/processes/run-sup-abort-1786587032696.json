@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "processes": [
+    {
+      "pid": 32024,
+      "label": "planning",
+      "command": "C:\\mh-runtime-c781-09\\node-v22.22.0-win-x64\\node.exe",
+      "registeredAt": "2026-08-13T02:10:32.714Z",
+      "exitedAt": "2026-08-13T02:10:33.141Z"
+    }
+  ],
+  "updatedAt": "2026-08-13T02:10:33.152Z"
+}

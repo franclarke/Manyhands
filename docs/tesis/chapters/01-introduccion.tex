@@ -3,100 +3,141 @@
 
 \section{Motivación}
 
-La ingeniería de software asistida por modelos de lenguaje de gran escala (\emph{Large Language Models}, LLMs) ha experimentado una evolución acelerada en el último lustro. Lo que comenzó como autocompletado sintáctico de líneas en editores de código evolucionó hacia asistentes conversacionales generativos y, más recientemente, hacia \emph{agentes autónomos de software} \cite{chen2021codex,yao2023react,wang2024survey}. A diferencia de los modelos pasivos de consulta, un agente autónomo interactúa en un bucle cerrado de razonamiento y acción: inspecciona la estructura de un repositorio, invoca herramientas de línea de comandos, lee diagnósticos de compiladores, aplica modificaciones sobre múltiples archivos y ejecuta suites de pruebas de forma reactiva \cite{yang2024sweagent}. Evaluaciones sobre repositorios reales de código abierto, como SWE-bench \cite{jimenez2024swebench}, confirman que estos agentes son capaces de resolver de manera autónoma una fracción sustancial de incidencias de software y tareas de mantenimiento correctivo.
+Los modelos de lenguaje dejaron de ser herramientas que sólo completan líneas
+de código. Los agentes actuales pueden recorrer un repositorio, ejecutar
+comandos, interpretar errores y modificar varios archivos en ciclos sucesivos
+de observación y acción \cite{chen2021codex,yao2023react,yang2024sweagent}. Esta
+evolución amplió el tipo de problemas que pueden abordar, pero también volvió
+visible una diferencia central: resolver un parche local no es equivalente a
+coordinar un cambio que atraviesa dominio, persistencia, interfaces y pruebas.
 
-A pesar de estos avances, existe una brecha fundamental entre resolver un parche puntual y desarrollar un objetivo de ingeniería de mediana o gran escala. Un requerimiento como \emph{<<implementar un mecanismo de autorización basado en roles, exponerlo en los endpoints de la API REST, auditar los eventos en base de datos y reflejar los permisos en la interfaz de usuario>>} no puede reducirse a una única función ni a una ventana de contexto plana. Cuando se intenta delegar un objetivo complejo a un agente único monolítico, surgen tres patologías sistemáticas documentadas en la práctica:
+Un agente único puede perder información relevante cuando debe sostener a la
+vez demasiados archivos, dependencias y decisiones. Dividir el trabajo entre
+varios agentes parece una solución natural, pero introduce un problema nuevo:
+cada frontera creada debe coordinarse y luego integrarse. Dos agentes pueden
+implementar firmas incompatibles, editar el mismo archivo o aprobar pruebas que
+no demuestran el comportamiento solicitado. Por lo tanto, el desafío no es
+simplemente utilizar más agentes, sino gobernar su colaboración como un proceso
+de ingeniería de software.
 
-\begin{enumerate}
-  \item \textbf{Saturación y degradación de contexto:} Al verse forzado a procesar decenas de archivos, interfaces y dependencias en su ventana de atención, el modelo sufre de pérdida de foco (*needle in a haystack*), introduce alucinaciones en firmas de funciones, pierde importaciones críticas o destruye silenciosamente código circundante \cite{vaswani2017attention,liu2024agentbench}.
-  \item \textbf{Desborde y violación de alcance (*scope drift*):} Al carecer de límites explícitos de autoridad, el agente modifica configuraciones globales, bibliotecas compartidas o archivos fuera del perímetro del problema, introduciendo efectos colaterales impredecibles sobre partes del sistema que no estaban bajo revisión.
-  \item \textbf{Ausencia de aislamiento y contención:} Ejecutar un agente autónomo directamente sobre el árbol de trabajo principal del desarrollador pone en riesgo cambios sin confirmar (*uncommitted work*) y expone el entorno a comandos destructivos o bucles infinitos de ejecución.
-\end{enumerate}
+Esta tesis aborda ese desafío mediante \sistema, un plano de control local que
+coordina agentes de código sin reemplazarlos. Los modelos conservan aquello en
+lo que son valiosos —interpretar objetivos y proponer implementaciones—,
+mientras que el sistema determina qué puede ejecutarse, qué debe esperar, qué
+rutas puede modificar cada intento y qué evidencia se exige antes de entregar
+un resultado.
 
-Frente a estas limitaciones, la respuesta natural de la ingeniería de software consiste en \textbf{descomponer} el problema en unidades de trabajo más pequeñas y coordinar múltiples agentes. Sin embargo, descomponer incorrectamente es tan perjudicial como no descomponer.
+\section{El problema: la paradoja de la granularidad}
 
-\section{Planteamiento del problema: la paradoja de la granularidad}
+La modularidad busca dividir un sistema alrededor de responsabilidades que
+puedan cambiar de forma relativamente independiente \cite{parnas1972criteria}.
+En un sistema multi-agente, esta idea adquiere una consecuencia operacional:
+la forma de dividir el objetivo determina cuántos agentes se ejecutan, cuánto
+contexto recibe cada uno y cuántas integraciones deben resolverse.
 
-La descomposición de sistemas de software es un problema clásico ampliamente estudiado. Parnas \cite{parnas1972criteria} demostró que los módulos deben delimitarse en torno a decisiones de diseño secretas u ocultas, y no según la secuencia temporal del procesamiento; una partición que ignore las fronteras de encapsulamiento produce componentes acoplados que no pueden modificarse de forma independiente. Brooks \cite{brooks1995mythical} formuló que la adición de actores a un proyecto incrementa las vías de comunicación de forma cuadrática ($O(n^2)$), haciendo que el costo intrínseco de coordinar interfaces supere rápidamente las ganancias del paralelismo si las tareas no son estrictamente disjuntas. Conway \cite{conway1968committees} advirtió que la estructura de cualquier sistema resultante refleja inevitablemente las estructuras de comunicación de los agentes que lo construyen.
-
-Al trasladar estos principios a sistemas multi-agente basados en LLMs, surge lo que en esta tesis denominamos \textbf{la paradoja de la granularidad}. Dicha paradoja se manifiesta como una tensión entre dos extremos patológicos:
+Existen dos extremos igualmente problemáticos:
 
 \begin{itemize}
-  \item \textbf{Sub-división (hojas hipertrofiadas):} Si el orquestador mantiene una tarea compuesta como una única unidad ejecutable, el agente asignado experimenta saturación de contexto, consume excesivos turnos de inferencia y finalmente falla por agotamiento de presupuesto o incapacidad de razonar sobre toda la masa de código simultáneamente.
-  \item \textbf{Sobre-división (micro-fragmentación):} Si el orquestador parte un objetivo en demasiadas micro-tareas (por ejemplo, una tarea por archivo o por función), cada sub-agente requiere su propio contexto, se deben negociar contratos de interfaz adicionales y el riesgo de colisiones durante la integración se dispara. Con frecuencia, el costo computacional y temporal de integrar y reparar las costuras (*seams*) entre micro-tareas supera ampliamente el costo de haber resuelto la tarea en un único bloque cohesivo.
+  \item \textbf{Una tarea demasiado grande.} Un solo agente debe comprender
+  muchas decisiones y archivos. Aumentan la duración del intento, la pérdida de
+  contexto y las modificaciones fuera de alcance.
+  \item \textbf{Una tarea excesivamente fragmentada.} Cada fragmento requiere
+  contexto, contrato, proceso y validación propios. Crecen las costuras entre
+  partes y, con ellas, el riesgo de incompatibilidades y el costo de integración
+  \cite{brooks1995mythical}.
 \end{itemize}
 
-El desafío radica en que no existe una granularidad universal fija. La división óptima depende de la topología del repositorio, las dependencias entre módulos, la superficie de validación y la masa de código involucrada. Un sistema robusto de ingeniería de software para agentes no puede basarse en heurísticas ingenuas de división fija ni en invocaciones descontroladas de chat entre modelos, sino que requiere una \textbf{arquitectura formal guiada por contratos, grafos dirigidos de tareas y verificación estricta sobre evidencia física}.
+Se denomina \textbf{paradoja de la granularidad} a la necesidad de encontrar
+una división suficientemente pequeña para ser ejecutable, pero suficientemente
+cohesiva para que la coordinación no domine el trabajo útil. No existe un
+tamaño universal: la decisión depende de las fronteras del repositorio, de los
+artefactos compartidos y de la posibilidad de verificar cada parte.
 
-\section{Preguntas de investigación e hipótesis}
+\section{Propuesta de solución}
 
-Con el propósito de abordar las problemáticas expuestas, este trabajo de tesis plantea dos preguntas de investigación articuladas en una relación 80/20 de profundidad técnica: el eje principal investiga la arquitectura de orquestación, contratos y verificación del sistema (80\%), mientras que el eje complementario investiga el diseño y la fundamentación de una política determinista de granularidad (20\%).
-
-\subsection{Eje 1: Orquestación, contratos e integración en grafo (80\%)}
-
-\begin{description}[leftmargin=1.8cm,style=nextline]
-  \item[\textbf{PI-1}] ¿Es viable diseñar una arquitectura de orquestación multi-agente basada en grafos dirigidos acíclicos y contratos formales versionados que coordine la descomposición, el aislamiento de ejecución en worktrees y la integración ascendente de resultados, garantizando que todo resultado entregado esté respaldado por evidencia reproducible sobre un commit exacto?
-\end{description}
-
-\noindent De esta pregunta se desprende la siguiente hipótesis general:
-
-\begin{description}[leftmargin=1.8cm,style=nextline]
-  \item[\textbf{H-1}] \emph{Un sistema de orquestación fundado en contratos de interfaces (\emph{seams}), dependencias de artefactos tipadas, aislamiento estricto por worktrees y verificación mediante una matriz de evidencias sobre commits físicos permite a agentes de lenguaje heterogéneos completar colaborativamente objetivos de software complejos sin introducir estados inconsistentes ni requerir intervenciones imperativas ad-hoc sobre el grafo.}
-\end{description}
-
-\subsection{Eje 2: Política de granularidad adaptativa y categórica (20\%)}
-
-\begin{description}[leftmargin=1.8cm,style=nextline]
-  \item[\textbf{PI-2}] ¿Puede formularse una política de granularidad determinista y explicable que, prescindiendo de funciones continuas de puntuación y umbrales numéricos arbitrarios, decida cuándo descomponer un nodo o colapsarlo a una hoja única en función de propiedades estructurales observables de capacidad, paralelismo y aislamiento probatorio?
-\end{description}
-
-\noindent De esta pregunta se formula la segunda hipótesis:
-
-\begin{description}[leftmargin=1.8cm,style=nextline]
-  \item[\textbf{H-2}] \emph{Una política de granularidad basada en tres propiedades categóricas discretas (\texttt{doesNotFit}, \texttt{runsInParallel} y \texttt{verifiableApart}) discrimina consistentemente entre objetivos transversales y requerimientos cohesivos, colapsando determinísticamente las particiones que no aportan paralelismo ni aislamiento y evitando la sobre-fragmentación de tareas.}
-\end{description}
-
-\section{Objetivos del trabajo}
-
-\subsection{Objetivo general}
-
-Diseñar, implementar formalmente y evaluar una plataforma local de orquestación de agentes de código denominada \sistema, estructurada en torno a contratos formales versionados, grafos dirigidos acíclicos de tareas, ejecución aislada en worktrees de Git, una política de granularidad categórica y una disciplina rigurosa de integración y entrega basada en evidencia sobre commits exactos.
-
-\subsection{Objetivos específicos}
+ManyHands trata un objetivo de software como un \emph{run}: una transformación
+completa desde un repositorio base hasta un commit integrado y entregado. El
+run se organiza mediante cinco estrategias complementarias:
 
 \begin{enumerate}
-  \item \textbf{Diseño del plano de contratos y relaciones tipadas:} Formalizar un modelo de grafo híbrido y un catálogo inmutable de contratos de alcance, interfaces, artefactos y validación que distinga explícitamente jerarquías de integración, dependencias temporales de artefactos, acuerdos de interfaz y exclusiones mutuas por contienda de recursos.
-  \item \textbf{Implementación del motor de planificación progresiva y presupuestada:} Desarrollar un motor de descomposición basado en consultas presupuestadas a un índice estructural del repositorio y provisto de mecanismos criptográficos de detección de estados causales para prevenir bucles infinitos de reparación.
-  \item \textbf{Desarrollo del verificador estático de invariantes de plan:} Implementar un verificador determinista que audite exhaustivamente ocho categorías de invariantes formales (aciclicidad, cobertura probatoria, disyunción de escritores, integridad de rutas y compatibilidad de interfaces) antes de autorizar la compilación a grafo ejecutable.
-  \item \textbf{Formalización de la Política de Granularidad Categórica:} Diseñar una política de partición que sustituya los modelos heurísticos de puntuación continua por reglas categóricas fundadas en límites de capacidad atencional, concurrencia real y disyunción de criterios de prueba, integrando algoritmos de poda y colapso de particiones sin pérdida de criterios.
-  \item \textbf{Aislamiento y supervisión de entornos de ejecución:} Construir un subsistema de ejecución segura sobre un conjunto reciclable de \emph{Git worktrees}, dotado de supervisión recursiva de árboles de procesos en el sistema operativo, verificación estricta de alcance en tiempo de ejecución con política de denegación prioritaria y saneamiento de variables de entorno.
-  \item \textbf{Integración ascendente y Matriz de Evidencias:} Implementar un protocolo de integración jerárquica con resolución semántica de conflictos y construcción de una matriz de evidencias auditada contra controles negativos, pruebas basales y políticas contra pruebas inestables.
-  \item \textbf{Entrega transaccional y persistencia auditable:} Desarrollar un protocolo de publicación transaccional que garantice entregas atómicas basadas en manifiestos y recibos inmutables, respaldado por un registro de solo anexión de eventos de dominio (\emph{Event Sourcing}).
-  \item \textbf{Diseño y ejecución del protocolo experimental pre-registrado:} Definir un marco metodológico reproducible para contrastar el comportamiento del sistema ante requerimientos multi-capa y tareas cohesivas bajo oráculos externos independientes de evaluación.
+  \item \textbf{Grafo híbrido.} La jerarquía expresa quién integra a quién; las
+  relaciones tipadas expresan dependencias de artefactos, acuerdos de interfaz
+  y conflictos de escritura.
+  \item \textbf{Contratos versionados.} Cada unidad conoce su objetivo, alcance,
+  artefactos, interfaces y obligaciones de validación antes de ejecutar.
+  \item \textbf{Granularidad explicable.} Una división se conserva sólo si
+  aporta capacidad, paralelismo o aislamiento de pruebas.
+  \item \textbf{Aislamiento y recuperación.} Los intentos se ejecutan en
+  worktrees separados, bajo supervisión de procesos y con estado durable.
+  \item \textbf{Evidencia antes que declaración.} La integración y la entrega
+  dependen de pruebas y recibos asociados al commit exacto, no del relato del
+  modelo.
 \end{enumerate}
 
-\section{Alcance y limitaciones}
+Estas estrategias forman una cadena de custodia: cada etapa recibe una entrada
+identificada, produce un artefacto verificable y deja una evidencia durable para
+la etapa siguiente.
 
-\sistema\ está concebido como un plano de control local para un único desarrollador. La indexación, la planificación, el scheduler de olas, la persistencia, la supervisión de procesos, la integración y la validación se ejecutan de manera autónoma en la máquina de trabajo; únicamente las llamadas de inferencia son derivadas a ejecutores de modelos de lenguaje mediante CLI especializadas (como Codex CLI o Claude Code). Por consiguiente, no se asume privacidad absoluta respecto al proveedor de inferencia remoto.
+\section{Preguntas y objetivos de investigación}
 
-En el marco metodológico de esta tesis:
-\begin{itemize}
-  \item El sistema opera sobre repositorios locales bajo control de versiones Git.
-  \item El alcance de la implementación prioriza la corrección formal, la contención del entorno y la trazabilidad de extremo a extremo, por sobre la velocidad bruta de ejecución.
-  \item La evaluación empírica se enfoca en verificar la viabilidad arquitectónica de la cadena de custodia y la respuesta discriminativa de la política de granularidad ante tareas de distinta naturaleza estructural, delimitando claramente las capacidades demostradas de las extensiones futuras.
-  \item Quedan fuera del alcance de este trabajo el soporte multi-usuario concurrente, el aislamiento mediante virtualización pesada o hipervisores, el enrutamiento dinámico entre modelos heterogéneos y la optimización continua de hiperparámetros de inferencia.
-\end{itemize}
+El trabajo se organiza alrededor de dos preguntas:
+
+\begin{description}[leftmargin=1.8cm,style=nextline]
+  \item[\textbf{PI-1}] ¿Es viable coordinar agentes de código mediante un grafo
+  y contratos versionados, aislando su ejecución e integrando sus resultados de
+  manera que cada entrega quede vinculada a evidencia reproducible sobre un
+  commit exacto?
+  \item[\textbf{PI-2}] ¿Puede una política determinista y explicable decidir
+  cuándo dividir una tarea o conservarla como una unidad cohesiva a partir de
+  propiedades observables de capacidad, paralelismo y verificación?
+\end{description}
+
+La hipótesis principal sostiene que una arquitectura basada en contratos,
+relaciones tipadas, aislamiento físico e integración por evidencia permite
+coordinar agentes heterogéneos sin depender de correcciones imperativas del
+grafo. La hipótesis complementaria sostiene que una política categórica puede
+evitar la microfragmentación sin recurrir a puntajes difíciles de interpretar.
+
+El \textbf{objetivo general} es diseñar, implementar y evaluar una plataforma
+local de orquestación multi-agente que transforme objetivos de software en
+resultados integrados, auditables y reproducibles. De él se derivan los
+siguientes objetivos específicos:
+
+\begin{enumerate}
+  \item modelar el trabajo mediante grafos jerárquicos y relaciones tipadas;
+  \item formalizar contratos de objetivo, alcance, interfaz, artefacto y
+  validación;
+  \item diseñar una política categórica de granularidad y un algoritmo de
+  colapso que preserve criterios;
+  \item implementar ejecución aislada, supervisión de procesos y recuperación
+  durable;
+  \item integrar resultados de forma ascendente y construir evidencia sobre el
+  candidato exacto;
+  \item publicar entregas transaccionales y conservar un historial auditable;
+  \item evaluar el ciclo completo mediante regresiones y un caso experimental
+  representativo.
+\end{enumerate}
+
+\section{Alcance}
+
+ManyHands se diseñó como una herramienta local para un desarrollador. Opera
+sobre repositorios Git y utiliza ejecutores externos de modelos mediante CLI.
+El trabajo prioriza corrección, contención y trazabilidad por encima de la
+velocidad máxima. Quedan fuera de alcance la colaboración multiusuario, el
+entrenamiento de modelos, la optimización de costos entre proveedores y el
+aislamiento mediante máquinas virtuales completas.
+
+La evaluación estudia la viabilidad de la arquitectura y su capacidad para
+producir una descomposición útil. No pretende establecer una comparación
+estadística universal entre modelos ni generalizar rendimiento a todos los
+lenguajes y tamaños de repositorio.
 
 \section{Organización del documento}
 
-El resto de esta tesis se estructura de la siguiente manera:
-\begin{itemize}
-  \item El \textbf{Capítulo~\ref{cap:preliminares}} introduce los fundamentos conceptuales: agentes de código LLM, grafos dirigidos acíclicos, diseño por contratos, aislamiento por worktrees, verificación por evidencia y Event Sourcing.
-  \item El \textbf{Capítulo~\ref{cap:estado}} analiza el estado del arte en ingeniería de software con agentes, frameworks multi-agente, compiladores de tareas y enrutamiento de modelos, posicionando a \sistema.
-  \item El \textbf{Capítulo~\ref{cap:metodologia}} desarrolla el aporte del Eje 2: la Política de Granularidad Categórica 4.0, la crítica a los modelos continuos de scoring, el algoritmo de colapso de particiones y la metodología del banco de regresión offline.
-  \item El \textbf{Capítulo~\ref{cap:arquitectura}} detalla la arquitectura central del sistema (Eje 1): el run como unidad de producto, el modelo de grafo híbrido con relaciones tipadas, el sistema formal de contratos, el motor de planificación progresivo y el verificador estático de 8 invariantes.
-  \item El \textbf{Capítulo~\ref{cap:implementacion}} expone la implementación física de la plataforma: la organización modular del monorepo, los workers aislados en worktrees, el motor de integración ascendente, la matriz de evidencias, la entrega transaccional, el daemon local y la interfaz web supervisora.
-  \item El \textbf{Capítulo~\ref{cap:evaluacion}} presenta el diseño y pre-registro del protocolo de evaluación experimental, definiendo el repositorio objetivo, la taxonomía de tareas, las celdas experimentales y la validación mediante oráculo externo.
-  \item El \textbf{Capítulo~\ref{cap:discusion}} analiza las implicancias teóricas y prácticas del diseño, la frontera entre semántica generativa y control determinista, la evidencia exógena vs endógena y las amenazas a la validez.
-  \item El \textbf{Capítulo~\ref{cap:conclusiones}} sintetiza las respuestas a las preguntas de investigación, enumera las contribuciones técnicas de la tesis y propone las líneas prioritarias de trabajo futuro.
-\end{itemize}
+Los capítulos~\ref{cap:preliminares} y~\ref{cap:estado} introducen los conceptos
+y antecedentes. El capítulo~\ref{cap:metodologia} presenta la política de
+granularidad. Los capítulos~\ref{cap:arquitectura} y~\ref{cap:implementacion}
+explican el diseño y su materialización. El capítulo~\ref{cap:evaluacion}
+describe el experimento \emph{Viaje en Familia}; el
+capítulo~\ref{cap:discusion} analiza sus alcances y el
+capítulo~\ref{cap:conclusiones} sintetiza los aportes y líneas futuras.

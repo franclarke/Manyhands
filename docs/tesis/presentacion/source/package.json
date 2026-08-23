@@ -1,0 +1,15 @@
+{
+  "name": "manyhands-presentacion-oral-source",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build-deck.mjs",
+    "add-transitions": "node add-fade-transitions.mjs ../ManyHands-presentacion-oral.pptx",
+    "build:final": "npm run build && npm run add-transitions"
+  },
+  "dependencies": {
+    "@oai/artifact-tool": "2.8.48",
+    "jszip": "3.10.1"
+  }
+}
+

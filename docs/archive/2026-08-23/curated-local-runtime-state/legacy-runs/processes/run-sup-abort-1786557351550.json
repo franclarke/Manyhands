@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "processes": [
+    {
+      "pid": 10344,
+      "label": "planning",
+      "command": "C:\\Program Files\\nodejs\\node.exe",
+      "registeredAt": "2026-08-12T17:55:51.564Z",
+      "exitedAt": "2026-08-12T17:55:51.975Z"
+    }
+  ],
+  "updatedAt": "2026-08-12T17:55:52.408Z"
+}

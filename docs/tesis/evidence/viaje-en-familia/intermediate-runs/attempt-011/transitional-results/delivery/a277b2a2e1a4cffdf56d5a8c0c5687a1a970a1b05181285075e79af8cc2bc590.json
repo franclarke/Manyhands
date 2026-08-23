@@ -1,0 +1,14 @@
+{
+  "receiptId": "delivery:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:final-01634ccdb2f61ecc:0c264d5d34a64eb141f0f159e1a62718695e1b83",
+  "requestFingerprint": "1e5694e0ec301566235e938ed0826a1949bd131f7aa8462bd9ecbbc89047b24c",
+  "manifestId": "final-01634ccdb2f61ecc",
+  "finalSha": "0c264d5d34a64eb141f0f159e1a62718695e1b83",
+  "targetBranch": "main",
+  "targetHeadBefore": "64f0e44ff4bc90c2536c62ede517c8f855f1a6b4",
+  "targetHeadAfter": "0c264d5d34a64eb141f0f159e1a62718695e1b83",
+  "disposition": "delivered",
+  "destination": "main",
+  "deliveredTreeSha": "dfa9121f4413ea6b97a19cea600dcd6942a73431",
+  "cleanlinessPolicyId": "manyhands-runtime-exempt.v1",
+  "confirmed": true
+}

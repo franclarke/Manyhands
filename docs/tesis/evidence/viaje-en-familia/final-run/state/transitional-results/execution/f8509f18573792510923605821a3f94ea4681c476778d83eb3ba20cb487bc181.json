@@ -1,0 +1,552 @@
+{
+  "events": [
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:readiness.observed:110",
+      "occurredAt": "2026-08-21T10:14:44.173Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:dashboard"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:dashboard",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-logic-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-ui-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:stops",
+            "unit:agenda",
+            "unit:search",
+            "unit:organization",
+            "unit:budget",
+            "unit:packing",
+            "unit:memories",
+            "unit:notes",
+            "unit:favorites",
+            "unit:dashboard"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:stops",
+            "unit:agenda",
+            "unit:search",
+            "unit:organization",
+            "unit:budget",
+            "unit:packing",
+            "unit:memories",
+            "unit:notes",
+            "unit:favorites",
+            "unit:dashboard"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T10:14:44.068Z"
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:wave.selected:111",
+      "occurredAt": "2026-08-21T10:14:44.436Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:wave:10",
+        "nodeIds": [
+          "unit:dashboard"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-logic-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-ui-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-21T10:14:44.338Z"
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:2:started",
+      "occurredAt": "2026-08-21T10:14:44.609Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:2",
+        "nodeId": "unit:dashboard",
+        "inputFingerprint": "sha256:ca1d04e8ab9b0d20f8ef175d64eee79e2ae8d53f78e4ac41faa8f7e25faa3ad7",
+        "retryOfAttemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:1",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:2:failed",
+      "occurredAt": "2026-08-21T10:26:16.747Z",
+      "type": "attempt.failed",
+      "payload": {
+        "attemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:2",
+        "nodeId": "unit:dashboard",
+        "reason": "validation_failed: exact candidate 7a7776236e6a7943365503732747bb033dc35db5 failed matrix matrix-a07301b5d3a7f85e. Failed criteria: validation:dashboard-a11y: No acceptable evidence is linked to this obligation. | validation:dashboard-unit: Validation fails, but the same failure exists in the baseline. Candidate validation output: validation:dashboard-unit: rd summary from the canonical stores (7.2773ms)\n  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n  + actual - expected\n  \n    {\n  +   completed: 0,\n  +   completionLabel: '0 de 2',\n  +   completionPercent: 0,\n  +   remaining: 2,\n  -   completed: 1,\n  -   completionLabel: '1 de 2',\n  -   completionPercent: 50,\n  -   remaining: 1,\n      total: 2\n    }\n  \n      at TestContext.<anonymous> (file:///C:/mh-exp/viaje-familia/attempt-012/repo/.manyhands/worktrees/run_1572bf91950318003847e64a15e39bac091472e5c115c06fcb9-fb86300f/63a75bab4802a6f6c8276268eb6e32ba/src/dashboard/summary.test.mjs:132:10)\n      at Test.runInAsyncScope (node:async_hooks:227:14)\n      at Test.run (node:internal/test_runner/test:1306:25)\n      at Test.start (node:internal/test_runner/test:1177:17)\n      at startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: { completed: 0, total: 2, remaining: 2, completionPercent: 0, completionLabel: '0 de 2' },\n    expected: { completed: 1, total: 2, remaining: 1, completionPercent: 50, completionLabel: '1 de 2' },\n    operator: 'deepStrictEqual',\n    diff: 'simple'\n  }",
+        "usage": {
+          "tokensTotal": 124015,
+          "costUsd": 0.5580675,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:2:decision",
+      "occurredAt": "2026-08-21T10:26:16.747Z",
+      "type": "decision.raised",
+      "payload": {
+        "decision": {
+          "id": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:2:decision",
+          "kind": "resolve_conflict",
+          "question": "Execution for Dashboard y presentación requires guidance: validation_failed: exact candidate 7a7776236e6a7943365503732747bb033dc35db5 failed matrix matrix-a07301b5d3a7f85e. Failed criteria: validation:dashboard-a11y: No acceptable evidence is linked to this obligation. | validation:dashboard-unit: Validation fails, but the same failure exists in the baseline. Candidate validation output: validation:dashboard-unit: rd summary from the canonical stores (7.2773ms)\n  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n  + actual - expected\n  \n    {\n  +   completed: 0,\n  +   completionLabel: '0 de 2',\n  +   completionPercent: 0,\n  +   remaining: 2,\n  -   completed: 1,\n  -   completionLabel: '1 de 2',\n  -   completionPercent: 50,\n  -   remaining: 1,\n      total: 2\n    }\n  \n      at TestContext.<anonymous> (file:///C:/mh-exp/viaje-familia/attempt-012/repo/.manyhands/worktrees/run_1572bf91950318003847e64a15e39bac091472e5c115c06fcb9-fb86300f/63a75bab4802a6f6c8276268eb6e32ba/src/dashboard/summary.test.mjs:132:10)\n      at Test.runInAsyncScope (node:async_hooks:227:14)\n      at Test.run (node:internal/test_runner/test:1306:25)\n      at Test.start (node:internal/test_runner/test:1177:17)\n      at startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: { completed: 0, total: 2, remaining: 2, completionPercent: 0, completionLabel: '0 de 2' },\n    expected: { completed: 1, total: 2, remaining: 1, completionPercent: 50, completionLabel: '1 de 2' },\n    operator: 'deepStrictEqual',\n    diff: 'simple'\n  }",
+          "options": [
+            {
+              "id": "retry",
+              "label": "Retry with guidance"
+            },
+            {
+              "id": "stop",
+              "label": "Stop this work"
+            }
+          ],
+          "affectedNodeIds": [
+            "unit:dashboard"
+          ],
+          "repairTargetNodeId": "unit:dashboard",
+          "evidenceRefs": [
+            "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:2",
+            "input-fingerprint:sha256:ca1d04e8ab9b0d20f8ef175d64eee79e2ae8d53f78e4ac41faa8f7e25faa3ad7"
+          ],
+          "impact": "behavior",
+          "raisedAtGraphRevision": 1
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:readiness.observed:115",
+      "occurredAt": "2026-08-21T10:26:17.059Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [],
+        "pendingDecisionIds": [
+          "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:2:decision"
+        ],
+        "explanations": [
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:2:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-logic-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-ui-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:stops",
+            "unit:agenda",
+            "unit:search",
+            "unit:organization",
+            "unit:budget",
+            "unit:packing",
+            "unit:memories",
+            "unit:notes",
+            "unit:favorites",
+            "unit:dashboard"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:stops",
+            "unit:agenda",
+            "unit:search",
+            "unit:organization",
+            "unit:budget",
+            "unit:packing",
+            "unit:memories",
+            "unit:notes",
+            "unit:favorites",
+            "unit:dashboard"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T10:26:16.966Z"
+      }
+    }
+  ]
+}

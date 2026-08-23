@@ -1,0 +1,2617 @@
+{
+  "events": [
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:readiness.observed:14",
+      "occurredAt": "2026-08-21T00:31:43.870Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:budget",
+          "unit:favorites",
+          "unit:notes",
+          "unit:packing",
+          "unit:persistence",
+          "unit:stops"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:budget",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:favorites",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:notes",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:packing",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:persistence",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:stops",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:area-itinerario",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:exploration-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:area-organizacion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:budget-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:packing-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:area-recuerdos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favorites-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notes-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard-ui",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerario-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organizacion-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:persistence-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:recuerdos-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:exploration",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerario-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organizacion-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:persistence-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:recuerdos-integration",
+                "revision": 1
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:persistence",
+            "unit:dashboard-ui",
+            "unit:area-itinerario",
+            "unit:stops",
+            "unit:agenda",
+            "unit:exploration",
+            "unit:area-organizacion",
+            "unit:budget",
+            "unit:packing",
+            "unit:area-recuerdos",
+            "unit:notes",
+            "unit:favorites"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:persistence",
+            "unit:dashboard-ui",
+            "unit:area-itinerario",
+            "unit:stops",
+            "unit:agenda",
+            "unit:exploration",
+            "unit:area-organizacion",
+            "unit:budget",
+            "unit:packing",
+            "unit:area-recuerdos",
+            "unit:notes",
+            "unit:favorites"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T00:31:43.861Z"
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:wave.selected:15",
+      "occurredAt": "2026-08-21T00:31:43.888Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:wave:1",
+        "nodeIds": [
+          "unit:budget",
+          "unit:favorites",
+          "unit:notes",
+          "unit:packing",
+          "unit:persistence",
+          "unit:stops"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:area-itinerario",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:exploration-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:area-organizacion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:budget-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:packing-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:area-recuerdos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favorites-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notes-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard-ui",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerario-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organizacion-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:persistence-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:recuerdos-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:exploration",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerario-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organizacion-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:persistence-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:recuerdos-integration",
+                "revision": 1
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-21T00:31:43.883Z"
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:budget:1:started",
+      "occurredAt": "2026-08-21T00:31:43.897Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:budget:1",
+        "nodeId": "unit:budget",
+        "inputFingerprint": "sha256:6fdeadf04e88fa5aadfa25e35a97f25ba88484f34da12e86eb01cd5f361e71dd",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:favorites:1:started",
+      "occurredAt": "2026-08-21T00:31:43.898Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:favorites:1",
+        "nodeId": "unit:favorites",
+        "inputFingerprint": "sha256:eb49dd17c4c5038f669945c7713454624f8afac34a380d4f2a0fd54610f8d2e6",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:notes:1:started",
+      "occurredAt": "2026-08-21T00:31:43.898Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:notes:1",
+        "nodeId": "unit:notes",
+        "inputFingerprint": "sha256:ce08c7bd25debab56dcc2b65773dee693dc865e97fbc4cda66c12ec64d3edde9",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:packing:1:started",
+      "occurredAt": "2026-08-21T00:31:43.898Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:packing:1",
+        "nodeId": "unit:packing",
+        "inputFingerprint": "sha256:5d23f9777519ca635bdf1d22835acbb0eda422b52ed74e7d2c4a05d49abbcc6c",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:persistence:1:started",
+      "occurredAt": "2026-08-21T00:31:43.898Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:persistence:1",
+        "nodeId": "unit:persistence",
+        "inputFingerprint": "sha256:59067d834e9c88315728e503cc909d2e389662fb1d77f5ed4b15d52a2c570b81",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:stops:1:started",
+      "occurredAt": "2026-08-21T00:31:43.898Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:stops:1",
+        "nodeId": "unit:stops",
+        "inputFingerprint": "sha256:b2e0c40357ee2d02e18d61fa0852b1485b8c2cf8cd944b8236ac45783d1fb294",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:favorites:1:candidate",
+      "occurredAt": "2026-08-21T00:35:18.157Z",
+      "type": "attempt.candidate_created",
+      "payload": {
+        "attemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:favorites:1",
+        "nodeId": "unit:favorites",
+        "candidateCommit": "ff8f3fd2135de4fb77072391d0f5eedb3a48677f",
+        "candidate": {
+          "manifestDigest": "sha256:b119ab7c5c0813937ed4d26fec739aa48b5dc80d54d8e25fa1290698d665f1f3",
+          "commitOid": "ff8f3fd2135de4fb77072391d0f5eedb3a48677f",
+          "treeOid": "b1e4a07cedfad537d75285ec6748dfa82f77602f"
+        },
+        "outputDigest": "sha256:94b59ba6db0e1db80b31e1848538cb2692f079edffbc7047d8c0b07d3f5a487c",
+        "changedFiles": [
+          "src/recuerdos/favorites/favorites.mjs",
+          "src/recuerdos/favorites/favorites.test.mjs"
+        ],
+        "usage": {
+          "tokensTotal": 51413,
+          "costUsd": 0.2313585,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:favorites:1:validated",
+      "occurredAt": "2026-08-21T00:35:18.157Z",
+      "type": "validation.completed",
+      "payload": {
+        "attemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:favorites:1",
+        "nodeId": "unit:favorites",
+        "matrix": {
+          "matrixId": "matrix-e92f6b53d9e2f34e",
+          "candidateCommit": "ff8f3fd2135de4fb77072391d0f5eedb3a48677f",
+          "validationContract": {
+            "id": "validation-contract:unit:favorites",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:favorites",
+              "obligationId": "validation:favorites",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-018dcb22e18dc8834348e40a16a670765949e3ed9aab39d899f136927fdf511d:attempt:1",
+                "validation:favorites:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:31891061a6342fbb3bc8c7f0af7bb62bf4515ec7cbc284306a9807dbeb32532b",
+          "observations": [
+            {
+              "evidenceId": "command-018dcb22e18dc8834348e40a16a670765949e3ed9aab39d899f136927fdf511d:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "018dcb22e18dc8834348e40a16a670765949e3ed9aab39d899f136927fdf511d",
+              "durationMs": 962.0442999999796,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "d385a3ef5bb26e2ab24d42e3a33b9312efa3fcb1db78743e48a57bcf1833b126",
+              "criterionIds": [
+                "criterion:favorites"
+              ],
+              "obligationIds": [
+                "validation:favorites"
+              ],
+              "references": [
+                "src/recuerdos/favorites/favorites.test.mjs"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-e92f6b53d9e2f34e:validation:favorites",
+              "revision": 1,
+              "goalContractDigest": "sha256:97bd7ed579633c87ee0ab27b914ccd620ece801a22c6bc943bb7e1f1b7d62909",
+              "criterionId": "criterion:run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:1",
+              "obligationId": "validation:favorites",
+              "candidate": {
+                "manifestDigest": "sha256:b119ab7c5c0813937ed4d26fec739aa48b5dc80d54d8e25fa1290698d665f1f3",
+                "commitOid": "ff8f3fd2135de4fb77072391d0f5eedb3a48677f",
+                "treeOid": "b1e4a07cedfad537d75285ec6748dfa82f77602f"
+              },
+              "baseline": {
+                "commitOid": "782059f2f39b5fe5e22d7a471b6804fc44b76f35",
+                "treeOid": "1555e640f7399b75338f2ecbfcd9ad268cd814d9"
+              },
+              "proofStrategyDigest": "sha256:b619df00ec142e9745335545bb17d88a37f25e6363afb7a3314be2a21f238229",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:31891061a6342fbb3bc8c7f0af7bb62bf4515ec7cbc284306a9807dbeb32532b",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:245eca19af29758b4a082c079b84718f313891f519a2f9b6826d9a917d4f6842",
+              "outputDigest": "sha256:d385a3ef5bb26e2ab24d42e3a33b9312efa3fcb1db78743e48a57bcf1833b126",
+              "outcome": "satisfied",
+              "digest": "sha256:ec87b0f11fd697a83feb4efb2f7698d047c3cfce73e180cc201a7bba4326befe"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:favorites:negative-control",
+              "obligationId": "validation:favorites",
+              "detectedFailure": true,
+              "outputDigest": "1843fdaf0a02d76cb488cbb88aef340d130cbee65e1b45e0b741cfc7248ada4f"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:favorites:1:artifact:artifact:favorites-change",
+      "occurredAt": "2026-08-21T00:35:18.157Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:favorites-change:run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:favorites:1",
+          "runId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6",
+          "nodeId": "unit:favorites",
+          "digest": "sha256:28a1ab9dc229bbf07e9a0d8204e185a52fbbe6943466dc0a8f4e35ec00937a7f",
+          "producerAttemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:favorites:1",
+          "contract": {
+            "id": "artifact:favorites-change",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:28a1ab9dc229bbf07e9a0d8204e185a52fbbe6943466dc0a8f4e35ec00937a7f",
+          "manifest": {
+            "id": "artifact:favorites-change",
+            "contract": {
+              "id": "artifact:favorites-change",
+              "revision": 1,
+              "digest": "sha256:792f4484e662774d37c34b7821db08a93bdd3593ca982bd938b94c7e63886fc7"
+            },
+            "producerNodeId": "unit:favorites",
+            "producerAttemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:favorites:1",
+            "inputFingerprint": "sha256:eb49dd17c4c5038f669945c7713454624f8afac34a380d4f2a0fd54610f8d2e6",
+            "repositoryObjectStoreId": "object-store:5496f21c1c6cbad7",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "ff8f3fd2135de4fb77072391d0f5eedb3a48677f",
+              "treeOid": "b1e4a07cedfad537d75285ec6748dfa82f77602f"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-c642b021615106a89fe7927dad24f77a-bdb6c8db5964/attempts/run-c642b021615106a89fe7927dad24f77a-172f0fc204d0/artifacts/artifact-favorites-change-ae7183689c14",
+            "kind": "change_set",
+            "baseTreeSha": "1555e640f7399b75338f2ecbfcd9ad268cd814d9",
+            "resultTreeSha": "b1e4a07cedfad537d75285ec6748dfa82f77602f",
+            "entries": [
+              {
+                "newPath": "src/recuerdos/favorites/favorites.mjs",
+                "operation": "add",
+                "newOid": "33ca174ee24c8a3a718582f0bb2b6f1e9a9ecf44",
+                "newMode": "100644"
+              },
+              {
+                "newPath": "src/recuerdos/favorites/favorites.test.mjs",
+                "operation": "add",
+                "newOid": "600964ed2d1b567f01e7f41985737b8331e46d1f",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:28a1ab9dc229bbf07e9a0d8204e185a52fbbe6943466dc0a8f4e35ec00937a7f"
+          },
+          "adoptedAt": "2026-08-21T00:35:18.157Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:persistence:1:candidate",
+      "occurredAt": "2026-08-21T00:36:14.950Z",
+      "type": "attempt.candidate_created",
+      "payload": {
+        "attemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:persistence:1",
+        "nodeId": "unit:persistence",
+        "candidateCommit": "8240091fb53a551f34604d489ad5dbd78e4de07a",
+        "candidate": {
+          "manifestDigest": "sha256:5253945b500ccaf61e4465463ba6738d50a95301e896dcf33204a6f9075fd835",
+          "commitOid": "8240091fb53a551f34604d489ad5dbd78e4de07a",
+          "treeOid": "0d71b29ca7832319235ad788f54795b98a351158"
+        },
+        "outputDigest": "sha256:a66ce3dd55eeab60c9130ddf5394da992e5a7e03998fc5f88c51dce3f354d3c2",
+        "changedFiles": [
+          "src/shared/storage.mjs",
+          "src/shared/storage.test.mjs"
+        ],
+        "usage": {
+          "tokensTotal": 40443,
+          "costUsd": 0.1819935,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:persistence:1:validated",
+      "occurredAt": "2026-08-21T00:36:14.950Z",
+      "type": "validation.completed",
+      "payload": {
+        "attemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:persistence:1",
+        "nodeId": "unit:persistence",
+        "matrix": {
+          "matrixId": "matrix-35f52470220dff32",
+          "candidateCommit": "8240091fb53a551f34604d489ad5dbd78e4de07a",
+          "validationContract": {
+            "id": "validation-contract:unit:persistence",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:persistence",
+              "obligationId": "validation:persistence",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-f181a81b259d98368b4650585396df8145a296cf027126fb0670bf5a8827b0c1:attempt:1",
+                "validation:persistence:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:4774c8d3a14da7bfb073419f1d42e38f6153278b6226f016910e770161654bf7",
+          "observations": [
+            {
+              "evidenceId": "command-f181a81b259d98368b4650585396df8145a296cf027126fb0670bf5a8827b0c1:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "f181a81b259d98368b4650585396df8145a296cf027126fb0670bf5a8827b0c1",
+              "durationMs": 1151.6555999999982,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "a4cb2a1378796bddcd64217d2fc5b427252f2faf9e5dd495f5bef7e30c484e98",
+              "criterionIds": [
+                "criterion:persistence"
+              ],
+              "obligationIds": [
+                "validation:persistence"
+              ],
+              "references": [
+                "src/shared/storage.test.mjs"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-35f52470220dff32:validation:persistence",
+              "revision": 1,
+              "goalContractDigest": "sha256:97bd7ed579633c87ee0ab27b914ccd620ece801a22c6bc943bb7e1f1b7d62909",
+              "criterionId": "criterion:run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:1",
+              "obligationId": "validation:persistence",
+              "candidate": {
+                "manifestDigest": "sha256:5253945b500ccaf61e4465463ba6738d50a95301e896dcf33204a6f9075fd835",
+                "commitOid": "8240091fb53a551f34604d489ad5dbd78e4de07a",
+                "treeOid": "0d71b29ca7832319235ad788f54795b98a351158"
+              },
+              "baseline": {
+                "commitOid": "782059f2f39b5fe5e22d7a471b6804fc44b76f35",
+                "treeOid": "1555e640f7399b75338f2ecbfcd9ad268cd814d9"
+              },
+              "proofStrategyDigest": "sha256:d4d1bd029890ea669f7a04df87410753177e458e4e89c283788a6904c0f3eb58",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:4774c8d3a14da7bfb073419f1d42e38f6153278b6226f016910e770161654bf7",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:25e39d08fb55a84dd89a21a695df8aba9c9dafa55700dfa4acfc208d61e100c6",
+              "outputDigest": "sha256:a4cb2a1378796bddcd64217d2fc5b427252f2faf9e5dd495f5bef7e30c484e98",
+              "outcome": "satisfied",
+              "digest": "sha256:2b0acf30311980a4a87e498f280324767271de42a914abf00db052607183b6b7"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:persistence:negative-control",
+              "obligationId": "validation:persistence",
+              "detectedFailure": true,
+              "outputDigest": "27e793e67d6fd2bcb1115ee5e9e2becf04adaf9fbe63659a9ae4ad11ae63aeff"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:persistence:1:artifact:artifact:persistence-change",
+      "occurredAt": "2026-08-21T00:36:14.950Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:persistence-change:run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:persistence:1",
+          "runId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6",
+          "nodeId": "unit:persistence",
+          "digest": "sha256:03f21e86fd297722e01288ebf6546dd620755242286b1e5d4ece3cc9d5ff6f14",
+          "producerAttemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:persistence:1",
+          "contract": {
+            "id": "artifact:persistence-change",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:03f21e86fd297722e01288ebf6546dd620755242286b1e5d4ece3cc9d5ff6f14",
+          "manifest": {
+            "id": "artifact:persistence-change",
+            "contract": {
+              "id": "artifact:persistence-change",
+              "revision": 1,
+              "digest": "sha256:ac6caa2cbc643f511d6829159dad703cdae02ee7322fcb2bd9c4223b8209462c"
+            },
+            "producerNodeId": "unit:persistence",
+            "producerAttemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:persistence:1",
+            "inputFingerprint": "sha256:59067d834e9c88315728e503cc909d2e389662fb1d77f5ed4b15d52a2c570b81",
+            "repositoryObjectStoreId": "object-store:5496f21c1c6cbad7",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "8240091fb53a551f34604d489ad5dbd78e4de07a",
+              "treeOid": "0d71b29ca7832319235ad788f54795b98a351158"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-c642b021615106a89fe7927dad24f77a-bdb6c8db5964/attempts/run-c642b021615106a89fe7927dad24f77a-e833c3815138/artifacts/artifact-persistence-change-c04aea3b1037",
+            "kind": "change_set",
+            "baseTreeSha": "1555e640f7399b75338f2ecbfcd9ad268cd814d9",
+            "resultTreeSha": "0d71b29ca7832319235ad788f54795b98a351158",
+            "entries": [
+              {
+                "newPath": "src/shared/storage.mjs",
+                "operation": "add",
+                "newOid": "483508c3da29dba2bc565793964005063bc0b30c",
+                "newMode": "100644"
+              },
+              {
+                "newPath": "src/shared/storage.test.mjs",
+                "operation": "add",
+                "newOid": "61075f4bc76b341c1bbad0036a8a1a761b3643d4",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:03f21e86fd297722e01288ebf6546dd620755242286b1e5d4ece3cc9d5ff6f14"
+          },
+          "adoptedAt": "2026-08-21T00:36:14.950Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:budget:1:candidate",
+      "occurredAt": "2026-08-21T00:36:18.201Z",
+      "type": "attempt.candidate_created",
+      "payload": {
+        "attemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:budget:1",
+        "nodeId": "unit:budget",
+        "candidateCommit": "233c5c43f877d935268cfa0558710fb51f8316db",
+        "candidate": {
+          "manifestDigest": "sha256:7adfe6da74d8a11bf29e818d9ee253493a9f6f24e762bd888ce053deff23fc00",
+          "commitOid": "233c5c43f877d935268cfa0558710fb51f8316db",
+          "treeOid": "d7f7416869b1a365b19b63ff670ec0fb318a8846"
+        },
+        "outputDigest": "sha256:7832d5b43b22f9bd38ccbbdbc1127d13a8cbcf627088c86b1613da489e752167",
+        "changedFiles": [
+          "src/organizacion/budget/budget.mjs",
+          "src/organizacion/budget/budget.test.mjs"
+        ],
+        "usage": {
+          "tokensTotal": 38793,
+          "costUsd": 0.17456850000000002,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:budget:1:validated",
+      "occurredAt": "2026-08-21T00:36:18.201Z",
+      "type": "validation.completed",
+      "payload": {
+        "attemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:budget:1",
+        "nodeId": "unit:budget",
+        "matrix": {
+          "matrixId": "matrix-341dd709f768700d",
+          "candidateCommit": "233c5c43f877d935268cfa0558710fb51f8316db",
+          "validationContract": {
+            "id": "validation-contract:unit:budget",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:budget",
+              "obligationId": "validation:budget",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-97bc57e9cb9a6d7c63cc36486656853ed7be7994014bdd83a0b4a74bebc317ef:attempt:1",
+                "validation:budget:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:68c1749886401506ad857bdfabd38e6a59da422e863ceb83bde1a6819a40b047",
+          "observations": [
+            {
+              "evidenceId": "command-97bc57e9cb9a6d7c63cc36486656853ed7be7994014bdd83a0b4a74bebc317ef:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "97bc57e9cb9a6d7c63cc36486656853ed7be7994014bdd83a0b4a74bebc317ef",
+              "durationMs": 1105.8537999999826,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "555372c9d4cf67aeb169a337a1f655a5a9ed9d233eec6d844bc50f03a1e0e13d",
+              "criterionIds": [
+                "criterion:budget"
+              ],
+              "obligationIds": [
+                "validation:budget"
+              ],
+              "references": [
+                "src/organizacion/budget/budget.test.mjs"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-341dd709f768700d:validation:budget",
+              "revision": 1,
+              "goalContractDigest": "sha256:97bd7ed579633c87ee0ab27b914ccd620ece801a22c6bc943bb7e1f1b7d62909",
+              "criterionId": "criterion:run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:1",
+              "obligationId": "validation:budget",
+              "candidate": {
+                "manifestDigest": "sha256:7adfe6da74d8a11bf29e818d9ee253493a9f6f24e762bd888ce053deff23fc00",
+                "commitOid": "233c5c43f877d935268cfa0558710fb51f8316db",
+                "treeOid": "d7f7416869b1a365b19b63ff670ec0fb318a8846"
+              },
+              "baseline": {
+                "commitOid": "782059f2f39b5fe5e22d7a471b6804fc44b76f35",
+                "treeOid": "1555e640f7399b75338f2ecbfcd9ad268cd814d9"
+              },
+              "proofStrategyDigest": "sha256:c80a22c6625c94c867220271cba77ec61c867c87edd51f560f72923bf944bde5",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:68c1749886401506ad857bdfabd38e6a59da422e863ceb83bde1a6819a40b047",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:e5cf28f025f457342defc6609201f60864fda73797adab3f9b11a830176e927c",
+              "outputDigest": "sha256:555372c9d4cf67aeb169a337a1f655a5a9ed9d233eec6d844bc50f03a1e0e13d",
+              "outcome": "satisfied",
+              "digest": "sha256:159a17b61ea8a95778c6cd2754391e02b7702974b4d114bf982b2c51d1fb9668"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:budget:negative-control",
+              "obligationId": "validation:budget",
+              "detectedFailure": true,
+              "outputDigest": "69066ac5bb0e49c87b818be55017ae9be4799269a3fc20483e9e6ac0bc0a57a1"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:budget:1:artifact:artifact:budget-change",
+      "occurredAt": "2026-08-21T00:36:18.201Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:budget-change:run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:budget:1",
+          "runId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6",
+          "nodeId": "unit:budget",
+          "digest": "sha256:1079902863f8fc3d7ad86f7395beb9080260de56199ac27f1a9beae2e51bb44f",
+          "producerAttemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:budget:1",
+          "contract": {
+            "id": "artifact:budget-change",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:1079902863f8fc3d7ad86f7395beb9080260de56199ac27f1a9beae2e51bb44f",
+          "manifest": {
+            "id": "artifact:budget-change",
+            "contract": {
+              "id": "artifact:budget-change",
+              "revision": 1,
+              "digest": "sha256:9fb0cf76c803a0fd0bb77be5e301fecfd9312b775cd8c8098e5409becdc36147"
+            },
+            "producerNodeId": "unit:budget",
+            "producerAttemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:budget:1",
+            "inputFingerprint": "sha256:6fdeadf04e88fa5aadfa25e35a97f25ba88484f34da12e86eb01cd5f361e71dd",
+            "repositoryObjectStoreId": "object-store:5496f21c1c6cbad7",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "233c5c43f877d935268cfa0558710fb51f8316db",
+              "treeOid": "d7f7416869b1a365b19b63ff670ec0fb318a8846"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-c642b021615106a89fe7927dad24f77a-bdb6c8db5964/attempts/run-c642b021615106a89fe7927dad24f77a-c7f2807928b2/artifacts/artifact-budget-change-e6ebf7e61383",
+            "kind": "change_set",
+            "baseTreeSha": "1555e640f7399b75338f2ecbfcd9ad268cd814d9",
+            "resultTreeSha": "d7f7416869b1a365b19b63ff670ec0fb318a8846",
+            "entries": [
+              {
+                "newPath": "src/organizacion/budget/budget.mjs",
+                "operation": "add",
+                "newOid": "71acc47b1737c4c05c426037f103a798e41b15a6",
+                "newMode": "100644"
+              },
+              {
+                "newPath": "src/organizacion/budget/budget.test.mjs",
+                "operation": "add",
+                "newOid": "55b52016cd5d38429b615bf2ca3c77b9cb2f6a24",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:1079902863f8fc3d7ad86f7395beb9080260de56199ac27f1a9beae2e51bb44f"
+          },
+          "adoptedAt": "2026-08-21T00:36:18.201Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:packing:1:candidate",
+      "occurredAt": "2026-08-21T00:38:04.719Z",
+      "type": "attempt.candidate_created",
+      "payload": {
+        "attemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:packing:1",
+        "nodeId": "unit:packing",
+        "candidateCommit": "8b273fc54a56f60c23ae06df05041521bdfbb064",
+        "candidate": {
+          "manifestDigest": "sha256:485e8190e7d186f0d4405f98a8c4bbeba43241f353162e8acacf8f23c46ce2c7",
+          "commitOid": "8b273fc54a56f60c23ae06df05041521bdfbb064",
+          "treeOid": "18e92d7fa50bcd4fb9da285dd2a34e550ebca62d"
+        },
+        "outputDigest": "sha256:d32a4a8cd9fedc757c3692722e2f5a142660158a27091a90c1601b23cd504909",
+        "changedFiles": [
+          "src/organizacion/packing/packing.mjs",
+          "src/organizacion/packing/packing.test.mjs"
+        ],
+        "usage": {
+          "tokensTotal": 55774,
+          "costUsd": 0.250983,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:packing:1:validated",
+      "occurredAt": "2026-08-21T00:38:04.719Z",
+      "type": "validation.completed",
+      "payload": {
+        "attemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:packing:1",
+        "nodeId": "unit:packing",
+        "matrix": {
+          "matrixId": "matrix-806e66819b6eecf4",
+          "candidateCommit": "8b273fc54a56f60c23ae06df05041521bdfbb064",
+          "validationContract": {
+            "id": "validation-contract:unit:packing",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:packing",
+              "obligationId": "validation:packing",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-b62da1640f702d89c94e04045a36720d9751dbc585d6632abfc75cda8cf22e2d:attempt:1",
+                "validation:packing:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:738d0477cd96ab0899ff4dfb23cdbf7fd2fd6e35b568dc2c2db05fb8ed426313",
+          "observations": [
+            {
+              "evidenceId": "command-b62da1640f702d89c94e04045a36720d9751dbc585d6632abfc75cda8cf22e2d:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "b62da1640f702d89c94e04045a36720d9751dbc585d6632abfc75cda8cf22e2d",
+              "durationMs": 902.8190000000177,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "a80295e84304c60295001aef201a866f58dca39292559801412ae1b1f436eef3",
+              "criterionIds": [
+                "criterion:packing"
+              ],
+              "obligationIds": [
+                "validation:packing"
+              ],
+              "references": [
+                "src/organizacion/packing/packing.test.mjs"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-806e66819b6eecf4:validation:packing",
+              "revision": 1,
+              "goalContractDigest": "sha256:97bd7ed579633c87ee0ab27b914ccd620ece801a22c6bc943bb7e1f1b7d62909",
+              "criterionId": "criterion:run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:1",
+              "obligationId": "validation:packing",
+              "candidate": {
+                "manifestDigest": "sha256:485e8190e7d186f0d4405f98a8c4bbeba43241f353162e8acacf8f23c46ce2c7",
+                "commitOid": "8b273fc54a56f60c23ae06df05041521bdfbb064",
+                "treeOid": "18e92d7fa50bcd4fb9da285dd2a34e550ebca62d"
+              },
+              "baseline": {
+                "commitOid": "782059f2f39b5fe5e22d7a471b6804fc44b76f35",
+                "treeOid": "1555e640f7399b75338f2ecbfcd9ad268cd814d9"
+              },
+              "proofStrategyDigest": "sha256:5e7f5c6bb6373b3b48a93abe307f1772f39344837d0d1e83dadfb48ee93e203d",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:738d0477cd96ab0899ff4dfb23cdbf7fd2fd6e35b568dc2c2db05fb8ed426313",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:70dc10c2aa6830a3b927c381cd2a27605e28b8fdbc9f74efa2e1627de85e5a37",
+              "outputDigest": "sha256:a80295e84304c60295001aef201a866f58dca39292559801412ae1b1f436eef3",
+              "outcome": "satisfied",
+              "digest": "sha256:d32dd4b1045719c061bc3146edc697c3ad9123055a7ff1f3bbc48f6433b74e70"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:packing:negative-control",
+              "obligationId": "validation:packing",
+              "detectedFailure": true,
+              "outputDigest": "619911357d9f7e68b48e0c4cd6f1903d345e1e5de76145e6c11468c509bef89f"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:packing:1:artifact:artifact:packing-change",
+      "occurredAt": "2026-08-21T00:38:04.719Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:packing-change:run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:packing:1",
+          "runId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6",
+          "nodeId": "unit:packing",
+          "digest": "sha256:f009ab1c895998a291e311f9dac8f991faa6f52479425fdfd958086929c6c7ba",
+          "producerAttemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:packing:1",
+          "contract": {
+            "id": "artifact:packing-change",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:f009ab1c895998a291e311f9dac8f991faa6f52479425fdfd958086929c6c7ba",
+          "manifest": {
+            "id": "artifact:packing-change",
+            "contract": {
+              "id": "artifact:packing-change",
+              "revision": 1,
+              "digest": "sha256:fdef247527813853d7c1cbab65b4331ecf5f5cd486d7c7f3f9b610b4d3c14c2c"
+            },
+            "producerNodeId": "unit:packing",
+            "producerAttemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:packing:1",
+            "inputFingerprint": "sha256:5d23f9777519ca635bdf1d22835acbb0eda422b52ed74e7d2c4a05d49abbcc6c",
+            "repositoryObjectStoreId": "object-store:5496f21c1c6cbad7",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "8b273fc54a56f60c23ae06df05041521bdfbb064",
+              "treeOid": "18e92d7fa50bcd4fb9da285dd2a34e550ebca62d"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-c642b021615106a89fe7927dad24f77a-bdb6c8db5964/attempts/run-c642b021615106a89fe7927dad24f77a-77a0b01fe19e/artifacts/artifact-packing-change-bb94531ef225",
+            "kind": "change_set",
+            "baseTreeSha": "1555e640f7399b75338f2ecbfcd9ad268cd814d9",
+            "resultTreeSha": "18e92d7fa50bcd4fb9da285dd2a34e550ebca62d",
+            "entries": [
+              {
+                "newPath": "src/organizacion/packing/packing.mjs",
+                "operation": "add",
+                "newOid": "a076031573770cd84e0248b4df006ab75888ef88",
+                "newMode": "100644"
+              },
+              {
+                "newPath": "src/organizacion/packing/packing.test.mjs",
+                "operation": "add",
+                "newOid": "04015dc79a49557642bd126d08f6316a71b61b0b",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:f009ab1c895998a291e311f9dac8f991faa6f52479425fdfd958086929c6c7ba"
+          },
+          "adoptedAt": "2026-08-21T00:38:04.719Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:notes:1:failed",
+      "occurredAt": "2026-08-21T00:39:07.409Z",
+      "type": "attempt.failed",
+      "payload": {
+        "attemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:notes:1",
+        "nodeId": "unit:notes",
+        "reason": "validation_failed: exact candidate a961e4296d5a6b5edfd34b75db42588f899ffe93 failed matrix matrix-38d8d859cfcafdc1.",
+        "usage": {
+          "tokensTotal": 63794,
+          "costUsd": 0.287073,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:notes:1:decision",
+      "occurredAt": "2026-08-21T00:39:07.409Z",
+      "type": "decision.raised",
+      "payload": {
+        "decision": {
+          "id": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:notes:1:decision",
+          "kind": "resolve_conflict",
+          "question": "Execution for Notas requires guidance: validation_failed: exact candidate a961e4296d5a6b5edfd34b75db42588f899ffe93 failed matrix matrix-38d8d859cfcafdc1.",
+          "options": [
+            {
+              "id": "retry",
+              "label": "Retry with guidance"
+            },
+            {
+              "id": "stop",
+              "label": "Stop this work"
+            }
+          ],
+          "affectedNodeIds": [
+            "unit:notes"
+          ],
+          "repairTargetNodeId": "unit:notes",
+          "evidenceRefs": [
+            "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:notes:1",
+            "input-fingerprint:sha256:ce08c7bd25debab56dcc2b65773dee693dc865e97fbc4cda66c12ec64d3edde9"
+          ],
+          "impact": "behavior",
+          "raisedAtGraphRevision": 1
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:stops:1:candidate",
+      "occurredAt": "2026-08-21T00:39:57.263Z",
+      "type": "attempt.candidate_created",
+      "payload": {
+        "attemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:stops:1",
+        "nodeId": "unit:stops",
+        "candidateCommit": "48c5deb229b7d375b9f05cdb24108f356e9a9ded",
+        "candidate": {
+          "manifestDigest": "sha256:5c671108b93b6830bd2ce30d5cd00793465e4ecf2d03528d54502aff21613c7a",
+          "commitOid": "48c5deb229b7d375b9f05cdb24108f356e9a9ded",
+          "treeOid": "e98d1c683a10f6b2230553922d3b865de7321eec"
+        },
+        "outputDigest": "sha256:dc0092b63781140a2387aaa17e038fc76b5dd915dfaf4ff0361f873655a74836",
+        "changedFiles": [
+          "src/itinerario/stops/stops.mjs",
+          "src/itinerario/stops/stops.test.mjs"
+        ],
+        "usage": {
+          "tokensTotal": 70660,
+          "costUsd": 0.31797,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:stops:1:validated",
+      "occurredAt": "2026-08-21T00:39:57.263Z",
+      "type": "validation.completed",
+      "payload": {
+        "attemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:stops:1",
+        "nodeId": "unit:stops",
+        "matrix": {
+          "matrixId": "matrix-156ab9a05c601020",
+          "candidateCommit": "48c5deb229b7d375b9f05cdb24108f356e9a9ded",
+          "validationContract": {
+            "id": "validation-contract:unit:stops",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:stops",
+              "obligationId": "validation:stops",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-c998de0dddf3ff238bcec631911da0f398ad14c5fb3d309b60eb216260f05b0f:attempt:1",
+                "validation:stops:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:6fe3a33a001c8d9c0a9a91f4d8e73bb14532bd3593cdeabfc8a8cb3e9dc10af0",
+          "observations": [
+            {
+              "evidenceId": "command-c998de0dddf3ff238bcec631911da0f398ad14c5fb3d309b60eb216260f05b0f:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "c998de0dddf3ff238bcec631911da0f398ad14c5fb3d309b60eb216260f05b0f",
+              "durationMs": 933.0741999999736,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "9db1195ef5f6d930ad17805bece995c6f63a285d7a53492f9c9757f50cfdfa26",
+              "criterionIds": [
+                "criterion:stops"
+              ],
+              "obligationIds": [
+                "validation:stops"
+              ],
+              "references": [
+                "src/itinerario/stops/stops.test.mjs"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-156ab9a05c601020:validation:stops",
+              "revision": 1,
+              "goalContractDigest": "sha256:97bd7ed579633c87ee0ab27b914ccd620ece801a22c6bc943bb7e1f1b7d62909",
+              "criterionId": "criterion:run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:1",
+              "obligationId": "validation:stops",
+              "candidate": {
+                "manifestDigest": "sha256:5c671108b93b6830bd2ce30d5cd00793465e4ecf2d03528d54502aff21613c7a",
+                "commitOid": "48c5deb229b7d375b9f05cdb24108f356e9a9ded",
+                "treeOid": "e98d1c683a10f6b2230553922d3b865de7321eec"
+              },
+              "baseline": {
+                "commitOid": "782059f2f39b5fe5e22d7a471b6804fc44b76f35",
+                "treeOid": "1555e640f7399b75338f2ecbfcd9ad268cd814d9"
+              },
+              "proofStrategyDigest": "sha256:f4dd980ad6a38196f720269c633b4e282c3f675145d1e516ec24644097d40c07",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:6fe3a33a001c8d9c0a9a91f4d8e73bb14532bd3593cdeabfc8a8cb3e9dc10af0",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:ab2b94d919558043a7165f3ae49b9c19da52618dba18f61e85ead92a46d6101c",
+              "outputDigest": "sha256:9db1195ef5f6d930ad17805bece995c6f63a285d7a53492f9c9757f50cfdfa26",
+              "outcome": "satisfied",
+              "digest": "sha256:8aa7ed7cd50072275e85bfdfc9f9b1e8310e6138da111e2b10140b551f3832b8"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:stops:negative-control",
+              "obligationId": "validation:stops",
+              "detectedFailure": true,
+              "outputDigest": "0e25798e3bae703427123213876531dd811c3ef8c190d50d0d48f2e4efa6b4de"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:stops:1:artifact:artifact:stops-change",
+      "occurredAt": "2026-08-21T00:39:57.263Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:stops-change:run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:stops:1",
+          "runId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6",
+          "nodeId": "unit:stops",
+          "digest": "sha256:273912bca8d4409f79ac85f8b5271d6d9c1afd45f0070d2b031720b3ea085274",
+          "producerAttemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:stops:1",
+          "contract": {
+            "id": "artifact:stops-change",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:273912bca8d4409f79ac85f8b5271d6d9c1afd45f0070d2b031720b3ea085274",
+          "manifest": {
+            "id": "artifact:stops-change",
+            "contract": {
+              "id": "artifact:stops-change",
+              "revision": 1,
+              "digest": "sha256:30db001a9236f975225a6af1414efc4db5244284403ee1c279b8c99ca84de8e2"
+            },
+            "producerNodeId": "unit:stops",
+            "producerAttemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:stops:1",
+            "inputFingerprint": "sha256:b2e0c40357ee2d02e18d61fa0852b1485b8c2cf8cd944b8236ac45783d1fb294",
+            "repositoryObjectStoreId": "object-store:5496f21c1c6cbad7",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "48c5deb229b7d375b9f05cdb24108f356e9a9ded",
+              "treeOid": "e98d1c683a10f6b2230553922d3b865de7321eec"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-c642b021615106a89fe7927dad24f77a-bdb6c8db5964/attempts/run-c642b021615106a89fe7927dad24f77a-21bd98ea406c/artifacts/artifact-stops-change-45769231a76b",
+            "kind": "change_set",
+            "baseTreeSha": "1555e640f7399b75338f2ecbfcd9ad268cd814d9",
+            "resultTreeSha": "e98d1c683a10f6b2230553922d3b865de7321eec",
+            "entries": [
+              {
+                "newPath": "src/itinerario/stops/stops.mjs",
+                "operation": "add",
+                "newOid": "5cc442af82ec0fd6c23f0eaced510c7d4704103a",
+                "newMode": "100644"
+              },
+              {
+                "newPath": "src/itinerario/stops/stops.test.mjs",
+                "operation": "add",
+                "newOid": "8f5d098ac16aca03f2eeae856c796b152bef8112",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:273912bca8d4409f79ac85f8b5271d6d9c1afd45f0070d2b031720b3ea085274"
+          },
+          "adoptedAt": "2026-08-21T00:39:57.263Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:readiness.observed:39",
+      "occurredAt": "2026-08-21T00:39:57.303Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:agenda",
+          "unit:area-organizacion"
+        ],
+        "pendingDecisionIds": [
+          "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:notes:1:decision"
+        ],
+        "explanations": [
+          {
+            "nodeId": "unit:agenda",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:area-organizacion",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:area-itinerario",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:exploration-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:area-recuerdos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notes-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard-ui",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerario-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organizacion-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:recuerdos-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:exploration",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:notes:1:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:persistence",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerario-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organizacion-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:recuerdos-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:persistence",
+            "unit:dashboard-ui",
+            "unit:area-itinerario",
+            "unit:stops",
+            "unit:agenda",
+            "unit:exploration",
+            "unit:area-organizacion",
+            "unit:budget",
+            "unit:packing",
+            "unit:area-recuerdos",
+            "unit:notes",
+            "unit:favorites"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:persistence",
+            "unit:dashboard-ui",
+            "unit:area-itinerario",
+            "unit:stops",
+            "unit:agenda",
+            "unit:exploration",
+            "unit:area-organizacion",
+            "unit:budget",
+            "unit:packing",
+            "unit:area-recuerdos",
+            "unit:notes",
+            "unit:favorites"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T00:39:57.291Z"
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:wave.selected:40",
+      "occurredAt": "2026-08-21T00:39:57.337Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:wave:2",
+        "nodeIds": [
+          "unit:agenda",
+          "unit:area-organizacion"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:area-itinerario",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:exploration-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:area-recuerdos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notes-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard-ui",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerario-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organizacion-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:recuerdos-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:exploration",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:notes:1:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:persistence",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerario-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organizacion-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:recuerdos-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-21T00:39:57.325Z"
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:agenda:1:started",
+      "occurredAt": "2026-08-21T00:39:57.359Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:agenda:1",
+        "nodeId": "unit:agenda",
+        "inputFingerprint": "sha256:b31cac1fa1442387491fdaceb09bc1a06ff0f540e4f977517b1b8caa226e27a0",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:area-organizacion:1:started",
+      "occurredAt": "2026-08-21T00:39:57.360Z",
+      "type": "integration.started",
+      "payload": {
+        "attemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:area-organizacion:1",
+        "nodeId": "unit:area-organizacion",
+        "inputFingerprint": "sha256:ce0816c06250a3e290c2741ebbc96035f6a4809a29ef1bd8c4101e1dbac5f2a9",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        },
+        "requiredArtifactIds": [
+          "artifact:budget-change:run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:budget:1",
+          "artifact:packing-change:run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:packing:1"
+        ]
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:area-organizacion:1:failed",
+      "occurredAt": "2026-08-21T00:44:36.112Z",
+      "type": "attempt.failed",
+      "payload": {
+        "attemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:area-organizacion:1",
+        "nodeId": "unit:area-organizacion",
+        "reason": "Artifact path is outside its contract: src/organizacion/budget/budget.mjs."
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:area-organizacion:1:decision",
+      "occurredAt": "2026-08-21T00:44:36.112Z",
+      "type": "decision.raised",
+      "payload": {
+        "decision": {
+          "id": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:area-organizacion:1:decision",
+          "kind": "resolve_conflict",
+          "question": "Execution for Organización requires guidance: Artifact path is outside its contract: src/organizacion/budget/budget.mjs.",
+          "options": [
+            {
+              "id": "retry",
+              "label": "Retry with guidance"
+            },
+            {
+              "id": "stop",
+              "label": "Stop this work"
+            }
+          ],
+          "affectedNodeIds": [
+            "unit:area-organizacion"
+          ],
+          "repairTargetNodeId": "unit:area-organizacion",
+          "evidenceRefs": [
+            "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:area-organizacion:1",
+            "input-fingerprint:sha256:ce0816c06250a3e290c2741ebbc96035f6a4809a29ef1bd8c4101e1dbac5f2a9"
+          ],
+          "impact": "behavior",
+          "raisedAtGraphRevision": 1
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:agenda:1:candidate",
+      "occurredAt": "2026-08-21T00:46:51.688Z",
+      "type": "attempt.candidate_created",
+      "payload": {
+        "attemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:agenda:1",
+        "nodeId": "unit:agenda",
+        "candidateCommit": "eb253035cbe0214bef88a2e9b70a6a4c85eeba1a",
+        "candidate": {
+          "manifestDigest": "sha256:fba7ea96b1bb482326d06c7f17c915ccc5aa0dfa68c5cf7e4dbbc16375ae3eb4",
+          "commitOid": "eb253035cbe0214bef88a2e9b70a6a4c85eeba1a",
+          "treeOid": "72875bfad54610a1a434b9dbeb0aefda14474ea9"
+        },
+        "outputDigest": "sha256:63811ae295c2bfa15aae5deed03b7707704455e95c4d57ee41d026c8e26570aa",
+        "changedFiles": [
+          "src/itinerario/agenda/agenda.mjs",
+          "src/itinerario/agenda/agenda.test.mjs"
+        ],
+        "usage": {
+          "tokensTotal": 77953,
+          "costUsd": 0.35078849999999995,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:agenda:1:validated",
+      "occurredAt": "2026-08-21T00:46:51.688Z",
+      "type": "validation.completed",
+      "payload": {
+        "attemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:agenda:1",
+        "nodeId": "unit:agenda",
+        "matrix": {
+          "matrixId": "matrix-68f93404f15fc539",
+          "candidateCommit": "eb253035cbe0214bef88a2e9b70a6a4c85eeba1a",
+          "validationContract": {
+            "id": "validation-contract:unit:agenda",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:agenda",
+              "obligationId": "validation:agenda",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-d584272ace131af11665d2f1da901456c54ee3ace4f0c0d5a59b264da623d17f:attempt:1",
+                "validation:agenda:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:1a98ac88dd801c7536f8c948af6fbef5c4935fd420000b27e91125e681a06681",
+          "observations": [
+            {
+              "evidenceId": "command-d584272ace131af11665d2f1da901456c54ee3ace4f0c0d5a59b264da623d17f:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "d584272ace131af11665d2f1da901456c54ee3ace4f0c0d5a59b264da623d17f",
+              "durationMs": 1134.4668999999994,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "6a08c2fefb43b8d3f6413c44aba4e7a9eaea915f5a73ac2d9eb138f0d32fed0f",
+              "criterionIds": [
+                "criterion:agenda"
+              ],
+              "obligationIds": [
+                "validation:agenda"
+              ],
+              "references": [
+                "src/itinerario/agenda/agenda.test.mjs"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-68f93404f15fc539:validation:agenda",
+              "revision": 1,
+              "goalContractDigest": "sha256:97bd7ed579633c87ee0ab27b914ccd620ece801a22c6bc943bb7e1f1b7d62909",
+              "criterionId": "criterion:run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:1",
+              "obligationId": "validation:agenda",
+              "candidate": {
+                "manifestDigest": "sha256:fba7ea96b1bb482326d06c7f17c915ccc5aa0dfa68c5cf7e4dbbc16375ae3eb4",
+                "commitOid": "eb253035cbe0214bef88a2e9b70a6a4c85eeba1a",
+                "treeOid": "72875bfad54610a1a434b9dbeb0aefda14474ea9"
+              },
+              "baseline": {
+                "commitOid": "782059f2f39b5fe5e22d7a471b6804fc44b76f35",
+                "treeOid": "1555e640f7399b75338f2ecbfcd9ad268cd814d9"
+              },
+              "proofStrategyDigest": "sha256:4454eb5b36009a2127aa3c2dd7cbc7c92a40cd204ea6d6341e2e8c387060978b",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:1a98ac88dd801c7536f8c948af6fbef5c4935fd420000b27e91125e681a06681",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:479e45b89fb000849d29598f56111657abf3bb54c48661695013e898bb9e2a27",
+              "outputDigest": "sha256:6a08c2fefb43b8d3f6413c44aba4e7a9eaea915f5a73ac2d9eb138f0d32fed0f",
+              "outcome": "satisfied",
+              "digest": "sha256:7373d6b4fe75a788ea08e1938f6a39760ef11b8bc8eab63e275a153a85a2b2f2"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:agenda:negative-control",
+              "obligationId": "validation:agenda",
+              "detectedFailure": true,
+              "outputDigest": "660ffb58c14525b9a7f2bd5e48f15039ec33cd6b36affc61d3daa81d4b9ff5f2"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:agenda:1:artifact:artifact:agenda-change",
+      "occurredAt": "2026-08-21T00:46:51.688Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:agenda-change:run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:agenda:1",
+          "runId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6",
+          "nodeId": "unit:agenda",
+          "digest": "sha256:d74271cb185923459cf123b14c587be70b678c851e8f408d7931e0851590f679",
+          "producerAttemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:agenda:1",
+          "contract": {
+            "id": "artifact:agenda-change",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:d74271cb185923459cf123b14c587be70b678c851e8f408d7931e0851590f679",
+          "manifest": {
+            "id": "artifact:agenda-change",
+            "contract": {
+              "id": "artifact:agenda-change",
+              "revision": 1,
+              "digest": "sha256:9a409c3e1b2bcba6bfc3b032266756c84faa794a7e91643ab826f8bd615324d1"
+            },
+            "producerNodeId": "unit:agenda",
+            "producerAttemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:agenda:1",
+            "inputFingerprint": "sha256:b31cac1fa1442387491fdaceb09bc1a06ff0f540e4f977517b1b8caa226e27a0",
+            "repositoryObjectStoreId": "object-store:5496f21c1c6cbad7",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "eb253035cbe0214bef88a2e9b70a6a4c85eeba1a",
+              "treeOid": "72875bfad54610a1a434b9dbeb0aefda14474ea9"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-c642b021615106a89fe7927dad24f77a-bdb6c8db5964/attempts/run-c642b021615106a89fe7927dad24f77a-b55970a479bb/artifacts/artifact-agenda-change-39dfd90586d8",
+            "kind": "change_set",
+            "baseTreeSha": "e98d1c683a10f6b2230553922d3b865de7321eec",
+            "resultTreeSha": "72875bfad54610a1a434b9dbeb0aefda14474ea9",
+            "entries": [
+              {
+                "newPath": "src/itinerario/agenda/agenda.mjs",
+                "operation": "add",
+                "newOid": "e4918016da51749e3cc6fb2fdc76d0baca31aa3e",
+                "newMode": "100644"
+              },
+              {
+                "newPath": "src/itinerario/agenda/agenda.test.mjs",
+                "operation": "add",
+                "newOid": "f200b56c8088628308fbe392d2c7aeca51f321ac",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:d74271cb185923459cf123b14c587be70b678c851e8f408d7931e0851590f679"
+          },
+          "adoptedAt": "2026-08-21T00:46:51.688Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:readiness.observed:48",
+      "occurredAt": "2026-08-21T00:46:51.745Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:exploration"
+        ],
+        "pendingDecisionIds": [
+          "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:area-organizacion:1:decision",
+          "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:notes:1:decision"
+        ],
+        "explanations": [
+          {
+            "nodeId": "unit:exploration",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:area-itinerario",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:exploration-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:area-organizacion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:area-organizacion:1:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:area-recuerdos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notes-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard-ui",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerario-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organizacion-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:recuerdos-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:notes:1:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:persistence",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerario-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organizacion-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:recuerdos-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:persistence",
+            "unit:dashboard-ui",
+            "unit:area-itinerario",
+            "unit:stops",
+            "unit:agenda",
+            "unit:exploration",
+            "unit:area-organizacion",
+            "unit:budget",
+            "unit:packing",
+            "unit:area-recuerdos",
+            "unit:notes",
+            "unit:favorites"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:persistence",
+            "unit:dashboard-ui",
+            "unit:area-itinerario",
+            "unit:stops",
+            "unit:agenda",
+            "unit:exploration",
+            "unit:area-organizacion",
+            "unit:budget",
+            "unit:packing",
+            "unit:area-recuerdos",
+            "unit:notes",
+            "unit:favorites"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T00:46:51.728Z"
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:wave.selected:49",
+      "occurredAt": "2026-08-21T00:46:51.792Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:wave:3",
+        "nodeIds": [
+          "unit:exploration"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:area-itinerario",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:exploration-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:area-organizacion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:area-organizacion:1:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:area-recuerdos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notes-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard-ui",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerario-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organizacion-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:recuerdos-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:notes:1:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:persistence",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerario-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organizacion-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:recuerdos-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-21T00:46:51.776Z"
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:exploration:1:started",
+      "occurredAt": "2026-08-21T00:46:51.819Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:exploration:1",
+        "nodeId": "unit:exploration",
+        "inputFingerprint": "sha256:e7cbb28b7bffde2afd05b394fd2283286d760e58724e9d8828b04606189afd51",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:exploration:1:failed",
+      "occurredAt": "2026-08-21T00:52:39.595Z",
+      "type": "attempt.failed",
+      "payload": {
+        "attemptId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:exploration:1",
+        "nodeId": "unit:exploration",
+        "reason": "validation_failed: exact candidate 5cbdfd2cac4b50eb08c304b6a3978a9127dbb2e2 failed matrix matrix-045465dc0a760775.",
+        "usage": {
+          "tokensTotal": 74164,
+          "costUsd": 0.333738,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:exploration:1:decision",
+      "occurredAt": "2026-08-21T00:52:39.595Z",
+      "type": "decision.raised",
+      "payload": {
+        "decision": {
+          "id": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:exploration:1:decision",
+          "kind": "resolve_conflict",
+          "question": "Execution for Exploración requires guidance: validation_failed: exact candidate 5cbdfd2cac4b50eb08c304b6a3978a9127dbb2e2 failed matrix matrix-045465dc0a760775.",
+          "options": [
+            {
+              "id": "retry",
+              "label": "Retry with guidance"
+            },
+            {
+              "id": "stop",
+              "label": "Stop this work"
+            }
+          ],
+          "affectedNodeIds": [
+            "unit:exploration"
+          ],
+          "repairTargetNodeId": "unit:exploration",
+          "evidenceRefs": [
+            "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:exploration:1",
+            "input-fingerprint:sha256:e7cbb28b7bffde2afd05b394fd2283286d760e58724e9d8828b04606189afd51"
+          ],
+          "impact": "behavior",
+          "raisedAtGraphRevision": 1
+        }
+      }
+    },
+    {
+      "eventId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:readiness.observed:53",
+      "occurredAt": "2026-08-21T00:52:39.658Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [],
+        "pendingDecisionIds": [
+          "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:area-organizacion:1:decision",
+          "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:exploration:1:decision",
+          "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:notes:1:decision"
+        ],
+        "explanations": [
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:area-itinerario",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:exploration-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:area-organizacion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:area-organizacion:1:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:area-recuerdos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notes-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard-ui",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerario-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organizacion-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:recuerdos-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:exploration",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:exploration:1:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:c642b021615106a89fe7927dad24f77a2df8e5d09f729ff6c40c0cbd43927be6:attempt:unit:notes:1:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:persistence",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerario-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organizacion-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:recuerdos-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:persistence",
+            "unit:dashboard-ui",
+            "unit:area-itinerario",
+            "unit:stops",
+            "unit:agenda",
+            "unit:exploration",
+            "unit:area-organizacion",
+            "unit:budget",
+            "unit:packing",
+            "unit:area-recuerdos",
+            "unit:notes",
+            "unit:favorites"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:persistence",
+            "unit:dashboard-ui",
+            "unit:area-itinerario",
+            "unit:stops",
+            "unit:agenda",
+            "unit:exploration",
+            "unit:area-organizacion",
+            "unit:budget",
+            "unit:packing",
+            "unit:area-recuerdos",
+            "unit:notes",
+            "unit:favorites"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T00:52:39.637Z"
+      }
+    }
+  ]
+}

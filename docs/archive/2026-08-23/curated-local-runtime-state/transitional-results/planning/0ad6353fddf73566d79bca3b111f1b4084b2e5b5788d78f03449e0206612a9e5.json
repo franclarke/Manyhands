@@ -1,0 +1,3168 @@
+{
+  "events": [
+    {
+      "eventId": "repository:sha256:c2fe34bfdb080b1090c426187e96c72872b222e6a6dc514c6815f12d63e5002c:inspection",
+      "occurredAt": "2026-08-17T06:25:07.317Z",
+      "type": "repository.inspected",
+      "payload": {
+        "snapshotId": "sha256:c2fe34bfdb080b1090c426187e96c72872b222e6a6dc514c6815f12d63e5002c",
+        "disposition": "partial",
+        "snapshot": {
+          "schemaVersion": 1,
+          "snapshotId": "sha256:c2fe34bfdb080b1090c426187e96c72872b222e6a6dc514c6815f12d63e5002c",
+          "repositoryId": "Cuentas-Claras",
+          "rootPath": "C:\\Users\\franc\\Documents\\Proyectos\\Cuentas Claras",
+          "targetFingerprint": "7b304907cce55b6e",
+          "baseCommit": "680018b7a2dd7fff3660431df84e19c10af7b53b",
+          "indexSchemaVersion": 1,
+          "capturedAt": "2026-08-17T06:23:04.580Z",
+          "inspectionDisposition": "partial",
+          "capabilities": {
+            "scripts": {},
+            "baselineCommands": [],
+            "languages": [],
+            "stack": []
+          },
+          "diagnostics": [
+            {
+              "code": "no_supported_source_files",
+              "severity": "warning",
+              "message": "Repository contains no structurally indexed TypeScript or JavaScript source files."
+            }
+          ],
+          "indexHash": "acba1ed6ef4c8ac2bc69f401ffe93a98e8f67b34f42341ef37ea5f53790852ec",
+          "index": {
+            "repositoryId": "Cuentas-Claras",
+            "rootPath": "C:\\Users\\franc\\Documents\\Proyectos\\Cuentas Claras",
+            "indexedAt": "2026-08-17T05:28:46.531Z",
+            "files": [],
+            "symbols": [],
+            "imports": [],
+            "exports": [],
+            "diagnostics": [],
+            "metadata": {
+              "indexer": "ripgrep-native-v2",
+              "deterministic": true,
+              "fileCount": 0,
+              "symbolCount": 0,
+              "importCount": 0,
+              "exportCount": 0
+            }
+          }
+        },
+        "repositoryModelDigest": "sha256:50af49682523c2b2131cf5495c3d5f399bade1b965cc27f0c42aaac5150d0f3a",
+        "repositoryView": {
+          "digest": "sha256:ab735c42524e87f419bdaf53e5dfb68697512834bdfa9e53ac35778b3257951f",
+          "treeSha": "aa4b1fc231cbff6853853ab8b07c786d16c51948",
+          "resourceCatalogDigest": "sha256:dcb863fd1f7bea75fd767419ea7be8bef59dafb33a1fbed07ff351678d7e8e29"
+        },
+        "queryDigests": [
+          "sha256:aa4208e907ec8d04f670100a4f995d6470847442abf80dd56d9af08439f321af",
+          "sha256:8a07d2f7cd526bb62875bb869a716ba90a360dbd428ba6b8da213c47f4006aaf",
+          "sha256:aa45528dfb8d8ffa723c41b11b8bd0ae737d0951715ab53fe1da71cc93164e76"
+        ]
+      }
+    },
+    {
+      "eventId": "planning:plan:goal:run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:completed:run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba",
+      "occurredAt": "2026-08-17T06:25:07.330Z",
+      "type": "planning.completed",
+      "payload": {
+        "semanticPlan": {
+          "id": "plan:goal:run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba",
+          "revision": 1,
+          "goalContract": {
+            "id": "goal:run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba",
+            "revision": 1,
+            "digest": "sha256:fe8f5d7edf7be3bc3713953e0915354b3a7d0b49e289b688b04ea08cd43f924b"
+          },
+          "repositorySnapshot": {
+            "id": "sha256:c2fe34bfdb080b1090c426187e96c72872b222e6a6dc514c6815f12d63e5002c",
+            "digest": "sha256:acba1ed6ef4c8ac2bc69f401ffe93a98e8f67b34f42341ef37ea5f53790852ec"
+          },
+          "repositoryView": {
+            "digest": "sha256:ab735c42524e87f419bdaf53e5dfb68697512834bdfa9e53ac35778b3257951f",
+            "treeSha": "aa4b1fc231cbff6853853ab8b07c786d16c51948",
+            "resourceCatalogDigest": "sha256:dcb863fd1f7bea75fd767419ea7be8bef59dafb33a1fbed07ff351678d7e8e29"
+          },
+          "rootUnitId": "unit:cuentas-claras",
+          "units": {
+            "unit:cuentas-claras": {
+              "id": "unit:cuentas-claras",
+              "role": "composite",
+              "title": "Cuentas Claras - aplicación modular Node.js",
+              "objective": "Integrar dominio, liquidación, almacenamiento/reportes e interfaces HTTP/CLI en una aplicación coherente y probar el flujo completo end-to-end con node --test.",
+              "boundary": {
+                "kind": "application",
+                "evidenceRefs": [
+                  "evidence:3a98499c4817d2d876de1d8e"
+                ]
+              },
+              "outcomes": [
+                {
+                  "id": "outcome:app-integrada",
+                  "statement": "La aplicación permite crear un evento, registrar participantes y gastos, persistirlos en JSON, calcular la liquidación mínima y exponerla por HTTP y CLI."
+                }
+              ],
+              "criteria": [
+                {
+                  "criterionId": "criterion:root-integracion",
+                  "statement": "El flujo completo (evento -> participantes -> gastos -> persistencia JSON -> liquidación mínima -> reporte WhatsApp -> HTTP y CLI) funciona de extremo a extremo bajo node --test.",
+                  "sourceCriterionId": "criterion:run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:1"
+                },
+                {
+                  "criterionId": "criterion:root-dominio",
+                  "statement": "El modelo de dominio soporta eventos, participantes y gastos con pagador, monto, categoría y participantes del gasto.",
+                  "sourceCriterionId": "criterion:run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:1"
+                },
+                {
+                  "criterionId": "criterion:root-liquidacion",
+                  "statement": "El motor de balances calcula el saldo de cada persona y produce el número mínimo de transferencias.",
+                  "sourceCriterionId": "criterion:run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:1"
+                },
+                {
+                  "criterionId": "criterion:root-almacenamiento",
+                  "statement": "Los eventos y gastos se persisten en archivos JSON locales y se genera el reporte de texto con emojis.",
+                  "sourceCriterionId": "criterion:run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:1"
+                },
+                {
+                  "criterionId": "criterion:root-interfaces",
+                  "statement": "El servidor HTTP expone /api/events, /api/expenses y /api/settlement, y la CLI interactiva crea eventos y muestra el resumen.",
+                  "sourceCriterionId": "criterion:run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:1"
+                }
+              ],
+              "repositorySurface": {
+                "resourceRefs": [
+                  "catalog-resource:76cd907bf17d7923b9a3fe93"
+                ],
+                "pathHints": [
+                  "src/domain/index.js",
+                  "src/interface/e2e.test.js",
+                  "src/settlement/index.js",
+                  "src/storage/index.js"
+                ]
+              },
+              "resourceIntents": [],
+              "consumes": [
+                "artifact:domain-change",
+                "artifact:interface-change",
+                "artifact:settlement-change",
+                "artifact:storage-change"
+              ],
+              "produces": [],
+              "seamRefs": [
+                "seam:domain-model",
+                "seam:settlement-engine",
+                "seam:storage-report"
+              ],
+              "validation": [
+                {
+                  "obligationId": "validation:root-e2e",
+                  "criterionId": "criterion:root-integracion",
+                  "proofStrategyId": "proof:validation:root-e2e",
+                  "layer": "e2e",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "src/interface/e2e.test.js"
+                    ],
+                    "references": [
+                      "src/interface/e2e.test.js"
+                    ]
+                  }
+                }
+              ],
+              "uncertainty": [],
+              "granularity": {
+                "disposition": "split",
+                "feasibility": {
+                  "coherentResponsibility": true,
+                  "boundedContext": "yes",
+                  "boundedChangeSurface": "yes",
+                  "independentlyValidatable": "yes",
+                  "unresolvedArchitectureDecision": false
+                },
+                "splitReasons": [
+                  "independent_delivery",
+                  "integration_boundary",
+                  "parallelism"
+                ],
+                "expectedBenefits": [
+                  "Cada subsistema se valida por separado con node --test.",
+                  "Los cuatro módulos viven en directorios disjuntos y avanzan en paralelo."
+                ],
+                "expectedCosts": [
+                  "Tres contratos explícitos deben mantenerse compatibles entre módulos."
+                ],
+                "integrationObligationId": "validation:root-e2e",
+                "evidenceRefs": [
+                  "evidence:3a98499c4817d2d876de1d8e"
+                ],
+                "epistemic": {
+                  "state": "known",
+                  "confidence": "high",
+                  "evidenceRefs": [
+                    "evidence:3a98499c4817d2d876de1d8e"
+                  ]
+                }
+              },
+              "expansion": "expanded",
+              "integration": {
+                "obligationId": "validation:root-e2e",
+                "objective": "Componer los cuatro módulos y demostrar el flujo completo del evento hasta la liquidación y el reporte.",
+                "criterionIds": [
+                  "criterion:root-integracion"
+                ],
+                "proofStrategyId": "proof:validation:root-e2e",
+                "artifactIds": [
+                  "artifact:domain-change",
+                  "artifact:interface-change",
+                  "artifact:settlement-change",
+                  "artifact:storage-change"
+                ],
+                "seamIds": [
+                  "seam:domain-model",
+                  "seam:settlement-engine",
+                  "seam:storage-report"
+                ]
+              }
+            },
+            "unit:domain": {
+              "id": "unit:domain",
+              "parentId": "unit:cuentas-claras",
+              "role": "leaf",
+              "title": "Módulo de Dominio y Participantes",
+              "objective": "Modelar eventos, participantes y gastos con validación de pagador, monto, categoría y participantes del gasto.",
+              "boundary": {
+                "kind": "domain",
+                "evidenceRefs": [
+                  "evidence:3a98499c4817d2d876de1d8e"
+                ]
+              },
+              "outcomes": [
+                {
+                  "id": "outcome:dominio",
+                  "statement": "El dominio expone creación de eventos, alta de personas y carga de gastos validados."
+                }
+              ],
+              "criteria": [
+                {
+                  "criterionId": "criterion:domain-modelo",
+                  "statement": "createEvent, addParticipant y addExpense validan pagador conocido, monto positivo, categoría en Comida/Bebida/Postre/Varios y lista no vacía de participantes.",
+                  "sourceCriterionId": "criterion:root-dominio"
+                }
+              ],
+              "repositorySurface": {
+                "resourceRefs": [
+                  "path:src/domain"
+                ],
+                "pathHints": [
+                  "src/domain/categories.js",
+                  "src/domain/domain.test.js",
+                  "src/domain/event.js",
+                  "src/domain/expense.js",
+                  "src/domain/index.js"
+                ]
+              },
+              "resourceIntents": [
+                {
+                  "resourceId": "path:src/domain",
+                  "access": "modify",
+                  "ownerPhase": "implementation",
+                  "outputArtifactId": "artifact:domain-change",
+                  "evidenceRefs": [
+                    "evidence:3a98499c4817d2d876de1d8e"
+                  ],
+                  "epistemic": {
+                    "state": "known",
+                    "confidence": "high",
+                    "evidenceRefs": [
+                      "evidence:3a98499c4817d2d876de1d8e"
+                    ]
+                  }
+                }
+              ],
+              "consumes": [],
+              "produces": [
+                "artifact:domain-change"
+              ],
+              "seamRefs": [
+                "seam:domain-model"
+              ],
+              "validation": [
+                {
+                  "obligationId": "validation:domain-unit",
+                  "criterionId": "criterion:domain-modelo",
+                  "proofStrategyId": "proof:validation:domain-unit",
+                  "layer": "unit",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "src/domain/domain.test.js"
+                    ],
+                    "references": [
+                      "src/domain/domain.test.js"
+                    ]
+                  }
+                }
+              ],
+              "uncertainty": [],
+              "granularity": {
+                "disposition": "leaf",
+                "feasibility": {
+                  "coherentResponsibility": true,
+                  "boundedContext": "yes",
+                  "boundedChangeSurface": "yes",
+                  "independentlyValidatable": "yes",
+                  "unresolvedArchitectureDecision": false
+                },
+                "splitReasons": [],
+                "expectedBenefits": [],
+                "expectedCosts": [],
+                "evidenceRefs": [
+                  "evidence:3a98499c4817d2d876de1d8e"
+                ],
+                "epistemic": {
+                  "state": "known",
+                  "confidence": "high",
+                  "evidenceRefs": [
+                    "evidence:3a98499c4817d2d876de1d8e"
+                  ]
+                }
+              },
+              "expansion": "leaf"
+            },
+            "unit:settlement": {
+              "id": "unit:settlement",
+              "parentId": "unit:cuentas-claras",
+              "role": "leaf",
+              "title": "Módulo de Cálculo y Balances",
+              "objective": "Calcular el balance por persona y generar la cantidad mínima de transferencias para saldar las deudas.",
+              "boundary": {
+                "kind": "module",
+                "evidenceRefs": [
+                  "evidence:56db9f0d44b2a75276e852fb"
+                ]
+              },
+              "outcomes": [
+                {
+                  "id": "outcome:liquidacion",
+                  "statement": "El motor devuelve balances exactos y una lista mínima de transferencias."
+                }
+              ],
+              "criteria": [
+                {
+                  "criterionId": "criterion:settlement-minimo",
+                  "statement": "computeBalances suma cero y settle produce a lo sumo n-1 transferencias que dejan todos los balances en cero.",
+                  "sourceCriterionId": "criterion:root-liquidacion"
+                }
+              ],
+              "repositorySurface": {
+                "resourceRefs": [
+                  "path:src/settlement"
+                ],
+                "pathHints": [
+                  "src/settlement/balances.js",
+                  "src/settlement/index.js",
+                  "src/settlement/minimal-transfers.js",
+                  "src/settlement/settlement.test.js"
+                ]
+              },
+              "resourceIntents": [
+                {
+                  "resourceId": "path:src/settlement",
+                  "access": "modify",
+                  "ownerPhase": "implementation",
+                  "outputArtifactId": "artifact:settlement-change",
+                  "evidenceRefs": [
+                    "evidence:56db9f0d44b2a75276e852fb"
+                  ],
+                  "epistemic": {
+                    "state": "known",
+                    "confidence": "high",
+                    "evidenceRefs": [
+                      "evidence:56db9f0d44b2a75276e852fb"
+                    ]
+                  }
+                }
+              ],
+              "consumes": [
+                "artifact:domain-change"
+              ],
+              "produces": [
+                "artifact:settlement-change"
+              ],
+              "seamRefs": [
+                "seam:domain-model",
+                "seam:settlement-engine"
+              ],
+              "validation": [
+                {
+                  "obligationId": "validation:settlement-unit",
+                  "criterionId": "criterion:settlement-minimo",
+                  "proofStrategyId": "proof:validation:settlement-unit",
+                  "layer": "unit",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "src/settlement/settlement.test.js"
+                    ],
+                    "references": [
+                      "src/settlement/settlement.test.js"
+                    ]
+                  }
+                }
+              ],
+              "uncertainty": [],
+              "granularity": {
+                "disposition": "leaf",
+                "feasibility": {
+                  "coherentResponsibility": true,
+                  "boundedContext": "yes",
+                  "boundedChangeSurface": "yes",
+                  "independentlyValidatable": "yes",
+                  "unresolvedArchitectureDecision": false
+                },
+                "splitReasons": [],
+                "expectedBenefits": [],
+                "expectedCosts": [],
+                "evidenceRefs": [
+                  "evidence:56db9f0d44b2a75276e852fb"
+                ],
+                "epistemic": {
+                  "state": "known",
+                  "confidence": "high",
+                  "evidenceRefs": [
+                    "evidence:56db9f0d44b2a75276e852fb"
+                  ]
+                }
+              },
+              "expansion": "leaf"
+            },
+            "unit:storage": {
+              "id": "unit:storage",
+              "parentId": "unit:cuentas-claras",
+              "role": "leaf",
+              "title": "Módulo de Almacenamiento y Reportes",
+              "objective": "Persistir eventos y gastos en archivos JSON locales y generar el reporte de texto con emojis listo para WhatsApp.",
+              "boundary": {
+                "kind": "module",
+                "evidenceRefs": [
+                  "evidence:996eaf54f95aee8a26505531"
+                ]
+              },
+              "outcomes": [
+                {
+                  "id": "outcome:almacenamiento",
+                  "statement": "Los eventos se guardan y recuperan desde JSON y el reporte incluye resumen, total, promedio y liquidación."
+                }
+              ],
+              "criteria": [
+                {
+                  "criterionId": "criterion:storage-reporte",
+                  "statement": "saveEvent/loadEvent hacen round-trip exacto en JSON y renderReport incluye total general, promedio por persona y las transferencias finales con emojis.",
+                  "sourceCriterionId": "criterion:root-almacenamiento"
+                }
+              ],
+              "repositorySurface": {
+                "resourceRefs": [
+                  "path:src/storage"
+                ],
+                "pathHints": [
+                  "src/storage/index.js",
+                  "src/storage/json-store.js",
+                  "src/storage/report.js",
+                  "src/storage/report.test.js",
+                  "src/storage/storage.test.js"
+                ]
+              },
+              "resourceIntents": [
+                {
+                  "resourceId": "path:src/storage",
+                  "access": "modify",
+                  "ownerPhase": "implementation",
+                  "outputArtifactId": "artifact:storage-change",
+                  "evidenceRefs": [
+                    "evidence:996eaf54f95aee8a26505531"
+                  ],
+                  "epistemic": {
+                    "state": "known",
+                    "confidence": "high",
+                    "evidenceRefs": [
+                      "evidence:996eaf54f95aee8a26505531"
+                    ]
+                  }
+                }
+              ],
+              "consumes": [
+                "artifact:domain-change",
+                "artifact:settlement-change"
+              ],
+              "produces": [
+                "artifact:storage-change"
+              ],
+              "seamRefs": [
+                "seam:domain-model",
+                "seam:settlement-engine",
+                "seam:storage-report"
+              ],
+              "validation": [
+                {
+                  "obligationId": "validation:storage-unit",
+                  "criterionId": "criterion:storage-reporte",
+                  "proofStrategyId": "proof:validation:storage-unit",
+                  "layer": "unit",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "src/storage/storage.test.js",
+                      "src/storage/report.test.js"
+                    ],
+                    "references": [
+                      "src/storage/storage.test.js",
+                      "src/storage/report.test.js"
+                    ]
+                  }
+                }
+              ],
+              "uncertainty": [],
+              "granularity": {
+                "disposition": "leaf",
+                "feasibility": {
+                  "coherentResponsibility": true,
+                  "boundedContext": "yes",
+                  "boundedChangeSurface": "yes",
+                  "independentlyValidatable": "yes",
+                  "unresolvedArchitectureDecision": false
+                },
+                "splitReasons": [],
+                "expectedBenefits": [],
+                "expectedCosts": [],
+                "evidenceRefs": [
+                  "evidence:996eaf54f95aee8a26505531"
+                ],
+                "epistemic": {
+                  "state": "known",
+                  "confidence": "high",
+                  "evidenceRefs": [
+                    "evidence:996eaf54f95aee8a26505531"
+                  ]
+                }
+              },
+              "expansion": "leaf"
+            },
+            "unit:interface": {
+              "id": "unit:interface",
+              "parentId": "unit:cuentas-claras",
+              "role": "leaf",
+              "title": "Servidor HTTP y CLI",
+              "objective": "Exponer los endpoints REST /api/events, /api/expenses y /api/settlement y ofrecer una CLI interactiva, más el test E2E del flujo completo.",
+              "boundary": {
+                "kind": "vertical_slice",
+                "evidenceRefs": [
+                  "evidence:3a98499c4817d2d876de1d8e"
+                ]
+              },
+              "outcomes": [
+                {
+                  "id": "outcome:interfaces",
+                  "statement": "El servidor HTTP responde los tres endpoints y la CLI crea eventos y muestra el resumen por consola."
+                }
+              ],
+              "criteria": [
+                {
+                  "criterionId": "criterion:interface-http-cli",
+                  "statement": "GET /api/events, POST /api/expenses y GET /api/settlement responden con el JSON esperado y la CLI imprime el reporte del evento creado.",
+                  "sourceCriterionId": "criterion:root-interfaces"
+                }
+              ],
+              "repositorySurface": {
+                "resourceRefs": [
+                  "path:src/interface"
+                ],
+                "pathHints": [
+                  "src/interface/cli.js",
+                  "src/interface/e2e.test.js",
+                  "src/interface/interface.test.js",
+                  "src/interface/routes.js",
+                  "src/interface/server.js"
+                ]
+              },
+              "resourceIntents": [
+                {
+                  "resourceId": "path:src/interface",
+                  "access": "modify",
+                  "ownerPhase": "implementation",
+                  "outputArtifactId": "artifact:interface-change",
+                  "evidenceRefs": [
+                    "evidence:3a98499c4817d2d876de1d8e"
+                  ],
+                  "epistemic": {
+                    "state": "known",
+                    "confidence": "high",
+                    "evidenceRefs": [
+                      "evidence:3a98499c4817d2d876de1d8e"
+                    ]
+                  }
+                }
+              ],
+              "consumes": [
+                "artifact:domain-change",
+                "artifact:settlement-change",
+                "artifact:storage-change"
+              ],
+              "produces": [
+                "artifact:interface-change"
+              ],
+              "seamRefs": [
+                "seam:domain-model",
+                "seam:settlement-engine",
+                "seam:storage-report"
+              ],
+              "validation": [
+                {
+                  "obligationId": "validation:interface-unit",
+                  "criterionId": "criterion:interface-http-cli",
+                  "proofStrategyId": "proof:validation:interface-unit",
+                  "layer": "integration",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "src/interface/interface.test.js"
+                    ],
+                    "references": [
+                      "src/interface/interface.test.js"
+                    ]
+                  }
+                }
+              ],
+              "uncertainty": [],
+              "granularity": {
+                "disposition": "leaf",
+                "feasibility": {
+                  "coherentResponsibility": true,
+                  "boundedContext": "yes",
+                  "boundedChangeSurface": "yes",
+                  "independentlyValidatable": "yes",
+                  "unresolvedArchitectureDecision": false
+                },
+                "splitReasons": [],
+                "expectedBenefits": [],
+                "expectedCosts": [],
+                "evidenceRefs": [
+                  "evidence:3a98499c4817d2d876de1d8e"
+                ],
+                "epistemic": {
+                  "state": "known",
+                  "confidence": "high",
+                  "evidenceRefs": [
+                    "evidence:3a98499c4817d2d876de1d8e"
+                  ]
+                }
+              },
+              "expansion": "leaf"
+            }
+          },
+          "seams": {
+            "seam:domain-model": {
+              "id": "seam:domain-model",
+              "kind": "api",
+              "specification": "src/domain/index.js exporta createEvent(name), addParticipant(event, name), addExpense(event, {payerId, amount, category, participantIds, description}) y CATEGORIES.",
+              "producerUnitId": "unit:domain",
+              "consumerUnitIds": [
+                "unit:cuentas-claras",
+                "unit:interface",
+                "unit:settlement",
+                "unit:storage"
+              ],
+              "semanticFacts": {
+                "exports": "createEvent, addParticipant, addExpense, CATEGORIES",
+                "categories": "Comida, Bebida, Postre, Varios",
+                "expenseFields": "id, payerId, amount, category, participantIds, description",
+                "eventFields": "id, name, participants, expenses, createdAt",
+                "amountUnit": "número en pesos, positivo, dos decimales como máximo"
+              },
+              "compatibility": {
+                "mode": "exact",
+                "rules": [
+                  "La lista de categorías sólo puede crecer, nunca renombrarse.",
+                  "Los nombres de campo de Event y Expense permanecen estables."
+                ]
+              },
+              "artifactId": "artifact:domain-change",
+              "validationObligationIds": [
+                "validation:interface-unit",
+                "validation:settlement-unit",
+                "validation:storage-unit"
+              ]
+            },
+            "seam:settlement-engine": {
+              "id": "seam:settlement-engine",
+              "kind": "api",
+              "specification": "src/settlement/index.js exporta computeBalances(event) y settle(event) devolviendo transferencias mínimas.",
+              "producerUnitId": "unit:settlement",
+              "consumerUnitIds": [
+                "unit:cuentas-claras",
+                "unit:interface",
+                "unit:storage"
+              ],
+              "semanticFacts": {
+                "exports": "computeBalances, settle",
+                "balancesShape": "mapa participantId -> número con signo, positivo si le deben",
+                "transferShape": "fromId, toId, amount",
+                "guarantee": "la cantidad de transferencias es la mínima y nunca supera n-1"
+              },
+              "compatibility": {
+                "mode": "exact",
+                "rules": [
+                  "La forma de la transferencia (fromId, toId, amount) permanece estable.",
+                  "settle recibe un Event del seam de dominio sin transformaciones previas."
+                ]
+              },
+              "artifactId": "artifact:settlement-change",
+              "validationObligationIds": [
+                "validation:interface-unit",
+                "validation:storage-unit"
+              ]
+            },
+            "seam:storage-report": {
+              "id": "seam:storage-report",
+              "kind": "api",
+              "specification": "src/storage/index.js exporta saveEvent(event, dir), loadEvent(id, dir), listEvents(dir) y renderReport(event, settlement).",
+              "producerUnitId": "unit:storage",
+              "consumerUnitIds": [
+                "unit:cuentas-claras",
+                "unit:interface"
+              ],
+              "semanticFacts": {
+                "exports": "saveEvent, loadEvent, listEvents, renderReport",
+                "storageFormat": "un archivo JSON por evento bajo el directorio de datos configurable",
+                "reportSections": "resumen de gastos, total general, gasto promedio por persona, liquidación final",
+                "reportOutput": "string de texto plano con emojis apto para WhatsApp"
+              },
+              "compatibility": {
+                "mode": "backward_compatible",
+                "rules": [
+                  "El JSON persistido conserva los campos del seam de dominio.",
+                  "renderReport siempre devuelve string, nunca imprime por consola."
+                ]
+              },
+              "artifactId": "artifact:storage-change",
+              "validationObligationIds": [
+                "validation:interface-unit"
+              ]
+            }
+          },
+          "artifacts": {
+            "artifact:domain-change": {
+              "id": "artifact:domain-change",
+              "producerUnitId": "unit:domain",
+              "consumerUnitIds": [
+                "unit:cuentas-claras",
+                "unit:interface",
+                "unit:settlement",
+                "unit:storage"
+              ],
+              "artifactType": "source_change",
+              "materialization": "patch",
+              "expectedPaths": [
+                "src/domain/categories.js",
+                "src/domain/domain.test.js",
+                "src/domain/event.js",
+                "src/domain/expense.js",
+                "src/domain/index.js"
+              ]
+            },
+            "artifact:settlement-change": {
+              "id": "artifact:settlement-change",
+              "producerUnitId": "unit:settlement",
+              "consumerUnitIds": [
+                "unit:cuentas-claras",
+                "unit:interface",
+                "unit:storage"
+              ],
+              "artifactType": "source_change",
+              "materialization": "patch",
+              "expectedPaths": [
+                "src/settlement/balances.js",
+                "src/settlement/index.js",
+                "src/settlement/minimal-transfers.js",
+                "src/settlement/settlement.test.js"
+              ]
+            },
+            "artifact:storage-change": {
+              "id": "artifact:storage-change",
+              "producerUnitId": "unit:storage",
+              "consumerUnitIds": [
+                "unit:cuentas-claras",
+                "unit:interface"
+              ],
+              "artifactType": "source_change",
+              "materialization": "patch",
+              "expectedPaths": [
+                "src/storage/index.js",
+                "src/storage/json-store.js",
+                "src/storage/report.js",
+                "src/storage/report.test.js",
+                "src/storage/storage.test.js"
+              ]
+            },
+            "artifact:interface-change": {
+              "id": "artifact:interface-change",
+              "producerUnitId": "unit:interface",
+              "consumerUnitIds": [
+                "unit:cuentas-claras"
+              ],
+              "artifactType": "source_change",
+              "materialization": "patch",
+              "expectedPaths": [
+                "src/interface/cli.js",
+                "src/interface/e2e.test.js",
+                "src/interface/interface.test.js",
+                "src/interface/routes.js",
+                "src/interface/server.js"
+              ]
+            }
+          },
+          "decisions": [],
+          "evidence": [
+            {
+              "id": "evidence:3a98499c4817d2d876de1d8e",
+              "snapshotId": "sha256:c2fe34bfdb080b1090c426187e96c72872b222e6a6dc514c6815f12d63e5002c",
+              "kind": "file",
+              "locator": ".gitignore",
+              "digest": "sha256:9a10f95bf4d209cd36c93ec26834f7b45a31afe28094eb94f1c0ea5bcba68b8a",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:56db9f0d44b2a75276e852fb",
+              "snapshotId": "sha256:c2fe34bfdb080b1090c426187e96c72872b222e6a6dc514c6815f12d63e5002c",
+              "kind": "file",
+              "locator": "README.md",
+              "digest": "sha256:a22707703c45fce89c324d5b4fe10c2e447f28529e172c4880b2a90bb52df6b7",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:996eaf54f95aee8a26505531",
+              "snapshotId": "sha256:c2fe34bfdb080b1090c426187e96c72872b222e6a6dc514c6815f12d63e5002c",
+              "kind": "diagnostic",
+              "locator": "no_supported_source_files",
+              "digest": "sha256:1fd0bcf877548c79008551357e9c38c29f607a95d2eb9d7968a33b9594a54182",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            }
+          ],
+          "status": "ready",
+          "digest": "sha256:f39f731f2e007faece51cd5ea41343e7118c6fa9b4909ad0926636ff8371d0d4"
+        },
+        "trace": {
+          "budget": {
+            "modelCalls": 3,
+            "repositoryQueries": 3,
+            "queryBytes": 65536,
+            "revisions": 3,
+            "repairs": 2,
+            "expansions": 0
+          },
+          "consumed": {
+            "modelCalls": 1,
+            "repositoryQueries": 3,
+            "queryBytes": 1411,
+            "revisions": 1,
+            "repairs": 0,
+            "expansions": 0
+          },
+          "revisions": [
+            {
+              "index": 1,
+              "cause": "initial",
+              "budget": {
+                "modelCalls": 3,
+                "repositoryQueries": 3,
+                "queryBytes": 65536,
+                "revisions": 3,
+                "repairs": 2,
+                "expansions": 0
+              },
+              "consumed": {
+                "modelCalls": 1,
+                "repositoryQueries": 3,
+                "queryBytes": 1411,
+                "revisions": 1,
+                "repairs": 0,
+                "expansions": 0
+              },
+              "queryReceipts": [
+                "sha256:8a07d2f7cd526bb62875bb869a716ba90a360dbd428ba6b8da213c47f4006aaf",
+                "sha256:aa4208e907ec8d04f670100a4f995d6470847442abf80dd56d9af08439f321af",
+                "sha256:aa45528dfb8d8ffa723c41b11b8bd0ae737d0951715ab53fe1da71cc93164e76"
+              ],
+              "evidenceRefs": [
+                "evidence:3a98499c4817d2d876de1d8e",
+                "evidence:56db9f0d44b2a75276e852fb",
+                "evidence:996eaf54f95aee8a26505531"
+              ],
+              "changedDecisionIds": [],
+              "changedFindingCodes": [
+                "repository_model_coverage_incomplete",
+                "resource_catalog_coverage_incomplete"
+              ],
+              "proposalDigest": "sha256:f39f731f2e007faece51cd5ea41343e7118c6fa9b4909ad0926636ff8371d0d4",
+              "causalStateDigest": "sha256:7b308130fca2ca2418ac429f2e75172a5ac4c0fa30b176252981237c7af70883",
+              "digest": "sha256:93de5d8d1a09a5db5314894e0782e46e0ba25f04258a69dd968251e878132063"
+            }
+          ],
+          "advisoryFindings": [
+            {
+              "code": "repository_model_coverage_incomplete",
+              "severity": "warning",
+              "authority": "repository",
+              "message": "Repository model coverage is partial.",
+              "evidenceRefs": [
+                "evidence:3a98499c4817d2d876de1d8e",
+                "evidence:56db9f0d44b2a75276e852fb",
+                "evidence:996eaf54f95aee8a26505531"
+              ],
+              "resolution": "none"
+            },
+            {
+              "code": "resource_catalog_coverage_incomplete",
+              "severity": "warning",
+              "authority": "repository",
+              "message": "Resource catalog coverage is partial.",
+              "evidenceRefs": [
+                "evidence:3a98499c4817d2d876de1d8e",
+                "evidence:56db9f0d44b2a75276e852fb",
+                "evidence:996eaf54f95aee8a26505531"
+              ],
+              "resolution": "none"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "graph:graph-plan:goal:run:a36e115ad61dc33357661d553517e18541-b1cf11983b:r1:compiled",
+      "occurredAt": "2026-08-17T06:25:07.330Z",
+      "type": "graph.compiled",
+      "payload": {
+        "graphId": "graph-plan:goal:run:a36e115ad61dc33357661d553517e18541-b1cf11983b",
+        "revision": 1,
+        "graph": {
+          "graphId": "graph-plan:goal:run:a36e115ad61dc33357661d553517e18541-b1cf11983b",
+          "revision": 1,
+          "semanticPlan": {
+            "id": "plan:goal:run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba",
+            "revision": 1,
+            "digest": "sha256:f39f731f2e007faece51cd5ea41343e7118c6fa9b4909ad0926636ff8371d0d4"
+          },
+          "repositoryView": {
+            "digest": "sha256:ab735c42524e87f419bdaf53e5dfb68697512834bdfa9e53ac35778b3257951f",
+            "treeSha": "aa4b1fc231cbff6853853ab8b07c786d16c51948",
+            "resourceCatalogDigest": "sha256:dcb863fd1f7bea75fd767419ea7be8bef59dafb33a1fbed07ff351678d7e8e29"
+          },
+          "rootId": "unit:cuentas-claras",
+          "nodes": {
+            "unit:cuentas-claras": {
+              "id": "unit:cuentas-claras",
+              "parentId": null,
+              "kind": "root",
+              "title": "Cuentas Claras - aplicación modular Node.js",
+              "goal": "Integrar dominio, liquidación, almacenamiento/reportes e interfaces HTTP/CLI en una aplicación coherente y probar el flujo completo end-to-end con node --test.",
+              "contractRef": {
+                "id": "task:unit:cuentas-claras",
+                "revision": 1,
+                "digest": "sha256:ec5bdb5202cef9b4ce3f449e430e57e35abb85ba92d2ac92631f65fcdd67b73d"
+              }
+            },
+            "unit:domain": {
+              "id": "unit:domain",
+              "parentId": "unit:cuentas-claras",
+              "kind": "leaf",
+              "title": "Módulo de Dominio y Participantes",
+              "goal": "Modelar eventos, participantes y gastos con validación de pagador, monto, categoría y participantes del gasto.",
+              "contractRef": {
+                "id": "task:unit:domain",
+                "revision": 1,
+                "digest": "sha256:552ffaa6c0f5f2d9f9e30c43867384012e1b2b12a52b5aaf2a25c3d3053e00f0"
+              }
+            },
+            "unit:settlement": {
+              "id": "unit:settlement",
+              "parentId": "unit:cuentas-claras",
+              "kind": "leaf",
+              "title": "Módulo de Cálculo y Balances",
+              "goal": "Calcular el balance por persona y generar la cantidad mínima de transferencias para saldar las deudas.",
+              "contractRef": {
+                "id": "task:unit:settlement",
+                "revision": 1,
+                "digest": "sha256:715ce948f283d8e799b5490f61382b8604ecd4679a52582487bdc6bb1defd71f"
+              }
+            },
+            "unit:storage": {
+              "id": "unit:storage",
+              "parentId": "unit:cuentas-claras",
+              "kind": "leaf",
+              "title": "Módulo de Almacenamiento y Reportes",
+              "goal": "Persistir eventos y gastos en archivos JSON locales y generar el reporte de texto con emojis listo para WhatsApp.",
+              "contractRef": {
+                "id": "task:unit:storage",
+                "revision": 1,
+                "digest": "sha256:280fad430a852e9967cb7a56f50d3d9129ca7f5b56d36a515278a86c7620cba7"
+              }
+            },
+            "unit:interface": {
+              "id": "unit:interface",
+              "parentId": "unit:cuentas-claras",
+              "kind": "leaf",
+              "title": "Servidor HTTP y CLI",
+              "goal": "Exponer los endpoints REST /api/events, /api/expenses y /api/settlement y ofrecer una CLI interactiva, más el test E2E del flujo completo.",
+              "contractRef": {
+                "id": "task:unit:interface",
+                "revision": 1,
+                "digest": "sha256:2c943d5b8688d04fe946bd667340244c725d5cb4793d265b02b641df3b17eddd"
+              }
+            }
+          },
+          "artifactRequirements": [
+            {
+              "id": "artifact-requirement-artifact:domain-change:unit:cuentas-claras-7e8de1db5d",
+              "producerNodeId": "unit:domain",
+              "consumerNodeId": "unit:cuentas-claras",
+              "artifactContract": {
+                "id": "artifact:domain-change",
+                "revision": 1,
+                "digest": "sha256:cc0c2a11ed919e4a0d1ef5abad9bb826dbcf5eb6f2565836e1f4b4e4a9ab0bb6"
+              },
+              "consumerInputName": "artifact:domain-change",
+              "acceptedManifestKinds": [
+                "candidate_tree",
+                "change_set"
+              ]
+            },
+            {
+              "id": "artifact-requirement-artifact:domain-change:unit:interface-a87e302b31",
+              "producerNodeId": "unit:domain",
+              "consumerNodeId": "unit:interface",
+              "artifactContract": {
+                "id": "artifact:domain-change",
+                "revision": 1,
+                "digest": "sha256:cc0c2a11ed919e4a0d1ef5abad9bb826dbcf5eb6f2565836e1f4b4e4a9ab0bb6"
+              },
+              "consumerInputName": "artifact:domain-change",
+              "acceptedManifestKinds": [
+                "candidate_tree",
+                "change_set"
+              ]
+            },
+            {
+              "id": "artifact-requirement-artifact:domain-change:unit:settlement-60e9b60a06",
+              "producerNodeId": "unit:domain",
+              "consumerNodeId": "unit:settlement",
+              "artifactContract": {
+                "id": "artifact:domain-change",
+                "revision": 1,
+                "digest": "sha256:cc0c2a11ed919e4a0d1ef5abad9bb826dbcf5eb6f2565836e1f4b4e4a9ab0bb6"
+              },
+              "consumerInputName": "artifact:domain-change",
+              "acceptedManifestKinds": [
+                "candidate_tree",
+                "change_set"
+              ]
+            },
+            {
+              "id": "artifact-requirement-artifact:domain-change:unit:storage-3fb71abd89",
+              "producerNodeId": "unit:domain",
+              "consumerNodeId": "unit:storage",
+              "artifactContract": {
+                "id": "artifact:domain-change",
+                "revision": 1,
+                "digest": "sha256:cc0c2a11ed919e4a0d1ef5abad9bb826dbcf5eb6f2565836e1f4b4e4a9ab0bb6"
+              },
+              "consumerInputName": "artifact:domain-change",
+              "acceptedManifestKinds": [
+                "candidate_tree",
+                "change_set"
+              ]
+            },
+            {
+              "id": "artifact-requirement-artifact:interface-change:unit:cuentas-claras-253fe556b6",
+              "producerNodeId": "unit:interface",
+              "consumerNodeId": "unit:cuentas-claras",
+              "artifactContract": {
+                "id": "artifact:interface-change",
+                "revision": 1,
+                "digest": "sha256:37a4879e6fffe2a17504be12482ff2220ac0ba73e0cf038c7973a2c5f02ef61b"
+              },
+              "consumerInputName": "artifact:interface-change",
+              "acceptedManifestKinds": [
+                "candidate_tree",
+                "change_set"
+              ]
+            },
+            {
+              "id": "artifact-requirement-artifact:settlement-change:unit:cuentas-claras-cb328abdbd",
+              "producerNodeId": "unit:settlement",
+              "consumerNodeId": "unit:cuentas-claras",
+              "artifactContract": {
+                "id": "artifact:settlement-change",
+                "revision": 1,
+                "digest": "sha256:f1333032e41f5acc12c4be8684b3fa935535ec3aabff9aa90f252c65f38abeb7"
+              },
+              "consumerInputName": "artifact:settlement-change",
+              "acceptedManifestKinds": [
+                "candidate_tree",
+                "change_set"
+              ]
+            },
+            {
+              "id": "artifact-requirement-artifact:settlement-change:unit:interface-a15ff986be",
+              "producerNodeId": "unit:settlement",
+              "consumerNodeId": "unit:interface",
+              "artifactContract": {
+                "id": "artifact:settlement-change",
+                "revision": 1,
+                "digest": "sha256:f1333032e41f5acc12c4be8684b3fa935535ec3aabff9aa90f252c65f38abeb7"
+              },
+              "consumerInputName": "artifact:settlement-change",
+              "acceptedManifestKinds": [
+                "candidate_tree",
+                "change_set"
+              ]
+            },
+            {
+              "id": "artifact-requirement-artifact:settlement-change:unit:storage-62d41af010",
+              "producerNodeId": "unit:settlement",
+              "consumerNodeId": "unit:storage",
+              "artifactContract": {
+                "id": "artifact:settlement-change",
+                "revision": 1,
+                "digest": "sha256:f1333032e41f5acc12c4be8684b3fa935535ec3aabff9aa90f252c65f38abeb7"
+              },
+              "consumerInputName": "artifact:settlement-change",
+              "acceptedManifestKinds": [
+                "candidate_tree",
+                "change_set"
+              ]
+            },
+            {
+              "id": "artifact-requirement-artifact:storage-change:unit:cuentas-claras-b41b9b051a",
+              "producerNodeId": "unit:storage",
+              "consumerNodeId": "unit:cuentas-claras",
+              "artifactContract": {
+                "id": "artifact:storage-change",
+                "revision": 1,
+                "digest": "sha256:576442d08b00fd1af1f2b589a4ab60678b7a69b4cfcb312698e5b38fb28d875b"
+              },
+              "consumerInputName": "artifact:storage-change",
+              "acceptedManifestKinds": [
+                "candidate_tree",
+                "change_set"
+              ]
+            },
+            {
+              "id": "artifact-requirement-artifact:storage-change:unit:interface-b745884508",
+              "producerNodeId": "unit:storage",
+              "consumerNodeId": "unit:interface",
+              "artifactContract": {
+                "id": "artifact:storage-change",
+                "revision": 1,
+                "digest": "sha256:576442d08b00fd1af1f2b589a4ab60678b7a69b4cfcb312698e5b38fb28d875b"
+              },
+              "consumerInputName": "artifact:storage-change",
+              "acceptedManifestKinds": [
+                "candidate_tree",
+                "change_set"
+              ]
+            }
+          ],
+          "seamBindings": [
+            {
+              "id": "seam-binding-seam:domain-model:unit:cuentas-claras-e2246a10b5",
+              "producerNodeId": "unit:domain",
+              "consumerNodeId": "unit:cuentas-claras",
+              "seamContract": {
+                "id": "seam:domain-model",
+                "revision": 1,
+                "digest": "sha256:b3844572934af042371945504cf83d82ff06ba6ed6937b55e0a2a7b93efd4d8a"
+              },
+              "artifactRequirementId": "artifact-requirement-artifact:domain-change:unit:cuentas-claras-7e8de1db5d",
+              "validationObligationIds": [
+                "validation:interface-unit",
+                "validation:settlement-unit",
+                "validation:storage-unit"
+              ]
+            },
+            {
+              "id": "seam-binding-seam:domain-model:unit:interface-2f71a954e5",
+              "producerNodeId": "unit:domain",
+              "consumerNodeId": "unit:interface",
+              "seamContract": {
+                "id": "seam:domain-model",
+                "revision": 1,
+                "digest": "sha256:b3844572934af042371945504cf83d82ff06ba6ed6937b55e0a2a7b93efd4d8a"
+              },
+              "artifactRequirementId": "artifact-requirement-artifact:domain-change:unit:interface-a87e302b31",
+              "validationObligationIds": [
+                "validation:interface-unit",
+                "validation:settlement-unit",
+                "validation:storage-unit"
+              ]
+            },
+            {
+              "id": "seam-binding-seam:domain-model:unit:settlement-e1cfcce554",
+              "producerNodeId": "unit:domain",
+              "consumerNodeId": "unit:settlement",
+              "seamContract": {
+                "id": "seam:domain-model",
+                "revision": 1,
+                "digest": "sha256:b3844572934af042371945504cf83d82ff06ba6ed6937b55e0a2a7b93efd4d8a"
+              },
+              "artifactRequirementId": "artifact-requirement-artifact:domain-change:unit:settlement-60e9b60a06",
+              "validationObligationIds": [
+                "validation:interface-unit",
+                "validation:settlement-unit",
+                "validation:storage-unit"
+              ]
+            },
+            {
+              "id": "seam-binding-seam:domain-model:unit:storage-d638e51a8e",
+              "producerNodeId": "unit:domain",
+              "consumerNodeId": "unit:storage",
+              "seamContract": {
+                "id": "seam:domain-model",
+                "revision": 1,
+                "digest": "sha256:b3844572934af042371945504cf83d82ff06ba6ed6937b55e0a2a7b93efd4d8a"
+              },
+              "artifactRequirementId": "artifact-requirement-artifact:domain-change:unit:storage-3fb71abd89",
+              "validationObligationIds": [
+                "validation:interface-unit",
+                "validation:settlement-unit",
+                "validation:storage-unit"
+              ]
+            },
+            {
+              "id": "seam-binding-seam:settlement-engine:unit:cuentas-claras-599cc457c6",
+              "producerNodeId": "unit:settlement",
+              "consumerNodeId": "unit:cuentas-claras",
+              "seamContract": {
+                "id": "seam:settlement-engine",
+                "revision": 1,
+                "digest": "sha256:a05fe6bce52ddc76046db17d6513c8cfec783b02fc621366bcfbf7ce615f32eb"
+              },
+              "artifactRequirementId": "artifact-requirement-artifact:settlement-change:unit:cuentas-claras-cb328abdbd",
+              "validationObligationIds": [
+                "validation:interface-unit",
+                "validation:storage-unit"
+              ]
+            },
+            {
+              "id": "seam-binding-seam:settlement-engine:unit:interface-61cf457bf1",
+              "producerNodeId": "unit:settlement",
+              "consumerNodeId": "unit:interface",
+              "seamContract": {
+                "id": "seam:settlement-engine",
+                "revision": 1,
+                "digest": "sha256:a05fe6bce52ddc76046db17d6513c8cfec783b02fc621366bcfbf7ce615f32eb"
+              },
+              "artifactRequirementId": "artifact-requirement-artifact:settlement-change:unit:interface-a15ff986be",
+              "validationObligationIds": [
+                "validation:interface-unit",
+                "validation:storage-unit"
+              ]
+            },
+            {
+              "id": "seam-binding-seam:settlement-engine:unit:storage-b155adcdb6",
+              "producerNodeId": "unit:settlement",
+              "consumerNodeId": "unit:storage",
+              "seamContract": {
+                "id": "seam:settlement-engine",
+                "revision": 1,
+                "digest": "sha256:a05fe6bce52ddc76046db17d6513c8cfec783b02fc621366bcfbf7ce615f32eb"
+              },
+              "artifactRequirementId": "artifact-requirement-artifact:settlement-change:unit:storage-62d41af010",
+              "validationObligationIds": [
+                "validation:interface-unit",
+                "validation:storage-unit"
+              ]
+            },
+            {
+              "id": "seam-binding-seam:storage-report:unit:cuentas-claras-399dd28a4f",
+              "producerNodeId": "unit:storage",
+              "consumerNodeId": "unit:cuentas-claras",
+              "seamContract": {
+                "id": "seam:storage-report",
+                "revision": 1,
+                "digest": "sha256:01c8f7df1e29745d51eb69d2eaffc19f5f74dfbe133005a88202c6fb2bcc3991"
+              },
+              "artifactRequirementId": "artifact-requirement-artifact:storage-change:unit:cuentas-claras-b41b9b051a",
+              "validationObligationIds": [
+                "validation:interface-unit"
+              ]
+            },
+            {
+              "id": "seam-binding-seam:storage-report:unit:interface-8cd3524a8b",
+              "producerNodeId": "unit:storage",
+              "consumerNodeId": "unit:interface",
+              "seamContract": {
+                "id": "seam:storage-report",
+                "revision": 1,
+                "digest": "sha256:01c8f7df1e29745d51eb69d2eaffc19f5f74dfbe133005a88202c6fb2bcc3991"
+              },
+              "artifactRequirementId": "artifact-requirement-artifact:storage-change:unit:interface-b745884508",
+              "validationObligationIds": [
+                "validation:interface-unit"
+              ]
+            }
+          ],
+          "resourceClaims": [
+            {
+              "id": "resource-claim-unit:domain:path:src-domain:modify-0a53223ef3",
+              "nodeId": "unit:domain",
+              "resourceId": "path:src/domain",
+              "source": "planner",
+              "evidenceRefs": [
+                "evidence:3a98499c4817d2d876de1d8e"
+              ],
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "evidence:3a98499c4817d2d876de1d8e"
+                ]
+              },
+              "access": "modify",
+              "ownerPhase": "implementation",
+              "inputVersion": {
+                "kind": "repository_view",
+                "digest": "sha256:ab735c42524e87f419bdaf53e5dfb68697512834bdfa9e53ac35778b3257951f"
+              },
+              "outputArtifact": {
+                "id": "artifact:domain-change",
+                "revision": 1,
+                "digest": "sha256:cc0c2a11ed919e4a0d1ef5abad9bb826dbcf5eb6f2565836e1f4b4e4a9ab0bb6"
+              }
+            },
+            {
+              "id": "resource-claim-unit:interface:path:src-interface:modify-976ac699be",
+              "nodeId": "unit:interface",
+              "resourceId": "path:src/interface",
+              "source": "planner",
+              "evidenceRefs": [
+                "evidence:3a98499c4817d2d876de1d8e"
+              ],
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "evidence:3a98499c4817d2d876de1d8e"
+                ]
+              },
+              "access": "modify",
+              "ownerPhase": "implementation",
+              "inputVersion": {
+                "kind": "repository_view",
+                "digest": "sha256:ab735c42524e87f419bdaf53e5dfb68697512834bdfa9e53ac35778b3257951f"
+              },
+              "outputArtifact": {
+                "id": "artifact:interface-change",
+                "revision": 1,
+                "digest": "sha256:37a4879e6fffe2a17504be12482ff2220ac0ba73e0cf038c7973a2c5f02ef61b"
+              }
+            },
+            {
+              "id": "resource-claim-unit:settlement:path:src-settlement:modify-44d1954ea1",
+              "nodeId": "unit:settlement",
+              "resourceId": "path:src/settlement",
+              "source": "planner",
+              "evidenceRefs": [
+                "evidence:56db9f0d44b2a75276e852fb"
+              ],
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "evidence:56db9f0d44b2a75276e852fb"
+                ]
+              },
+              "access": "modify",
+              "ownerPhase": "implementation",
+              "inputVersion": {
+                "kind": "repository_view",
+                "digest": "sha256:ab735c42524e87f419bdaf53e5dfb68697512834bdfa9e53ac35778b3257951f"
+              },
+              "outputArtifact": {
+                "id": "artifact:settlement-change",
+                "revision": 1,
+                "digest": "sha256:f1333032e41f5acc12c4be8684b3fa935535ec3aabff9aa90f252c65f38abeb7"
+              }
+            },
+            {
+              "id": "resource-claim-unit:storage:path:src-storage:modify-6f1da687d2",
+              "nodeId": "unit:storage",
+              "resourceId": "path:src/storage",
+              "source": "planner",
+              "evidenceRefs": [
+                "evidence:996eaf54f95aee8a26505531"
+              ],
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "evidence:996eaf54f95aee8a26505531"
+                ]
+              },
+              "access": "modify",
+              "ownerPhase": "implementation",
+              "inputVersion": {
+                "kind": "repository_view",
+                "digest": "sha256:ab735c42524e87f419bdaf53e5dfb68697512834bdfa9e53ac35778b3257951f"
+              },
+              "outputArtifact": {
+                "id": "artifact:storage-change",
+                "revision": 1,
+                "digest": "sha256:576442d08b00fd1af1f2b589a4ab60678b7a69b4cfcb312698e5b38fb28d875b"
+              }
+            }
+          ],
+          "runtimeLeaseClaims": [],
+          "contractRefs": [
+            {
+              "id": "artifact:domain-change",
+              "revision": 1,
+              "digest": "sha256:cc0c2a11ed919e4a0d1ef5abad9bb826dbcf5eb6f2565836e1f4b4e4a9ab0bb6"
+            },
+            {
+              "id": "artifact:interface-change",
+              "revision": 1,
+              "digest": "sha256:37a4879e6fffe2a17504be12482ff2220ac0ba73e0cf038c7973a2c5f02ef61b"
+            },
+            {
+              "id": "artifact:settlement-change",
+              "revision": 1,
+              "digest": "sha256:f1333032e41f5acc12c4be8684b3fa935535ec3aabff9aa90f252c65f38abeb7"
+            },
+            {
+              "id": "artifact:storage-change",
+              "revision": 1,
+              "digest": "sha256:576442d08b00fd1af1f2b589a4ab60678b7a69b4cfcb312698e5b38fb28d875b"
+            },
+            {
+              "id": "integration:unit:cuentas-claras",
+              "revision": 1,
+              "digest": "sha256:1a8928e2bd349a6a34c68f603365c5862eefdf1f9b89f347d5c861b958894e30"
+            },
+            {
+              "id": "proof:validation:domain-unit",
+              "revision": 1,
+              "digest": "sha256:48362d86f90179d87ac4c3a950103968e64a704251e82eff0761e2ce4df992e5"
+            },
+            {
+              "id": "proof:validation:interface-unit",
+              "revision": 1,
+              "digest": "sha256:a8f0d1e6dc2fb012e0254c7cfae68a24f2649cb1cb5777fee856551a3c2e558c"
+            },
+            {
+              "id": "proof:validation:root-e2e",
+              "revision": 1,
+              "digest": "sha256:dade4de31deb04dc5fc7cbb86092c2a9bba4de9a5bfa7905610bd36ea221db01"
+            },
+            {
+              "id": "proof:validation:settlement-unit",
+              "revision": 1,
+              "digest": "sha256:81873c22854c541ab65acd5918619e562d8c5ad93d9d95ee72bf2942b4c96af0"
+            },
+            {
+              "id": "proof:validation:storage-unit",
+              "revision": 1,
+              "digest": "sha256:53c16f9e04550d06f105078063a9ddaa361fe10892db4af3999138150793b67d"
+            },
+            {
+              "id": "scope:unit:cuentas-claras",
+              "revision": 1,
+              "digest": "sha256:3007b64d5b07351b0cd7a3579725369598dab202ca8a79dddfaf18328cc484c3"
+            },
+            {
+              "id": "scope:unit:domain",
+              "revision": 1,
+              "digest": "sha256:66614e0c81317f7d95d4273c33d89503ffaf7a65df0c9beb47a2eb0ad2e145a9"
+            },
+            {
+              "id": "scope:unit:interface",
+              "revision": 1,
+              "digest": "sha256:19df794d964586ca2992953801f2d85f8871f029702b9ba407a042f734ca33c5"
+            },
+            {
+              "id": "scope:unit:settlement",
+              "revision": 1,
+              "digest": "sha256:5285b69b3204d7a523ec1ff20c85ab2a9ebb54e0e221bd524052c63a4488e991"
+            },
+            {
+              "id": "scope:unit:storage",
+              "revision": 1,
+              "digest": "sha256:cd8a11f12b703f37192a53c85234d627582dc03ad92ed899fbe6bae325e53e6d"
+            },
+            {
+              "id": "seam:domain-model",
+              "revision": 1,
+              "digest": "sha256:b3844572934af042371945504cf83d82ff06ba6ed6937b55e0a2a7b93efd4d8a"
+            },
+            {
+              "id": "seam:settlement-engine",
+              "revision": 1,
+              "digest": "sha256:a05fe6bce52ddc76046db17d6513c8cfec783b02fc621366bcfbf7ce615f32eb"
+            },
+            {
+              "id": "seam:storage-report",
+              "revision": 1,
+              "digest": "sha256:01c8f7df1e29745d51eb69d2eaffc19f5f74dfbe133005a88202c6fb2bcc3991"
+            },
+            {
+              "id": "task:unit:cuentas-claras",
+              "revision": 1,
+              "digest": "sha256:ec5bdb5202cef9b4ce3f449e430e57e35abb85ba92d2ac92631f65fcdd67b73d"
+            },
+            {
+              "id": "task:unit:domain",
+              "revision": 1,
+              "digest": "sha256:552ffaa6c0f5f2d9f9e30c43867384012e1b2b12a52b5aaf2a25c3d3053e00f0"
+            },
+            {
+              "id": "task:unit:interface",
+              "revision": 1,
+              "digest": "sha256:2c943d5b8688d04fe946bd667340244c725d5cb4793d265b02b641df3b17eddd"
+            },
+            {
+              "id": "task:unit:settlement",
+              "revision": 1,
+              "digest": "sha256:715ce948f283d8e799b5490f61382b8604ecd4679a52582487bdc6bb1defd71f"
+            },
+            {
+              "id": "task:unit:storage",
+              "revision": 1,
+              "digest": "sha256:280fad430a852e9967cb7a56f50d3d9129ca7f5b56d36a515278a86c7620cba7"
+            },
+            {
+              "id": "validation-contract:unit:cuentas-claras",
+              "revision": 1,
+              "digest": "sha256:7ecff1309b94b462a5b8e2dac8cab0b7c25e8b360ff5dd075e79c6f84228aed8"
+            },
+            {
+              "id": "validation-contract:unit:domain",
+              "revision": 1,
+              "digest": "sha256:da5e992e71c5c55a3f1295e77c2e965ef456d872798431302e3dd254cf80afc2"
+            },
+            {
+              "id": "validation-contract:unit:interface",
+              "revision": 1,
+              "digest": "sha256:5ee81f84b09a502c7c3da437ca4246e0b3433f1b286265a47744968da4046e0e"
+            },
+            {
+              "id": "validation-contract:unit:settlement",
+              "revision": 1,
+              "digest": "sha256:6ad27ab03c238f4f7c716ca8fbe38cc1d3c6624c236b43dfde01270861021e9a"
+            },
+            {
+              "id": "validation-contract:unit:storage",
+              "revision": 1,
+              "digest": "sha256:3fe1455d6ab585a10b2c8a2b4c6a81f6641342ce99c90dee6f1fd805b6e7904b"
+            },
+            {
+              "id": "validation:domain-unit",
+              "revision": 1,
+              "digest": "sha256:855cf1a76cbe70817c0c00efdf193f849a65e5394a6e76b1c538ad649f400b75"
+            },
+            {
+              "id": "validation:interface-unit",
+              "revision": 1,
+              "digest": "sha256:d454a2b9954e673a18e4c47f58d07e412f4333d227f7b287f7fcc599c4f73a24"
+            },
+            {
+              "id": "validation:root-e2e",
+              "revision": 1,
+              "digest": "sha256:9db26fec5f1aa877f0b3791e4b937f695364cd21e49adf6c18e78439747dbd2e"
+            },
+            {
+              "id": "validation:settlement-unit",
+              "revision": 1,
+              "digest": "sha256:80c0abc0f4efd32d33f5ac2a7f49f37586003f2592fae168666b26c2d3a49b92"
+            },
+            {
+              "id": "validation:storage-unit",
+              "revision": 1,
+              "digest": "sha256:77734972263303c178a993035a98ec6a8498601e2f39283ecc9b98e54f80b5ea"
+            }
+          ],
+          "digest": "sha256:d3d01a047f00b101ee01813e80f0a2c24e8fb52ed96e95250afbca302983f3ca"
+        },
+        "contracts": [
+          {
+            "schemaVersion": 2,
+            "task": {
+              "schemaVersion": 2,
+              "id": "task:unit:cuentas-claras",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:cuentas-claras",
+              "goal": "Integrar dominio, liquidación, almacenamiento/reportes e interfaces HTTP/CLI en una aplicación coherente y probar el flujo completo end-to-end con node --test.",
+              "acceptanceCriteria": [
+                {
+                  "id": "criterion:root-integracion",
+                  "kind": "e2e",
+                  "description": "El flujo completo (evento -> participantes -> gastos -> persistencia JSON -> liquidación mínima -> reporte WhatsApp -> HTTP y CLI) funciona de extremo a extremo bajo node --test.",
+                  "required": true
+                },
+                {
+                  "id": "criterion:root-dominio",
+                  "kind": "integration",
+                  "description": "El modelo de dominio soporta eventos, participantes y gastos con pagador, monto, categoría y participantes del gasto.",
+                  "required": false
+                },
+                {
+                  "id": "criterion:root-liquidacion",
+                  "kind": "integration",
+                  "description": "El motor de balances calcula el saldo de cada persona y produce el número mínimo de transferencias.",
+                  "required": false
+                },
+                {
+                  "id": "criterion:root-almacenamiento",
+                  "kind": "integration",
+                  "description": "Los eventos y gastos se persisten en archivos JSON locales y se genera el reporte de texto con emojis.",
+                  "required": false
+                },
+                {
+                  "id": "criterion:root-interfaces",
+                  "kind": "integration",
+                  "description": "El servidor HTTP expone /api/events, /api/expenses y /api/settlement, y la CLI interactiva crea eventos y muestra el resumen.",
+                  "required": false
+                }
+              ],
+              "scope": {
+                "id": "scope:unit:cuentas-claras",
+                "revision": "1"
+              },
+              "consumes": [
+                {
+                  "id": "artifact:domain-change",
+                  "revision": "1"
+                },
+                {
+                  "id": "artifact:interface-change",
+                  "revision": "1"
+                },
+                {
+                  "id": "artifact:settlement-change",
+                  "revision": "1"
+                },
+                {
+                  "id": "artifact:storage-change",
+                  "revision": "1"
+                }
+              ],
+              "produces": [],
+              "seams": [
+                {
+                  "id": "seam:domain-model",
+                  "revision": "1"
+                },
+                {
+                  "id": "seam:settlement-engine",
+                  "revision": "1"
+                },
+                {
+                  "id": "seam:storage-report",
+                  "revision": "1"
+                }
+              ],
+              "validation": {
+                "id": "validation-contract:unit:cuentas-claras",
+                "revision": "1"
+              },
+              "constraints": []
+            },
+            "scope": {
+              "schemaVersion": 2,
+              "id": "scope:unit:cuentas-claras",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:cuentas-claras",
+              "allowedPaths": [
+                "src/domain/index.js",
+                "src/interface/e2e.test.js",
+                "src/settlement/index.js",
+                "src/storage/index.js"
+              ],
+              "forbiddenPaths": [],
+              "coordinationPaths": [],
+              "outputRoots": []
+            },
+            "seams": [
+              {
+                "schemaVersion": 2,
+                "id": "seam:domain-model",
+                "revision": "1",
+                "provenance": "compiled",
+                "kind": "api",
+                "specification": "src/domain/index.js exporta createEvent(name), addParticipant(event, name), addExpense(event, {payerId, amount, category, participantIds, description}) y CATEGORIES.",
+                "producerNodeId": "unit:domain",
+                "consumerNodeIds": [
+                  "unit:cuentas-claras",
+                  "unit:interface",
+                  "unit:settlement",
+                  "unit:storage"
+                ],
+                "semanticFacts": {
+                  "exports": "createEvent, addParticipant, addExpense, CATEGORIES",
+                  "categories": "Comida, Bebida, Postre, Varios",
+                  "expenseFields": "id, payerId, amount, category, participantIds, description",
+                  "eventFields": "id, name, participants, expenses, createdAt",
+                  "amountUnit": "número en pesos, positivo, dos decimales como máximo"
+                },
+                "compatibility": {
+                  "mode": "exact",
+                  "rules": [
+                    "La lista de categorías sólo puede crecer, nunca renombrarse.",
+                    "Los nombres de campo de Event y Expense permanecen estables."
+                  ]
+                },
+                "baselineArtifactContractId": "artifact:domain-change"
+              },
+              {
+                "schemaVersion": 2,
+                "id": "seam:settlement-engine",
+                "revision": "1",
+                "provenance": "compiled",
+                "kind": "api",
+                "specification": "src/settlement/index.js exporta computeBalances(event) y settle(event) devolviendo transferencias mínimas.",
+                "producerNodeId": "unit:settlement",
+                "consumerNodeIds": [
+                  "unit:cuentas-claras",
+                  "unit:interface",
+                  "unit:storage"
+                ],
+                "semanticFacts": {
+                  "exports": "computeBalances, settle",
+                  "balancesShape": "mapa participantId -> número con signo, positivo si le deben",
+                  "transferShape": "fromId, toId, amount",
+                  "guarantee": "la cantidad de transferencias es la mínima y nunca supera n-1"
+                },
+                "compatibility": {
+                  "mode": "exact",
+                  "rules": [
+                    "La forma de la transferencia (fromId, toId, amount) permanece estable.",
+                    "settle recibe un Event del seam de dominio sin transformaciones previas."
+                  ]
+                },
+                "baselineArtifactContractId": "artifact:settlement-change"
+              },
+              {
+                "schemaVersion": 2,
+                "id": "seam:storage-report",
+                "revision": "1",
+                "provenance": "compiled",
+                "kind": "api",
+                "specification": "src/storage/index.js exporta saveEvent(event, dir), loadEvent(id, dir), listEvents(dir) y renderReport(event, settlement).",
+                "producerNodeId": "unit:storage",
+                "consumerNodeIds": [
+                  "unit:cuentas-claras",
+                  "unit:interface"
+                ],
+                "semanticFacts": {
+                  "exports": "saveEvent, loadEvent, listEvents, renderReport",
+                  "storageFormat": "un archivo JSON por evento bajo el directorio de datos configurable",
+                  "reportSections": "resumen de gastos, total general, gasto promedio por persona, liquidación final",
+                  "reportOutput": "string de texto plano con emojis apto para WhatsApp"
+                },
+                "compatibility": {
+                  "mode": "backward_compatible",
+                  "rules": [
+                    "El JSON persistido conserva los campos del seam de dominio.",
+                    "renderReport siempre devuelve string, nunca imprime por consola."
+                  ]
+                },
+                "baselineArtifactContractId": "artifact:storage-change"
+              }
+            ],
+            "artifacts": [
+              {
+                "schemaVersion": 2,
+                "id": "artifact:domain-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:domain",
+                "consumerNodeIds": [
+                  "unit:cuentas-claras",
+                  "unit:interface",
+                  "unit:settlement",
+                  "unit:storage"
+                ],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  "src/domain/categories.js",
+                  "src/domain/domain.test.js",
+                  "src/domain/event.js",
+                  "src/domain/expense.js",
+                  "src/domain/index.js"
+                ]
+              },
+              {
+                "schemaVersion": 2,
+                "id": "artifact:interface-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:interface",
+                "consumerNodeIds": [
+                  "unit:cuentas-claras"
+                ],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  "src/interface/cli.js",
+                  "src/interface/e2e.test.js",
+                  "src/interface/interface.test.js",
+                  "src/interface/routes.js",
+                  "src/interface/server.js"
+                ]
+              },
+              {
+                "schemaVersion": 2,
+                "id": "artifact:settlement-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:settlement",
+                "consumerNodeIds": [
+                  "unit:cuentas-claras",
+                  "unit:interface",
+                  "unit:storage"
+                ],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  "src/settlement/balances.js",
+                  "src/settlement/index.js",
+                  "src/settlement/minimal-transfers.js",
+                  "src/settlement/settlement.test.js"
+                ]
+              },
+              {
+                "schemaVersion": 2,
+                "id": "artifact:storage-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:storage",
+                "consumerNodeIds": [
+                  "unit:cuentas-claras",
+                  "unit:interface"
+                ],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  "src/storage/index.js",
+                  "src/storage/json-store.js",
+                  "src/storage/report.js",
+                  "src/storage/report.test.js",
+                  "src/storage/storage.test.js"
+                ]
+              }
+            ],
+            "validation": {
+              "schemaVersion": 2,
+              "id": "validation-contract:unit:cuentas-claras",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:cuentas-claras",
+              "obligations": [
+                {
+                  "id": "validation:root-e2e",
+                  "criterionId": "criterion:root-integracion",
+                  "layer": "e2e",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "src/interface/e2e.test.js"
+                    ],
+                    "references": [
+                      "src/interface/e2e.test.js"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "schemaVersion": 2,
+            "task": {
+              "schemaVersion": 2,
+              "id": "task:unit:domain",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:domain",
+              "goal": "Modelar eventos, participantes y gastos con validación de pagador, monto, categoría y participantes del gasto.",
+              "acceptanceCriteria": [
+                {
+                  "id": "criterion:domain-modelo",
+                  "kind": "unit",
+                  "description": "createEvent, addParticipant y addExpense validan pagador conocido, monto positivo, categoría en Comida/Bebida/Postre/Varios y lista no vacía de participantes.",
+                  "required": true
+                }
+              ],
+              "scope": {
+                "id": "scope:unit:domain",
+                "revision": "1"
+              },
+              "consumes": [],
+              "produces": [
+                {
+                  "id": "artifact:domain-change",
+                  "revision": "1"
+                }
+              ],
+              "seams": [
+                {
+                  "id": "seam:domain-model",
+                  "revision": "1"
+                }
+              ],
+              "validation": {
+                "id": "validation-contract:unit:domain",
+                "revision": "1"
+              },
+              "constraints": []
+            },
+            "scope": {
+              "schemaVersion": 2,
+              "id": "scope:unit:domain",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:domain",
+              "allowedPaths": [
+                "src/domain",
+                "src/domain/categories.js",
+                "src/domain/domain.test.js",
+                "src/domain/event.js",
+                "src/domain/expense.js",
+                "src/domain/index.js"
+              ],
+              "forbiddenPaths": [],
+              "coordinationPaths": [],
+              "outputRoots": []
+            },
+            "seams": [
+              {
+                "schemaVersion": 2,
+                "id": "seam:domain-model",
+                "revision": "1",
+                "provenance": "compiled",
+                "kind": "api",
+                "specification": "src/domain/index.js exporta createEvent(name), addParticipant(event, name), addExpense(event, {payerId, amount, category, participantIds, description}) y CATEGORIES.",
+                "producerNodeId": "unit:domain",
+                "consumerNodeIds": [
+                  "unit:cuentas-claras",
+                  "unit:interface",
+                  "unit:settlement",
+                  "unit:storage"
+                ],
+                "semanticFacts": {
+                  "exports": "createEvent, addParticipant, addExpense, CATEGORIES",
+                  "categories": "Comida, Bebida, Postre, Varios",
+                  "expenseFields": "id, payerId, amount, category, participantIds, description",
+                  "eventFields": "id, name, participants, expenses, createdAt",
+                  "amountUnit": "número en pesos, positivo, dos decimales como máximo"
+                },
+                "compatibility": {
+                  "mode": "exact",
+                  "rules": [
+                    "La lista de categorías sólo puede crecer, nunca renombrarse.",
+                    "Los nombres de campo de Event y Expense permanecen estables."
+                  ]
+                },
+                "baselineArtifactContractId": "artifact:domain-change"
+              }
+            ],
+            "artifacts": [
+              {
+                "schemaVersion": 2,
+                "id": "artifact:domain-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:domain",
+                "consumerNodeIds": [
+                  "unit:cuentas-claras",
+                  "unit:interface",
+                  "unit:settlement",
+                  "unit:storage"
+                ],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  "src/domain/categories.js",
+                  "src/domain/domain.test.js",
+                  "src/domain/event.js",
+                  "src/domain/expense.js",
+                  "src/domain/index.js"
+                ]
+              }
+            ],
+            "validation": {
+              "schemaVersion": 2,
+              "id": "validation-contract:unit:domain",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:domain",
+              "obligations": [
+                {
+                  "id": "validation:domain-unit",
+                  "criterionId": "criterion:domain-modelo",
+                  "layer": "unit",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "src/domain/domain.test.js"
+                    ],
+                    "references": [
+                      "src/domain/domain.test.js"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "schemaVersion": 2,
+            "task": {
+              "schemaVersion": 2,
+              "id": "task:unit:interface",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:interface",
+              "goal": "Exponer los endpoints REST /api/events, /api/expenses y /api/settlement y ofrecer una CLI interactiva, más el test E2E del flujo completo.",
+              "acceptanceCriteria": [
+                {
+                  "id": "criterion:interface-http-cli",
+                  "kind": "integration",
+                  "description": "GET /api/events, POST /api/expenses y GET /api/settlement responden con el JSON esperado y la CLI imprime el reporte del evento creado.",
+                  "required": true
+                }
+              ],
+              "scope": {
+                "id": "scope:unit:interface",
+                "revision": "1"
+              },
+              "consumes": [
+                {
+                  "id": "artifact:domain-change",
+                  "revision": "1"
+                },
+                {
+                  "id": "artifact:settlement-change",
+                  "revision": "1"
+                },
+                {
+                  "id": "artifact:storage-change",
+                  "revision": "1"
+                }
+              ],
+              "produces": [
+                {
+                  "id": "artifact:interface-change",
+                  "revision": "1"
+                }
+              ],
+              "seams": [
+                {
+                  "id": "seam:domain-model",
+                  "revision": "1"
+                },
+                {
+                  "id": "seam:settlement-engine",
+                  "revision": "1"
+                },
+                {
+                  "id": "seam:storage-report",
+                  "revision": "1"
+                }
+              ],
+              "validation": {
+                "id": "validation-contract:unit:interface",
+                "revision": "1"
+              },
+              "constraints": []
+            },
+            "scope": {
+              "schemaVersion": 2,
+              "id": "scope:unit:interface",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:interface",
+              "allowedPaths": [
+                "src/interface",
+                "src/interface/cli.js",
+                "src/interface/e2e.test.js",
+                "src/interface/interface.test.js",
+                "src/interface/routes.js",
+                "src/interface/server.js"
+              ],
+              "forbiddenPaths": [],
+              "coordinationPaths": [],
+              "outputRoots": []
+            },
+            "seams": [
+              {
+                "schemaVersion": 2,
+                "id": "seam:domain-model",
+                "revision": "1",
+                "provenance": "compiled",
+                "kind": "api",
+                "specification": "src/domain/index.js exporta createEvent(name), addParticipant(event, name), addExpense(event, {payerId, amount, category, participantIds, description}) y CATEGORIES.",
+                "producerNodeId": "unit:domain",
+                "consumerNodeIds": [
+                  "unit:cuentas-claras",
+                  "unit:interface",
+                  "unit:settlement",
+                  "unit:storage"
+                ],
+                "semanticFacts": {
+                  "exports": "createEvent, addParticipant, addExpense, CATEGORIES",
+                  "categories": "Comida, Bebida, Postre, Varios",
+                  "expenseFields": "id, payerId, amount, category, participantIds, description",
+                  "eventFields": "id, name, participants, expenses, createdAt",
+                  "amountUnit": "número en pesos, positivo, dos decimales como máximo"
+                },
+                "compatibility": {
+                  "mode": "exact",
+                  "rules": [
+                    "La lista de categorías sólo puede crecer, nunca renombrarse.",
+                    "Los nombres de campo de Event y Expense permanecen estables."
+                  ]
+                },
+                "baselineArtifactContractId": "artifact:domain-change"
+              },
+              {
+                "schemaVersion": 2,
+                "id": "seam:settlement-engine",
+                "revision": "1",
+                "provenance": "compiled",
+                "kind": "api",
+                "specification": "src/settlement/index.js exporta computeBalances(event) y settle(event) devolviendo transferencias mínimas.",
+                "producerNodeId": "unit:settlement",
+                "consumerNodeIds": [
+                  "unit:cuentas-claras",
+                  "unit:interface",
+                  "unit:storage"
+                ],
+                "semanticFacts": {
+                  "exports": "computeBalances, settle",
+                  "balancesShape": "mapa participantId -> número con signo, positivo si le deben",
+                  "transferShape": "fromId, toId, amount",
+                  "guarantee": "la cantidad de transferencias es la mínima y nunca supera n-1"
+                },
+                "compatibility": {
+                  "mode": "exact",
+                  "rules": [
+                    "La forma de la transferencia (fromId, toId, amount) permanece estable.",
+                    "settle recibe un Event del seam de dominio sin transformaciones previas."
+                  ]
+                },
+                "baselineArtifactContractId": "artifact:settlement-change"
+              },
+              {
+                "schemaVersion": 2,
+                "id": "seam:storage-report",
+                "revision": "1",
+                "provenance": "compiled",
+                "kind": "api",
+                "specification": "src/storage/index.js exporta saveEvent(event, dir), loadEvent(id, dir), listEvents(dir) y renderReport(event, settlement).",
+                "producerNodeId": "unit:storage",
+                "consumerNodeIds": [
+                  "unit:cuentas-claras",
+                  "unit:interface"
+                ],
+                "semanticFacts": {
+                  "exports": "saveEvent, loadEvent, listEvents, renderReport",
+                  "storageFormat": "un archivo JSON por evento bajo el directorio de datos configurable",
+                  "reportSections": "resumen de gastos, total general, gasto promedio por persona, liquidación final",
+                  "reportOutput": "string de texto plano con emojis apto para WhatsApp"
+                },
+                "compatibility": {
+                  "mode": "backward_compatible",
+                  "rules": [
+                    "El JSON persistido conserva los campos del seam de dominio.",
+                    "renderReport siempre devuelve string, nunca imprime por consola."
+                  ]
+                },
+                "baselineArtifactContractId": "artifact:storage-change"
+              }
+            ],
+            "artifacts": [
+              {
+                "schemaVersion": 2,
+                "id": "artifact:domain-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:domain",
+                "consumerNodeIds": [
+                  "unit:cuentas-claras",
+                  "unit:interface",
+                  "unit:settlement",
+                  "unit:storage"
+                ],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  "src/domain/categories.js",
+                  "src/domain/domain.test.js",
+                  "src/domain/event.js",
+                  "src/domain/expense.js",
+                  "src/domain/index.js"
+                ]
+              },
+              {
+                "schemaVersion": 2,
+                "id": "artifact:interface-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:interface",
+                "consumerNodeIds": [
+                  "unit:cuentas-claras"
+                ],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  "src/interface/cli.js",
+                  "src/interface/e2e.test.js",
+                  "src/interface/interface.test.js",
+                  "src/interface/routes.js",
+                  "src/interface/server.js"
+                ]
+              },
+              {
+                "schemaVersion": 2,
+                "id": "artifact:settlement-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:settlement",
+                "consumerNodeIds": [
+                  "unit:cuentas-claras",
+                  "unit:interface",
+                  "unit:storage"
+                ],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  "src/settlement/balances.js",
+                  "src/settlement/index.js",
+                  "src/settlement/minimal-transfers.js",
+                  "src/settlement/settlement.test.js"
+                ]
+              },
+              {
+                "schemaVersion": 2,
+                "id": "artifact:storage-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:storage",
+                "consumerNodeIds": [
+                  "unit:cuentas-claras",
+                  "unit:interface"
+                ],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  "src/storage/index.js",
+                  "src/storage/json-store.js",
+                  "src/storage/report.js",
+                  "src/storage/report.test.js",
+                  "src/storage/storage.test.js"
+                ]
+              }
+            ],
+            "validation": {
+              "schemaVersion": 2,
+              "id": "validation-contract:unit:interface",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:interface",
+              "obligations": [
+                {
+                  "id": "validation:interface-unit",
+                  "criterionId": "criterion:interface-http-cli",
+                  "layer": "integration",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "src/interface/interface.test.js"
+                    ],
+                    "references": [
+                      "src/interface/interface.test.js"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "schemaVersion": 2,
+            "task": {
+              "schemaVersion": 2,
+              "id": "task:unit:settlement",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:settlement",
+              "goal": "Calcular el balance por persona y generar la cantidad mínima de transferencias para saldar las deudas.",
+              "acceptanceCriteria": [
+                {
+                  "id": "criterion:settlement-minimo",
+                  "kind": "unit",
+                  "description": "computeBalances suma cero y settle produce a lo sumo n-1 transferencias que dejan todos los balances en cero.",
+                  "required": true
+                }
+              ],
+              "scope": {
+                "id": "scope:unit:settlement",
+                "revision": "1"
+              },
+              "consumes": [
+                {
+                  "id": "artifact:domain-change",
+                  "revision": "1"
+                }
+              ],
+              "produces": [
+                {
+                  "id": "artifact:settlement-change",
+                  "revision": "1"
+                }
+              ],
+              "seams": [
+                {
+                  "id": "seam:domain-model",
+                  "revision": "1"
+                },
+                {
+                  "id": "seam:settlement-engine",
+                  "revision": "1"
+                }
+              ],
+              "validation": {
+                "id": "validation-contract:unit:settlement",
+                "revision": "1"
+              },
+              "constraints": []
+            },
+            "scope": {
+              "schemaVersion": 2,
+              "id": "scope:unit:settlement",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:settlement",
+              "allowedPaths": [
+                "src/settlement",
+                "src/settlement/balances.js",
+                "src/settlement/index.js",
+                "src/settlement/minimal-transfers.js",
+                "src/settlement/settlement.test.js"
+              ],
+              "forbiddenPaths": [],
+              "coordinationPaths": [],
+              "outputRoots": []
+            },
+            "seams": [
+              {
+                "schemaVersion": 2,
+                "id": "seam:domain-model",
+                "revision": "1",
+                "provenance": "compiled",
+                "kind": "api",
+                "specification": "src/domain/index.js exporta createEvent(name), addParticipant(event, name), addExpense(event, {payerId, amount, category, participantIds, description}) y CATEGORIES.",
+                "producerNodeId": "unit:domain",
+                "consumerNodeIds": [
+                  "unit:cuentas-claras",
+                  "unit:interface",
+                  "unit:settlement",
+                  "unit:storage"
+                ],
+                "semanticFacts": {
+                  "exports": "createEvent, addParticipant, addExpense, CATEGORIES",
+                  "categories": "Comida, Bebida, Postre, Varios",
+                  "expenseFields": "id, payerId, amount, category, participantIds, description",
+                  "eventFields": "id, name, participants, expenses, createdAt",
+                  "amountUnit": "número en pesos, positivo, dos decimales como máximo"
+                },
+                "compatibility": {
+                  "mode": "exact",
+                  "rules": [
+                    "La lista de categorías sólo puede crecer, nunca renombrarse.",
+                    "Los nombres de campo de Event y Expense permanecen estables."
+                  ]
+                },
+                "baselineArtifactContractId": "artifact:domain-change"
+              },
+              {
+                "schemaVersion": 2,
+                "id": "seam:settlement-engine",
+                "revision": "1",
+                "provenance": "compiled",
+                "kind": "api",
+                "specification": "src/settlement/index.js exporta computeBalances(event) y settle(event) devolviendo transferencias mínimas.",
+                "producerNodeId": "unit:settlement",
+                "consumerNodeIds": [
+                  "unit:cuentas-claras",
+                  "unit:interface",
+                  "unit:storage"
+                ],
+                "semanticFacts": {
+                  "exports": "computeBalances, settle",
+                  "balancesShape": "mapa participantId -> número con signo, positivo si le deben",
+                  "transferShape": "fromId, toId, amount",
+                  "guarantee": "la cantidad de transferencias es la mínima y nunca supera n-1"
+                },
+                "compatibility": {
+                  "mode": "exact",
+                  "rules": [
+                    "La forma de la transferencia (fromId, toId, amount) permanece estable.",
+                    "settle recibe un Event del seam de dominio sin transformaciones previas."
+                  ]
+                },
+                "baselineArtifactContractId": "artifact:settlement-change"
+              }
+            ],
+            "artifacts": [
+              {
+                "schemaVersion": 2,
+                "id": "artifact:domain-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:domain",
+                "consumerNodeIds": [
+                  "unit:cuentas-claras",
+                  "unit:interface",
+                  "unit:settlement",
+                  "unit:storage"
+                ],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  "src/domain/categories.js",
+                  "src/domain/domain.test.js",
+                  "src/domain/event.js",
+                  "src/domain/expense.js",
+                  "src/domain/index.js"
+                ]
+              },
+              {
+                "schemaVersion": 2,
+                "id": "artifact:settlement-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:settlement",
+                "consumerNodeIds": [
+                  "unit:cuentas-claras",
+                  "unit:interface",
+                  "unit:storage"
+                ],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  "src/settlement/balances.js",
+                  "src/settlement/index.js",
+                  "src/settlement/minimal-transfers.js",
+                  "src/settlement/settlement.test.js"
+                ]
+              }
+            ],
+            "validation": {
+              "schemaVersion": 2,
+              "id": "validation-contract:unit:settlement",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:settlement",
+              "obligations": [
+                {
+                  "id": "validation:settlement-unit",
+                  "criterionId": "criterion:settlement-minimo",
+                  "layer": "unit",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "src/settlement/settlement.test.js"
+                    ],
+                    "references": [
+                      "src/settlement/settlement.test.js"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "schemaVersion": 2,
+            "task": {
+              "schemaVersion": 2,
+              "id": "task:unit:storage",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:storage",
+              "goal": "Persistir eventos y gastos en archivos JSON locales y generar el reporte de texto con emojis listo para WhatsApp.",
+              "acceptanceCriteria": [
+                {
+                  "id": "criterion:storage-reporte",
+                  "kind": "unit",
+                  "description": "saveEvent/loadEvent hacen round-trip exacto en JSON y renderReport incluye total general, promedio por persona y las transferencias finales con emojis.",
+                  "required": true
+                }
+              ],
+              "scope": {
+                "id": "scope:unit:storage",
+                "revision": "1"
+              },
+              "consumes": [
+                {
+                  "id": "artifact:domain-change",
+                  "revision": "1"
+                },
+                {
+                  "id": "artifact:settlement-change",
+                  "revision": "1"
+                }
+              ],
+              "produces": [
+                {
+                  "id": "artifact:storage-change",
+                  "revision": "1"
+                }
+              ],
+              "seams": [
+                {
+                  "id": "seam:domain-model",
+                  "revision": "1"
+                },
+                {
+                  "id": "seam:settlement-engine",
+                  "revision": "1"
+                },
+                {
+                  "id": "seam:storage-report",
+                  "revision": "1"
+                }
+              ],
+              "validation": {
+                "id": "validation-contract:unit:storage",
+                "revision": "1"
+              },
+              "constraints": []
+            },
+            "scope": {
+              "schemaVersion": 2,
+              "id": "scope:unit:storage",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:storage",
+              "allowedPaths": [
+                "src/storage",
+                "src/storage/index.js",
+                "src/storage/json-store.js",
+                "src/storage/report.js",
+                "src/storage/report.test.js",
+                "src/storage/storage.test.js"
+              ],
+              "forbiddenPaths": [],
+              "coordinationPaths": [],
+              "outputRoots": []
+            },
+            "seams": [
+              {
+                "schemaVersion": 2,
+                "id": "seam:domain-model",
+                "revision": "1",
+                "provenance": "compiled",
+                "kind": "api",
+                "specification": "src/domain/index.js exporta createEvent(name), addParticipant(event, name), addExpense(event, {payerId, amount, category, participantIds, description}) y CATEGORIES.",
+                "producerNodeId": "unit:domain",
+                "consumerNodeIds": [
+                  "unit:cuentas-claras",
+                  "unit:interface",
+                  "unit:settlement",
+                  "unit:storage"
+                ],
+                "semanticFacts": {
+                  "exports": "createEvent, addParticipant, addExpense, CATEGORIES",
+                  "categories": "Comida, Bebida, Postre, Varios",
+                  "expenseFields": "id, payerId, amount, category, participantIds, description",
+                  "eventFields": "id, name, participants, expenses, createdAt",
+                  "amountUnit": "número en pesos, positivo, dos decimales como máximo"
+                },
+                "compatibility": {
+                  "mode": "exact",
+                  "rules": [
+                    "La lista de categorías sólo puede crecer, nunca renombrarse.",
+                    "Los nombres de campo de Event y Expense permanecen estables."
+                  ]
+                },
+                "baselineArtifactContractId": "artifact:domain-change"
+              },
+              {
+                "schemaVersion": 2,
+                "id": "seam:settlement-engine",
+                "revision": "1",
+                "provenance": "compiled",
+                "kind": "api",
+                "specification": "src/settlement/index.js exporta computeBalances(event) y settle(event) devolviendo transferencias mínimas.",
+                "producerNodeId": "unit:settlement",
+                "consumerNodeIds": [
+                  "unit:cuentas-claras",
+                  "unit:interface",
+                  "unit:storage"
+                ],
+                "semanticFacts": {
+                  "exports": "computeBalances, settle",
+                  "balancesShape": "mapa participantId -> número con signo, positivo si le deben",
+                  "transferShape": "fromId, toId, amount",
+                  "guarantee": "la cantidad de transferencias es la mínima y nunca supera n-1"
+                },
+                "compatibility": {
+                  "mode": "exact",
+                  "rules": [
+                    "La forma de la transferencia (fromId, toId, amount) permanece estable.",
+                    "settle recibe un Event del seam de dominio sin transformaciones previas."
+                  ]
+                },
+                "baselineArtifactContractId": "artifact:settlement-change"
+              },
+              {
+                "schemaVersion": 2,
+                "id": "seam:storage-report",
+                "revision": "1",
+                "provenance": "compiled",
+                "kind": "api",
+                "specification": "src/storage/index.js exporta saveEvent(event, dir), loadEvent(id, dir), listEvents(dir) y renderReport(event, settlement).",
+                "producerNodeId": "unit:storage",
+                "consumerNodeIds": [
+                  "unit:cuentas-claras",
+                  "unit:interface"
+                ],
+                "semanticFacts": {
+                  "exports": "saveEvent, loadEvent, listEvents, renderReport",
+                  "storageFormat": "un archivo JSON por evento bajo el directorio de datos configurable",
+                  "reportSections": "resumen de gastos, total general, gasto promedio por persona, liquidación final",
+                  "reportOutput": "string de texto plano con emojis apto para WhatsApp"
+                },
+                "compatibility": {
+                  "mode": "backward_compatible",
+                  "rules": [
+                    "El JSON persistido conserva los campos del seam de dominio.",
+                    "renderReport siempre devuelve string, nunca imprime por consola."
+                  ]
+                },
+                "baselineArtifactContractId": "artifact:storage-change"
+              }
+            ],
+            "artifacts": [
+              {
+                "schemaVersion": 2,
+                "id": "artifact:domain-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:domain",
+                "consumerNodeIds": [
+                  "unit:cuentas-claras",
+                  "unit:interface",
+                  "unit:settlement",
+                  "unit:storage"
+                ],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  "src/domain/categories.js",
+                  "src/domain/domain.test.js",
+                  "src/domain/event.js",
+                  "src/domain/expense.js",
+                  "src/domain/index.js"
+                ]
+              },
+              {
+                "schemaVersion": 2,
+                "id": "artifact:settlement-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:settlement",
+                "consumerNodeIds": [
+                  "unit:cuentas-claras",
+                  "unit:interface",
+                  "unit:storage"
+                ],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  "src/settlement/balances.js",
+                  "src/settlement/index.js",
+                  "src/settlement/minimal-transfers.js",
+                  "src/settlement/settlement.test.js"
+                ]
+              },
+              {
+                "schemaVersion": 2,
+                "id": "artifact:storage-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:storage",
+                "consumerNodeIds": [
+                  "unit:cuentas-claras",
+                  "unit:interface"
+                ],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  "src/storage/index.js",
+                  "src/storage/json-store.js",
+                  "src/storage/report.js",
+                  "src/storage/report.test.js",
+                  "src/storage/storage.test.js"
+                ]
+              }
+            ],
+            "validation": {
+              "schemaVersion": 2,
+              "id": "validation-contract:unit:storage",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:storage",
+              "obligations": [
+                {
+                  "id": "validation:storage-unit",
+                  "criterionId": "criterion:storage-reporte",
+                  "layer": "unit",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "src/storage/storage.test.js",
+                      "src/storage/report.test.js"
+                    ],
+                    "references": [
+                      "src/storage/storage.test.js",
+                      "src/storage/report.test.js"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "evidenceAuthority": {
+          "goal": {
+            "id": "goal:run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba",
+            "revision": 1,
+            "goal": "Construir una aplicación modular en Node.js llamada \"Cuentas Claras\" para organizar eventos familiares/amigos (asados, viajes, cumpleaños) y calcular la división exacta de gastos.\n\nLa aplicación debe incluir:\n1. Módulo de Dominio y Participantes:\n   - Registro de personas en el evento.\n   - Carga de gastos individuales indicando quién pagó, el monto, la categoría (Comida, Bebida, Postre, Varios) y quiénes participaron de ese gasto.\n2. Módulo de Cálculo y Balances:\n   - Algoritmo de liquidación inteligente: calcula el balance de cada persona y genera la cantidad mínima de transferencias necesarias para saldar las deudas (ej. \"Juan le transfiere $5.000 a Sofía\").\n3. Módulo de Almacenamiento y Reportes:\n   - Persistencia de eventos y gastos en archivos JSON locales.\n   - Generador de reportes en texto formateado con emojis listo para compartir por WhatsApp (resumen de gastos, total general, gasto promedio por persona y liquidación final).\n4. Servidor HTTP y CLI:\n   - Servidor HTTP simple con endpoints REST para consultar eventos, agregar gastos y obtener la liquidación (/api/events, /api/expenses, /api/settlement).\n   - Interfaz por línea de comandos (CLI) interactiva para crear eventos y ver el resumen por consola.\n5. Suite de Pruebas Automatizadas:\n   - Tests unitarios para cada módulo y test de integración E2E que valide el flujo completo con node --test.",
+            "acceptanceCriteria": [
+              {
+                "id": "criterion:run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:1",
+                "statement": "Construir una aplicación modular en Node.js llamada \"Cuentas Claras\" para organizar eventos familiares/amigos (asados, viajes, cumpleaños) y calcular la división exacta de gastos.\n\nLa aplicación debe incluir:\n1. Módulo de Dominio y Participantes:\n   - Registro de personas en el evento.\n   - Carga de gastos individuales indicando quién pagó, el monto, la categoría (Comida, Bebida, Postre, Varios) y quiénes participaron de ese gasto.\n2. Módulo de Cálculo y Balances:\n   - Algoritmo de liquidación inteligente: calcula el balance de cada persona y genera la cantidad mínima de transferencias necesarias para saldar las deudas (ej. \"Juan le transfiere $5.000 a Sofía\").\n3. Módulo de Almacenamiento y Reportes:\n   - Persistencia de eventos y gastos en archivos JSON locales.\n   - Generador de reportes en texto formateado con emojis listo para compartir por WhatsApp (resumen de gastos, total general, gasto promedio por persona y liquidación final).\n4. Servidor HTTP y CLI:\n   - Servidor HTTP simple con endpoints REST para consultar eventos, agregar gastos y obtener la liquidación (/api/events, /api/expenses, /api/settlement).\n   - Interfaz por línea de comandos (CLI) interactiva para crear eventos y ver el resumen por consola.\n5. Suite de Pruebas Automatizadas:\n   - Tests unitarios para cada módulo y test de integración E2E que valide el flujo completo con node --test.",
+                "required": true,
+                "level": "product",
+                "protectedReferences": [],
+                "verification": {
+                  "allowedProofs": [
+                    {
+                      "mode": "executable",
+                      "authority": "orchestrator_deterministic"
+                    }
+                  ],
+                  "independence": "independent_required"
+                }
+              }
+            ],
+            "constraints": [],
+            "qualityAttributes": [],
+            "target": {
+              "repositoryId": "Cuentas-Claras",
+              "baseCommit": "680018b7a2dd7fff3660431df84e19c10af7b53b",
+              "treeSha": "aa4b1fc231cbff6853853ab8b07c786d16c51948"
+            },
+            "digest": "sha256:fe8f5d7edf7be3bc3713953e0915354b3a7d0b49e289b688b04ea08cd43f924b"
+          },
+          "validationObligations": [
+            {
+              "digest": "sha256:855cf1a76cbe70817c0c00efdf193f849a65e5394a6e76b1c538ad649f400b75",
+              "id": "validation:domain-unit",
+              "revision": 1,
+              "criterionId": "criterion:run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:1",
+              "ownerNodeId": "unit:domain",
+              "required": true,
+              "proofStrategy": {
+                "id": "proof:validation:domain-unit",
+                "revision": 1,
+                "digest": "sha256:48362d86f90179d87ac4c3a950103968e64a704251e82eff0761e2ce4df992e5"
+              }
+            },
+            {
+              "digest": "sha256:d454a2b9954e673a18e4c47f58d07e412f4333d227f7b287f7fcc599c4f73a24",
+              "id": "validation:interface-unit",
+              "revision": 1,
+              "criterionId": "criterion:run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:1",
+              "ownerNodeId": "unit:interface",
+              "required": true,
+              "proofStrategy": {
+                "id": "proof:validation:interface-unit",
+                "revision": 1,
+                "digest": "sha256:a8f0d1e6dc2fb012e0254c7cfae68a24f2649cb1cb5777fee856551a3c2e558c"
+              }
+            },
+            {
+              "digest": "sha256:9db26fec5f1aa877f0b3791e4b937f695364cd21e49adf6c18e78439747dbd2e",
+              "id": "validation:root-e2e",
+              "revision": 1,
+              "criterionId": "criterion:run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:1",
+              "ownerNodeId": "unit:cuentas-claras",
+              "required": true,
+              "proofStrategy": {
+                "id": "proof:validation:root-e2e",
+                "revision": 1,
+                "digest": "sha256:dade4de31deb04dc5fc7cbb86092c2a9bba4de9a5bfa7905610bd36ea221db01"
+              }
+            },
+            {
+              "digest": "sha256:80c0abc0f4efd32d33f5ac2a7f49f37586003f2592fae168666b26c2d3a49b92",
+              "id": "validation:settlement-unit",
+              "revision": 1,
+              "criterionId": "criterion:run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:1",
+              "ownerNodeId": "unit:settlement",
+              "required": true,
+              "proofStrategy": {
+                "id": "proof:validation:settlement-unit",
+                "revision": 1,
+                "digest": "sha256:81873c22854c541ab65acd5918619e562d8c5ad93d9d95ee72bf2942b4c96af0"
+              }
+            },
+            {
+              "digest": "sha256:77734972263303c178a993035a98ec6a8498601e2f39283ecc9b98e54f80b5ea",
+              "id": "validation:storage-unit",
+              "revision": 1,
+              "criterionId": "criterion:run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:1",
+              "ownerNodeId": "unit:storage",
+              "required": true,
+              "proofStrategy": {
+                "id": "proof:validation:storage-unit",
+                "revision": 1,
+                "digest": "sha256:53c16f9e04550d06f105078063a9ddaa361fe10892db4af3999138150793b67d"
+              }
+            }
+          ],
+          "proofStrategies": [
+            {
+              "id": "proof:validation:domain-unit",
+              "revision": 1,
+              "goalContractDigest": "sha256:fe8f5d7edf7be3bc3713953e0915354b3a7d0b49e289b688b04ea08cd43f924b",
+              "criterionId": "criterion:run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:1",
+              "obligationId": "validation:domain-unit",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "repositoryViewDigest": "sha256:ab735c42524e87f419bdaf53e5dfb68697512834bdfa9e53ac35778b3257951f",
+              "procedureRef": "command:stage6-transitional-validation",
+              "selectorDigest": "sha256:cee1ec468b2823882f5032adb51557e21f25a2bef32aafb1debb3b0660f41945",
+              "environmentPolicyDigest": "sha256:stage6-transitional-environment",
+              "independence": "independent_required",
+              "digest": "sha256:48362d86f90179d87ac4c3a950103968e64a704251e82eff0761e2ce4df992e5"
+            },
+            {
+              "id": "proof:validation:interface-unit",
+              "revision": 1,
+              "goalContractDigest": "sha256:fe8f5d7edf7be3bc3713953e0915354b3a7d0b49e289b688b04ea08cd43f924b",
+              "criterionId": "criterion:run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:1",
+              "obligationId": "validation:interface-unit",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "repositoryViewDigest": "sha256:ab735c42524e87f419bdaf53e5dfb68697512834bdfa9e53ac35778b3257951f",
+              "procedureRef": "command:stage6-transitional-validation",
+              "selectorDigest": "sha256:4ab17e6b876789ea812f7283fcf299ab7da68c1a6f8c5dc5e84835a94918bf8d",
+              "environmentPolicyDigest": "sha256:stage6-transitional-environment",
+              "independence": "independent_required",
+              "digest": "sha256:a8f0d1e6dc2fb012e0254c7cfae68a24f2649cb1cb5777fee856551a3c2e558c"
+            },
+            {
+              "id": "proof:validation:root-e2e",
+              "revision": 1,
+              "goalContractDigest": "sha256:fe8f5d7edf7be3bc3713953e0915354b3a7d0b49e289b688b04ea08cd43f924b",
+              "criterionId": "criterion:run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:1",
+              "obligationId": "validation:root-e2e",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "repositoryViewDigest": "sha256:ab735c42524e87f419bdaf53e5dfb68697512834bdfa9e53ac35778b3257951f",
+              "procedureRef": "command:stage6-transitional-validation",
+              "selectorDigest": "sha256:593c32c69fc6cd974db65572e34ed4f0f89fe1cebf234f96c7876e47fe8b2e3a",
+              "environmentPolicyDigest": "sha256:stage6-transitional-environment",
+              "independence": "independent_required",
+              "digest": "sha256:dade4de31deb04dc5fc7cbb86092c2a9bba4de9a5bfa7905610bd36ea221db01"
+            },
+            {
+              "id": "proof:validation:settlement-unit",
+              "revision": 1,
+              "goalContractDigest": "sha256:fe8f5d7edf7be3bc3713953e0915354b3a7d0b49e289b688b04ea08cd43f924b",
+              "criterionId": "criterion:run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:1",
+              "obligationId": "validation:settlement-unit",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "repositoryViewDigest": "sha256:ab735c42524e87f419bdaf53e5dfb68697512834bdfa9e53ac35778b3257951f",
+              "procedureRef": "command:stage6-transitional-validation",
+              "selectorDigest": "sha256:fb2c486da1b1cdbae4de93faa25f65c6a531bd612bd480e11f1f90ac6bafe365",
+              "environmentPolicyDigest": "sha256:stage6-transitional-environment",
+              "independence": "independent_required",
+              "digest": "sha256:81873c22854c541ab65acd5918619e562d8c5ad93d9d95ee72bf2942b4c96af0"
+            },
+            {
+              "id": "proof:validation:storage-unit",
+              "revision": 1,
+              "goalContractDigest": "sha256:fe8f5d7edf7be3bc3713953e0915354b3a7d0b49e289b688b04ea08cd43f924b",
+              "criterionId": "criterion:run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:1",
+              "obligationId": "validation:storage-unit",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "repositoryViewDigest": "sha256:ab735c42524e87f419bdaf53e5dfb68697512834bdfa9e53ac35778b3257951f",
+              "procedureRef": "command:stage6-transitional-validation",
+              "selectorDigest": "sha256:1491cfe586d1c546b89cb92bef2edce7b10ed272d21670f5223581b4266b57af",
+              "environmentPolicyDigest": "sha256:stage6-transitional-environment",
+              "independence": "independent_required",
+              "digest": "sha256:53c16f9e04550d06f105078063a9ddaa361fe10892db4af3999138150793b67d"
+            }
+          ]
+        },
+        "review": {
+          "findings": [
+            {
+              "code": "repository_model_coverage_incomplete",
+              "severity": "warning",
+              "authority": "repository",
+              "message": "Repository model coverage is partial.",
+              "evidenceRefs": [
+                "evidence:3a98499c4817d2d876de1d8e",
+                "evidence:56db9f0d44b2a75276e852fb",
+                "evidence:996eaf54f95aee8a26505531"
+              ],
+              "resolution": "none"
+            },
+            {
+              "code": "resource_catalog_coverage_incomplete",
+              "severity": "warning",
+              "authority": "repository",
+              "message": "Resource catalog coverage is partial.",
+              "evidenceRefs": [
+                "evidence:3a98499c4817d2d876de1d8e",
+                "evidence:56db9f0d44b2a75276e852fb",
+                "evidence:996eaf54f95aee8a26505531"
+              ],
+              "resolution": "none"
+            }
+          ]
+        },
+        "trace": {
+          "budget": {
+            "modelCalls": 3,
+            "repositoryQueries": 3,
+            "queryBytes": 65536,
+            "revisions": 3,
+            "repairs": 2,
+            "expansions": 0
+          },
+          "consumed": {
+            "modelCalls": 1,
+            "repositoryQueries": 3,
+            "queryBytes": 1411,
+            "revisions": 1,
+            "repairs": 0,
+            "expansions": 0
+          },
+          "revisions": [
+            {
+              "index": 1,
+              "cause": "initial",
+              "budget": {
+                "modelCalls": 3,
+                "repositoryQueries": 3,
+                "queryBytes": 65536,
+                "revisions": 3,
+                "repairs": 2,
+                "expansions": 0
+              },
+              "consumed": {
+                "modelCalls": 1,
+                "repositoryQueries": 3,
+                "queryBytes": 1411,
+                "revisions": 1,
+                "repairs": 0,
+                "expansions": 0
+              },
+              "queryReceipts": [
+                "sha256:8a07d2f7cd526bb62875bb869a716ba90a360dbd428ba6b8da213c47f4006aaf",
+                "sha256:aa4208e907ec8d04f670100a4f995d6470847442abf80dd56d9af08439f321af",
+                "sha256:aa45528dfb8d8ffa723c41b11b8bd0ae737d0951715ab53fe1da71cc93164e76"
+              ],
+              "evidenceRefs": [
+                "evidence:3a98499c4817d2d876de1d8e",
+                "evidence:56db9f0d44b2a75276e852fb",
+                "evidence:996eaf54f95aee8a26505531"
+              ],
+              "changedDecisionIds": [],
+              "changedFindingCodes": [
+                "repository_model_coverage_incomplete",
+                "resource_catalog_coverage_incomplete"
+              ],
+              "proposalDigest": "sha256:f39f731f2e007faece51cd5ea41343e7118c6fa9b4909ad0926636ff8371d0d4",
+              "causalStateDigest": "sha256:7b308130fca2ca2418ac429f2e75172a5ac4c0fa30b176252981237c7af70883",
+              "digest": "sha256:93de5d8d1a09a5db5314894e0782e46e0ba25f04258a69dd968251e878132063"
+            }
+          ],
+          "advisoryFindings": [
+            {
+              "code": "repository_model_coverage_incomplete",
+              "severity": "warning",
+              "authority": "repository",
+              "message": "Repository model coverage is partial.",
+              "evidenceRefs": [
+                "evidence:3a98499c4817d2d876de1d8e",
+                "evidence:56db9f0d44b2a75276e852fb",
+                "evidence:996eaf54f95aee8a26505531"
+              ],
+              "resolution": "none"
+            },
+            {
+              "code": "resource_catalog_coverage_incomplete",
+              "severity": "warning",
+              "authority": "repository",
+              "message": "Resource catalog coverage is partial.",
+              "evidenceRefs": [
+                "evidence:3a98499c4817d2d876de1d8e",
+                "evidence:56db9f0d44b2a75276e852fb",
+                "evidence:996eaf54f95aee8a26505531"
+              ],
+              "resolution": "none"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "graph:graph-plan:goal:run:a36e115ad61dc33357661d553517e18541-b1cf11983b:r1:proposed",
+      "occurredAt": "2026-08-17T06:25:07.330Z",
+      "type": "graph.revision.proposed",
+      "payload": {
+        "graphId": "graph-plan:goal:run:a36e115ad61dc33357661d553517e18541-b1cf11983b",
+        "revision": 1
+      }
+    },
+    {
+      "eventId": "approve-plan:graph-plan:goal:run:a36e115ad61dc33357661d553517e18541-b1cf11983b:r1",
+      "occurredAt": "2026-08-17T06:25:07.330Z",
+      "type": "decision.raised",
+      "payload": {
+        "decision": {
+          "id": "approve-plan:graph-plan:goal:run:a36e115ad61dc33357661d553517e18541-b1cf11983b:r1",
+          "kind": "approve_plan",
+          "question": "Approve graph revision 1?",
+          "options": [
+            {
+              "id": "approve",
+              "label": "Approve plan"
+            },
+            {
+              "id": "request_changes",
+              "label": "Request changes"
+            }
+          ],
+          "affectedNodeIds": [
+            "unit:cuentas-claras"
+          ],
+          "evidenceRefs": [
+            "graph:graph-plan:goal:run:a36e115ad61dc33357661d553517e18541-b1cf11983b:r1"
+          ],
+          "impact": "acceptance"
+        }
+      }
+    }
+  ]
+}

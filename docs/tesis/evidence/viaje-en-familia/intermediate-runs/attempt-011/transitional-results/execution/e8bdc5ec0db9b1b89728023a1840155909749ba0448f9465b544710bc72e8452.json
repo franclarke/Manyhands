@@ -1,0 +1,541 @@
+{
+  "events": [
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:readiness.observed:207",
+      "occurredAt": "2026-08-21T08:38:53.841Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:root"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:root",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:equipaje",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:exploracion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favoritos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organizacion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:paradas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:presupuesto",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:recuerdos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:paradas",
+            "unit:agenda",
+            "unit:exploracion",
+            "unit:organizacion",
+            "unit:presupuesto",
+            "unit:equipaje",
+            "unit:recuerdos",
+            "unit:notas",
+            "unit:favoritos",
+            "unit:dashboard"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:paradas",
+            "unit:agenda",
+            "unit:exploracion",
+            "unit:organizacion",
+            "unit:presupuesto",
+            "unit:equipaje",
+            "unit:recuerdos",
+            "unit:notas",
+            "unit:favoritos",
+            "unit:dashboard"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T08:38:53.663Z"
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:wave.selected:208",
+      "occurredAt": "2026-08-21T08:38:54.404Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:wave:18",
+        "nodeIds": [
+          "unit:root"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:equipaje",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:exploracion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favoritos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organizacion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:paradas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:presupuesto",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:recuerdos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-21T08:38:54.210Z"
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:root:6:started",
+      "occurredAt": "2026-08-21T08:38:54.779Z",
+      "type": "integration.started",
+      "payload": {
+        "attemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:root:6",
+        "nodeId": "unit:root",
+        "inputFingerprint": "sha256:41d79e8f6d7a0c87450834241a2b2a298c52feadb17a2e413fde71d905298bbf",
+        "retryOfAttemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:root:5",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        },
+        "requiredArtifactIds": [
+          "artifact:storage-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:storage:1",
+          "artifact:paradas-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:paradas:2",
+          "artifact:agenda-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:agenda:1",
+          "artifact:equipaje-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:equipaje:1",
+          "artifact:favoritos-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:favoritos:1",
+          "artifact:notas-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:notas:2",
+          "artifact:presupuesto-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:presupuesto:1",
+          "artifact:dashboard-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:dashboard:6",
+          "artifact:dashboard-ui-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:dashboard:6",
+          "artifact:exploracion-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:exploracion:2",
+          "artifact:itinerary-integration:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:itinerary:1",
+          "artifact:organizacion-integration:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:organizacion:1",
+          "artifact:recuerdos-integration:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:recuerdos:1"
+        ]
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:root:6:failed",
+      "occurredAt": "2026-08-21T08:43:09.627Z",
+      "type": "attempt.failed",
+      "payload": {
+        "attemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:root:6",
+        "nodeId": "unit:root",
+        "reason": "Parent validation outcome is failed."
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:root:6:decision",
+      "occurredAt": "2026-08-21T08:43:09.627Z",
+      "type": "decision.raised",
+      "payload": {
+        "decision": {
+          "id": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:root:6:decision",
+          "kind": "resolve_conflict",
+          "question": "Execution for Viaje en Familia requires guidance: Parent validation outcome is failed.",
+          "options": [
+            {
+              "id": "retry",
+              "label": "Retry with guidance"
+            },
+            {
+              "id": "stop",
+              "label": "Stop this work"
+            }
+          ],
+          "affectedNodeIds": [
+            "unit:root"
+          ],
+          "repairTargetNodeId": "unit:root",
+          "evidenceRefs": [
+            "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:root:6",
+            "input-fingerprint:sha256:41d79e8f6d7a0c87450834241a2b2a298c52feadb17a2e413fde71d905298bbf"
+          ],
+          "impact": "behavior",
+          "raisedAtGraphRevision": 1
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:readiness.observed:212",
+      "occurredAt": "2026-08-21T08:43:10.170Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [],
+        "pendingDecisionIds": [
+          "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:root:6:decision"
+        ],
+        "explanations": [
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:equipaje",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:exploracion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favoritos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organizacion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:paradas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:presupuesto",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:recuerdos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:root:6:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:paradas",
+            "unit:agenda",
+            "unit:exploracion",
+            "unit:organizacion",
+            "unit:presupuesto",
+            "unit:equipaje",
+            "unit:recuerdos",
+            "unit:notas",
+            "unit:favoritos",
+            "unit:dashboard"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:paradas",
+            "unit:agenda",
+            "unit:exploracion",
+            "unit:organizacion",
+            "unit:presupuesto",
+            "unit:equipaje",
+            "unit:recuerdos",
+            "unit:notas",
+            "unit:favoritos",
+            "unit:dashboard"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T08:43:09.984Z"
+      }
+    }
+  ]
+}

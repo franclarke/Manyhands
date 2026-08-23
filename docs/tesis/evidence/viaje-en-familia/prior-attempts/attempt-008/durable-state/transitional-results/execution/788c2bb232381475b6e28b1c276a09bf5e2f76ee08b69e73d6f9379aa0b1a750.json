@@ -1,0 +1,966 @@
+{
+  "events": [
+    {
+      "eventId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:readiness.observed:74",
+      "occurredAt": "2026-08-21T02:00:37.070Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:route"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:route",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:route-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:mem-favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:mem-notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:org-budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:org-packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-app",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:route-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-explore",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:route",
+            "unit:route-stops",
+            "unit:route-agenda",
+            "unit:route-explore",
+            "unit:organization",
+            "unit:org-budget",
+            "unit:org-packing",
+            "unit:memories",
+            "unit:mem-notes",
+            "unit:mem-favorites",
+            "unit:dashboard"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:route",
+            "unit:route-stops",
+            "unit:route-agenda",
+            "unit:route-explore",
+            "unit:organization",
+            "unit:org-budget",
+            "unit:org-packing",
+            "unit:memories",
+            "unit:mem-notes",
+            "unit:mem-favorites",
+            "unit:dashboard"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T02:00:37.035Z"
+      }
+    },
+    {
+      "eventId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:wave.selected:75",
+      "occurredAt": "2026-08-21T02:00:37.151Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:wave:5",
+        "nodeIds": [
+          "unit:route"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:route-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:mem-favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:mem-notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:org-budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:org-packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-app",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:route-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-explore",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-21T02:00:37.123Z"
+      }
+    },
+    {
+      "eventId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:route:3:started",
+      "occurredAt": "2026-08-21T02:00:37.203Z",
+      "type": "integration.started",
+      "payload": {
+        "attemptId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:route:3",
+        "nodeId": "unit:route",
+        "inputFingerprint": "sha256:c98b3aa67b386784af85a2a7dd79871305242a7f3d3c48af1de7437664a3381b",
+        "retryOfAttemptId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:route:2",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        },
+        "requiredArtifactIds": [
+          "artifact:route-agenda:run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:route-agenda:1",
+          "artifact:route-explore:run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:route-explore:1",
+          "artifact:route-stops:run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:route-stops:1"
+        ]
+      }
+    },
+    {
+      "eventId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:route:3:integrated",
+      "occurredAt": "2026-08-21T02:08:00.961Z",
+      "type": "integration.completed",
+      "payload": {
+        "attemptId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:route:3",
+        "nodeId": "unit:route",
+        "manifestId": "integration-result-integration-request-6e11608973fd07aa",
+        "candidateCommit": "bfe5497f6ded9dd54436c86ab3f67ae1a9c83d62",
+        "candidate": {
+          "manifestDigest": "sha256:46e06871a9aeca484c41cbebcb276c20b3883c3ef79845f324d618d3d775f0b5",
+          "commitOid": "bfe5497f6ded9dd54436c86ab3f67ae1a9c83d62",
+          "treeOid": "670356cf29eca46416021a87a814aa208fca49bb"
+        },
+        "matrix": {
+          "matrixId": "matrix-99cf8e171c30f683",
+          "candidateCommit": "bfe5497f6ded9dd54436c86ab3f67ae1a9c83d62",
+          "validationContract": {
+            "id": "validation-contract:unit:route",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:route",
+              "obligationId": "validation:route-integration",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-720c04d5df75c4392ced07a17eefc7dd69142429e59a40c74b157823abc3414f:attempt:1",
+                "validation:route-integration:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:b7dfba1d0b861c5b097ac0bffb671672a132bb9821a835fb1a76a6a42e308f32",
+          "observations": [
+            {
+              "evidenceId": "command-720c04d5df75c4392ced07a17eefc7dd69142429e59a40c74b157823abc3414f:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "720c04d5df75c4392ced07a17eefc7dd69142429e59a40c74b157823abc3414f",
+              "durationMs": 1118.7434999999823,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "481bd002d6dffa51775e3696ee11ad03b538f72c3f3e987dbae4f20ddd61dc7d",
+              "criterionIds": [
+                "criterion:route"
+              ],
+              "obligationIds": [
+                "validation:route-integration"
+              ],
+              "references": [
+                "public/js/route/integration/index.test.mjs"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-99cf8e171c30f683:validation:route-integration",
+              "revision": 1,
+              "goalContractDigest": "sha256:61d7ab1256316db89129a9b48652f52178444c4cafdeb4078a2d8105a1fcfa87",
+              "criterionId": "criterion:run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:1",
+              "obligationId": "validation:route-integration",
+              "candidate": {
+                "manifestDigest": "sha256:46e06871a9aeca484c41cbebcb276c20b3883c3ef79845f324d618d3d775f0b5",
+                "commitOid": "bfe5497f6ded9dd54436c86ab3f67ae1a9c83d62",
+                "treeOid": "670356cf29eca46416021a87a814aa208fca49bb"
+              },
+              "baseline": {
+                "commitOid": "6bf13e8f5e437bc7ff56a194917b036a10a7fe72",
+                "treeOid": "1555e640f7399b75338f2ecbfcd9ad268cd814d9"
+              },
+              "proofStrategyDigest": "sha256:fc2d9f608fcc0522867a5bad130e19d64fe0122b2983489027d9e8eba95bb23a",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:b7dfba1d0b861c5b097ac0bffb671672a132bb9821a835fb1a76a6a42e308f32",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:74b4676528ffc904f4e3a52650f4558544046966686ad5e6e9f7fdeafbee969b",
+              "outputDigest": "sha256:481bd002d6dffa51775e3696ee11ad03b538f72c3f3e987dbae4f20ddd61dc7d",
+              "outcome": "satisfied",
+              "digest": "sha256:e6c81a74cb2f00aeea88457dac02c4e2037baa5a0dcaf7f969fd417c90a97c73"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:route-integration:negative-control",
+              "obligationId": "validation:route-integration",
+              "detectedFailure": true,
+              "outputDigest": "63dd181ac4f7f9fbd41c5b1998b1e106a60c9fafd91977c16c7be1825942843e"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:route:3:artifact:artifact:route-integration",
+      "occurredAt": "2026-08-21T02:08:00.961Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:route-integration:run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:route:3",
+          "runId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab",
+          "nodeId": "unit:route",
+          "digest": "sha256:c1097118230b14e7660e5e98a07d900c334e66cb655faf2a7d1e974677f1565c",
+          "producerAttemptId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:route:3",
+          "contract": {
+            "id": "artifact:route-integration",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:c1097118230b14e7660e5e98a07d900c334e66cb655faf2a7d1e974677f1565c",
+          "manifest": {
+            "id": "artifact:route-integration",
+            "contract": {
+              "id": "artifact:route-integration",
+              "revision": 1,
+              "digest": "sha256:f47aa333ebef0eb15448d1a6e62128e0916cd3be42fa1e57a9e22a1482b06c06"
+            },
+            "producerNodeId": "unit:route",
+            "producerAttemptId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:route:3",
+            "inputFingerprint": "sha256:c98b3aa67b386784af85a2a7dd79871305242a7f3d3c48af1de7437664a3381b",
+            "repositoryObjectStoreId": "object-store:c590b054f49723ab",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "bfe5497f6ded9dd54436c86ab3f67ae1a9c83d62",
+              "treeOid": "670356cf29eca46416021a87a814aa208fca49bb"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-31e27276b8616ce0c78e5e5c9e2a1007-8ec7b49a4603/attempts/run-31e27276b8616ce0c78e5e5c9e2a1007-2158009fa53a/artifacts/artifact-route-integration-6d33933ddca4",
+            "kind": "change_set",
+            "baseTreeSha": "9401ec7d01c9a041666333d7327551c27473dc4a",
+            "resultTreeSha": "670356cf29eca46416021a87a814aa208fca49bb",
+            "entries": [
+              {
+                "newPath": "public/js/route/integration/index.mjs",
+                "operation": "add",
+                "newOid": "00a91d869f3957e7c9dabec2916966c1c89837e6",
+                "newMode": "100644"
+              },
+              {
+                "newPath": "public/js/route/integration/index.test.mjs",
+                "operation": "add",
+                "newOid": "6715ad555859a1f933806f185fb1021270569607",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:c1097118230b14e7660e5e98a07d900c334e66cb655faf2a7d1e974677f1565c"
+          },
+          "adoptedAt": "2026-08-21T02:08:00.961Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:readiness.observed:79",
+      "occurredAt": "2026-08-21T02:08:01.075Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:dashboard"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:dashboard",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:mem-favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:mem-notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:org-budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:org-packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-app",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-explore",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:route",
+            "unit:route-stops",
+            "unit:route-agenda",
+            "unit:route-explore",
+            "unit:organization",
+            "unit:org-budget",
+            "unit:org-packing",
+            "unit:memories",
+            "unit:mem-notes",
+            "unit:mem-favorites",
+            "unit:dashboard"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:route",
+            "unit:route-stops",
+            "unit:route-agenda",
+            "unit:route-explore",
+            "unit:organization",
+            "unit:org-budget",
+            "unit:org-packing",
+            "unit:memories",
+            "unit:mem-notes",
+            "unit:mem-favorites",
+            "unit:dashboard"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T02:08:01.033Z"
+      }
+    },
+    {
+      "eventId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:wave.selected:80",
+      "occurredAt": "2026-08-21T02:08:01.188Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:wave:6",
+        "nodeIds": [
+          "unit:dashboard"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:mem-favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:mem-notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:org-budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:org-packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-app",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-explore",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-21T02:08:01.149Z"
+      }
+    },
+    {
+      "eventId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:dashboard:1:started",
+      "occurredAt": "2026-08-21T02:08:01.267Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:dashboard:1",
+        "nodeId": "unit:dashboard",
+        "inputFingerprint": "sha256:56c088d80934f27f17ea903663ab643ea8abce7daf57ec891deab8d3a6a4784d",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:dashboard:1:failed",
+      "occurredAt": "2026-08-21T02:18:39.269Z",
+      "type": "attempt.failed",
+      "payload": {
+        "attemptId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:dashboard:1",
+        "nodeId": "unit:dashboard",
+        "reason": "timeout: timeout: The agent hit the hard timeout. Consider a longer per-task timeout or a faster executor for this node.: loadBudgetState(this.#state, budgetLike);\n    return this;\n  }\n\n  addExpense(category, amount) {\n    const normalizedCategory = normalizeCategory(category);\n    const normalizedAmount = normalizeAmount(amount, \"expense\");\n    const current = this.#state.expenseLedger.get(normalizedCategory) ?? [];\n\n    this.#state.expenseLedger.set(normalizedCategory, [...current, normalizedAmount]);\n    return this;\n  }\n\n  removeExpense(category, amount) {\n    const normalizedCategory = normalizeCategory(category);\n    removeExpenseFromLedger(this.#state.expenseLedger, normalizedCategory, amount);\n    return this;\n  }\n\n  getBudgetSummary() {\n    return createSummaryBudget(this.#state);\n  }\n\n  addPackingItem(item) {\n    const normalizedItem = normalizePackingItem(item);\n    this.#state.packingChecklist = addPackingItemToChecklist(this.#state.packingChecklist, normalizedItem);\n    return this;\n  }\n\n  togglePackingItem(id) {\n    this.#state.packingChecklist = togglePackingChecklistItem(this.#state.packingChecklist, id);\n    return this;\n  }\n\n  removePackingItem(id) {\n    this.#state.packingChecklist = removePackingItemById(this.#state.packingChecklist, id);\n    return this;\n  }\n\n  getPackingProgress() {\n    return readPackingProgress(this.#state.packingChecklist);\n  }\n\n  get state() {\n    return {\n      budgetTotal: this.#state.budgetTotal,\n      categories: [...this.#state.categoryBudgets.entries()].map(([category, budget]) => ({\n        category,\n        budget,\n      })),\n      expensesByCategory: [...this.#state.expenseLedger.entries()].map(([category, expenses]) => ({\n        category,\n        expenses: [...expenses],\n      })),\n      packing: {\n        ...this.#state.packingChecklist,\n        items: this.#state.packingChecklist.items.map((item) => ({ ...item })),\n      },\n    };\n  }\n}\n\nexport function createOrganizationIntegration(initialState = {}) {\n  return new OrganizationIntegration(initialState);\n}\n\nexport const organization = createOrganizationIntegration();\n\nexport function setBudget(target, budgetLike) {\n  if (target instanceof OrganizationIntegration) {\n    return target.setBudget(budgetLike);\n  }\n\n  return organization.setBudget(target);\n}\n\nexport function addExpense(target, category, amount) {\n  if (target instanceof OrganizationIntegration) {\n    return target.addExpense(category, amount);\n  }\n\n  return organization.addExpense(target, category);\n}\n\nexport function removeExpense(target, category, amount) {\n  if (target instanceof OrganizationIntegration) {\n    return target.removeExpense(category, amount);\n  }\n\n  return organization.removeExpense(target, category);\n}\n\nexport function getBudgetSummary(target) {\n  if (target instanceof OrganizationIntegration) {\n    return target.getBudgetSummary();\n  }\n\n  return organization.getBudgetSummary();\n}\n\nexport function addPackingItem(target, item) {\n  if (target instanceof OrganizationIntegration) {\n    return target.addPackingItem(item);\n  }\n\n  return organization.addPackingItem(target);\n}\n\nexport function togglePackingItem(target, id) {\n  if (target instanceof OrganizationIntegration) {\n    return target.togglePackingItem(id);\n  }\n\n  return organization.togglePackingItem(target);\n}\n\nexport function removePackingItem(target, id) {\n  if (target instanceof OrganizationIntegration) {\n    return target.removePackingItem(id);\n  }\n\n  return organization.removePackingItem(target);\n}\n\nexport function getPackingProgress(target) {\n  if (target instanceof OrganizationIntegration) {\n    return target.getPackingProgress();\n  }\n\n  return organization.getPackingProgress();\n}\n\nexport default {\n  OrganizationIntegration,\n  addExpense,\n  addPackingItem,\n  createOrganizationIntegration,\n  getBudgetSummary,\n  getPackingProgress,\n  organization,\n  removeExpense,\n  removePackingItem,\n  setBudget,\n  togglePackingItem,\n};\n\r\n\ncodex\nMH_STATUS {\"message\":\"writing the dashboard module, markup, styles, tests, and server routing update\",\"phase\":\"implement\",\"pct\":80}\n\nprocess-tree termination could not be verified",
+        "usage": {
+          "source": "unavailable"
+        }
+      }
+    },
+    {
+      "eventId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:dashboard:1:decision",
+      "occurredAt": "2026-08-21T02:18:39.269Z",
+      "type": "decision.raised",
+      "payload": {
+        "decision": {
+          "id": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:dashboard:1:decision",
+          "kind": "resolve_conflict",
+          "question": "Execution for Dashboard y presentación requires guidance: timeout: timeout: The agent hit the hard timeout. Consider a longer per-task timeout or a faster executor for this node.: loadBudgetState(this.#state, budgetLike);\n    return this;\n  }\n\n  addExpense(category, amount) {\n    const normalizedCategory = normalizeCategory(category);\n    const normalizedAmount = normalizeAmount(amount, \"expense\");\n    const current = this.#state.expenseLedger.get(normalizedCategory) ?? [];\n\n    this.#state.expenseLedger.set(normalizedCategory, [...current, normalizedAmount]);\n    return this;\n  }\n\n  removeExpense(category, amount) {\n    const normalizedCategory = normalizeCategory(category);\n    removeExpenseFromLedger(this.#state.expenseLedger, normalizedCategory, amount);\n    return this;\n  }\n\n  getBudgetSummary() {\n    return createSummaryBudget(this.#state);\n  }\n\n  addPackingItem(item) {\n    const normalizedItem = normalizePackingItem(item);\n    this.#state.packingChecklist = addPackingItemToChecklist(this.#state.packingChecklist, normalizedItem);\n    return this;\n  }\n\n  togglePackingItem(id) {\n    this.#state.packingChecklist = togglePackingChecklistItem(this.#state.packingChecklist, id);\n    return this;\n  }\n\n  removePackingItem(id) {\n    this.#state.packingChecklist = removePackingItemById(this.#state.packingChecklist, id);\n    return this;\n  }\n\n  getPackingProgress() {\n    return readPackingProgress(this.#state.packingChecklist);\n  }\n\n  get state() {\n    return {\n      budgetTotal: this.#state.budgetTotal,\n      categories: [...this.#state.categoryBudgets.entries()].map(([category, budget]) => ({\n        category,\n        budget,\n      })),\n      expensesByCategory: [...this.#state.expenseLedger.entries()].map(([category, expenses]) => ({\n        category,\n        expenses: [...expenses],\n      })),\n      packing: {\n        ...this.#state.packingChecklist,\n        items: this.#state.packingChecklist.items.map((item) => ({ ...item })),\n      },\n    };\n  }\n}\n\nexport function createOrganizationIntegration(initialState = {}) {\n  return new OrganizationIntegration(initialState);\n}\n\nexport const organization = createOrganizationIntegration();\n\nexport function setBudget(target, budgetLike) {\n  if (target instanceof OrganizationIntegration) {\n    return target.setBudget(budgetLike);\n  }\n\n  return organization.setBudget(target);\n}\n\nexport function addExpense(target, category, amount) {\n  if (target instanceof OrganizationIntegration) {\n    return target.addExpense(category, amount);\n  }\n\n  return organization.addExpense(target, category);\n}\n\nexport function removeExpense(target, category, amount) {\n  if (target instanceof OrganizationIntegration) {\n    return target.removeExpense(category, amount);\n  }\n\n  return organization.removeExpense(target, category);\n}\n\nexport function getBudgetSummary(target) {\n  if (target instanceof OrganizationIntegration) {\n    return target.getBudgetSummary();\n  }\n\n  return organization.getBudgetSummary();\n}\n\nexport function addPackingItem(target, item) {\n  if (target instanceof OrganizationIntegration) {\n    return target.addPackingItem(item);\n  }\n\n  return organization.addPackingItem(target);\n}\n\nexport function togglePackingItem(target, id) {\n  if (target instanceof OrganizationIntegration) {\n    return target.togglePackingItem(id);\n  }\n\n  return organization.togglePackingItem(target);\n}\n\nexport function removePackingItem(target, id) {\n  if (target instanceof OrganizationIntegration) {\n    return target.removePackingItem(id);\n  }\n\n  return organization.removePackingItem(target);\n}\n\nexport function getPackingProgress(target) {\n  if (target instanceof OrganizationIntegration) {\n    return target.getPackingProgress();\n  }\n\n  return organization.getPackingProgress();\n}\n\nexport default {\n  OrganizationIntegration,\n  addExpense,\n  addPackingItem,\n  createOrganizationIntegration,\n  getBudgetSummary,\n  getPackingProgress,\n  organization,\n  removeExpense,\n  removePackingItem,\n  setBudget,\n  togglePackingItem,\n};\n\r\n\ncodex\nMH_STATUS {\"message\":\"writing the dashboard module, markup, styles, tests, and server routing update\",\"phase\":\"implement\",\"pct\":80}\n\nprocess-tree termination could not be verified",
+          "options": [
+            {
+              "id": "retry",
+              "label": "Retry with guidance"
+            },
+            {
+              "id": "stop",
+              "label": "Stop this work"
+            }
+          ],
+          "affectedNodeIds": [
+            "unit:dashboard"
+          ],
+          "repairTargetNodeId": "unit:dashboard",
+          "evidenceRefs": [
+            "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:dashboard:1",
+            "input-fingerprint:sha256:56c088d80934f27f17ea903663ab643ea8abce7daf57ec891deab8d3a6a4784d"
+          ],
+          "impact": "behavior",
+          "raisedAtGraphRevision": 1
+        }
+      }
+    },
+    {
+      "eventId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:readiness.observed:84",
+      "occurredAt": "2026-08-21T02:18:39.431Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [],
+        "pendingDecisionIds": [
+          "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:dashboard:1:decision"
+        ],
+        "explanations": [
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:dashboard:1:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:mem-favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:mem-notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:org-budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:org-packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-app",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-explore",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:route",
+            "unit:route-stops",
+            "unit:route-agenda",
+            "unit:route-explore",
+            "unit:organization",
+            "unit:org-budget",
+            "unit:org-packing",
+            "unit:memories",
+            "unit:mem-notes",
+            "unit:mem-favorites",
+            "unit:dashboard"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:route",
+            "unit:route-stops",
+            "unit:route-agenda",
+            "unit:route-explore",
+            "unit:organization",
+            "unit:org-budget",
+            "unit:org-packing",
+            "unit:memories",
+            "unit:mem-notes",
+            "unit:mem-favorites",
+            "unit:dashboard"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T02:18:39.377Z"
+      }
+    }
+  ]
+}

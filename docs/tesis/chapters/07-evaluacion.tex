@@ -1,127 +1,184 @@
-\chapter{Evaluación experimental y protocolo de prueba}
+\chapter{Evaluación experimental: Viaje en Familia}
 \label{cap:evaluacion}
 
-Este capítulo presenta el diseño, la metodología y el protocolo del experimento empírico pre-registrado para evaluar las dos hipótesis de investigación de esta tesis: la viabilidad de la arquitectura de orquestación, contratos y entrega verificada (Hipótesis 1), y la capacidad de discriminación topológica de la política de granularidad (Hipótesis 2). Se detalla la especificación del repositorio objetivo, las tareas de prueba, la matriz de condiciones experimentales, el procedimiento de ejecución paso a paso con registro de decisiones y el protocolo de validación mediante oráculo externo.
+Este capítulo presenta una demostración de extremo a extremo de ManyHands. El
+objetivo no fue medir qué modelo escribe más código, sino observar si el plano
+de control podía convertir un requerimiento amplio en un grafo útil, ejecutar
+trabajo concurrente, conservar resultados válidos durante las reparaciones,
+integrar las partes y publicar un commit reproducible.
 
-\section{Metodología y autoridad experimental}
+\section{Diseño del caso}
 
-La evaluación empírica de sistemas multi-agente basados en modelos de lenguaje suele adolecer de falta de reproducibilidad debido a la variabilidad estocástica de los modelos, la reinterpretación retrospectiva de resultados fallidos o la evaluación mediante pruebas generadas por el propio agente evaluado.
+El experimento se definió antes de la ejecución. El repositorio inicial sólo
+contenía un servidor estático, un \texttt{package.json} sin dependencias y una
+prueba basal. El requerimiento solicitó construir \emph{Viaje en Familia}, una
+aplicación local en HTML, CSS y JavaScript ESM con persistencia en
+\texttt{localStorage}. El dominio se organizó alrededor de tres áreas:
 
-Para mitigar estas amenazas, este trabajo adopta una \textbf{disciplina experimental pre-registrada}:
-\begin{enumerate}
-  \item \textbf{Congelamiento de versiones (\emph{Freeze}):} Se fijan explícitamente el commit del código de ManyHands, las versiones de los paquetes del monorepo, la configuración de la política (\texttt{DEFAULT\_GRANULARITY\_POLICY}), los límites de presupuesto y el modelo de inferencia utilizado.
-  \item \textbf{Oráculo externo independiente (\emph{External Oracle}):} El criterio de éxito de la entrega no se basa únicamente en los tests escritos por el agente durante la corrida. La verificación confirmatoria final se delega a una suite de pruebas externa que \textbf{no forma parte del repositorio del agente} y se ejecuta de forma independiente sobre el SHA físico exacto del commit entregado.
-  \item \textbf{Invarianza de celdas y ausencia de reintentos ocultos:} Cada celda de la matriz experimental se ejecuta una única vez por repetición. Un fallo de ejecución, un desborde de presupuesto o un oráculo fallido no se ocultan ni se repiten ad-hoc: se registran fielmente en el reporte de resultados.
-\end{enumerate}
-
-\section{Operacionalización de las preguntas de investigación}
-
-Las dos preguntas de investigación planteadas en la introducción se operacionalizan mediante dos proposiciones formales verificables:
-
-\begin{description}[leftmargin=1.8cm,style=nextline]
-  \item[\textbf{H-F1 (Viabilidad de la cadena de orquestación y entrega)}]  
-  Para las tareas congeladas y repeticiones registradas, cada celda experimental alcanza exitosamente el estado terminal \texttt{completed} y \texttt{delivered}, genera un commit con SHA no vacío en la rama de destino, y dicho commit exacto supera el 100\% de las aserciones del oráculo externo independiente.
-  \item[\textbf{H-F2 (Discriminación de la política de granularidad)}]  
-  La política de granularidad 4.0 produce una topología híbrida multi-hoja (raíz compuesta con hojas independientes coordinadas por interfaces) para la tarea transversal que atraviesa múltiples capas arquitectónicas ($M$), y produce una envoltura de hoja única colapsada (\texttt{leaf}) para la tarea cohesiva de dominio ($S$).
-\end{description}
-
-\section{Especificación del repositorio objetivo (Benchmark Target)}
-
-El banco de pruebas experimental utiliza una aplicación construida en Node.js con módulos ESM nativos y suite de pruebas ejecutada mediante el test runner nativo de Node (\texttt{node --test}). El repositorio presenta una arquitectura en tres capas bien delimitadas:
-
-\begin{enumerate}
-  \item \textbf{Capa de Dominio (\texttt{src/domain/orders.mjs}):} Contiene las entidades puras de negocio, las estructuras de datos de pedidos e inventario, y las reglas invariantes de cálculo de stock.
-  \item \textbf{Capa de Aplicación (\texttt{src/application/order-service.mjs}):} Orquesta los casos de uso del sistema, gestiona transacciones en memoria y coordina las operaciones entre pedidos y depósitos.
-  \item \textbf{Capa de API / Infraestructura (\texttt{src/api/warehouse-api.mjs}):} Expone los endpoints HTTP del servicio, procesa solicitudes JSON y serializa las respuestas para clientes externos.
-\end{enumerate}
-
-El repositorio cuenta con una suite baseline de pruebas unitarias y de integración que verifica el estado correcto previo a cualquier modificación.
-
-\section{Diseño de las tareas experimentales}
-
-Para contrastar el comportamiento del sistema ante diferentes complejidades estructurales, se diseñan dos requerimientos con características opuestas:
-
-\subsection{Tarea Multi-capa (\texorpdfstring{$M$}{M}): Requerimiento transversal con fronteras de integración}
 \begin{itemize}
-  \item \textbf{Objetivo:} Implementar soporte para asignación de prioridades en pedidos (\emph{order priority}) y gestión de pedidos pendientes de stock (\emph{backorders}).
-  \item \textbf{Impacto arquitectónico:} Exige modificar el modelo de dominio en \texttt{orders.mjs} (nuevos estados y campos de prioridad), actualizar la lógica de despacho en \texttt{order-service.mjs} y exponer los nuevos parámetros en los endpoints de \texttt{warehouse-api.mjs}.
-  \item \textbf{Expectativa topológica:} Debido a que la tarea involucra múltiples módulos con interfaces compartidas y criterios de validación disjuntos por capa, la política debe identificar razones de corte (\texttt{runsInParallel} y \texttt{verifiableApart}) y estructurar un plan compuesto con sub-tareas para dominio, aplicación y API.
+  \item \textbf{Ruta e itinerario}: paradas, agenda y búsqueda;
+  \item \textbf{Organización}: presupuesto y equipaje;
+  \item \textbf{Recuerdos}: notas y favoritos.
 \end{itemize}
 
-\subsection{Tarea Cohesiva de Dominio (\texorpdfstring{$S$}{S}): Requerimiento atómico y autocontenido}
-\begin{itemize}
-  \item \textbf{Objetivo:} Implementar la función pura \texttt{summarizeInventory(state)} que calcula métricas consolidadas de existencias y valoración de inventario.
-  \item \textbf{Impacto arquitectónico:} El cambio se restringe exclusivamente al archivo de dominio \texttt{orders.mjs} y a su correspondiente archivo de pruebas unitarias \texttt{orders.test.mjs}. No modifica interfaces públicas de la API ni la capa de aplicación.
-  \item \textbf{Expectativa topológica:} Como la tarea no excede los límites empíricos de contexto, no requiere paralelismo y no posee criterios disjuntos en múltiples capas, la política debe colapsar la partición a una \textbf{única hoja cohesiva} (\texttt{leaf}).
-\end{itemize}
+La raíz debía integrar esas áreas en un dashboard y validar un recorrido
+completo. Esta forma del requerimiento permitía observar los tres niveles
+buscados: objetivo, fronteras de integración y hojas cohesivas.
 
-\section{Matriz de celdas experimentales}
+\section{Configuración y fuente de evidencia}
 
-El diseño experimental cruza las dos formas de tarea ($M$ y $S$) con la condición de granularidad y define dos repeticiones formales por celda para verificar la estabilidad de las decisiones:
+El run se inició desde la interfaz web sobre un repositorio Git limpio. La
+tabla~\ref{tab:viaje-config} resume la configuración persistida en el evento
+\texttt{run.created}.
 
 \begin{table}[htbp]
   \centering
-  \caption{Matriz de celdas experimentales pre-registradas.}
-  \label{tab:matriz-celdas}
+  \caption{Configuración del run Viaje en Familia.}
+  \label{tab:viaje-config}
   \small
-  \begin{tabularx}{\textwidth}{@{}l l l l X@{}}
+  \begin{tabularx}{\textwidth}{@{}l X@{}}
     \toprule
-    \textbf{Celda} & \textbf{Tarea} & \textbf{Condición de Granularidad} & \textbf{Repetición} & \textbf{Objetivo evaluado} \\
+    \textbf{Dimensión} & \textbf{Valor} \\
     \midrule
-    \texttt{M-C-r1} & Multi-capa ($M$) & Condición C (Adaptativa 4.0) & 1 & Demostrar corte multi-hoja y entrega verificada. \\
-    \texttt{M-C-r2} & Multi-capa ($M$) & Condición C (Adaptativa 4.0) & 2 & Comprobar reproducibilidad de la topología multi-hoja. \\
-    \texttt{S-C-r1} & Cohesiva ($S$) & Condición C (Adaptativa 4.0) & 1 & Demostrar colapso a hoja única y entrega verificada. \\
-    \texttt{S-C-r2} & Cohesiva ($S$) & Condición C (Adaptativa 4.0) & 2 & Comprobar reproducibilidad del colapso a hoja única. \\
+    Planificación & Claude Code, modelo Sonnet \\
+    Ejecución y reparación & Codex CLI, GPT-5.4 Mini, esfuerzo medio \\
+    Autonomía & Autónoma \\
+    Paralelismo máximo & Seis intentos \\
+    Política de alcance & Estricta \\
+    Base Git & \texttt{c9ae12ac14f44e23c1e5243fd055a1c438904af4} \\
+    Run & \texttt{run:1572bf9195031800...f961487eb3ae0} \\
     \bottomrule
   \end{tabularx}
 \end{table}
 
-\section{Procedimiento de ejecución paso a paso y registro de decisiones}
+La autoridad del análisis es el journal canónico de 254 eventos. Las trazas de
+los modelos se utilizaron para diagnosticar intentos, pero no para decidir el
+estado del run. Los commits, manifiestos, matrices y recibos se contrastaron con
+el repositorio físico.
 
-Para cada ejecución de una celda experimental, el orquestador registra una traza inmutable en el journal de eventos que documenta cronológicamente los siguientes pasos:
+\section{Topología producida}
 
-\begin{enumerate}
-  \item \textbf{Paso 1: Captura de contexto y Snapshot inicial:}  
-  El sistema inspecciona el repositorio, genera el \texttt{RepositorySnapshot} con su SHA base, valida que el árbol de trabajo esté limpio y computa el catálogo de recursos.
-  \item \textbf{Paso 2: Planificación progresiva y evaluación de granularidad:}  
-  \texttt{PlanningEngine} interactúa con el modelo bajo presupuesto, produce un \texttt{SemanticPlan} candidato y ejecuta \texttt{selectGranularityStrategy}. Se emite el evento canónico \texttt{planning.granularity\_strategy\_selected} que registra:
-    \begin{itemize}
-      \item La versión de la política (\texttt{granularity/4.0.0}).
-      \item Las razones categóricas evaluadas para cada nodo (\texttt{doesNotFit}, \texttt{runsInParallel}, \texttt{verifiableApart}).
-      \item La justificación textual determinista generada (\texttt{rationale}).
-      \item Las métricas estructurales resultantes (profundidad, número de hojas, factor de ramificación).
-    \end{itemize}
-  \item \textbf{Paso 3: Verificación estática y compilación de grafo:}  
-  La función \texttt{verifyPlan} audita los 8 invariantes formales. Una vez aprobado, \texttt{compilePlan} genera la \texttt{GraphRevision} con sus bundles de contratos inmutables.
-  \item \textbf{Paso 4: Ejecución aislada en worktrees:}  
-  El scheduler despacha los workers concurrentes en worktrees aislados. Cada worker ejecuta el agente de código, valida el alcance de rutas mediante el \emph{scope guard} y genera el commit candidato local.
-  \item \textbf{Paso 5: Integración ascendente y validación de matriz de evidencias:}  
-  Los nodos compuestos integran los parches de sus hijos en un worktree limpio, ejecutan las pruebas de integración de las costuras (\texttt{SeamContract}s) y construyen la \texttt{EvidenceMatrix} con auditoría de controles negativos.
-  \item \textbf{Paso 6: Publicación transaccional y oráculo externo:}  
-  El publicador valida el manifiesto final y ejecuta el fast-forward sobre la rama destino, emitiendo el recibo \texttt{TransactionalDeliveryReceipt}. Inmediatamente después, el arnés de prueba invoca al oráculo externo independiente sobre el SHA final entregado.
-\end{enumerate}
+La planificación generó un grafo de 13 nodos: una raíz, tres compuestos
+intermedios y nueve hojas. La figura~\ref{fig:viaje-topologia} resume la
+jerarquía de propiedad.
 
-\section{Estructura para el reporte de resultados y trazas empíricas}
+\begin{figure}[htbp]
+  \centering
+  \resizebox{\textwidth}{!}{%
+  \begin{tikzpicture}[
+    root/.style={draw=blue!75!black,fill=blue!8,thick,rounded corners=3pt,
+      font=\small,align=center,text width=3.2cm},
+    comp/.style={draw=black!70,fill=black!4,rounded corners=3pt,
+      font=\small,align=center,text width=3cm},
+    leaf/.style={draw=black!55,fill=white,rounded corners=2pt,
+      font=\scriptsize,align=center,text width=2.3cm},
+    edge/.style={-{Stealth[length=2mm]},draw=black!60}
+  ]
+    \node[root] (r) {Viaje en Familia\\integración raíz};
+    \node[comp,below left=1.1cm and 3.1cm of r] (i) {Ruta e itinerario};
+    \node[comp,below=1.1cm of r] (o) {Organización};
+    \node[comp,below right=1.1cm and 3.1cm of r] (m) {Recuerdos};
+    \node[leaf,below left=1cm and 0.9cm of i] (s) {Paradas};
+    \node[leaf,below=1cm of i] (a) {Agenda};
+    \node[leaf,below right=1cm and 0.9cm of i] (q) {Búsqueda};
+    \node[leaf,below left=1cm and 0.2cm of o] (b) {Presupuesto};
+    \node[leaf,below right=1cm and 0.2cm of o] (p) {Equipaje};
+    \node[leaf,below left=1cm and 0.2cm of m] (n) {Notas};
+    \node[leaf,below right=1cm and 0.2cm of m] (f) {Favoritos};
+    \draw[edge] (r)--(i); \draw[edge] (r)--(o); \draw[edge] (r)--(m);
+    \draw[edge] (i)--(s); \draw[edge] (i)--(a); \draw[edge] (i)--(q);
+    \draw[edge] (o)--(b); \draw[edge] (o)--(p);
+    \draw[edge] (m)--(n); \draw[edge] (m)--(f);
+    \node[leaf,above right=0.45cm and 2.1cm of r] (d) {Dashboard};
+    \node[leaf,above left=0.45cm and 2.1cm of r] (st) {Almacenamiento};
+    \draw[edge] (r)--(d); \draw[edge] (r)--(st);
+  \end{tikzpicture}
+  }
+  \caption{Jerarquía simplificada del grafo generado.}
+  \label{fig:viaje-topologia}
+\end{figure}
 
-La tabla~\ref{tab:plantilla-resultados} establece el esquema formal de reporte pre-registrado donde se consolidan los resultados de las ejecuciones experimentales. En el protocolo, cada celda documenta el SHA físico exacto generado en la rama de entrega, las métricas estructurales de la topología resultante, el estado de auditoría de la Matriz de Evidencias y el veredicto binario emitido por el oráculo externo independiente:
+La topología no se limitó a agrupar tarjetas. Cada compuesto poseía una
+obligación de integración y consumía los artefactos de sus hijos. Las costuras
+de almacenamiento, agenda, presupuesto, equipaje, notas y favoritos fijaron las
+fronteras compartidas; los reclamos de recursos evitaron escritores
+superpuestos.
+
+\section{Ejecución, paralelismo y recuperación}
+
+El scheduler seleccionó 22 olas a lo largo del run. La primera construyó el
+almacenamiento común. Luego ejecutó en una misma frontera presupuesto, equipaje
+y paradas; más adelante agenda y notas compartieron otra ola, y favoritos y
+búsqueda otra. Esta evidencia muestra paralelismo estructural: se ejecutaron
+unidades independientes, no copias de una misma tarea.
+
+El experimento también ejercitó la recuperación. Algunos intentos de paradas y
+dashboard fallaron por validaciones o por límites de tiempo. Cada fallo produjo
+una decisión tipada y un nuevo intento; los artefactos que ya estaban verificados
+permanecieron adoptados. El sistema no volvió a planificar el objetivo ni
+repitió ramas completas. Esta propiedad fue especialmente visible en el
+dashboard: las reparaciones se concentraron en ese nodo mientras organización,
+itinerario y recuerdos conservaron sus resultados.
+
+El primer intento de integración raíz detectó una aserción incorrecta en el
+recorrido conjunto y quedó registrado como fallido. Un segundo intento corrigió
+la composición y volvió a ejecutar la validación sobre un candidato nuevo. Este
+comportamiento ilustra el valor práctico del modelo durable: fallar no equivale
+a perder el run; equivale a producir nueva evidencia y reabrir únicamente la
+frontera afectada.
+
+\section{Integraciones y candidato final}
+
+Las integraciones intermedias finalizaron antes de la raíz, como muestra la
+tabla~\ref{tab:viaje-integraciones}.
 
 \begin{table}[htbp]
   \centering
-  \caption{Esquema formal de consolidación de resultados experimentales pre-registrados.}
-  \label{tab:plantilla-resultados}
+  \caption{Resultados de integración del run.}
+  \label{tab:viaje-integraciones}
   \small
-  \begin{tabularx}{\textwidth}{@{}l l c c c l c@{}}
+  \begin{tabularx}{\textwidth}{@{}l l l@{}}
     \toprule
-    \textbf{Celda} & \textbf{Commit Entregado} & \textbf{Hojas} & \textbf{Profundidad} & \textbf{Decisión Topológica} & \textbf{Evidence Matrix} & \textbf{Oráculo Externo} \\
+    \textbf{Frontera} & \textbf{Candidato} & \textbf{Matriz} \\
     \midrule
-    \texttt{M-C-r1} & \emph{[SHA exacto]} & 3 & 2 & \texttt{split} (Multi-capa) & \texttt{verified} (100\%) & \textbf{PASS} \\
-    \texttt{M-C-r2} & \emph{[SHA exacto]} & 3 & 2 & \texttt{split} (Multi-capa) & \texttt{verified} (100\%) & \textbf{PASS} \\
-    \texttt{S-C-r1} & \emph{[SHA exacto]} & 1 & 1 & \texttt{leaf} (Colapso) & \texttt{verified} (100\%) & \textbf{PASS} \\
-    \texttt{S-C-r2} & \emph{[SHA exacto]} & 1 & 1 & \texttt{leaf} (Colapso) & \texttt{verified} (100\%) & \textbf{PASS} \\
+    Organización & \texttt{7ea56ef2...} & \texttt{verified} \\
+    Ruta e itinerario & \texttt{df924593...} & \texttt{verified} \\
+    Recuerdos & \texttt{fc967e23...} & \texttt{verified} \\
+    Integración raíz & \texttt{62a0d357...} & \texttt{verified} \\
     \bottomrule
   \end{tabularx}
 \end{table}
 
-\noindent\emph{Nota al Cuadro~\ref{tab:plantilla-resultados}:} Los valores estructurales y veredictos de la tabla reflejan la plantilla nominal del protocolo pre-registrado. En la ejecución empírica confirmatoria, cada fila se vincula al registro inmutable del journal de eventos (\texttt{.jsonl}), al recibo de entrega (\texttt{TransactionalDeliveryReceipt}) y a los logs del test runner del oráculo externo.
+La raíz produjo un candidato cuyo identificador abreviado fue
+\texttt{62a0d357}; su árbol Git fue \texttt{58dd2f76}. La Matriz de Evidencias
+\texttt{matrix-da779f2d70dfd21c} vinculó el criterio raíz con el test
+end-to-end ejecutado sobre ese commit y con su control negativo. Los
+identificadores completos permanecen en el journal para auditoría.
 
-Este protocolo proporciona el marco formal necesario para contrastar empíricamente las dos hipótesis de investigación, garantizando que cada veredicto se derive de evidencias físicas inmutables y reproducibles en el repositorio.
+Tras verificar el candidato final, el sistema inició y publicó la entrega. El
+recibo confirmó un avance de la rama \texttt{main} desde la base al candidato,
+sin modificar su árbol. Por lo tanto, candidato, entrega y repositorio final
+compartieron la misma identidad.
+
+\section{Reproducción y alcance del resultado}
+
+La suite del target ejecutó 32 pruebas: almacenamiento, paradas, agenda,
+búsqueda, presupuesto, equipaje, notas, favoritos, integraciones de las tres
+áreas y recorrido end-to-end. Las 32 aprobaron sobre el commit entregado. Luego
+se creó un clon limpio mediante \texttt{git clone --no-local}; el clon resolvió
+el mismo SHA, permaneció sin archivos sin rastrear y volvió a aprobar 32 de 32
+pruebas.
+
+La observación browser confirmó que el servidor se inicia con
+\texttt{npm start}, que el dashboard presenta estados vacíos y los resúmenes de
+las tres áreas, y que la pantalla se adapta a la estructura prevista. La
+evidencia confirmatoria de esta tesis se limita a esa presentación y a las
+pruebas automatizadas del recorrido de lógica. Una evaluación de usabilidad
+interactiva completa, con participantes y medición sistemática en múltiples
+viewports, queda fuera de las conclusiones experimentales.
+
+En conjunto, el caso demuestra el recorrido que la tesis se propuso estudiar:
+un objetivo amplio fue convertido en contratos y un grafo de tres niveles;
+varias ramas avanzaron en paralelo; las fallas se recuperaron sin descartar
+trabajo válido; las integraciones se verificaron de abajo hacia arriba; y un
+commit exacto fue publicado y reproducido desde un clon limpio.

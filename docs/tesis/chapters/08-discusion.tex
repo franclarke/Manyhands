@@ -1,86 +1,103 @@
 \chapter{Discusión}
 \label{cap:discusion}
 
-Este capítulo discute las implicancias teóricas, metodológicas y prácticas de la arquitectura de \sistema, analizando el significado de las dos hipótesis de investigación, la frontera entre razonamiento generativo y control determinista, la importancia de la evidencia exógena frente a la endógena, las garantías de seguridad y contención en entornos locales, las brechas de transición identificadas y las amenazas a la validez científica del trabajo.
+\section{Qué demuestra el sistema}
 
-\section{Interpretación de las dos hipótesis de investigación}
-
-\subsection{Eje 1: Orquestación por contratos y entrega verificada}
-
-La primera hipótesis de investigación (\textbf{H-1}) no plantea una afirmación sobre métricas superficiales de productividad (como la cantidad bruta de líneas de código generadas o la velocidad de emisión de tokens). Por el contrario, evalúa la \textbf{integridad de la cadena de custodia de ingeniería}:
+El aporte principal de ManyHands no es generar más líneas de código ni reemplazar
+la capacidad de los modelos utilizados como ejecutores. Su aporte es una cadena
+de custodia para el trabajo generado:
 
 \begin{equation}
-\text{Objetivo} \xrightarrow{\text{Planificación}} \text{Contratos} \xrightarrow{\text{Aislamiento}} \text{Ejecución} \xrightarrow{\text{Evidencia}} \text{Integración} \xrightarrow{\text{Transacción}} \text{Commit Entregado}
+\text{Objetivo} \rightarrow \text{Plan} \rightarrow \text{Contratos}
+\rightarrow \text{Intentos} \rightarrow \text{Evidencia}
+\rightarrow \text{Integración} \rightarrow \text{Entrega}.
 \label{eq:cadena-custodia}
 \end{equation}
 
-El valor del enfoque de ManyHands radica en demostrar que la orquestación multi-agente en repositorios reales solo es viable cuando se reemplaza la interacción libre en lenguaje natural por un plano formal de \textbf{contratos inmutables y relaciones tipadas}. La separación entre dependencias temporales de artefactos (\texttt{ArtifactRequirement}), acuerdos de interfaz pública (\texttt{SeamBinding}) y exclusiones mutuas por recursos (\texttt{ResourceClaim}) permite que el scheduler coordine agentes concurrentes sin riesgo de colisiones destructivas ni estados intermedios inconsistentes.
+El run Viaje en Familia muestra que esta cadena puede operar de extremo a
+extremo. La planificación produjo una jerarquía coherente; el scheduler encontró
+fronteras concurrentes; los compuestos integraron a sus hijos; la recuperación
+reabrió nodos fallidos sin descartar artefactos adoptados; y la entrega quedó
+vinculada a un commit y un árbol Git reproducibles.
 
-\subsection{Eje 2: Política de granularidad categórica}
+El resultado no implica que toda ejecución autónoma de software vaya a
+completar cualquier objetivo. Demuestra una proposición más acotada y útil: es
+posible construir un plano de control que mantenga trazabilidad y permita
+recuperar fallas durante una colaboración multi-agente real.
 
-La segunda hipótesis (\textbf{H-2}) aborda el problema de la sobre- y sub-fragmentación en la descomposición de software. Como se demostró en la sección~\ref{sec:critica-scoring}, intentar resolver la granularidad mediante funciones de utilidad continuas y umbrales numéricos constituye una falacia metodológica que degenera en parámetros libres imposibles de calibrar.
+\section{Modelos para semántica, software para autoridad}
 
-La adopción de la \textbf{Política Categórica 4.0} aporta una lección fundamental: una descomposición solo es justificable si compra capacidad física de contexto (\texttt{doesNotFit}), paralelismo real en rondas de producción (\texttt{runsInParallel}) o aislamiento de pruebas (\texttt{verifiableApart}). Cuando un requerimiento no satisface ninguna de estas tres condiciones, colapsar determinísticamente la partición en una única hoja cohesiva no solo reduce el costo de inferencia, sino que elimina por completo el overhead de negociar interfaces y fusionar ramas innecesarias.
-
-\subsection{El compromiso de ingeniería: sobrecarga de control vs. garantía de integridad}
-
-La adopción de una arquitectura basada en grafos híbridos, contratos Zod, aislamiento en worktrees y verificación de doble fase introduce inevitablemente una sobrecarga computacional y temporal respecto a un flujo de trabajo monolítico desestructurado (*one-shot prompting*). Cada intento requiere preparar árboles de trabajo en disco, validar diffs, ejecutar suites de pruebas basales y persistir eventos atómicos.
-
-Sin embargo, este costo constituye un \textbf{compromiso de diseño deliberado}: en ingeniería de software profesional sobre repositorios preexistentes, el costo de reparar una corrupción inadvertida del historial de Git, depurar efectos colaterales fuera de alcance o resolver una incompatibilidad silenciosa de interfaces supera por órdenes de magnitud los segundos adicionales requeridos por la orquestación formal. El sistema intercambia una fracción mínima de tiempo de cómputo por una garantía absoluta de determinismo, contención y verificabilidad física.
-
-\section{La frontera entre razonamiento generativo y control determinista}
-
-Una de las decisiones arquitectónicas centrales de este trabajo consiste en establecer una frontera infranqueable entre lo que se delega a los modelos de lenguaje y lo que gobierna el software determinista:
+Una decisión transversal del diseño fue separar dos responsabilidades:
 
 \begin{itemize}
-  \item \textbf{Responsabilidad del modelo (Juicio semántico):} El LLM es insustituible para interpretar el requerimiento en lenguaje natural, comprender la intención del código preexistente, proponer qué módulos deben crearse y redactar la lógica de negocio.
-  \item \textbf{Responsabilidad del motor determinista (Control e invariantes):} El software determinista (\texttt{verifyPlan}, \texttt{ScopeGuard}, \texttt{EvidenceMatrix}, \texttt{TransactionalDeliveryPublisher}) es el único responsable de validar esquemas, aplicar límites de presupuesto, calcular el orden topológico del grafo, verificar invariantes de aciclicidad, aislar los worktrees en el sistema operativo, auditar las suites de pruebas y ejecutar los merges en Git.
+  \item el modelo interpreta el objetivo, propone límites semánticos y escribe
+  o repara código;
+  \item el plano determinista valida esquemas, calcula disponibilidad, limita
+  recursos, inspecciona Git y decide si existe evidencia suficiente.
 \end{itemize}
 
-Permitir que un modelo decida arbitrariamente cuándo un plan es válido o modifique los umbrales de su propia evaluación reintroduce la no-determinación y el riesgo de alucinación que la ingeniería de software busca erradicar.
+La separación evita pedir al mismo componente probabilístico que produzca el
+resultado y, al mismo tiempo, sea la autoridad final sobre su corrección. El
+modelo conserva libertad dentro de un intento; los contratos y verificadores
+limitan las consecuencias que ese intento puede tener sobre el run.
 
-\section{Evidencia exógena frente a evidencia endógena}
+\section{Por qué la granularidad es categórica}
 
-En el desarrollo de software asistido por IA existe un riesgo epistemológico sustancial denominado \emph{sesgo de confirmación endógeno}: cuando un mismo agente escribe la implementación de una función y simultáneamente escribe la prueba unitaria que la valida, existe una alta probabilidad de que ambos artefactos compartan la misma mala interpretación del requerimiento original. En tal escenario, la suite de pruebas reporta un estado verde (\texttt{passed}), pero el comportamiento del sistema es erróneo.
+La experiencia con el puntaje continuo mostró que una fórmula puede parecer
+precisa sin ser explicable. Sumar cantidad de archivos, tokens, interfaces y
+pruebas produce un número, pero no una razón física para dividir. La política
+categórica cambia la pregunta: en lugar de ``¿qué puntaje obtuvo esta tarea?'',
+pregunta ``¿qué beneficio concreto compra la separación?''.
 
-\sistema\ aborda esta vulnerabilidad mediante tres líneas de defensa:
+Las tres respuestas posibles —capacidad, paralelismo o aislamiento de
+validación— pueden explicarse a un operador y observarse después de la
+ejecución. Además, el algoritmo de colapso reduce el costo de una propuesta
+demasiado fragmentada sin perder los criterios que debían verificarse.
 
-\begin{enumerate}
-  \item \textbf{Controles negativos obligatorios:} Toda nueva prueba generada por un agente debe demostrar sensibilidad, fallando de manera comprobable cuando se ejecuta contra el commit base previo a la modificación.
-  \item \textbf{Auditoría de integridad de pruebas:} Detección estricta de cualquier intento de debilitar aserciones, ignorar errores o modificar configuraciones del framework de pruebas.
-  \item \textbf{Oráculo externo independiente:} La validación confirmatoria final de la entrega no confía exclusivamente en las pruebas del repositorio del agente, sino que se valida contra una batería de pruebas externa ejecutada sobre el SHA del commit físico final.
-\end{enumerate}
+\section{Costo de control y recuperación}
 
-\section{Seguridad, contención y contabilidad en entornos locales}
+Los worktrees, journals, validaciones y recibos agregan tiempo respecto de una
+invocación única. Este costo es deliberado. En un parche trivial puede ser
+innecesario; en un cambio con varias fronteras, permite atribuir resultados,
+aislar fallas y continuar después de una interrupción.
 
-Ejecutar agentes de código con capacidad de invocar comandos en terminal directamente en la máquina del desarrollador impone requisitos críticos de seguridad:
+El experimento también muestra que la recuperación tiene costo propio. Un nodo
+puede requerir varios intentos antes de converger, y una evidencia mal
+especificada puede bloquear código correcto. La ventaja no es eliminar el
+fallo, sino volverlo local, durable y diagnosticable. La principal oportunidad
+de mejora consiste en reducir intentos repetidos mediante mejores diagnósticos
+y checkpoints de candidatos parciales.
 
-\begin{itemize}
-  \item \textbf{Aislamiento del sistema de archivos:} El uso de Git worktrees independientes asegura que el árbol de trabajo del usuario nunca sufra modificaciones accidentales ni pérdida de cambios no confirmados.
-  \item \textbf{Verificación estricta de alcance (*Scope Guard*):} El orquestador actúa como un firewall de rutas del sistema operativo: cualquier escritura fuera del conjunto cerrado de rutas autorizadas (\texttt{writePaths}) resulta en el aborto inmediato del intento.
-  \item \textbf{Supervisión y terminación limpia de procesos:} La gestión recursiva del árbol de procesos (\texttt{taskkill} / \texttt{SIGKILL}) garantiza que procesos zombies o servidores huérfanos iniciados por los agentes no queden consumiendo memoria o bloqueando puertos tras una cancelación o expiración de tiempo.
-  \item \textbf{Saneamiento de entorno y fencing:} La exclusión sistemática de credenciales y variables de entorno del host previene la fuga involuntaria de secretos corporativos hacia las APIs de los proveedores de LLM.
-\end{itemize}
+\section{Alcance de la evidencia}
 
-\section{Alcance real y brechas de transición}
+La evidencia técnica es fuerte en aquellas propiedades vinculadas a Git y al
+journal: topología, orden de eventos, procesos, candidatos, matrices, entrega y
+reproducción. Las 32 pruebas del target cubren la lógica de las áreas y su
+composición. La revisión visual confirma la presentación del dashboard y sus
+estados básicos.
 
-En conformidad con las normas de honestidad y rigor académico, es necesario explicitar las brechas de transición existentes entre la arquitectura canónica de diseño y el estado actual de la base de código:
-
-\begin{enumerate}
-  \item \textbf{Materialización selectiva de artefactos por archivo:} Aunque el contrato \texttt{ArtifactContract} contempla formalmente la especificación de entregables granulares (\texttt{materialization: "files"}), la implementación actual del driver de Git transporta el commit producido completo de cada intento. La composición quirúrgica de artefactos archivo por archivo permanece como una línea de desarrollo futuro.
-  \item \textbf{Aislamiento mediante sandboxing liviano vs contenedores:} La contención actual se basa en Git worktrees y verificación de rutas a nivel de proceso. El aislamiento estricto mediante espacios de nombres de Linux (\emph{namespaces}) o contenedores efímeros (Docker / Podman) fortalecería aún más la seguridad ante comandos arbitrarios maliciosos.
-\end{enumerate}
+La evaluación no constituye un estudio de usabilidad con usuarios ni una
+comparación estadística contra otros orquestadores. Tampoco demuestra
+escalabilidad a repositorios de millones de líneas o a todos los lenguajes. Estas
+distinciones protegen la interpretación del caso: el experimento aporta
+evidencia de viabilidad arquitectónica, no una ley universal sobre rendimiento
+de modelos.
 
 \section{Amenazas a la validez}
 
-\subsection{Validez interna}
-La variabilidad estocástica intrínseca en la generación de texto de los LLMs constituye la principal amenaza interna. Para mitigarla, el sistema fija la temperatura de inferencia en los niveles más deterministas posibles, utiliza esquemas Zod estrictos con extracción resiliente de JSON y somete la política de granularidad a un banco de regresión offline determinista con más de 80 casos históricos congelados.
+\begin{itemize}
+  \item \textbf{Variabilidad del modelo.} Una nueva ejecución puede proponer
+  código o particiones diferentes. El freeze de configuración y el journal
+  reducen ambigüedad, pero no eliminan la estocasticidad.
+  \item \textbf{Caso único.} Viaje en Familia fue elegido por su riqueza
+  estructural. Otros dominios pueden producir grafos y costos distintos.
+  \item \textbf{Pruebas como aproximación.} Una suite verde no mide por sí sola
+  mantenibilidad o experiencia de uso. Por eso se separan las conclusiones de
+  ingeniería de las futuras evaluaciones cualitativas.
+  \item \textbf{Entorno local.} La supervisión y el sandbox fueron ejercitados
+  en Windows. La portabilidad conceptual no sustituye una calificación física
+  equivalente en otros sistemas operativos.
+\end{itemize}
 
-\subsection{Validez externa}
-La evaluación empírica se diseñó sobre un repositorio de referencia en Node.js ESM. Si bien los conceptos de modularidad, dependencias de artefactos y contratos de interfaz son universales en la ingeniería de software, los resultados específicos de rendimiento y granularidad podrían variar en proyectos monolíticos de gran escala con millones de líneas de código o en lenguajes con sistemas de tipos compilados complejos (como Rust o C++). La generalización empírica hacia otros ecosistemas tecnológicos constituye un desafío abierto.
-
-\subsection{Validez de constructo}
-La medición de la corrección de un cambio de software mediante pruebas automatizadas y oráculos externos refleja fielmente la práctica de la industria (CI/CD). No obstante, pruebas automatizadas pueden no capturar aspectos cualitativos no funcionales, tales como la legibilidad del código, la mantenibilidad a largo plazo o el estilo idiomático de programación.
-
-\subsection{Validez de conclusión}
-Las conclusiones de esta tesis no pretenden establecer leyes estadísticas universales sobre el comportamiento de los modelos de lenguaje, sino demostrar una proposición concreta de ingeniería de software: \textbf{que es posible y viable construir una arquitectura formal de orquestación por contratos y evidencia que coordine agentes de IA de forma segura, determinista y auditable.}
+Estas amenazas no invalidan el recorrido observado, pero delimitan qué puede
+inferirse a partir de él.

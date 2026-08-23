@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "processes": [
+    {
+      "pid": 41648,
+      "label": "install",
+      "command": "C:\\mh-shim-c781-09\\node.exe",
+      "operationId": "op-install",
+      "registeredAt": "2026-08-12T23:05:18.083Z",
+      "exitedAt": "2026-08-12T23:05:18.630Z"
+    }
+  ],
+  "updatedAt": "2026-08-12T23:05:18.640Z"
+}

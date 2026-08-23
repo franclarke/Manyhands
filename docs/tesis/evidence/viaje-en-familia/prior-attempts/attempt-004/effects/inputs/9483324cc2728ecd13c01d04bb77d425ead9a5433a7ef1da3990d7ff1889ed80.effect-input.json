@@ -1,0 +1,1 @@
+{"kind":"process_terminate","payload":{"expectedProcessIdentity":{"creationIdentity":"windows-filetime:134317209925013406","pid":35864,"supervisorNonce":"nonce:a0b490b8-bd93-4ef3-bf7e-3a043bb137bb"},"reason":"Cancelled by operator","targetAttemptId":"stage3:execution","targetEffectId":"sha256:f71e5754cede0a3d959fadf82922a9945c80830d423be02db3624f8a0d40f32b"},"schemaVersion":1}

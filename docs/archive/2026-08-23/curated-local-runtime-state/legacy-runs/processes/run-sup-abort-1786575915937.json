@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "processes": [
+    {
+      "pid": 37960,
+      "label": "planning",
+      "command": "C:\\mh-shim-c781-09\\node.exe",
+      "registeredAt": "2026-08-12T23:05:15.951Z",
+      "exitedAt": "2026-08-12T23:05:16.512Z"
+    }
+  ],
+  "updatedAt": "2026-08-12T23:05:17.063Z"
+}

@@ -1,0 +1,1143 @@
+{
+  "events": [
+    {
+      "eventId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:readiness.observed:14",
+      "occurredAt": "2026-08-16T07:49:39.293Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:word-total"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:word-total",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:cli",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:reading-time-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:reading-time",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:sentence-length-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:cli-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:reading-time-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:sentence-length-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:top-words-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:word-total-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:sentence-length",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:top-words-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:top-words",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:word-total-change",
+                "revision": 1
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:word-total",
+            "unit:top-words",
+            "unit:sentence-length",
+            "unit:reading-time",
+            "unit:cli"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:word-total",
+            "unit:top-words",
+            "unit:sentence-length",
+            "unit:reading-time",
+            "unit:cli"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-16T07:49:39.289Z"
+      }
+    },
+    {
+      "eventId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:wave.selected:15",
+      "occurredAt": "2026-08-16T07:49:39.304Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:wave:1",
+        "nodeIds": [
+          "unit:word-total"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:cli",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:reading-time-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:reading-time",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:sentence-length-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:cli-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:reading-time-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:sentence-length-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:top-words-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:word-total-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:sentence-length",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:top-words-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:top-words",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:word-total-change",
+                "revision": 1
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-16T07:49:39.299Z"
+      }
+    },
+    {
+      "eventId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:word-total:1:started",
+      "occurredAt": "2026-08-16T07:49:39.310Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:word-total:1",
+        "nodeId": "unit:word-total",
+        "inputFingerprint": "sha256:102b9fc4b3c2d144b443ad8d604cf68228ff87ba86007225e5acf12ecbedd482",
+        "executorProfile": {
+          "id": "claude-code-cli",
+          "revision": "sha256:d4d7f01afe76cf13f9f84653825ce5f81d972399f0fec54b9cc1deae9e598ed9"
+        }
+      }
+    },
+    {
+      "eventId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:word-total:1:candidate",
+      "occurredAt": "2026-08-16T07:50:35.071Z",
+      "type": "attempt.candidate_created",
+      "payload": {
+        "attemptId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:word-total:1",
+        "nodeId": "unit:word-total",
+        "candidateCommit": "134b3f6282ef8a7c537800d6a054fe11103631f1",
+        "candidate": {
+          "manifestDigest": "sha256:4c47e774a303e1420ff69f8bb0e1b1bbdd6782d61eb2b1945dccb44ec1c3edfb",
+          "commitOid": "134b3f6282ef8a7c537800d6a054fe11103631f1",
+          "treeOid": "360ee37ab9c20421e90a6a664ff75965a0449d5f"
+        },
+        "outputDigest": "sha256:2dba27639cd927d2559fc6739a538e1e928040187dece9b7cad5ae4ecdc077dd",
+        "changedFiles": [
+          "src/word-total.js",
+          "src/word-total.test.js"
+        ],
+        "usage": {
+          "tokensIn": 324654,
+          "tokensOut": 3396,
+          "costUsd": 0.2523358,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:word-total:1:validated",
+      "occurredAt": "2026-08-16T07:50:35.071Z",
+      "type": "validation.completed",
+      "payload": {
+        "attemptId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:word-total:1",
+        "nodeId": "unit:word-total",
+        "matrix": {
+          "matrixId": "matrix-5b4279f3bdf83e44",
+          "candidateCommit": "134b3f6282ef8a7c537800d6a054fe11103631f1",
+          "validationContract": {
+            "id": "validation-contract:unit:word-total",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:word-total-refinement",
+              "obligationId": "validation:word-total",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-66a0e7a8e832f21fd8654d2e05eb75945cae65491785258d755cf1c3b17bdc9d:attempt:1",
+                "validation:word-total:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:cf8a09de75135bb0bc99f4b15cd641c2eee7571f2c66074fbcae36861d89cc62",
+          "observations": [
+            {
+              "evidenceId": "command-66a0e7a8e832f21fd8654d2e05eb75945cae65491785258d755cf1c3b17bdc9d:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "66a0e7a8e832f21fd8654d2e05eb75945cae65491785258d755cf1c3b17bdc9d",
+              "durationMs": 1168.5759000000035,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "d245c916124b6df900ff92da1e22e80fc273ce2a62da2b0c47cdd58dd24fc823",
+              "criterionIds": [
+                "criterion:word-total-refinement"
+              ],
+              "obligationIds": [
+                "validation:word-total"
+              ],
+              "references": [
+                "src/word-total.test.js"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-5b4279f3bdf83e44:validation:word-total",
+              "revision": 1,
+              "goalContractDigest": "sha256:8304648ac2ba3e9f2e0d749bae90fc5265cf11326288ce4b004046da93f33093",
+              "criterionId": "criterion:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:2",
+              "obligationId": "validation:word-total",
+              "candidate": {
+                "manifestDigest": "sha256:4c47e774a303e1420ff69f8bb0e1b1bbdd6782d61eb2b1945dccb44ec1c3edfb",
+                "commitOid": "134b3f6282ef8a7c537800d6a054fe11103631f1",
+                "treeOid": "360ee37ab9c20421e90a6a664ff75965a0449d5f"
+              },
+              "baseline": {
+                "commitOid": "3b84716162e45788027d3f017f7fd3ff4a5f8820",
+                "treeOid": "5d33daec17568a5ba47c8f5fa4130902cb418b43"
+              },
+              "proofStrategyDigest": "sha256:2efd57437edc870be9a700d40a8201ba125d5405da103854aafe45413b497836",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:cf8a09de75135bb0bc99f4b15cd641c2eee7571f2c66074fbcae36861d89cc62",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:5997d2a50bae0536d59293211ef32258e40f7af7ae2f7d9ed352068cc95e85e1",
+              "outputDigest": "sha256:d245c916124b6df900ff92da1e22e80fc273ce2a62da2b0c47cdd58dd24fc823",
+              "outcome": "satisfied",
+              "digest": "sha256:7f8703c0e49eadba2e4b0cd98e44d7b34ecbed0847fdcb571668e8633a60123a"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:word-total:negative-control",
+              "obligationId": "validation:word-total",
+              "detectedFailure": true,
+              "outputDigest": "d9e72c51600791ed5ff325d88c5efbdf799569b1526c9b3df4980e92f9f71344"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:word-total:1:artifact:artifact:word-total-change",
+      "occurredAt": "2026-08-16T07:50:35.071Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:word-total-change:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:word-total:1",
+          "runId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5",
+          "nodeId": "unit:word-total",
+          "digest": "sha256:7879fcafbce9d882b7d8e498d9ded446ec48daf8f00d0e638b99fc1cf4ad7dfc",
+          "producerAttemptId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:word-total:1",
+          "contract": {
+            "id": "artifact:word-total-change",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:7879fcafbce9d882b7d8e498d9ded446ec48daf8f00d0e638b99fc1cf4ad7dfc",
+          "manifest": {
+            "id": "artifact:word-total-change",
+            "contract": {
+              "id": "artifact:word-total-change",
+              "revision": 1,
+              "digest": "sha256:22724b4de2422e082233f6dd92d7de20bc8cd6953b56dd036ede81f87fb745ed"
+            },
+            "producerNodeId": "unit:word-total",
+            "producerAttemptId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:word-total:1",
+            "inputFingerprint": "sha256:102b9fc4b3c2d144b443ad8d604cf68228ff87ba86007225e5acf12ecbedd482",
+            "repositoryObjectStoreId": "object-store:c8384b3ee9e9ad12",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "134b3f6282ef8a7c537800d6a054fe11103631f1",
+              "treeOid": "360ee37ab9c20421e90a6a664ff75965a0449d5f"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-7fb26b869ccb95c5a715197d1927384b-f6b818e78c7a/attempts/run-7fb26b869ccb95c5a715197d1927384b-05c1ff8230aa/artifacts/artifact-word-total-change-3b87dc057b86",
+            "kind": "change_set",
+            "baseTreeSha": "5d33daec17568a5ba47c8f5fa4130902cb418b43",
+            "resultTreeSha": "360ee37ab9c20421e90a6a664ff75965a0449d5f",
+            "entries": [
+              {
+                "newPath": "src/word-total.js",
+                "operation": "add",
+                "newOid": "e44e40c4661f5db39b932132e6f2b7a05ebea86d",
+                "newMode": "100644"
+              },
+              {
+                "newPath": "src/word-total.test.js",
+                "operation": "add",
+                "newOid": "33b3ca3cf735e036d87b8db3b43de5c8bbc32b08",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:7879fcafbce9d882b7d8e498d9ded446ec48daf8f00d0e638b99fc1cf4ad7dfc"
+          },
+          "adoptedAt": "2026-08-16T07:50:35.071Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:readiness.observed:20",
+      "occurredAt": "2026-08-16T07:50:35.098Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:top-words"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:top-words",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:cli",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:reading-time-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:reading-time",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:sentence-length-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:cli-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:reading-time-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:sentence-length-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:top-words-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:sentence-length",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:top-words-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:word-total",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:word-total",
+            "unit:top-words",
+            "unit:sentence-length",
+            "unit:reading-time",
+            "unit:cli"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:word-total",
+            "unit:top-words",
+            "unit:sentence-length",
+            "unit:reading-time",
+            "unit:cli"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-16T07:50:35.089Z"
+      }
+    },
+    {
+      "eventId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:wave.selected:21",
+      "occurredAt": "2026-08-16T07:50:35.120Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:wave:2",
+        "nodeIds": [
+          "unit:top-words"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:cli",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:reading-time-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:reading-time",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:sentence-length-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:cli-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:reading-time-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:sentence-length-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:top-words-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:sentence-length",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:top-words-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:word-total",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-16T07:50:35.110Z"
+      }
+    },
+    {
+      "eventId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:top-words:1:started",
+      "occurredAt": "2026-08-16T07:50:35.132Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:top-words:1",
+        "nodeId": "unit:top-words",
+        "inputFingerprint": "sha256:9f049c9cdfd4eda4688eebaf88853934306299890d1de74e0be50675d3a9f3f2",
+        "executorProfile": {
+          "id": "claude-code-cli",
+          "revision": "sha256:d4d7f01afe76cf13f9f84653825ce5f81d972399f0fec54b9cc1deae9e598ed9"
+        }
+      }
+    },
+    {
+      "eventId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:top-words:1:candidate",
+      "occurredAt": "2026-08-16T07:51:39.448Z",
+      "type": "attempt.candidate_created",
+      "payload": {
+        "attemptId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:top-words:1",
+        "nodeId": "unit:top-words",
+        "candidateCommit": "f8c8659f6d91c9c8b8e246406ae5740cf04e4193",
+        "candidate": {
+          "manifestDigest": "sha256:e2559e527031dcef7c43517d4f2e869378e51612fc4ab5dcbf0ecc434d551d60",
+          "commitOid": "f8c8659f6d91c9c8b8e246406ae5740cf04e4193",
+          "treeOid": "d3198ee1bd46fd6820c64f4e09b6e579cc723fe5"
+        },
+        "outputDigest": "sha256:9c5db299131c8e64a2dead005fc0d07188d02c7132b472f4988818776da14a1a",
+        "changedFiles": [
+          "src/top-words.js",
+          "src/top-words.test.js"
+        ],
+        "usage": {
+          "tokensIn": 251958,
+          "tokensOut": 4260,
+          "costUsd": 0.2420319,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:top-words:1:validated",
+      "occurredAt": "2026-08-16T07:51:39.448Z",
+      "type": "validation.completed",
+      "payload": {
+        "attemptId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:top-words:1",
+        "nodeId": "unit:top-words",
+        "matrix": {
+          "matrixId": "matrix-ba1547a5e136cd5e",
+          "candidateCommit": "f8c8659f6d91c9c8b8e246406ae5740cf04e4193",
+          "validationContract": {
+            "id": "validation-contract:unit:top-words",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:top-words-refinement",
+              "obligationId": "validation:top-words",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-736401cf88aee361a1bb613a68c02e632e0c8276a6f759fab98c747afd61c706:attempt:1",
+                "validation:top-words:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:48f95f4e9aaba8b6c24abdb1df9503b88f06363fe5e22105d358d2a8edef5f9d",
+          "observations": [
+            {
+              "evidenceId": "command-736401cf88aee361a1bb613a68c02e632e0c8276a6f759fab98c747afd61c706:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "736401cf88aee361a1bb613a68c02e632e0c8276a6f759fab98c747afd61c706",
+              "durationMs": 1083.7238999999972,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "9ed849da54c07d8f5c41b54a5044320d3dd51eb10453e207236e1fa1b8196b31",
+              "criterionIds": [
+                "criterion:top-words-refinement"
+              ],
+              "obligationIds": [
+                "validation:top-words"
+              ],
+              "references": [
+                "src/top-words.test.js"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-ba1547a5e136cd5e:validation:top-words",
+              "revision": 1,
+              "goalContractDigest": "sha256:8304648ac2ba3e9f2e0d749bae90fc5265cf11326288ce4b004046da93f33093",
+              "criterionId": "criterion:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:3",
+              "obligationId": "validation:top-words",
+              "candidate": {
+                "manifestDigest": "sha256:e2559e527031dcef7c43517d4f2e869378e51612fc4ab5dcbf0ecc434d551d60",
+                "commitOid": "f8c8659f6d91c9c8b8e246406ae5740cf04e4193",
+                "treeOid": "d3198ee1bd46fd6820c64f4e09b6e579cc723fe5"
+              },
+              "baseline": {
+                "commitOid": "3b84716162e45788027d3f017f7fd3ff4a5f8820",
+                "treeOid": "5d33daec17568a5ba47c8f5fa4130902cb418b43"
+              },
+              "proofStrategyDigest": "sha256:7c86b323e0936810b4ead82ba53a594fdfad3c5e3a0f31dbd0fde62ccf438543",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:48f95f4e9aaba8b6c24abdb1df9503b88f06363fe5e22105d358d2a8edef5f9d",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:f3b56ea6934e0e2246a9aa3370ec632b3bb05f439fcc8d1bc15ea957576742b4",
+              "outputDigest": "sha256:9ed849da54c07d8f5c41b54a5044320d3dd51eb10453e207236e1fa1b8196b31",
+              "outcome": "satisfied",
+              "digest": "sha256:e15fc30c095253a61a11bebcc383c89873a0bd2942faea8bb5945a4b40e3b40b"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:top-words:negative-control",
+              "obligationId": "validation:top-words",
+              "detectedFailure": true,
+              "outputDigest": "3fe5d72888f9456ca314bcaecbffd7db57f8b453d4d82e2bf290f699d9d00c0c"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:top-words:1:artifact:artifact:top-words-change",
+      "occurredAt": "2026-08-16T07:51:39.448Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:top-words-change:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:top-words:1",
+          "runId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5",
+          "nodeId": "unit:top-words",
+          "digest": "sha256:1b4dd00a3d8e3dad633efe091fe042b1f7fc7114803f60d4d32da307342c8ec5",
+          "producerAttemptId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:top-words:1",
+          "contract": {
+            "id": "artifact:top-words-change",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:1b4dd00a3d8e3dad633efe091fe042b1f7fc7114803f60d4d32da307342c8ec5",
+          "manifest": {
+            "id": "artifact:top-words-change",
+            "contract": {
+              "id": "artifact:top-words-change",
+              "revision": 1,
+              "digest": "sha256:d017e59626199bbdb3b5a8bd3f9bacf01a02228418fc5b2045c458a9eabb8500"
+            },
+            "producerNodeId": "unit:top-words",
+            "producerAttemptId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:top-words:1",
+            "inputFingerprint": "sha256:9f049c9cdfd4eda4688eebaf88853934306299890d1de74e0be50675d3a9f3f2",
+            "repositoryObjectStoreId": "object-store:c8384b3ee9e9ad12",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "f8c8659f6d91c9c8b8e246406ae5740cf04e4193",
+              "treeOid": "d3198ee1bd46fd6820c64f4e09b6e579cc723fe5"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-7fb26b869ccb95c5a715197d1927384b-f6b818e78c7a/attempts/run-7fb26b869ccb95c5a715197d1927384b-53b26ff77e14/artifacts/artifact-top-words-change-8ed710d5a17f",
+            "kind": "change_set",
+            "baseTreeSha": "360ee37ab9c20421e90a6a664ff75965a0449d5f",
+            "resultTreeSha": "d3198ee1bd46fd6820c64f4e09b6e579cc723fe5",
+            "entries": [
+              {
+                "newPath": "src/top-words.js",
+                "operation": "add",
+                "newOid": "bf92d6867b70300afb6bb915cff62112be0d4e90",
+                "newMode": "100644"
+              },
+              {
+                "newPath": "src/top-words.test.js",
+                "operation": "add",
+                "newOid": "7c70a462f17e5c7e67633214b67ebb5f8061a73b",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:1b4dd00a3d8e3dad633efe091fe042b1f7fc7114803f60d4d32da307342c8ec5"
+          },
+          "adoptedAt": "2026-08-16T07:51:39.448Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:readiness.observed:26",
+      "occurredAt": "2026-08-16T07:51:39.482Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:sentence-length"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:sentence-length",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:cli",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:reading-time-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:reading-time",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:sentence-length-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:cli-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:reading-time-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:sentence-length-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:top-words",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:word-total",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:word-total",
+            "unit:top-words",
+            "unit:sentence-length",
+            "unit:reading-time",
+            "unit:cli"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:word-total",
+            "unit:top-words",
+            "unit:sentence-length",
+            "unit:reading-time",
+            "unit:cli"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-16T07:51:39.471Z"
+      }
+    },
+    {
+      "eventId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:wave.selected:27",
+      "occurredAt": "2026-08-16T07:51:39.508Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:wave:3",
+        "nodeIds": [
+          "unit:sentence-length"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:cli",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:reading-time-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:reading-time",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:sentence-length-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:cli-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:reading-time-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:sentence-length-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:top-words",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:word-total",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-16T07:51:39.499Z"
+      }
+    },
+    {
+      "eventId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:sentence-length:1:started",
+      "occurredAt": "2026-08-16T07:51:39.520Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:sentence-length:1",
+        "nodeId": "unit:sentence-length",
+        "inputFingerprint": "sha256:2ba58b8079523f161e2c50aedc387d439d7b7325f5c7bd0a0c5d21d3c47c8e07",
+        "executorProfile": {
+          "id": "claude-code-cli",
+          "revision": "sha256:d4d7f01afe76cf13f9f84653825ce5f81d972399f0fec54b9cc1deae9e598ed9"
+        }
+      }
+    },
+    {
+      "eventId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:sentence-length:1:failed",
+      "occurredAt": "2026-08-16T07:51:40.188Z",
+      "type": "attempt.failed",
+      "payload": {
+        "attemptId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:sentence-length:1",
+        "nodeId": "unit:sentence-length",
+        "reason": "Could not materialize artifact artifact:top-words-change:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:top-words:1: artifact_error."
+      }
+    },
+    {
+      "eventId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:sentence-length:1:decision",
+      "occurredAt": "2026-08-16T07:51:40.188Z",
+      "type": "decision.raised",
+      "payload": {
+        "decision": {
+          "id": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:sentence-length:1:decision",
+          "kind": "resolve_conflict",
+          "question": "Execution for Módulo de longitud media de oración requires guidance: Could not materialize artifact artifact:top-words-change:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:top-words:1: artifact_error.",
+          "options": [
+            {
+              "id": "retry",
+              "label": "Retry with guidance"
+            },
+            {
+              "id": "stop",
+              "label": "Stop this work"
+            }
+          ],
+          "affectedNodeIds": [
+            "unit:sentence-length",
+            "unit:top-words"
+          ],
+          "repairTargetNodeId": "unit:top-words",
+          "evidenceRefs": [
+            "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:sentence-length:1",
+            "input-fingerprint:sha256:2ba58b8079523f161e2c50aedc387d439d7b7325f5c7bd0a0c5d21d3c47c8e07"
+          ],
+          "impact": "behavior",
+          "raisedAtGraphRevision": 1
+        }
+      }
+    },
+    {
+      "eventId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:readiness.observed:31",
+      "occurredAt": "2026-08-16T07:51:40.218Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [],
+        "pendingDecisionIds": [
+          "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:sentence-length:1:decision"
+        ],
+        "explanations": [
+          {
+            "nodeId": "unit:cli",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:reading-time-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:reading-time",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:sentence-length-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:cli-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:reading-time-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:sentence-length-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:sentence-length",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:sentence-length:1:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:top-words",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:attempt:unit:sentence-length:1:decision"
+              },
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:word-total",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:word-total",
+            "unit:top-words",
+            "unit:sentence-length",
+            "unit:reading-time",
+            "unit:cli"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:word-total",
+            "unit:top-words",
+            "unit:sentence-length",
+            "unit:reading-time",
+            "unit:cli"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-16T07:51:40.205Z"
+      }
+    }
+  ]
+}

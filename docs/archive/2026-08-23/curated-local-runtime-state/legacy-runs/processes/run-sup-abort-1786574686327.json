@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "processes": [
+    {
+      "pid": 31496,
+      "label": "planning",
+      "command": "C:\\Users\\franc\\AppData\\Local\\pnpm\\node.exe",
+      "registeredAt": "2026-08-12T22:44:46.371Z",
+      "exitedAt": "2026-08-12T22:44:46.950Z"
+    }
+  ],
+  "updatedAt": "2026-08-12T22:44:47.509Z"
+}

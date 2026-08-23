@@ -13,3 +13,9 @@
 # Stage 0 hashes raw receipts byte-for-byte. Keep their committed bytes stable
 # across checkout-level line-ending settings.
 /docs/audits/stage-0/logs/** -text -diff
+
+# Archival deliverables and Git recovery bundles must remain byte-exact and
+# should never be passed through text diff drivers configured by the host.
+*.pdf -text -diff
+*.pptx -text -diff
+*.bundle -text -diff

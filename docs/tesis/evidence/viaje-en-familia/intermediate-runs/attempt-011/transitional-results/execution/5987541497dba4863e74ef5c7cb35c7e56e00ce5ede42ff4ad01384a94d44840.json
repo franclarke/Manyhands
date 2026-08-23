@@ -1,0 +1,499 @@
+{
+  "events": [
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:readiness.observed:219",
+      "occurredAt": "2026-08-21T08:54:28.605Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:root"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:root",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:equipaje",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:exploracion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favoritos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organizacion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:paradas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:presupuesto",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:recuerdos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:paradas",
+            "unit:agenda",
+            "unit:exploracion",
+            "unit:organizacion",
+            "unit:presupuesto",
+            "unit:equipaje",
+            "unit:recuerdos",
+            "unit:notas",
+            "unit:favoritos",
+            "unit:dashboard"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:paradas",
+            "unit:agenda",
+            "unit:exploracion",
+            "unit:organizacion",
+            "unit:presupuesto",
+            "unit:equipaje",
+            "unit:recuerdos",
+            "unit:notas",
+            "unit:favoritos",
+            "unit:dashboard"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T08:54:28.410Z"
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:wave.selected:220",
+      "occurredAt": "2026-08-21T08:54:29.263Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:wave:19",
+        "nodeIds": [
+          "unit:root"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:equipaje",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:exploracion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favoritos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organizacion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:paradas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:presupuesto",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:recuerdos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-21T08:54:29.058Z"
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:root:7:started",
+      "occurredAt": "2026-08-21T08:54:29.696Z",
+      "type": "integration.started",
+      "payload": {
+        "attemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:root:7",
+        "nodeId": "unit:root",
+        "inputFingerprint": "sha256:8bc666498a8ed0a8387df0510a024786b3fb3a540a24899a351f5eab17ad9fd0",
+        "retryOfAttemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:root:6",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        },
+        "requiredArtifactIds": [
+          "artifact:storage-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:storage:1",
+          "artifact:paradas-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:paradas:2",
+          "artifact:agenda-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:agenda:1",
+          "artifact:equipaje-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:equipaje:1",
+          "artifact:favoritos-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:favoritos:1",
+          "artifact:notas-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:notas:2",
+          "artifact:presupuesto-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:presupuesto:1",
+          "artifact:dashboard-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:dashboard:6",
+          "artifact:dashboard-ui-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:dashboard:6",
+          "artifact:exploracion-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:exploracion:2",
+          "artifact:itinerary-integration:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:itinerary:1",
+          "artifact:organizacion-integration:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:organizacion:1",
+          "artifact:recuerdos-integration:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:recuerdos:1"
+        ]
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:root:7:integrated",
+      "occurredAt": "2026-08-21T08:59:31.108Z",
+      "type": "integration.completed",
+      "payload": {
+        "attemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:root:7",
+        "nodeId": "unit:root",
+        "manifestId": "integration-result-integration-request-944a156da1642801",
+        "candidateCommit": "0c264d5d34a64eb141f0f159e1a62718695e1b83",
+        "candidate": {
+          "manifestDigest": "sha256:a5d10859eb1a4ffb2b4e93282afdad57304a4aa01979f5164f922cf39d440e74",
+          "commitOid": "0c264d5d34a64eb141f0f159e1a62718695e1b83",
+          "treeOid": "dfa9121f4413ea6b97a19cea600dcd6942a73431"
+        },
+        "matrix": {
+          "matrixId": "matrix-6dacafdcf5972113",
+          "candidateCommit": "0c264d5d34a64eb141f0f159e1a62718695e1b83",
+          "validationContract": {
+            "id": "validation-contract:unit:root",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:root-refinement",
+              "obligationId": "validation:root-e2e",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-9082cb3e1edcda357cb2502780864cbf374c78d33718cd32708cf4a41175d5bc:attempt:1",
+                "validation:root-e2e:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:b739c25949285a6be71fcdd5d93df5e6ba0a4c5ee54ba3dc793c9c463b2b4376",
+          "observations": [
+            {
+              "evidenceId": "command-9082cb3e1edcda357cb2502780864cbf374c78d33718cd32708cf4a41175d5bc:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "9082cb3e1edcda357cb2502780864cbf374c78d33718cd32708cf4a41175d5bc",
+              "durationMs": 945.7599000000046,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "8782573cbdce5c1907f4782f74d52218514bd8f83ddca482e8c07f6201e52f6e",
+              "criterionIds": [
+                "criterion:root-refinement"
+              ],
+              "obligationIds": [
+                "validation:root-e2e"
+              ],
+              "references": [
+                "test/e2e/full-trip.test.mjs"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-6dacafdcf5972113:validation:root-e2e",
+              "revision": 1,
+              "goalContractDigest": "sha256:63d0b7ed9a1f3b371f362292e0fb42386a8931e93567dc84e35581500523ed2c",
+              "criterionId": "criterion:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:1",
+              "obligationId": "validation:root-e2e",
+              "candidate": {
+                "manifestDigest": "sha256:a5d10859eb1a4ffb2b4e93282afdad57304a4aa01979f5164f922cf39d440e74",
+                "commitOid": "0c264d5d34a64eb141f0f159e1a62718695e1b83",
+                "treeOid": "dfa9121f4413ea6b97a19cea600dcd6942a73431"
+              },
+              "baseline": {
+                "commitOid": "64f0e44ff4bc90c2536c62ede517c8f855f1a6b4",
+                "treeOid": "1555e640f7399b75338f2ecbfcd9ad268cd814d9"
+              },
+              "proofStrategyDigest": "sha256:7ae5b17f991e178629c2c314daebc1a3110110df324172da9ca192ac765909e0",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:b739c25949285a6be71fcdd5d93df5e6ba0a4c5ee54ba3dc793c9c463b2b4376",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:2b73e8d632bea5e35b07662c8f6797f06ade3f58fa61a0f00c5588a345570a8a",
+              "outputDigest": "sha256:8782573cbdce5c1907f4782f74d52218514bd8f83ddca482e8c07f6201e52f6e",
+              "outcome": "satisfied",
+              "digest": "sha256:645c8ea1fa91841a85abc686a368ecd3647ec10b8aa45855d2690f1728aeace5"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:root-e2e:negative-control",
+              "obligationId": "validation:root-e2e",
+              "detectedFailure": true,
+              "outputDigest": "e58afebabb0d4b372ccf4c3edd6b45e255e87747e553524f4c8f27de10c1bc57"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:root:7:artifact:artifact:e2e-change",
+      "occurredAt": "2026-08-21T08:59:31.108Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:e2e-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:root:7",
+          "runId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d",
+          "nodeId": "unit:root",
+          "digest": "sha256:93004b4da5733fa730732c18a759cf54d86750c76e01344236cd8655b3282ade",
+          "producerAttemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:root:7",
+          "contract": {
+            "id": "artifact:e2e-change",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:93004b4da5733fa730732c18a759cf54d86750c76e01344236cd8655b3282ade",
+          "manifest": {
+            "id": "artifact:e2e-change",
+            "contract": {
+              "id": "artifact:e2e-change",
+              "revision": 1,
+              "digest": "sha256:231b25ae98a6568f40a67ee3f8306198b6c8dd5e7a5645397ad0beb88e3f3164"
+            },
+            "producerNodeId": "unit:root",
+            "producerAttemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:root:7",
+            "inputFingerprint": "sha256:8bc666498a8ed0a8387df0510a024786b3fb3a540a24899a351f5eab17ad9fd0",
+            "repositoryObjectStoreId": "object-store:1817cba9dbecd6da",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "0c264d5d34a64eb141f0f159e1a62718695e1b83",
+              "treeOid": "dfa9121f4413ea6b97a19cea600dcd6942a73431"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-22b14e85aa46e4fa5601dc5b44304224-292f2e30d56a/attempts/run-22b14e85aa46e4fa5601dc5b44304224-7b9066f39372/artifacts/artifact-e2e-change-73ff7a16b4c2",
+            "kind": "change_set",
+            "baseTreeSha": "7a1b4d782dfa4f1284e4a530d4e20fa582f9583f",
+            "resultTreeSha": "dfa9121f4413ea6b97a19cea600dcd6942a73431",
+            "entries": [
+              {
+                "newPath": "test/e2e/full-trip.test.mjs",
+                "operation": "add",
+                "newOid": "553d768bfee3e5c6a72c5f99663f4889f29bb30e",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:93004b4da5733fa730732c18a759cf54d86750c76e01344236cd8655b3282ade"
+          },
+          "adoptedAt": "2026-08-21T08:59:31.108Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:root:7:final",
+      "occurredAt": "2026-08-21T08:59:31.108Z",
+      "type": "final_candidate.verified",
+      "payload": {
+        "manifestId": "final-01634ccdb2f61ecc",
+        "commit": "0c264d5d34a64eb141f0f159e1a62718695e1b83",
+        "evidenceMatrixId": "matrix-6dacafdcf5972113",
+        "evidenceEligible": true,
+        "executionSucceeded": true,
+        "sourceTargetFingerprint": "1817cba9dbecd6da",
+        "targetBranch": "main",
+        "targetHead": "64f0e44ff4bc90c2536c62ede517c8f855f1a6b4",
+        "finalManifest": {
+          "commitSha": "0c264d5d34a64eb141f0f159e1a62718695e1b83",
+          "treeSha": "dfa9121f4413ea6b97a19cea600dcd6942a73431",
+          "graphRevision": 1,
+          "artifactIds": [
+            "artifact:e2e-change"
+          ],
+          "evidenceMatrixId": "matrix-6dacafdcf5972113",
+          "validationRecipeDigest": "sha256:b739c25949285a6be71fcdd5d93df5e6ba0a4c5ee54ba3dc793c9c463b2b4376",
+          "deliveryTarget": "main"
+        }
+      }
+    }
+  ]
+}

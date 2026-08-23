@@ -1,0 +1,796 @@
+{
+  "events": [
+    {
+      "eventId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:readiness.observed:15",
+      "occurredAt": "2026-08-15T14:23:45.629Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:tokenizer"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:tokenizer",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:tokenizer-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:word-count-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:word-count",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:tokenizer-change",
+                "revision": 1
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:tokenizer",
+            "unit:word-count"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:tokenizer",
+            "unit:word-count"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-15T14:23:45.626Z"
+      }
+    },
+    {
+      "eventId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:wave.selected:16",
+      "occurredAt": "2026-08-15T14:23:45.637Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:wave:1",
+        "nodeIds": [
+          "unit:tokenizer"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:tokenizer-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:word-count-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:word-count",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:tokenizer-change",
+                "revision": 1
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-15T14:23:45.634Z"
+      }
+    },
+    {
+      "eventId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:tokenizer:1:started",
+      "occurredAt": "2026-08-15T14:23:45.643Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:tokenizer:1",
+        "nodeId": "unit:tokenizer",
+        "inputFingerprint": "sha256:357767ef8fa42337ea02b75c1b691e7bc1fe62bca2f9a235fbbe81f16ce33190",
+        "executorProfile": {
+          "id": "claude-code-cli",
+          "revision": "sha256:d4d7f01afe76cf13f9f84653825ce5f81d972399f0fec54b9cc1deae9e598ed9"
+        }
+      }
+    },
+    {
+      "eventId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:tokenizer:1:candidate",
+      "occurredAt": "2026-08-15T14:24:19.963Z",
+      "type": "attempt.candidate_created",
+      "payload": {
+        "attemptId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:tokenizer:1",
+        "nodeId": "unit:tokenizer",
+        "candidateCommit": "b3e07bf07ceeb157e0ae3a160d365c2a599b73fa",
+        "candidate": {
+          "manifestDigest": "sha256:d360a8575eb47c55e9348f6c8a3f6b065969501fc7ce3b401326d85e45cf7a5d",
+          "commitOid": "b3e07bf07ceeb157e0ae3a160d365c2a599b73fa",
+          "treeOid": "b34bdec3f33d8498240720d7efedb4b3a66ae8fd"
+        },
+        "outputDigest": "sha256:14136b102ad5249ef809c6c40e2ea7a16cd76ffc06969d2026d9d2612470cd51",
+        "changedFiles": [
+          "src/tokenizer.js",
+          "src/tokenizer.test.js"
+        ],
+        "usage": {
+          "tokensIn": 165382,
+          "tokensOut": 1149,
+          "costUsd": 0.13880510000000001,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:tokenizer:1:validated",
+      "occurredAt": "2026-08-15T14:24:19.963Z",
+      "type": "validation.completed",
+      "payload": {
+        "attemptId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:tokenizer:1",
+        "nodeId": "unit:tokenizer",
+        "matrix": {
+          "matrixId": "matrix-01a4b02ab3c66478",
+          "candidateCommit": "b3e07bf07ceeb157e0ae3a160d365c2a599b73fa",
+          "validationContract": {
+            "id": "validation-contract:unit:tokenizer",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:tokenizer",
+              "obligationId": "validation:tokenizer",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-ceb4d4153537ae120534ba2fcead6691fc5af07f8526dcf3638f6f3de74fcc05:attempt:1",
+                "validation:tokenizer:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:d720d9e33bbab23acb7df7775ff3c6bac28882786816c95066295f89bc6118d5",
+          "observations": [
+            {
+              "evidenceId": "command-ceb4d4153537ae120534ba2fcead6691fc5af07f8526dcf3638f6f3de74fcc05:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "ceb4d4153537ae120534ba2fcead6691fc5af07f8526dcf3638f6f3de74fcc05",
+              "durationMs": 1024.1466,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "8baaf1b3dc935812cae1d11378b1914fc38b8dfd1295e77c903e11eaad4accd3",
+              "criterionIds": [
+                "criterion:tokenizer"
+              ],
+              "obligationIds": [
+                "validation:tokenizer"
+              ],
+              "references": [
+                "src/tokenizer.test.js"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-01a4b02ab3c66478:validation:tokenizer",
+              "revision": 1,
+              "goalContractDigest": "sha256:b5c4b3e13833aa5e608b54d5bf4349c51f990dea86fdcb0c1de60fb826c9ac2e",
+              "criterionId": "criterion:run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:1",
+              "obligationId": "validation:tokenizer",
+              "candidate": {
+                "manifestDigest": "sha256:d360a8575eb47c55e9348f6c8a3f6b065969501fc7ce3b401326d85e45cf7a5d",
+                "commitOid": "b3e07bf07ceeb157e0ae3a160d365c2a599b73fa",
+                "treeOid": "b34bdec3f33d8498240720d7efedb4b3a66ae8fd"
+              },
+              "baseline": {
+                "commitOid": "00273f055e7d4a7bdb706d02a90e88f65d9a370c",
+                "treeOid": "4230d720c666487a35a71858ab0a58edf26b65e5"
+              },
+              "proofStrategyDigest": "sha256:0a434418529d95ddd4c9bf5fea4205d0e3d371d75ad0946124dd47300823523c",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:d720d9e33bbab23acb7df7775ff3c6bac28882786816c95066295f89bc6118d5",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:19fc2a6bc075590358094ba96a848a07cc21350fef6494fc38236f15f4ab0230",
+              "outputDigest": "sha256:8baaf1b3dc935812cae1d11378b1914fc38b8dfd1295e77c903e11eaad4accd3",
+              "outcome": "satisfied",
+              "digest": "sha256:d80ef04660a3820fbf90910bc26db323f1f222bfeea28ceac8ea61d0d174561f"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:tokenizer:negative-control",
+              "obligationId": "validation:tokenizer",
+              "detectedFailure": true,
+              "outputDigest": "0e00a0c7939c946a8e3f1c18de8bd47d532d12d89572eb81d900c0e7ada27378"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:tokenizer:1:artifact:artifact:tokenizer-change",
+      "occurredAt": "2026-08-15T14:24:19.963Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:tokenizer-change:run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:tokenizer:1",
+          "runId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e",
+          "nodeId": "unit:tokenizer",
+          "digest": "sha256:7c3b97079a596d4984050a6d231d7b38fc0847ed70f35da8af9a62b4d38ea1a1",
+          "producerAttemptId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:tokenizer:1",
+          "contract": {
+            "id": "artifact:tokenizer-change",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:7c3b97079a596d4984050a6d231d7b38fc0847ed70f35da8af9a62b4d38ea1a1",
+          "manifest": {
+            "id": "artifact:tokenizer-change",
+            "contract": {
+              "id": "artifact:tokenizer-change",
+              "revision": 1,
+              "digest": "sha256:784f2ade5428dcb451ffa608e1cfc3a09c35733b385fc79da6f14868efbfc8bc"
+            },
+            "producerNodeId": "unit:tokenizer",
+            "producerAttemptId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:tokenizer:1",
+            "inputFingerprint": "sha256:357767ef8fa42337ea02b75c1b691e7bc1fe62bca2f9a235fbbe81f16ce33190",
+            "repositoryObjectStoreId": "object-store:1230c021466b8529",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "b3e07bf07ceeb157e0ae3a160d365c2a599b73fa",
+              "treeOid": "b34bdec3f33d8498240720d7efedb4b3a66ae8fd"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-4c9c8950d2d9491d34d2dc911e017c59-e27198f2c084/attempts/run-4c9c8950d2d9491d34d2dc911e017c59-51a5f0c35bcf/artifacts/artifact-tokenizer-change-6ecdac22542f",
+            "kind": "change_set",
+            "baseTreeSha": "4230d720c666487a35a71858ab0a58edf26b65e5",
+            "resultTreeSha": "b34bdec3f33d8498240720d7efedb4b3a66ae8fd",
+            "entries": [
+              {
+                "newPath": "src/tokenizer.js",
+                "operation": "add",
+                "newOid": "c3b471c26b8506ee7b4e791cb64d667c45b6b3b6",
+                "newMode": "100644"
+              },
+              {
+                "newPath": "src/tokenizer.test.js",
+                "operation": "add",
+                "newOid": "4ef8efd1b29c8588da6892d03f8fe33d4723d1d1",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:7c3b97079a596d4984050a6d231d7b38fc0847ed70f35da8af9a62b4d38ea1a1"
+          },
+          "adoptedAt": "2026-08-15T14:24:19.963Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:readiness.observed:21",
+      "occurredAt": "2026-08-15T14:24:19.994Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:word-count"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:word-count",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:word-count-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:tokenizer",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:tokenizer",
+            "unit:word-count"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:tokenizer",
+            "unit:word-count"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-15T14:24:19.987Z"
+      }
+    },
+    {
+      "eventId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:wave.selected:22",
+      "occurredAt": "2026-08-15T14:24:20.008Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:wave:2",
+        "nodeIds": [
+          "unit:word-count"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:word-count-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:tokenizer",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-15T14:24:20.003Z"
+      }
+    },
+    {
+      "eventId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:word-count:1:started",
+      "occurredAt": "2026-08-15T14:24:20.018Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:word-count:1",
+        "nodeId": "unit:word-count",
+        "inputFingerprint": "sha256:2b0dfda80043aa9d7985b5eb187dd0f907e45cc121182310397d80043065544f",
+        "executorProfile": {
+          "id": "claude-code-cli",
+          "revision": "sha256:d4d7f01afe76cf13f9f84653825ce5f81d972399f0fec54b9cc1deae9e598ed9"
+        }
+      }
+    },
+    {
+      "eventId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:word-count:1:candidate",
+      "occurredAt": "2026-08-15T14:24:56.783Z",
+      "type": "attempt.candidate_created",
+      "payload": {
+        "attemptId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:word-count:1",
+        "nodeId": "unit:word-count",
+        "candidateCommit": "e3082de161f6c1bb336c7451e901c848c2b25ad4",
+        "candidate": {
+          "manifestDigest": "sha256:ee5cc1bc37b27ecc2e7c141c12b720a602cfc4766dcdca7b04f5f968a14e3434",
+          "commitOid": "e3082de161f6c1bb336c7451e901c848c2b25ad4",
+          "treeOid": "91410785e4ca4ff13112e3cd67fb19879606db7d"
+        },
+        "outputDigest": "sha256:e1041aea59796a755a447bcd83f8ae144e8de6c7fa64436aa7f5a52e6a754c08",
+        "changedFiles": [
+          "src/word-count.js",
+          "src/word-count.test.js"
+        ],
+        "usage": {
+          "tokensIn": 166028,
+          "tokensOut": 1120,
+          "costUsd": 0.13891160000000002,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:word-count:1:validated",
+      "occurredAt": "2026-08-15T14:24:56.783Z",
+      "type": "validation.completed",
+      "payload": {
+        "attemptId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:word-count:1",
+        "nodeId": "unit:word-count",
+        "matrix": {
+          "matrixId": "matrix-28e3939490837499",
+          "candidateCommit": "e3082de161f6c1bb336c7451e901c848c2b25ad4",
+          "validationContract": {
+            "id": "validation-contract:unit:word-count",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:word-count",
+              "obligationId": "validation:word-count",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-9ccdd5ff698a45bfa66fa90317404f5c1e75370e09381b598a89a0242fa2593b:attempt:1",
+                "validation:word-count:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:94465adf0d78ae322d43e5426aa852cc57cb8d7263aec1a77f66bf1d3cfc82a3",
+          "observations": [
+            {
+              "evidenceId": "command-9ccdd5ff698a45bfa66fa90317404f5c1e75370e09381b598a89a0242fa2593b:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "9ccdd5ff698a45bfa66fa90317404f5c1e75370e09381b598a89a0242fa2593b",
+              "durationMs": 1126.573199999999,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "5b2974a40995bc4bfbef69f8146a78759dd871dedbf68155c72d16f0d4d0afe3",
+              "criterionIds": [
+                "criterion:word-count"
+              ],
+              "obligationIds": [
+                "validation:word-count"
+              ],
+              "references": [
+                "src/word-count.test.js"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-28e3939490837499:validation:word-count",
+              "revision": 1,
+              "goalContractDigest": "sha256:b5c4b3e13833aa5e608b54d5bf4349c51f990dea86fdcb0c1de60fb826c9ac2e",
+              "criterionId": "criterion:run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:1",
+              "obligationId": "validation:word-count",
+              "candidate": {
+                "manifestDigest": "sha256:ee5cc1bc37b27ecc2e7c141c12b720a602cfc4766dcdca7b04f5f968a14e3434",
+                "commitOid": "e3082de161f6c1bb336c7451e901c848c2b25ad4",
+                "treeOid": "91410785e4ca4ff13112e3cd67fb19879606db7d"
+              },
+              "baseline": {
+                "commitOid": "00273f055e7d4a7bdb706d02a90e88f65d9a370c",
+                "treeOid": "4230d720c666487a35a71858ab0a58edf26b65e5"
+              },
+              "proofStrategyDigest": "sha256:9fcdca705a983a139d547b7cd8a824b0a3442e79787cc0654c758b066a07a1dd",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:94465adf0d78ae322d43e5426aa852cc57cb8d7263aec1a77f66bf1d3cfc82a3",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:4705cd06f4d2737a83190720a488ee3ba8a0c4ac9f388783c19ebcec10f1654a",
+              "outputDigest": "sha256:5b2974a40995bc4bfbef69f8146a78759dd871dedbf68155c72d16f0d4d0afe3",
+              "outcome": "satisfied",
+              "digest": "sha256:9c80cf35f4ac0979784cd7c9a812972b857e7b3000c79ddaba5a4c7d1cf64828"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:word-count:negative-control",
+              "obligationId": "validation:word-count",
+              "detectedFailure": true,
+              "outputDigest": "f0875245f4ff294a02110c6046ddf8087d49790e72c07446d2901768a929c2a3"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:word-count:1:artifact:artifact:word-count-change",
+      "occurredAt": "2026-08-15T14:24:56.783Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:word-count-change:run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:word-count:1",
+          "runId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e",
+          "nodeId": "unit:word-count",
+          "digest": "sha256:466bd6540eeacc92d465ed603413763f2fd7983a9e6eea51b4d9e87810d73749",
+          "producerAttemptId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:word-count:1",
+          "contract": {
+            "id": "artifact:word-count-change",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:466bd6540eeacc92d465ed603413763f2fd7983a9e6eea51b4d9e87810d73749",
+          "manifest": {
+            "id": "artifact:word-count-change",
+            "contract": {
+              "id": "artifact:word-count-change",
+              "revision": 1,
+              "digest": "sha256:fffe73f7baf8e4f049c1faa126a8a68c54ead4d04dbeb6e99efdbae095a8781a"
+            },
+            "producerNodeId": "unit:word-count",
+            "producerAttemptId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:word-count:1",
+            "inputFingerprint": "sha256:2b0dfda80043aa9d7985b5eb187dd0f907e45cc121182310397d80043065544f",
+            "repositoryObjectStoreId": "object-store:1230c021466b8529",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "e3082de161f6c1bb336c7451e901c848c2b25ad4",
+              "treeOid": "91410785e4ca4ff13112e3cd67fb19879606db7d"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-4c9c8950d2d9491d34d2dc911e017c59-e27198f2c084/attempts/run-4c9c8950d2d9491d34d2dc911e017c59-44734bd5797b/artifacts/artifact-word-count-change-b1332be7ef11",
+            "kind": "change_set",
+            "baseTreeSha": "b34bdec3f33d8498240720d7efedb4b3a66ae8fd",
+            "resultTreeSha": "91410785e4ca4ff13112e3cd67fb19879606db7d",
+            "entries": [
+              {
+                "newPath": "src/word-count.js",
+                "operation": "add",
+                "newOid": "9cb0601ee0368a72a7aa35904cc0754b165fa98e",
+                "newMode": "100644"
+              },
+              {
+                "newPath": "src/word-count.test.js",
+                "operation": "add",
+                "newOid": "4456b2790cc465d3d0e3e725cfd3fc482ca48b88",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:466bd6540eeacc92d465ed603413763f2fd7983a9e6eea51b4d9e87810d73749"
+          },
+          "adoptedAt": "2026-08-15T14:24:56.783Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:readiness.observed:27",
+      "occurredAt": "2026-08-15T14:24:56.801Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:root"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:root",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:tokenizer",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:word-count",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:tokenizer",
+            "unit:word-count"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:tokenizer",
+            "unit:word-count"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-15T14:24:56.796Z"
+      }
+    },
+    {
+      "eventId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:wave.selected:28",
+      "occurredAt": "2026-08-15T14:24:56.815Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:wave:3",
+        "nodeIds": [
+          "unit:root"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:tokenizer",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:word-count",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-15T14:24:56.810Z"
+      }
+    },
+    {
+      "eventId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:root:1:started",
+      "occurredAt": "2026-08-15T14:24:56.823Z",
+      "type": "integration.started",
+      "payload": {
+        "attemptId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:root:1",
+        "nodeId": "unit:root",
+        "inputFingerprint": "sha256:508c6c86c783c66ec0d82fad2967a58a272269f45a8d59d1b391764ba2998ada",
+        "executorProfile": {
+          "id": "claude-code-cli",
+          "revision": "sha256:d4d7f01afe76cf13f9f84653825ce5f81d972399f0fec54b9cc1deae9e598ed9"
+        },
+        "requiredArtifactIds": [
+          "artifact:tokenizer-change:run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:tokenizer:1",
+          "artifact:word-count-change:run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:word-count:1"
+        ]
+      }
+    },
+    {
+      "eventId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:root:1:failed",
+      "occurredAt": "2026-08-15T14:25:09.076Z",
+      "type": "attempt.failed",
+      "payload": {
+        "attemptId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:root:1",
+        "nodeId": "unit:root",
+        "reason": "ownership_violation: unit:root wrote resources it does not claim: src/tokenizer.js is owned by unit:tokenizer; src/tokenizer.test.js is owned by unit:tokenizer; src/word-count.js is owned by unit:word-count; src/word-count.test.js is owned by unit:word-count. Amend the plan instead of repairing the attempt."
+      }
+    },
+    {
+      "eventId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:root:1:decision",
+      "occurredAt": "2026-08-15T14:25:09.076Z",
+      "type": "decision.raised",
+      "payload": {
+        "decision": {
+          "id": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:root:1:decision",
+          "kind": "approve_amendment",
+          "question": "Execution for Tokenizer and word-count modules with explicit contract requires guidance: ownership_violation: unit:root wrote resources it does not claim: src/tokenizer.js is owned by unit:tokenizer; src/tokenizer.test.js is owned by unit:tokenizer; src/word-count.js is owned by unit:word-count; src/word-count.test.js is owned by unit:word-count. Amend the plan instead of repairing the attempt.",
+          "options": [
+            {
+              "id": "amend",
+              "label": "Amend the plan"
+            },
+            {
+              "id": "stop",
+              "label": "Stop this work"
+            }
+          ],
+          "affectedNodeIds": [
+            "unit:root"
+          ],
+          "evidenceRefs": [
+            "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:root:1",
+            "input-fingerprint:sha256:508c6c86c783c66ec0d82fad2967a58a272269f45a8d59d1b391764ba2998ada"
+          ],
+          "impact": "behavior",
+          "raisedAtGraphRevision": 1
+        }
+      }
+    },
+    {
+      "eventId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:readiness.observed:32",
+      "occurredAt": "2026-08-15T14:25:09.096Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [],
+        "pendingDecisionIds": [
+          "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:root:1:decision"
+        ],
+        "explanations": [
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:4c9c8950d2d9491d34d2dc911e017c5921bdc7d9549b25d0a18ae0921711344e:attempt:unit:root:1:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:tokenizer",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:word-count",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:tokenizer",
+            "unit:word-count"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:tokenizer",
+            "unit:word-count"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-15T14:25:09.089Z"
+      }
+    }
+  ]
+}

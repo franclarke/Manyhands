@@ -1,0 +1,527 @@
+{
+  "events": [
+    {
+      "eventId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:readiness.observed:63",
+      "occurredAt": "2026-08-21T01:54:05.818Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:route"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:route",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:route-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:mem-favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:mem-notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:org-budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:org-packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-app",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:route-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-explore",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:route",
+            "unit:route-stops",
+            "unit:route-agenda",
+            "unit:route-explore",
+            "unit:organization",
+            "unit:org-budget",
+            "unit:org-packing",
+            "unit:memories",
+            "unit:mem-notes",
+            "unit:mem-favorites",
+            "unit:dashboard"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:route",
+            "unit:route-stops",
+            "unit:route-agenda",
+            "unit:route-explore",
+            "unit:organization",
+            "unit:org-budget",
+            "unit:org-packing",
+            "unit:memories",
+            "unit:mem-notes",
+            "unit:mem-favorites",
+            "unit:dashboard"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T01:54:05.797Z"
+      }
+    },
+    {
+      "eventId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:wave.selected:64",
+      "occurredAt": "2026-08-21T01:54:05.896Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:wave:4",
+        "nodeIds": [
+          "unit:route"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:route-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:mem-favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:mem-notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:org-budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:org-packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-app",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:route-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-explore",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-21T01:54:05.863Z"
+      }
+    },
+    {
+      "eventId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:route:2:started",
+      "occurredAt": "2026-08-21T01:54:05.948Z",
+      "type": "integration.started",
+      "payload": {
+        "attemptId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:route:2",
+        "nodeId": "unit:route",
+        "inputFingerprint": "sha256:a79a047d56d60fac4fef8f0e2dd0fbae6c55ead1d07f2324a02d7941ec25d98b",
+        "retryOfAttemptId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:route:1",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        },
+        "requiredArtifactIds": [
+          "artifact:route-agenda:run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:route-agenda:1",
+          "artifact:route-explore:run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:route-explore:1",
+          "artifact:route-stops:run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:route-stops:1"
+        ]
+      }
+    },
+    {
+      "eventId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:route:2:failed",
+      "occurredAt": "2026-08-21T02:00:34.562Z",
+      "type": "attempt.failed",
+      "payload": {
+        "attemptId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:route:2",
+        "nodeId": "unit:route",
+        "reason": "Parent validation outcome is failed."
+      }
+    },
+    {
+      "eventId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:route:2:decision",
+      "occurredAt": "2026-08-21T02:00:34.562Z",
+      "type": "decision.raised",
+      "payload": {
+        "decision": {
+          "id": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:route:2:decision",
+          "kind": "resolve_conflict",
+          "question": "Execution for Ruta e itinerario requires guidance: Parent validation outcome is failed.",
+          "options": [
+            {
+              "id": "retry",
+              "label": "Retry with guidance"
+            },
+            {
+              "id": "stop",
+              "label": "Stop this work"
+            }
+          ],
+          "affectedNodeIds": [
+            "unit:route"
+          ],
+          "repairTargetNodeId": "unit:route",
+          "evidenceRefs": [
+            "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:route:2",
+            "input-fingerprint:sha256:a79a047d56d60fac4fef8f0e2dd0fbae6c55ead1d07f2324a02d7941ec25d98b"
+          ],
+          "impact": "behavior",
+          "raisedAtGraphRevision": 1
+        }
+      }
+    },
+    {
+      "eventId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:readiness.observed:68",
+      "occurredAt": "2026-08-21T02:00:34.636Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [],
+        "pendingDecisionIds": [
+          "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:route:2:decision"
+        ],
+        "explanations": [
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:route-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:mem-favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:mem-notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:org-budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:org-packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-app",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:route-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:route:2:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-explore",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:route",
+            "unit:route-stops",
+            "unit:route-agenda",
+            "unit:route-explore",
+            "unit:organization",
+            "unit:org-budget",
+            "unit:org-packing",
+            "unit:memories",
+            "unit:mem-notes",
+            "unit:mem-favorites",
+            "unit:dashboard"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:route",
+            "unit:route-stops",
+            "unit:route-agenda",
+            "unit:route-explore",
+            "unit:organization",
+            "unit:org-budget",
+            "unit:org-packing",
+            "unit:memories",
+            "unit:mem-notes",
+            "unit:mem-favorites",
+            "unit:dashboard"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T02:00:34.616Z"
+      }
+    }
+  ]
+}

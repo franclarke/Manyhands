@@ -1,0 +1,504 @@
+{
+  "events": [
+    {
+      "eventId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:readiness.observed:101",
+      "occurredAt": "2026-08-21T02:29:25.991Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:dashboard"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:dashboard",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:mem-favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:mem-notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:org-budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:org-packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-app",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-explore",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:route",
+            "unit:route-stops",
+            "unit:route-agenda",
+            "unit:route-explore",
+            "unit:organization",
+            "unit:org-budget",
+            "unit:org-packing",
+            "unit:memories",
+            "unit:mem-notes",
+            "unit:mem-favorites",
+            "unit:dashboard"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:route",
+            "unit:route-stops",
+            "unit:route-agenda",
+            "unit:route-explore",
+            "unit:organization",
+            "unit:org-budget",
+            "unit:org-packing",
+            "unit:memories",
+            "unit:mem-notes",
+            "unit:mem-favorites",
+            "unit:dashboard"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T02:29:25.954Z"
+      }
+    },
+    {
+      "eventId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:wave.selected:102",
+      "occurredAt": "2026-08-21T02:29:26.132Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:wave:8",
+        "nodeIds": [
+          "unit:dashboard"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:mem-favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:mem-notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:org-budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:org-packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-app",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-explore",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-21T02:29:26.084Z"
+      }
+    },
+    {
+      "eventId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:dashboard:3:started",
+      "occurredAt": "2026-08-21T02:29:26.217Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:dashboard:3",
+        "nodeId": "unit:dashboard",
+        "inputFingerprint": "sha256:16f44fc9a19b54d86b01985166121f7a1aad238b54f3cf28f5849a9400a0176a",
+        "retryOfAttemptId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:dashboard:2",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:dashboard:3:failed",
+      "occurredAt": "2026-08-21T02:40:00.749Z",
+      "type": "attempt.failed",
+      "payload": {
+        "attemptId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:dashboard:3",
+        "nodeId": "unit:dashboard",
+        "reason": "timeout: timeout: The agent hit the hard timeout. Consider a longer per-task timeout or a faster executor for this node.: +  margin-bottom: 4px;\n+}\n+\n+label {\n+  display: grid;\n+  gap: 6px;\n+  font-size: 0.95rem;\n+}\n+\n+input,\n+select,\n+textarea,\n+button {\n+  font: inherit;\n+}\n+\n+input,\n+select,\n+textarea {\n+  width: 100%;\n+  padding: 12px 13px;\n+  border: 1px solid rgba(61, 49, 40, 0.18);\n+  border-radius: var(--radius-sm);\n+  background: rgba(255, 255, 255, 0.9);\n+  color: var(--text);\n+}\n+\n+input:focus,\n+select:focus,\n+textarea:focus,\n+button:focus-visible {\n+  outline: 3px solid rgba(38, 93, 114, 0.32);\n+  outline-offset: 2px;\n+}\n+\n+button {\n+  border: 0;\n+  border-radius: var(--radius-sm);\n+  padding: 11px 15px;\n+  background: var(--accent);\n+  color: #fff;\n+  cursor: pointer;\n+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;\n+  box-shadow: 0 12px 26px rgba(141, 91, 45, 0.2);\n+}\n+\n+button:hover {\n+  transform: translateY(-1px);\n+}\n+\n+.ghost-button,\n+.danger-button {\n+  padding: 9px 12px;\n+  background: transparent;\n+  color: var(--text);\n+  box-shadow: none;\n+  border: 1px solid rgba(61, 49, 40, 0.14);\n+}\n+\n+.danger-button {\n+  border-color: rgba(175, 54, 35, 0.2);\n+  color: #932c1a;\n+}\n+\n+.inline-form {\n+  display: flex;\n+  flex-wrap: wrap;\n+  gap: 10px;\n+  align-items: center;\n+}\n+\n+.inline-form input {\n+  min-width: min(100%, 280px);\n+}\n+\n+.inline-form button,\n+.card-form button {\n+  align-self: start;\n+}\n+\n+.sr-only {\n+  position: absolute;\n+  width: 1px;\n+  height: 1px;\n+  padding: 0;\n+  margin: -1px;\n+  overflow: hidden;\n+  clip: rect(0, 0, 0, 0);\n+  white-space: nowrap;\n+  border: 0;\n+}\n+\n+@media (min-width: 1100px) {\n+  .dashboard-grid {\n+    grid-template-columns: repeat(12, minmax(0, 1fr));\n+  }\n+\n+  .panel--route {\n+    grid-column: span 12;\n+  }\n+\n+  .panel--organization {\n+    grid-column: span 7;\n+  }\n+\n+  .panel--memories {\n+    grid-column: span 5;\n+  }\n+}\n+\n+@media (max-width: 1099px) {\n+  .hero {\n+    grid-template-columns: 1fr;\n+  }\n+\n+  .summary-grid,\n+  .split-list {\n+    grid-template-columns: 1fr;\n+  }\n+}\n+\n+@media (max-width: 720px) {\n+  .app-shell {\n+    width: min(100vw - 18px, 100%);\n+    padding: 12px 0 24px;\n+  }\n+\n+  .hero__metrics {\n+    grid-template-columns: 1fr 1fr;\n+  }\n+\n+  .item-card,\n+  .item-row {\n+    flex-direction: column;\n+  }\n+\n+  .item-card__actions,\n+  .item-row__side {\n+    justify-content: flex-start;\n+  }\n+}\n+\ndiff --git a/server.mjs b/server.mjs\nindex 8b0c4f50eb76998e5e056094182e78b0271d7ebf..86394bf148143a4e3e899f0ab61aabb2a2a5db53\n--- a/server.mjs\n+++ b/server.mjs\n@@ -11,6 +11,7 @@\n   \".css\": \"text/css; charset=utf-8\",\n   \".html\": \"text/html; charset=utf-8\",\n   \".js\": \"text/javascript; charset=utf-8\",\n+  \".mjs\": \"text/javascript; charset=utf-8\",\n   \".json\": \"application/json; charset=utf-8\",\n   \".svg\": \"image/svg+xml\"\n };\n@@ -18,13 +19,21 @@\n createServer(async (request, response) => {\n   try {\n     const pathname = decodeURIComponent(new URL(request.url ?? \"/\", \"http://localhost\").pathname);\n-    const relative = pathname === \"/\" ? \"index.html\" : pathname.replace(/^\\/+/, \"\");\n-    const candidate = path.resolve(publicRoot, relative);\n+    const relative = pathname === \"/\" ? \"app/index.html\" : pathname.replace(/^\\/+/, \"\");\n+    let candidate = path.resolve(publicRoot, relative);\n     if (candidate !== publicRoot && !candidate.startsWith(publicRoot + path.sep)) {\n       response.writeHead(403).end(\"Forbidden\");\n       return;\n     }\n-    const info = await stat(candidate);\n+    let info = await stat(candidate);\n+    if (info.isDirectory()) {\n+      candidate = path.resolve(candidate, \"index.html\");\n+      if (candidate !== publicRoot && !candidate.startsWith(publicRoot + path.sep)) {\n+        response.writeHead(403).end(\"Forbidden\");\n+        return;\n+      }\n+      info = await stat(candidate);\n+    }\n     if (!info.isFile()) throw Object.assign(new Error(\"Not a file\"), { code: \"ENOENT\" });\n     response.writeHead(200, {\n       \"content-type\": contentTypes[path.extname(candidate)] ?? \"application/octet-stream\",\n\n\nprocess-tree termination could not be verified",
+        "usage": {
+          "source": "unavailable"
+        }
+      }
+    },
+    {
+      "eventId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:dashboard:3:decision",
+      "occurredAt": "2026-08-21T02:40:00.749Z",
+      "type": "decision.raised",
+      "payload": {
+        "decision": {
+          "id": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:dashboard:3:decision",
+          "kind": "resolve_conflict",
+          "question": "Execution for Dashboard y presentación requires guidance: timeout: timeout: The agent hit the hard timeout. Consider a longer per-task timeout or a faster executor for this node.: +  margin-bottom: 4px;\n+}\n+\n+label {\n+  display: grid;\n+  gap: 6px;\n+  font-size: 0.95rem;\n+}\n+\n+input,\n+select,\n+textarea,\n+button {\n+  font: inherit;\n+}\n+\n+input,\n+select,\n+textarea {\n+  width: 100%;\n+  padding: 12px 13px;\n+  border: 1px solid rgba(61, 49, 40, 0.18);\n+  border-radius: var(--radius-sm);\n+  background: rgba(255, 255, 255, 0.9);\n+  color: var(--text);\n+}\n+\n+input:focus,\n+select:focus,\n+textarea:focus,\n+button:focus-visible {\n+  outline: 3px solid rgba(38, 93, 114, 0.32);\n+  outline-offset: 2px;\n+}\n+\n+button {\n+  border: 0;\n+  border-radius: var(--radius-sm);\n+  padding: 11px 15px;\n+  background: var(--accent);\n+  color: #fff;\n+  cursor: pointer;\n+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;\n+  box-shadow: 0 12px 26px rgba(141, 91, 45, 0.2);\n+}\n+\n+button:hover {\n+  transform: translateY(-1px);\n+}\n+\n+.ghost-button,\n+.danger-button {\n+  padding: 9px 12px;\n+  background: transparent;\n+  color: var(--text);\n+  box-shadow: none;\n+  border: 1px solid rgba(61, 49, 40, 0.14);\n+}\n+\n+.danger-button {\n+  border-color: rgba(175, 54, 35, 0.2);\n+  color: #932c1a;\n+}\n+\n+.inline-form {\n+  display: flex;\n+  flex-wrap: wrap;\n+  gap: 10px;\n+  align-items: center;\n+}\n+\n+.inline-form input {\n+  min-width: min(100%, 280px);\n+}\n+\n+.inline-form button,\n+.card-form button {\n+  align-self: start;\n+}\n+\n+.sr-only {\n+  position: absolute;\n+  width: 1px;\n+  height: 1px;\n+  padding: 0;\n+  margin: -1px;\n+  overflow: hidden;\n+  clip: rect(0, 0, 0, 0);\n+  white-space: nowrap;\n+  border: 0;\n+}\n+\n+@media (min-width: 1100px) {\n+  .dashboard-grid {\n+    grid-template-columns: repeat(12, minmax(0, 1fr));\n+  }\n+\n+  .panel--route {\n+    grid-column: span 12;\n+  }\n+\n+  .panel--organization {\n+    grid-column: span 7;\n+  }\n+\n+  .panel--memories {\n+    grid-column: span 5;\n+  }\n+}\n+\n+@media (max-width: 1099px) {\n+  .hero {\n+    grid-template-columns: 1fr;\n+  }\n+\n+  .summary-grid,\n+  .split-list {\n+    grid-template-columns: 1fr;\n+  }\n+}\n+\n+@media (max-width: 720px) {\n+  .app-shell {\n+    width: min(100vw - 18px, 100%);\n+    padding: 12px 0 24px;\n+  }\n+\n+  .hero__metrics {\n+    grid-template-columns: 1fr 1fr;\n+  }\n+\n+  .item-card,\n+  .item-row {\n+    flex-direction: column;\n+  }\n+\n+  .item-card__actions,\n+  .item-row__side {\n+    justify-content: flex-start;\n+  }\n+}\n+\ndiff --git a/server.mjs b/server.mjs\nindex 8b0c4f50eb76998e5e056094182e78b0271d7ebf..86394bf148143a4e3e899f0ab61aabb2a2a5db53\n--- a/server.mjs\n+++ b/server.mjs\n@@ -11,6 +11,7 @@\n   \".css\": \"text/css; charset=utf-8\",\n   \".html\": \"text/html; charset=utf-8\",\n   \".js\": \"text/javascript; charset=utf-8\",\n+  \".mjs\": \"text/javascript; charset=utf-8\",\n   \".json\": \"application/json; charset=utf-8\",\n   \".svg\": \"image/svg+xml\"\n };\n@@ -18,13 +19,21 @@\n createServer(async (request, response) => {\n   try {\n     const pathname = decodeURIComponent(new URL(request.url ?? \"/\", \"http://localhost\").pathname);\n-    const relative = pathname === \"/\" ? \"index.html\" : pathname.replace(/^\\/+/, \"\");\n-    const candidate = path.resolve(publicRoot, relative);\n+    const relative = pathname === \"/\" ? \"app/index.html\" : pathname.replace(/^\\/+/, \"\");\n+    let candidate = path.resolve(publicRoot, relative);\n     if (candidate !== publicRoot && !candidate.startsWith(publicRoot + path.sep)) {\n       response.writeHead(403).end(\"Forbidden\");\n       return;\n     }\n-    const info = await stat(candidate);\n+    let info = await stat(candidate);\n+    if (info.isDirectory()) {\n+      candidate = path.resolve(candidate, \"index.html\");\n+      if (candidate !== publicRoot && !candidate.startsWith(publicRoot + path.sep)) {\n+        response.writeHead(403).end(\"Forbidden\");\n+        return;\n+      }\n+      info = await stat(candidate);\n+    }\n     if (!info.isFile()) throw Object.assign(new Error(\"Not a file\"), { code: \"ENOENT\" });\n     response.writeHead(200, {\n       \"content-type\": contentTypes[path.extname(candidate)] ?? \"application/octet-stream\",\n\n\nprocess-tree termination could not be verified",
+          "options": [
+            {
+              "id": "retry",
+              "label": "Retry with guidance"
+            },
+            {
+              "id": "stop",
+              "label": "Stop this work"
+            }
+          ],
+          "affectedNodeIds": [
+            "unit:dashboard"
+          ],
+          "repairTargetNodeId": "unit:dashboard",
+          "evidenceRefs": [
+            "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:dashboard:3",
+            "input-fingerprint:sha256:16f44fc9a19b54d86b01985166121f7a1aad238b54f3cf28f5849a9400a0176a"
+          ],
+          "impact": "behavior",
+          "raisedAtGraphRevision": 1
+        }
+      }
+    },
+    {
+      "eventId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:readiness.observed:106",
+      "occurredAt": "2026-08-21T02:40:00.935Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [],
+        "pendingDecisionIds": [
+          "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:dashboard:3:decision"
+        ],
+        "explanations": [
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:31e27276b8616ce0c78e5e5c9e2a100788c08f93eabf06a4715ec413d32275ab:attempt:unit:dashboard:3:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:mem-favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:mem-notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:org-budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:org-packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-app",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-explore",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:route-stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:route",
+            "unit:route-stops",
+            "unit:route-agenda",
+            "unit:route-explore",
+            "unit:organization",
+            "unit:org-budget",
+            "unit:org-packing",
+            "unit:memories",
+            "unit:mem-notes",
+            "unit:mem-favorites",
+            "unit:dashboard"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:route",
+            "unit:route-stops",
+            "unit:route-agenda",
+            "unit:route-explore",
+            "unit:organization",
+            "unit:org-budget",
+            "unit:org-packing",
+            "unit:memories",
+            "unit:mem-notes",
+            "unit:mem-favorites",
+            "unit:dashboard"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T02:40:00.880Z"
+      }
+    }
+  ]
+}

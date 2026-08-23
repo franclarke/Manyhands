@@ -1,0 +1,1225 @@
+{
+  "events": [
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:readiness.observed:86",
+      "occurredAt": "2026-08-21T06:52:32.480Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:dashboard",
+          "unit:exploracion"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:dashboard",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:exploracion",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:equipaje",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favoritos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:exploracion-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organizacion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:paradas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:presupuesto",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:recuerdos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-ui-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:paradas",
+            "unit:agenda",
+            "unit:exploracion",
+            "unit:organizacion",
+            "unit:presupuesto",
+            "unit:equipaje",
+            "unit:recuerdos",
+            "unit:notas",
+            "unit:favoritos",
+            "unit:dashboard"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:paradas",
+            "unit:agenda",
+            "unit:exploracion",
+            "unit:organizacion",
+            "unit:presupuesto",
+            "unit:equipaje",
+            "unit:recuerdos",
+            "unit:notas",
+            "unit:favoritos",
+            "unit:dashboard"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T06:52:32.430Z"
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:wave.selected:87",
+      "occurredAt": "2026-08-21T06:52:32.622Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:wave:7",
+        "nodeIds": [
+          "unit:dashboard",
+          "unit:exploracion"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:equipaje",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favoritos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:exploracion-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organizacion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:paradas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:presupuesto",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:recuerdos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-ui-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-21T06:52:32.575Z"
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:dashboard:2:started",
+      "occurredAt": "2026-08-21T06:52:32.725Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:dashboard:2",
+        "nodeId": "unit:dashboard",
+        "inputFingerprint": "sha256:058456bd9c1de9c761974b7803ad01538eb06790aaf0a1ee4af0a4eefe3bf79a",
+        "retryOfAttemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:dashboard:1",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:exploracion:2:started",
+      "occurredAt": "2026-08-21T06:52:32.727Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:exploracion:2",
+        "nodeId": "unit:exploracion",
+        "inputFingerprint": "sha256:4771c500a61d0062017dc24023e5ffa7bfaa7703f96e9ed4d5228d2669ed8920",
+        "retryOfAttemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:exploracion:1",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:exploracion:2:candidate",
+      "occurredAt": "2026-08-21T06:58:45.992Z",
+      "type": "attempt.candidate_created",
+      "payload": {
+        "attemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:exploracion:2",
+        "nodeId": "unit:exploracion",
+        "candidateCommit": "17789109784229fa25f8e439e848ce14420aaffb",
+        "candidate": {
+          "manifestDigest": "sha256:18e82a94058c67ef58c48e40d17f2d9edae8a7931ae4b2d352b242a5a7cf47d7",
+          "commitOid": "17789109784229fa25f8e439e848ce14420aaffb",
+          "treeOid": "cb3e53d1977b572f27e12d8d141d04a887524cfb"
+        },
+        "outputDigest": "sha256:b434ffcb2a87d293728a94600d886301a5f57d20492ca2514dbfc8de5277fd6f",
+        "changedFiles": [
+          "src/itinerary/exploracion/exploracion.mjs",
+          "src/itinerary/exploracion/exploracion.test.mjs"
+        ],
+        "usage": {
+          "tokensTotal": 61342,
+          "costUsd": 0.276039,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:exploracion:2:validated",
+      "occurredAt": "2026-08-21T06:58:45.992Z",
+      "type": "validation.completed",
+      "payload": {
+        "attemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:exploracion:2",
+        "nodeId": "unit:exploracion",
+        "matrix": {
+          "matrixId": "matrix-bd070daa39b95d65",
+          "candidateCommit": "17789109784229fa25f8e439e848ce14420aaffb",
+          "validationContract": {
+            "id": "validation-contract:unit:exploracion",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:exploracion",
+              "obligationId": "validation:exploracion",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-fb933c590ee3f8b03475a5543cea711e8d7bbc84cc642f347d349550f284de7b:attempt:1",
+                "validation:exploracion:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:8b7fb22ca3397cf636b2480ce740368d4bf879ebc76c25824d30e8c114707f3c",
+          "observations": [
+            {
+              "evidenceId": "command-fb933c590ee3f8b03475a5543cea711e8d7bbc84cc642f347d349550f284de7b:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "fb933c590ee3f8b03475a5543cea711e8d7bbc84cc642f347d349550f284de7b",
+              "durationMs": 911.8803000000189,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "d9cfc431110a399c9c7acde484f954b455e581552f5e9d89a06bba7e24639ae1",
+              "criterionIds": [
+                "criterion:exploracion"
+              ],
+              "obligationIds": [
+                "validation:exploracion"
+              ],
+              "references": [
+                "src/itinerary/exploracion/exploracion.test.mjs"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-bd070daa39b95d65:validation:exploracion",
+              "revision": 1,
+              "goalContractDigest": "sha256:63d0b7ed9a1f3b371f362292e0fb42386a8931e93567dc84e35581500523ed2c",
+              "criterionId": "criterion:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:1",
+              "obligationId": "validation:exploracion",
+              "candidate": {
+                "manifestDigest": "sha256:18e82a94058c67ef58c48e40d17f2d9edae8a7931ae4b2d352b242a5a7cf47d7",
+                "commitOid": "17789109784229fa25f8e439e848ce14420aaffb",
+                "treeOid": "cb3e53d1977b572f27e12d8d141d04a887524cfb"
+              },
+              "baseline": {
+                "commitOid": "64f0e44ff4bc90c2536c62ede517c8f855f1a6b4",
+                "treeOid": "1555e640f7399b75338f2ecbfcd9ad268cd814d9"
+              },
+              "proofStrategyDigest": "sha256:dca4a00b8952806d794b472bfd79dd1de4afae0be1a0a0136a3953177a9d256e",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:8b7fb22ca3397cf636b2480ce740368d4bf879ebc76c25824d30e8c114707f3c",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:b08335dd2ee8dcce1600968fddc87cbf7139430eda5f9791542b5e3c84c8fe73",
+              "outputDigest": "sha256:d9cfc431110a399c9c7acde484f954b455e581552f5e9d89a06bba7e24639ae1",
+              "outcome": "satisfied",
+              "digest": "sha256:c27eb3e5969e1ff587f5f73c926105d2ce9717f08c5ef929afd8f997d77557e6"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:exploracion:negative-control",
+              "obligationId": "validation:exploracion",
+              "detectedFailure": true,
+              "outputDigest": "e0f19e28fbafcd544891746af0887c247ef12bed5a7998a499ce87fb388bf251"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:exploracion:2:artifact:artifact:exploracion-change",
+      "occurredAt": "2026-08-21T06:58:45.992Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:exploracion-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:exploracion:2",
+          "runId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d",
+          "nodeId": "unit:exploracion",
+          "digest": "sha256:cdec83a39c807c56eb350338682cda42560f695b5f754fd2fd1d890dc2b98f9c",
+          "producerAttemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:exploracion:2",
+          "contract": {
+            "id": "artifact:exploracion-change",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:cdec83a39c807c56eb350338682cda42560f695b5f754fd2fd1d890dc2b98f9c",
+          "manifest": {
+            "id": "artifact:exploracion-change",
+            "contract": {
+              "id": "artifact:exploracion-change",
+              "revision": 1,
+              "digest": "sha256:b718ce96ceb52bb966418d477bb1f76ad1be11898cc27701d6ef83f779f2be30"
+            },
+            "producerNodeId": "unit:exploracion",
+            "producerAttemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:exploracion:2",
+            "inputFingerprint": "sha256:4771c500a61d0062017dc24023e5ffa7bfaa7703f96e9ed4d5228d2669ed8920",
+            "repositoryObjectStoreId": "object-store:1817cba9dbecd6da",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "17789109784229fa25f8e439e848ce14420aaffb",
+              "treeOid": "cb3e53d1977b572f27e12d8d141d04a887524cfb"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-22b14e85aa46e4fa5601dc5b44304224-292f2e30d56a/attempts/run-22b14e85aa46e4fa5601dc5b44304224-a4671fdd29c1/artifacts/artifact-exploracion-change-fb34fc7fdb72",
+            "kind": "change_set",
+            "baseTreeSha": "46a8e6774fc479272ba2c572da10bca2ccf8b22a",
+            "resultTreeSha": "cb3e53d1977b572f27e12d8d141d04a887524cfb",
+            "entries": [
+              {
+                "newPath": "src/itinerary/exploracion/exploracion.mjs",
+                "operation": "add",
+                "newOid": "fe7a399b19e82108131b20a83d21dee5c0922b3f",
+                "newMode": "100644"
+              },
+              {
+                "newPath": "src/itinerary/exploracion/exploracion.test.mjs",
+                "operation": "add",
+                "newOid": "77eb6d9b795e2e38ef52f6838c8d5f32ab13df1b",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:cdec83a39c807c56eb350338682cda42560f695b5f754fd2fd1d890dc2b98f9c"
+          },
+          "adoptedAt": "2026-08-21T06:58:45.992Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:dashboard:2:failed",
+      "occurredAt": "2026-08-21T07:03:01.608Z",
+      "type": "attempt.failed",
+      "payload": {
+        "attemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:dashboard:2",
+        "nodeId": "unit:dashboard",
+        "reason": "timeout: timeout: The agent hit the hard timeout. Consider a longer per-task timeout or a faster executor for this node.",
+        "usage": {
+          "source": "unavailable"
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:dashboard:2:decision",
+      "occurredAt": "2026-08-21T07:03:01.608Z",
+      "type": "decision.raised",
+      "payload": {
+        "decision": {
+          "id": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:dashboard:2:decision",
+          "kind": "resolve_conflict",
+          "question": "Execution for Dashboard requires guidance: timeout: timeout: The agent hit the hard timeout. Consider a longer per-task timeout or a faster executor for this node.",
+          "options": [
+            {
+              "id": "retry",
+              "label": "Retry with guidance"
+            },
+            {
+              "id": "stop",
+              "label": "Stop this work"
+            }
+          ],
+          "affectedNodeIds": [
+            "unit:dashboard"
+          ],
+          "repairTargetNodeId": "unit:dashboard",
+          "evidenceRefs": [
+            "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:dashboard:2",
+            "input-fingerprint:sha256:058456bd9c1de9c761974b7803ad01538eb06790aaf0a1ee4af0a4eefe3bf79a"
+          ],
+          "impact": "behavior",
+          "raisedAtGraphRevision": 1
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:readiness.observed:95",
+      "occurredAt": "2026-08-21T07:03:01.775Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:itinerary"
+        ],
+        "pendingDecisionIds": [
+          "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:dashboard:2:decision"
+        ],
+        "explanations": [
+          {
+            "nodeId": "unit:itinerary",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:dashboard:2:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:equipaje",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:exploracion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favoritos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organizacion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:paradas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:presupuesto",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:recuerdos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-ui-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:paradas",
+            "unit:agenda",
+            "unit:exploracion",
+            "unit:organizacion",
+            "unit:presupuesto",
+            "unit:equipaje",
+            "unit:recuerdos",
+            "unit:notas",
+            "unit:favoritos",
+            "unit:dashboard"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:paradas",
+            "unit:agenda",
+            "unit:exploracion",
+            "unit:organizacion",
+            "unit:presupuesto",
+            "unit:equipaje",
+            "unit:recuerdos",
+            "unit:notas",
+            "unit:favoritos",
+            "unit:dashboard"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T07:03:01.722Z"
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:wave.selected:96",
+      "occurredAt": "2026-08-21T07:03:01.954Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:wave:8",
+        "nodeIds": [
+          "unit:itinerary"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:dashboard:2:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:equipaje",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:exploracion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favoritos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organizacion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:paradas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:presupuesto",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:recuerdos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-ui-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-21T07:03:01.895Z"
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:itinerary:1:started",
+      "occurredAt": "2026-08-21T07:03:02.065Z",
+      "type": "integration.started",
+      "payload": {
+        "attemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:itinerary:1",
+        "nodeId": "unit:itinerary",
+        "inputFingerprint": "sha256:503810beb8e88916048693889579c0d21b43df49286d545f1f9970ff01463fa6",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        },
+        "requiredArtifactIds": [
+          "artifact:storage-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:storage:1",
+          "artifact:paradas-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:paradas:2",
+          "artifact:agenda-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:agenda:1",
+          "artifact:exploracion-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:exploracion:2"
+        ]
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:itinerary:1:integrated",
+      "occurredAt": "2026-08-21T07:07:30.844Z",
+      "type": "integration.completed",
+      "payload": {
+        "attemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:itinerary:1",
+        "nodeId": "unit:itinerary",
+        "manifestId": "integration-result-integration-request-96e5f20e5155f16a",
+        "candidateCommit": "d3d88c223ab7bfa2dbf8d396ad494de4828b56de",
+        "candidate": {
+          "manifestDigest": "sha256:7e87863fc6edd77d5f68e48b9d340532a4586068e7bdb5bb736244ccddf4b274",
+          "commitOid": "d3d88c223ab7bfa2dbf8d396ad494de4828b56de",
+          "treeOid": "71f89982a09d58389f458bd3ddd2cc56543b6702"
+        },
+        "matrix": {
+          "matrixId": "matrix-b3051ed110da4c7b",
+          "candidateCommit": "d3d88c223ab7bfa2dbf8d396ad494de4828b56de",
+          "validationContract": {
+            "id": "validation-contract:unit:itinerary",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:itinerary",
+              "obligationId": "validation:itinerary-integration",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-1b32f4d2db7c51996a0222df6b8c58e0a20589978acb92b8389c855c9e5e3873:attempt:1",
+                "validation:itinerary-integration:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:064ef5673c8e98fc946e46f7aa1af5adaebb675e672a03c7c9fc7e8e85315942",
+          "observations": [
+            {
+              "evidenceId": "command-1b32f4d2db7c51996a0222df6b8c58e0a20589978acb92b8389c855c9e5e3873:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "1b32f4d2db7c51996a0222df6b8c58e0a20589978acb92b8389c855c9e5e3873",
+              "durationMs": 965.346300000092,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "3752abb7c910e19b083dcf6e5aaee7d7deb44e1204484ccde2f7139a748430e3",
+              "criterionIds": [
+                "criterion:itinerary"
+              ],
+              "obligationIds": [
+                "validation:itinerary-integration"
+              ],
+              "references": [
+                "test/itinerary/integration.test.mjs"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-b3051ed110da4c7b:validation:itinerary-integration",
+              "revision": 1,
+              "goalContractDigest": "sha256:63d0b7ed9a1f3b371f362292e0fb42386a8931e93567dc84e35581500523ed2c",
+              "criterionId": "criterion:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:1",
+              "obligationId": "validation:itinerary-integration",
+              "candidate": {
+                "manifestDigest": "sha256:7e87863fc6edd77d5f68e48b9d340532a4586068e7bdb5bb736244ccddf4b274",
+                "commitOid": "d3d88c223ab7bfa2dbf8d396ad494de4828b56de",
+                "treeOid": "71f89982a09d58389f458bd3ddd2cc56543b6702"
+              },
+              "baseline": {
+                "commitOid": "64f0e44ff4bc90c2536c62ede517c8f855f1a6b4",
+                "treeOid": "1555e640f7399b75338f2ecbfcd9ad268cd814d9"
+              },
+              "proofStrategyDigest": "sha256:5690b54aeee664c76040c5089b1d3e003bc8ee0f70486e5d5d3488b95a35cf9e",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:064ef5673c8e98fc946e46f7aa1af5adaebb675e672a03c7c9fc7e8e85315942",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:e31e18fb24cbba030702161b9764dd4799bbecfe02b7edd49b0f7484d9933d6c",
+              "outputDigest": "sha256:3752abb7c910e19b083dcf6e5aaee7d7deb44e1204484ccde2f7139a748430e3",
+              "outcome": "satisfied",
+              "digest": "sha256:af68de05ab04d4c9ba8eceb9b90f7dbfbed3e35a741703b21a5a34c7f47a3a64"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:itinerary-integration:negative-control",
+              "obligationId": "validation:itinerary-integration",
+              "detectedFailure": true,
+              "outputDigest": "5706598aacdc6ecf2bb86cf60d318840010813fb2741dd63a740dbda4665c050"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:itinerary:1:artifact:artifact:itinerary-integration",
+      "occurredAt": "2026-08-21T07:07:30.844Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:itinerary-integration:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:itinerary:1",
+          "runId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d",
+          "nodeId": "unit:itinerary",
+          "digest": "sha256:f59f21e3dfee0bdf36696d1fafcb94dc71511d5a601b97bde99c585eb715cf4d",
+          "producerAttemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:itinerary:1",
+          "contract": {
+            "id": "artifact:itinerary-integration",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:f59f21e3dfee0bdf36696d1fafcb94dc71511d5a601b97bde99c585eb715cf4d",
+          "manifest": {
+            "id": "artifact:itinerary-integration",
+            "contract": {
+              "id": "artifact:itinerary-integration",
+              "revision": 1,
+              "digest": "sha256:23147963d4db39b271153f9faad36966b740fba575e05113fdde0d7066347096"
+            },
+            "producerNodeId": "unit:itinerary",
+            "producerAttemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:itinerary:1",
+            "inputFingerprint": "sha256:503810beb8e88916048693889579c0d21b43df49286d545f1f9970ff01463fa6",
+            "repositoryObjectStoreId": "object-store:1817cba9dbecd6da",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "d3d88c223ab7bfa2dbf8d396ad494de4828b56de",
+              "treeOid": "71f89982a09d58389f458bd3ddd2cc56543b6702"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-22b14e85aa46e4fa5601dc5b44304224-292f2e30d56a/attempts/run-22b14e85aa46e4fa5601dc5b44304224-e57341ab89d6/artifacts/artifact-itinerary-integration-749700c8dc83",
+            "kind": "change_set",
+            "baseTreeSha": "cb3e53d1977b572f27e12d8d141d04a887524cfb",
+            "resultTreeSha": "71f89982a09d58389f458bd3ddd2cc56543b6702",
+            "entries": [
+              {
+                "newPath": "test/itinerary/integration.test.mjs",
+                "operation": "add",
+                "newOid": "9d0a81bb5a1e0784d46702a78272d98fa6d28990",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:f59f21e3dfee0bdf36696d1fafcb94dc71511d5a601b97bde99c585eb715cf4d"
+          },
+          "adoptedAt": "2026-08-21T07:07:30.844Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:readiness.observed:100",
+      "occurredAt": "2026-08-21T07:07:31.067Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [],
+        "pendingDecisionIds": [
+          "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:dashboard:2:decision"
+        ],
+        "explanations": [
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:dashboard:2:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:equipaje",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:exploracion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favoritos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organizacion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:paradas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:presupuesto",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:recuerdos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-ui-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:paradas",
+            "unit:agenda",
+            "unit:exploracion",
+            "unit:organizacion",
+            "unit:presupuesto",
+            "unit:equipaje",
+            "unit:recuerdos",
+            "unit:notas",
+            "unit:favoritos",
+            "unit:dashboard"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:paradas",
+            "unit:agenda",
+            "unit:exploracion",
+            "unit:organizacion",
+            "unit:presupuesto",
+            "unit:equipaje",
+            "unit:recuerdos",
+            "unit:notas",
+            "unit:favoritos",
+            "unit:dashboard"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T07:07:30.993Z"
+      }
+    }
+  ]
+}

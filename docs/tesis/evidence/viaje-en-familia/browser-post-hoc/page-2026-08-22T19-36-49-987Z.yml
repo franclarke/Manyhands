@@ -1,0 +1,112 @@
+- generic [ref=f1e3]:
+  - link "Saltar al contenido" [ref=f1e4] [cursor=pointer]:
+    - /url: "#dashboard-main"
+  - generic [ref=f1e5]:
+    - banner [ref=f1e6]:
+      - generic [ref=f1e7]:
+        - paragraph [ref=f1e8]: Presentación del viaje
+        - heading "Viaje en familia" [level=1] [ref=f1e9]
+        - paragraph [ref=f1e10]: 5 sept 2026 - 12 sept 2026
+      - generic [ref=f1e11]:
+        - article [ref=f1e12]:
+          - paragraph [ref=f1e13]: Eventos
+          - strong [ref=f1e14]: "3"
+          - paragraph [ref=f1e15]: Próximas actividades visibles
+        - article [ref=f1e16]:
+          - paragraph [ref=f1e17]: Presupuesto
+          - strong [ref=f1e18]: 575000/1200000
+          - paragraph [ref=f1e19]: Disponible 625000
+        - article [ref=f1e20]:
+          - paragraph [ref=f1e21]: Equipaje
+          - strong [ref=f1e22]: 0/3
+          - paragraph [ref=f1e23]: Progreso total de preparación
+      - navigation "Secciones del dashboard" [ref=f1e24]:
+        - link "Eventos" [ref=f1e25] [cursor=pointer]:
+          - /url: "#events"
+        - link "Presupuesto" [ref=f1e26] [cursor=pointer]:
+          - /url: "#budget"
+        - link "Equipaje" [ref=f1e27] [cursor=pointer]:
+          - /url: "#packing"
+        - link "Recuerdos" [ref=f1e28] [cursor=pointer]:
+          - /url: "#memories"
+      - button "Actualizar" [ref=f1e29] [cursor=pointer]
+    - main [ref=f1e30]:
+      - generic [ref=f1e31]:
+        - paragraph [ref=f1e32]: Agenda
+        - heading "Próximos eventos" [level=2] [ref=f1e33]
+        - list [ref=f1e34]:
+          - listitem [ref=f1e35]:
+            - strong [ref=f1e36]: Bariloche
+            - paragraph [ref=f1e37]: 2026-09-06 · 10:00
+            - paragraph [ref=f1e38]: Pendiente
+          - listitem [ref=f1e39]:
+            - strong [ref=f1e40]: Bariloche
+            - paragraph [ref=f1e41]: 2026-09-07 · 17:30
+            - paragraph [ref=f1e42]: Pendiente
+          - listitem [ref=f1e43]:
+            - strong [ref=f1e44]: Villa La Angostura
+            - paragraph [ref=f1e45]: 2026-09-10 · 09:30
+            - paragraph [ref=f1e46]: Pendiente
+      - generic [ref=f1e47]:
+        - paragraph [ref=f1e48]: Presupuesto
+        - heading "Resumen del presupuesto" [level=2] [ref=f1e49]
+        - paragraph [ref=f1e50]: Gastado 575000 de 1200000. Disponible 625000.
+        - list [ref=f1e53]:
+          - listitem [ref=f1e54]:
+            - generic [ref=f1e55]:
+              - strong [ref=f1e56]: alojamiento
+              - generic [ref=f1e57]: 63%
+            - paragraph [ref=f1e58]: 360000 gastados
+          - listitem [ref=f1e59]:
+            - generic [ref=f1e60]:
+              - strong [ref=f1e61]: comidas
+              - generic [ref=f1e62]: 22%
+            - paragraph [ref=f1e63]: 125000 gastados
+          - listitem [ref=f1e64]:
+            - generic [ref=f1e65]:
+              - strong [ref=f1e66]: actividades
+              - generic [ref=f1e67]: 16%
+            - paragraph [ref=f1e68]: 90000 gastados
+      - generic [ref=f1e69]:
+        - paragraph [ref=f1e70]: Equipaje
+        - heading "Progreso de equipaje" [level=2] [ref=f1e71]
+        - paragraph [ref=f1e72]: Llevas 0 de 3 elementos listos.
+        - paragraph [ref=f1e74]: 0% completado
+      - generic [ref=f1e75]:
+        - paragraph [ref=f1e76]: Recuerdos
+        - heading "Recuerdos destacados" [level=2] [ref=f1e77]
+        - list [ref=f1e78]:
+          - listitem [ref=f1e79]:
+            - generic [ref=f1e80]: Nota
+            - strong [ref=f1e81]: Día 2
+            - paragraph [ref=f1e82]: Reservar la cena familiar
+          - listitem [ref=f1e83]:
+            - generic [ref=f1e84]: Nota
+            - strong [ref=f1e85]: Bariloche
+            - paragraph [ref=f1e86]: Llevar la cámara
+          - listitem [ref=f1e87]:
+            - generic [ref=f1e88]: Favorito
+            - strong [ref=f1e89]: Villa La Angostura
+          - listitem [ref=f1e90]:
+            - generic [ref=f1e91]: Favorito
+            - strong [ref=f1e92]: 09:30 · Villa La Angostura
+      - generic [ref=f1e93]:
+        - paragraph [ref=f1e94]: Notas
+        - heading "Notas del viaje" [level=2] [ref=f1e95]
+        - list [ref=f1e96]:
+          - listitem [ref=f1e97]:
+            - strong [ref=f1e98]: Reservar la cena familiar
+            - paragraph [ref=f1e99]: Día 2
+          - listitem [ref=f1e100]:
+            - strong [ref=f1e101]: Llevar la cámara
+            - paragraph [ref=f1e102]: Parada
+      - generic [ref=f1e103]:
+        - paragraph [ref=f1e104]: Favoritos
+        - heading "Marcados como favoritos" [level=2] [ref=f1e105]
+        - list [ref=f1e106]:
+          - listitem [ref=f1e107]:
+            - strong [ref=f1e108]: Villa La Angostura
+            - paragraph [ref=f1e109]: Parada
+          - listitem [ref=f1e110]:
+            - strong [ref=f1e111]: 09:30 · Actividad
+            - paragraph [ref=f1e112]: Actividad

@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "processes": [
+    {
+      "pid": 36144,
+      "label": "planning-decomposer",
+      "command": "C:\\mh-shim-c781-09\\node.exe",
+      "registeredAt": "2026-08-12T23:05:18.695Z"
+    }
+  ],
+  "updatedAt": "2026-08-12T23:05:18.726Z"
+}

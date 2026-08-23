@@ -1,0 +1,210 @@
+{
+  "events": [
+    {
+      "eventId": "repository:sha256:c2fe34bfdb080b1090c426187e96c72872b222e6a6dc514c6815f12d63e5002c:inspection",
+      "occurredAt": "2026-08-17T05:39:46.289Z",
+      "type": "repository.inspected",
+      "payload": {
+        "snapshotId": "sha256:c2fe34bfdb080b1090c426187e96c72872b222e6a6dc514c6815f12d63e5002c",
+        "disposition": "partial",
+        "snapshot": {
+          "schemaVersion": 1,
+          "snapshotId": "sha256:c2fe34bfdb080b1090c426187e96c72872b222e6a6dc514c6815f12d63e5002c",
+          "repositoryId": "Cuentas-Claras",
+          "rootPath": "C:\\Users\\franc\\Documents\\Proyectos\\Cuentas Claras",
+          "targetFingerprint": "7b304907cce55b6e",
+          "baseCommit": "680018b7a2dd7fff3660431df84e19c10af7b53b",
+          "indexSchemaVersion": 1,
+          "capturedAt": "2026-08-17T05:28:46.531Z",
+          "inspectionDisposition": "partial",
+          "capabilities": {
+            "scripts": {},
+            "baselineCommands": [],
+            "languages": [],
+            "stack": []
+          },
+          "diagnostics": [
+            {
+              "code": "no_supported_source_files",
+              "severity": "warning",
+              "message": "Repository contains no structurally indexed TypeScript or JavaScript source files."
+            }
+          ],
+          "indexHash": "acba1ed6ef4c8ac2bc69f401ffe93a98e8f67b34f42341ef37ea5f53790852ec",
+          "index": {
+            "repositoryId": "Cuentas-Claras",
+            "rootPath": "C:\\Users\\franc\\Documents\\Proyectos\\Cuentas Claras",
+            "indexedAt": "2026-08-17T05:28:46.531Z",
+            "files": [],
+            "symbols": [],
+            "imports": [],
+            "exports": [],
+            "diagnostics": [],
+            "metadata": {
+              "indexer": "ripgrep-native-v2",
+              "deterministic": true,
+              "fileCount": 0,
+              "symbolCount": 0,
+              "importCount": 0,
+              "exportCount": 0
+            }
+          }
+        },
+        "repositoryModelDigest": "sha256:fbd7979d2ff0dbaa85067ae3c0bd90768e5f4c0946d3de72247f9ad429dd0725",
+        "repositoryView": {
+          "digest": "sha256:cf41d54ed3a39e8237e52bca411e771d842d140661fc024442a3d0b02b66ee03",
+          "treeSha": "aa4b1fc231cbff6853853ab8b07c786d16c51948",
+          "resourceCatalogDigest": "sha256:ff2c20729ffc81cb34424af43dc54f5cced7541eb3ecba699c41b0e572413d1f"
+        },
+        "queryDigests": [
+          "sha256:f88b0c253a18dff76265382a19f9bce36093edc63a29f9208dd9e6da76713ec1",
+          "sha256:437ef2cb58c3413e6dfa82d396dc4018305fe4121a84b0ce04774a63b9b52132"
+        ]
+      }
+    },
+    {
+      "eventId": "planning:run:02d0de9ba3235fdd42777ff2a4adbfd2a41a6101867da08d1ad15cae28fb4ecf:failed",
+      "occurredAt": "2026-08-17T05:39:46.289Z",
+      "type": "planning.failed",
+      "payload": {
+        "reason": "artifact_path_outside_write_surface: Artifact artifact:calculation-change expected path src/calculation/balance.js is outside its producer's write surface. | artifact_path_outside_write_surface: Artifact artifact:calculation-change expected path src/calculation/index.js is outside its producer's write surface. | artifact_path_outside_write_surface: Artifact artifact:calculation-change expected path src/calculation/settlement.js is outside its producer's write surface. | artifact_path_outside_write_surface: Artifact artifact:calculation-change expected path test/calculation.test.js is outside its producer's write surface. | artifact_path_outside_write_surface: Artifact artifact:domain-change expected path src/domain/event.js is outside its producer's write surface. | artifact_path_outside_write_surface: Artifact artifact:domain-change expected path src/domain/expense.js is outside its producer's write surface. | artifact_path_outside_write_surface: Artifact artifact:domain-change expected path src/domain/index.js is outside its producer's write surface. | artifact_path_outside_write_surface: Artifact artifact:domain-change expected path src/domain/participant.js is outside its producer's write surface. | artifact_path_outside_write_surface: Artifact artifact:domain-change expected path test/domain.test.js is outside its producer's write surface. | artifact_path_outside_write_surface: Artifact artifact:interface-change expected path src/api/routes.js is outside its producer's write surface. | artifact_path_outside_write_surface: Artifact artifact:interface-change expected path src/cli.js is outside its producer's write surface. | artifact_path_outside_write_surface: Artifact artifact:interface-change expected path src/server.js is outside its producer's write surface. | artifact_path_outside_write_surface: Artifact artifact:interface-change expected path test/e2e.test.js is outside its producer's write surface. | artifact_path_outside_write_surface: Artifact artifact:interface-change expected path test/interface.test.js is outside its producer's write surface. | artifact_path_outside_write_surface: Artifact artifact:project-setup expected path package.json is outside its producer's write surface. | artifact_path_outside_write_surface: Artifact artifact:storage-change expected path src/storage/eventStore.js is outside its producer's write surface. | artifact_path_outside_write_surface: Artifact artifact:storage-change expected path src/storage/index.js is outside its producer's write surface. | artifact_path_outside_write_surface: Artifact artifact:storage-change expected path src/storage/report.js is outside its producer's write surface. | artifact_path_outside_write_surface: Artifact artifact:storage-change expected path test/storage.test.js is outside its producer's write surface. | repository_model_coverage_incomplete: Repository model coverage is partial. | resource_catalog_coverage_incomplete: Resource catalog coverage is partial.",
+        "findings": [
+          {
+            "code": "artifact_path_outside_write_surface",
+            "message": "Artifact artifact:calculation-change expected path src/calculation/balance.js is outside its producer's write surface.",
+            "severity": "error",
+            "evidenceRefs": []
+          },
+          {
+            "code": "artifact_path_outside_write_surface",
+            "message": "Artifact artifact:calculation-change expected path src/calculation/index.js is outside its producer's write surface.",
+            "severity": "error",
+            "evidenceRefs": []
+          },
+          {
+            "code": "artifact_path_outside_write_surface",
+            "message": "Artifact artifact:calculation-change expected path src/calculation/settlement.js is outside its producer's write surface.",
+            "severity": "error",
+            "evidenceRefs": []
+          },
+          {
+            "code": "artifact_path_outside_write_surface",
+            "message": "Artifact artifact:calculation-change expected path test/calculation.test.js is outside its producer's write surface.",
+            "severity": "error",
+            "evidenceRefs": []
+          },
+          {
+            "code": "artifact_path_outside_write_surface",
+            "message": "Artifact artifact:domain-change expected path src/domain/event.js is outside its producer's write surface.",
+            "severity": "error",
+            "evidenceRefs": []
+          },
+          {
+            "code": "artifact_path_outside_write_surface",
+            "message": "Artifact artifact:domain-change expected path src/domain/expense.js is outside its producer's write surface.",
+            "severity": "error",
+            "evidenceRefs": []
+          },
+          {
+            "code": "artifact_path_outside_write_surface",
+            "message": "Artifact artifact:domain-change expected path src/domain/index.js is outside its producer's write surface.",
+            "severity": "error",
+            "evidenceRefs": []
+          },
+          {
+            "code": "artifact_path_outside_write_surface",
+            "message": "Artifact artifact:domain-change expected path src/domain/participant.js is outside its producer's write surface.",
+            "severity": "error",
+            "evidenceRefs": []
+          },
+          {
+            "code": "artifact_path_outside_write_surface",
+            "message": "Artifact artifact:domain-change expected path test/domain.test.js is outside its producer's write surface.",
+            "severity": "error",
+            "evidenceRefs": []
+          },
+          {
+            "code": "artifact_path_outside_write_surface",
+            "message": "Artifact artifact:interface-change expected path src/api/routes.js is outside its producer's write surface.",
+            "severity": "error",
+            "evidenceRefs": []
+          },
+          {
+            "code": "artifact_path_outside_write_surface",
+            "message": "Artifact artifact:interface-change expected path src/cli.js is outside its producer's write surface.",
+            "severity": "error",
+            "evidenceRefs": []
+          },
+          {
+            "code": "artifact_path_outside_write_surface",
+            "message": "Artifact artifact:interface-change expected path src/server.js is outside its producer's write surface.",
+            "severity": "error",
+            "evidenceRefs": []
+          },
+          {
+            "code": "artifact_path_outside_write_surface",
+            "message": "Artifact artifact:interface-change expected path test/e2e.test.js is outside its producer's write surface.",
+            "severity": "error",
+            "evidenceRefs": []
+          },
+          {
+            "code": "artifact_path_outside_write_surface",
+            "message": "Artifact artifact:interface-change expected path test/interface.test.js is outside its producer's write surface.",
+            "severity": "error",
+            "evidenceRefs": []
+          },
+          {
+            "code": "artifact_path_outside_write_surface",
+            "message": "Artifact artifact:project-setup expected path package.json is outside its producer's write surface.",
+            "severity": "error",
+            "evidenceRefs": []
+          },
+          {
+            "code": "artifact_path_outside_write_surface",
+            "message": "Artifact artifact:storage-change expected path src/storage/eventStore.js is outside its producer's write surface.",
+            "severity": "error",
+            "evidenceRefs": []
+          },
+          {
+            "code": "artifact_path_outside_write_surface",
+            "message": "Artifact artifact:storage-change expected path src/storage/index.js is outside its producer's write surface.",
+            "severity": "error",
+            "evidenceRefs": []
+          },
+          {
+            "code": "artifact_path_outside_write_surface",
+            "message": "Artifact artifact:storage-change expected path src/storage/report.js is outside its producer's write surface.",
+            "severity": "error",
+            "evidenceRefs": []
+          },
+          {
+            "code": "artifact_path_outside_write_surface",
+            "message": "Artifact artifact:storage-change expected path test/storage.test.js is outside its producer's write surface.",
+            "severity": "error",
+            "evidenceRefs": []
+          },
+          {
+            "code": "repository_model_coverage_incomplete",
+            "message": "Repository model coverage is partial.",
+            "severity": "warning",
+            "evidenceRefs": [
+              "evidence:3a98499c4817d2d876de1d8e",
+              "evidence:56db9f0d44b2a75276e852fb",
+              "evidence:996eaf54f95aee8a26505531"
+            ]
+          },
+          {
+            "code": "resource_catalog_coverage_incomplete",
+            "message": "Resource catalog coverage is partial.",
+            "severity": "warning",
+            "evidenceRefs": [
+              "evidence:3a98499c4817d2d876de1d8e",
+              "evidence:56db9f0d44b2a75276e852fb",
+              "evidence:996eaf54f95aee8a26505531"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

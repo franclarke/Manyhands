@@ -1,0 +1,1131 @@
+{
+  "events": [
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:readiness.observed:223",
+      "occurredAt": "2026-08-21T13:00:29.665Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:dashboard"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:dashboard",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-logic-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-ui-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:stops",
+            "unit:agenda",
+            "unit:search",
+            "unit:organization",
+            "unit:budget",
+            "unit:packing",
+            "unit:memories",
+            "unit:notes",
+            "unit:favorites",
+            "unit:dashboard"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:stops",
+            "unit:agenda",
+            "unit:search",
+            "unit:organization",
+            "unit:budget",
+            "unit:packing",
+            "unit:memories",
+            "unit:notes",
+            "unit:favorites",
+            "unit:dashboard"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T13:00:29.331Z"
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:wave.selected:224",
+      "occurredAt": "2026-08-21T13:00:30.854Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:wave:20",
+        "nodeIds": [
+          "unit:dashboard"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-logic-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-ui-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-21T13:00:30.407Z"
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:12:started",
+      "occurredAt": "2026-08-21T13:00:31.651Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:12",
+        "nodeId": "unit:dashboard",
+        "inputFingerprint": "sha256:965f0f2b5c20f36db47e35ea34d2df79eef8e82d39f7bd75ecaa80096edc8179",
+        "retryOfAttemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:11",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:12:candidate",
+      "occurredAt": "2026-08-21T13:06:21.252Z",
+      "type": "attempt.candidate_created",
+      "payload": {
+        "attemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:12",
+        "nodeId": "unit:dashboard",
+        "candidateCommit": "911033fc70f5be0a8b4e40eceb41c7011f5a10d5",
+        "candidate": {
+          "manifestDigest": "sha256:c9b568eac4aaf84d809dc31a658257eab3bef1eb3c644747ce099f31ba30421c",
+          "commitOid": "911033fc70f5be0a8b4e40eceb41c7011f5a10d5",
+          "treeOid": "6d1dec3a4551e5a83d3c8a8c24cb62bc74f53d7d"
+        },
+        "outputDigest": "sha256:dae112b55eaf4225da789d9b725bf8f41641596a7369df62c8c24cb68a6e5434",
+        "changedFiles": [
+          "public/app.mjs",
+          "public/index.html",
+          "public/styles.css",
+          "src/dashboard/summary.mjs",
+          "src/dashboard/summary.test.mjs"
+        ],
+        "usage": {
+          "tokensTotal": 76256,
+          "costUsd": 0.343152,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:12:validated",
+      "occurredAt": "2026-08-21T13:06:21.252Z",
+      "type": "validation.completed",
+      "payload": {
+        "attemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:12",
+        "nodeId": "unit:dashboard",
+        "matrix": {
+          "matrixId": "matrix-bb35a1a9177e7656",
+          "candidateCommit": "911033fc70f5be0a8b4e40eceb41c7011f5a10d5",
+          "validationContract": {
+            "id": "validation-contract:unit:dashboard",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:dashboard",
+              "obligationId": "validation:dashboard-a11y",
+              "status": "uncovered",
+              "justification": "No acceptable evidence is linked to this obligation.",
+              "evidenceRefs": []
+            },
+            {
+              "criterionId": "criterion:dashboard",
+              "obligationId": "validation:dashboard-unit",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-716da03137c7faab8efd43ccd8bd25a73741210e27bd557d3299c4e7fc251e6c:attempt:1",
+                "validation:dashboard-unit:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:710373f63c406eee69fa75766ecf9c4d3a6caa02ce45a79d994aa7c417a628ac",
+          "observations": [
+            {
+              "evidenceId": "command-716da03137c7faab8efd43ccd8bd25a73741210e27bd557d3299c4e7fc251e6c:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "716da03137c7faab8efd43ccd8bd25a73741210e27bd557d3299c4e7fc251e6c",
+              "durationMs": 1518.9243999999599,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "ba4dc489dbce05ac038612fcae8e2498a97fd9f422d0e30236ee99a93aa99d03",
+              "criterionIds": [
+                "criterion:dashboard"
+              ],
+              "obligationIds": [
+                "validation:dashboard-unit"
+              ],
+              "references": [
+                "src/dashboard/summary.test.mjs"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-bb35a1a9177e7656:validation:dashboard-a11y",
+              "revision": 1,
+              "goalContractDigest": "sha256:65b33b2f8fc5ee27619b478d2a2cca6d0e1728bac26461abd187e300055e84d0",
+              "criterionId": "criterion:run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:1",
+              "obligationId": "validation:dashboard-a11y",
+              "candidate": {
+                "manifestDigest": "sha256:c9b568eac4aaf84d809dc31a658257eab3bef1eb3c644747ce099f31ba30421c",
+                "commitOid": "911033fc70f5be0a8b4e40eceb41c7011f5a10d5",
+                "treeOid": "6d1dec3a4551e5a83d3c8a8c24cb62bc74f53d7d"
+              },
+              "baseline": {
+                "commitOid": "c9ae12ac14f44e23c1e5243fd055a1c438904af4",
+                "treeOid": "6feb4d770ce06f1afa35b6c7732c36453d14e85f"
+              },
+              "proofStrategyDigest": "sha256:b7a282dfa5c4e277cce6cd0cca20f80ca536cb5d4b676d59899067a623dffc89",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:710373f63c406eee69fa75766ecf9c4d3a6caa02ce45a79d994aa7c417a628ac",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+              "outputDigest": "sha256:5268d654ca005844a3d5271d02045264f10310ab34cc101d65eb4d1c8c7e3733",
+              "outcome": "inconclusive",
+              "digest": "sha256:29c2990624cab7b82dcbcf7d814bc7d2765c5f2d24e79e88dbde5db6ea0c439c"
+            },
+            {
+              "id": "evidence:matrix-bb35a1a9177e7656:validation:dashboard-unit",
+              "revision": 1,
+              "goalContractDigest": "sha256:65b33b2f8fc5ee27619b478d2a2cca6d0e1728bac26461abd187e300055e84d0",
+              "criterionId": "criterion:run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:1",
+              "obligationId": "validation:dashboard-unit",
+              "candidate": {
+                "manifestDigest": "sha256:c9b568eac4aaf84d809dc31a658257eab3bef1eb3c644747ce099f31ba30421c",
+                "commitOid": "911033fc70f5be0a8b4e40eceb41c7011f5a10d5",
+                "treeOid": "6d1dec3a4551e5a83d3c8a8c24cb62bc74f53d7d"
+              },
+              "baseline": {
+                "commitOid": "c9ae12ac14f44e23c1e5243fd055a1c438904af4",
+                "treeOid": "6feb4d770ce06f1afa35b6c7732c36453d14e85f"
+              },
+              "proofStrategyDigest": "sha256:dbd03da5c770e9a89a40ce76cc1a19a98c15d96cee9775f31d41158e6a1d62f1",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:710373f63c406eee69fa75766ecf9c4d3a6caa02ce45a79d994aa7c417a628ac",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:55f68435a96ffd486c7edb0b86c141e63ca79f2135bd98967d6703190ba07eb4",
+              "outputDigest": "sha256:ba4dc489dbce05ac038612fcae8e2498a97fd9f422d0e30236ee99a93aa99d03",
+              "outcome": "satisfied",
+              "digest": "sha256:fb8a15830bd09540e13dd95b241b2249a97707fb88a0d3e4ed61f44bb0873272"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:dashboard-unit:negative-control",
+              "obligationId": "validation:dashboard-unit",
+              "detectedFailure": true,
+              "outputDigest": "dc030ba6ff43d1c955c7e11b28c27cbe594a6acd339c91cca2f2118e29af1178"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:12:artifact:artifact:dashboard-logic-change",
+      "occurredAt": "2026-08-21T13:06:21.252Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:dashboard-logic-change:run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:12",
+          "runId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0",
+          "nodeId": "unit:dashboard",
+          "digest": "sha256:2a35be734d826ef8897eb2d9826bee0a0db1202731c122f6d89f9e82babe6833",
+          "producerAttemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:12",
+          "contract": {
+            "id": "artifact:dashboard-logic-change",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:2a35be734d826ef8897eb2d9826bee0a0db1202731c122f6d89f9e82babe6833",
+          "manifest": {
+            "id": "artifact:dashboard-logic-change",
+            "contract": {
+              "id": "artifact:dashboard-logic-change",
+              "revision": 1,
+              "digest": "sha256:c9563534cc822adb409481983f5f18013ed3f8063e0315f32504e442c6948ea8"
+            },
+            "producerNodeId": "unit:dashboard",
+            "producerAttemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:12",
+            "inputFingerprint": "sha256:965f0f2b5c20f36db47e35ea34d2df79eef8e82d39f7bd75ecaa80096edc8179",
+            "repositoryObjectStoreId": "object-store:629c32c0811527a6",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "911033fc70f5be0a8b4e40eceb41c7011f5a10d5",
+              "treeOid": "6d1dec3a4551e5a83d3c8a8c24cb62bc74f53d7d"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-1572bf91950318003847e64a15e39bac-fb86300ffa39/attempts/run-1572bf91950318003847e64a15e39bac-da34d97eed57/artifacts/artifact-dashboard-logic-change-d68b08ced010",
+            "kind": "change_set",
+            "baseTreeSha": "aa9384bfb40d8d94808874fdd37dae3e85585e99",
+            "resultTreeSha": "315fd6099f2cf5159a338ae738d77b08fdee27f9",
+            "entries": [
+              {
+                "newPath": "src/dashboard/summary.mjs",
+                "operation": "add",
+                "newOid": "c9e510c6a28b9d29316b071aadbf011ed6d7717f",
+                "newMode": "100644"
+              },
+              {
+                "newPath": "src/dashboard/summary.test.mjs",
+                "operation": "add",
+                "newOid": "643455ae03c47ec00e5254bfc96c1e6314c33cfe",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:2a35be734d826ef8897eb2d9826bee0a0db1202731c122f6d89f9e82babe6833"
+          },
+          "adoptedAt": "2026-08-21T13:06:21.252Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:12:artifact:artifact:dashboard-ui-change",
+      "occurredAt": "2026-08-21T13:06:21.252Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:dashboard-ui-change:run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:12",
+          "runId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0",
+          "nodeId": "unit:dashboard",
+          "digest": "sha256:e755f549d29fe71f10f9768a11609db1526fa2341f02d741847e4cb452c791dc",
+          "producerAttemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:12",
+          "contract": {
+            "id": "artifact:dashboard-ui-change",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:e755f549d29fe71f10f9768a11609db1526fa2341f02d741847e4cb452c791dc",
+          "manifest": {
+            "id": "artifact:dashboard-ui-change",
+            "contract": {
+              "id": "artifact:dashboard-ui-change",
+              "revision": 1,
+              "digest": "sha256:f77cc3e09770ca58ee46f2553f638dd51aa515a541f6847a98a9fabdcc733122"
+            },
+            "producerNodeId": "unit:dashboard",
+            "producerAttemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:12",
+            "inputFingerprint": "sha256:965f0f2b5c20f36db47e35ea34d2df79eef8e82d39f7bd75ecaa80096edc8179",
+            "repositoryObjectStoreId": "object-store:629c32c0811527a6",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "911033fc70f5be0a8b4e40eceb41c7011f5a10d5",
+              "treeOid": "6d1dec3a4551e5a83d3c8a8c24cb62bc74f53d7d"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-1572bf91950318003847e64a15e39bac-fb86300ffa39/attempts/run-1572bf91950318003847e64a15e39bac-da34d97eed57/artifacts/artifact-dashboard-ui-change-2ea078551b76",
+            "kind": "change_set",
+            "baseTreeSha": "aa9384bfb40d8d94808874fdd37dae3e85585e99",
+            "resultTreeSha": "8a444f6c1de69a37bb4df8fa26a4f5bef5f7416c",
+            "entries": [
+              {
+                "newPath": "public/app.mjs",
+                "operation": "add",
+                "newOid": "ed1acb050d55e2c4e54fffc26bd38049ecd74051",
+                "newMode": "100644"
+              },
+              {
+                "newPath": "public/index.html",
+                "operation": "add",
+                "newOid": "03f44379e152dd14990cd4c80796e4925c3afe86",
+                "newMode": "100644"
+              },
+              {
+                "newPath": "public/styles.css",
+                "operation": "add",
+                "newOid": "277611b2055a2c7b57d3f655c875fac7de589011",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:e755f549d29fe71f10f9768a11609db1526fa2341f02d741847e4cb452c791dc"
+          },
+          "adoptedAt": "2026-08-21T13:06:21.252Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:readiness.observed:230",
+      "occurredAt": "2026-08-21T13:06:22.280Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:root"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:root",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:stops",
+            "unit:agenda",
+            "unit:search",
+            "unit:organization",
+            "unit:budget",
+            "unit:packing",
+            "unit:memories",
+            "unit:notes",
+            "unit:favorites",
+            "unit:dashboard"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:stops",
+            "unit:agenda",
+            "unit:search",
+            "unit:organization",
+            "unit:budget",
+            "unit:packing",
+            "unit:memories",
+            "unit:notes",
+            "unit:favorites",
+            "unit:dashboard"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T13:06:21.927Z"
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:wave.selected:231",
+      "occurredAt": "2026-08-21T13:06:23.184Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:wave:21",
+        "nodeIds": [
+          "unit:root"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-21T13:06:22.888Z"
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:root:1:started",
+      "occurredAt": "2026-08-21T13:06:23.860Z",
+      "type": "integration.started",
+      "payload": {
+        "attemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:root:1",
+        "nodeId": "unit:root",
+        "inputFingerprint": "sha256:61aee4e6d6af23c45fab7dec0f0c121f970534e6d5dd223609f67fad9e85d1a0",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        },
+        "requiredArtifactIds": [
+          "artifact:storage-change:run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:storage:1",
+          "artifact:stops-change:run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:stops:4",
+          "artifact:agenda-change:run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:agenda:1",
+          "artifact:budget-change:run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:budget:1",
+          "artifact:favorites-change:run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:favorites:1",
+          "artifact:notes-change:run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:notes:1",
+          "artifact:packing-change:run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:packing:1",
+          "artifact:search-change:run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:search:1",
+          "artifact:dashboard-logic-change:run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:12",
+          "artifact:dashboard-ui-change:run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:dashboard:12",
+          "artifact:itinerary-integration-change:run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:itinerary:1",
+          "artifact:memories-integration-change:run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:memories:1",
+          "artifact:organization-integration-change:run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:organization:1"
+        ]
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:root:1:failed",
+      "occurredAt": "2026-08-21T13:14:24.024Z",
+      "type": "attempt.failed",
+      "payload": {
+        "attemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:root:1",
+        "nodeId": "unit:root",
+        "reason": "Parent validation outcome is failed."
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:root:1:decision",
+      "occurredAt": "2026-08-21T13:14:24.024Z",
+      "type": "decision.raised",
+      "payload": {
+        "decision": {
+          "id": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:root:1:decision",
+          "kind": "resolve_conflict",
+          "question": "Execution for Viaje en Familia requires guidance: Parent validation outcome is failed.",
+          "options": [
+            {
+              "id": "retry",
+              "label": "Retry with guidance"
+            },
+            {
+              "id": "stop",
+              "label": "Stop this work"
+            }
+          ],
+          "affectedNodeIds": [
+            "unit:root"
+          ],
+          "repairTargetNodeId": "unit:root",
+          "evidenceRefs": [
+            "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:root:1",
+            "input-fingerprint:sha256:61aee4e6d6af23c45fab7dec0f0c121f970534e6d5dd223609f67fad9e85d1a0"
+          ],
+          "impact": "behavior",
+          "raisedAtGraphRevision": 1
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:readiness.observed:235",
+      "occurredAt": "2026-08-21T13:14:25.606Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [],
+        "pendingDecisionIds": [
+          "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:root:1:decision"
+        ],
+        "explanations": [
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:root:1:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:stops",
+            "unit:agenda",
+            "unit:search",
+            "unit:organization",
+            "unit:budget",
+            "unit:packing",
+            "unit:memories",
+            "unit:notes",
+            "unit:favorites",
+            "unit:dashboard"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:stops",
+            "unit:agenda",
+            "unit:search",
+            "unit:organization",
+            "unit:budget",
+            "unit:packing",
+            "unit:memories",
+            "unit:notes",
+            "unit:favorites",
+            "unit:dashboard"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T13:14:25.138Z"
+      }
+    }
+  ]
+}

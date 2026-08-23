@@ -1,0 +1,1769 @@
+{
+  "events": [
+    {
+      "eventId": "repository:sha256:f10cdda1239d4ea7c77dc4c14ac27ab5d74e45947ff3d07b59f0c3f4ad121c3c:inspection",
+      "occurredAt": "2026-08-15T13:44:14.580Z",
+      "type": "repository.inspected",
+      "payload": {
+        "snapshotId": "sha256:f10cdda1239d4ea7c77dc4c14ac27ab5d74e45947ff3d07b59f0c3f4ad121c3c",
+        "disposition": "complete",
+        "snapshot": {
+          "schemaVersion": 1,
+          "snapshotId": "sha256:f10cdda1239d4ea7c77dc4c14ac27ab5d74e45947ff3d07b59f0c3f4ad121c3c",
+          "repositoryId": "mh8-r0-sandbox",
+          "rootPath": "C:\\Users\\franc\\Documents\\mh8-r0-sandbox",
+          "targetFingerprint": "1230c021466b8529",
+          "baseCommit": "00273f055e7d4a7bdb706d02a90e88f65d9a370c",
+          "indexSchemaVersion": 1,
+          "capturedAt": "2026-08-15T13:42:39.184Z",
+          "inspectionDisposition": "complete",
+          "capabilities": {
+            "scripts": {
+              "test": "node --test"
+            },
+            "baselineCommands": [
+              {
+                "kind": "test",
+                "command": "npm",
+                "args": [
+                  "test"
+                ],
+                "sourceScript": "test"
+              }
+            ],
+            "languages": [
+              {
+                "language": "javascript",
+                "coverage": "structural",
+                "confidence": 0.95,
+                "evidence": [
+                  "src/stage8-probe.js",
+                  "src/stage8-probe.test.js"
+                ]
+              }
+            ],
+            "stack": []
+          },
+          "diagnostics": [],
+          "indexHash": "b5a59d675f86204b9a4da82a17327792d6fbc2390a4c02b11fb98a7431d66d6e",
+          "index": {
+            "repositoryId": "mh8-r0-sandbox",
+            "rootPath": "C:\\Users\\franc\\Documents\\mh8-r0-sandbox",
+            "indexedAt": "2026-08-15T03:50:33.570Z",
+            "files": [
+              {
+                "path": "src/stage8-probe.js",
+                "kind": "source",
+                "contentHash": "c9b1c56919970057d1d1f7aaf2ab4923e6a5f72b9600ebba836a1f1d57fee40b",
+                "byteSize": 58,
+                "lineCount": 4,
+                "exportedSymbols": [
+                  "stage8Probe"
+                ],
+                "importedSymbols": [],
+                "declaredSymbols": [
+                  "stage8Probe"
+                ]
+              },
+              {
+                "path": "src/stage8-probe.test.js",
+                "kind": "test",
+                "contentHash": "113ce62f8d3e3668f7154d2cc0b616ddeab027ef260660eaf8444c20e9c59a88",
+                "byteSize": 228,
+                "lineCount": 9,
+                "exportedSymbols": [],
+                "importedSymbols": [],
+                "declaredSymbols": []
+              }
+            ],
+            "symbols": [
+              {
+                "name": "stage8Probe",
+                "kind": "function",
+                "filePath": "src/stage8-probe.js",
+                "exported": true,
+                "line": 1
+              }
+            ],
+            "imports": [],
+            "exports": [
+              {
+                "filePath": "src/stage8-probe.js",
+                "exportedSymbols": [
+                  "stage8Probe"
+                ]
+              }
+            ],
+            "diagnostics": [],
+            "metadata": {
+              "indexer": "ripgrep-native-v2",
+              "deterministic": true,
+              "fileCount": 2,
+              "symbolCount": 1,
+              "importCount": 0,
+              "exportCount": 1
+            }
+          }
+        },
+        "repositoryModelDigest": "sha256:b6cfb321fe29b69f1d4d40f45fcf78f0b29e2fca6f7f1f386c118525eb41c6c6",
+        "repositoryView": {
+          "digest": "sha256:ad7a03837f75f4ccd6022c7e8acd0bc056e1864a900a7ae3ccd142b727380977",
+          "treeSha": "4230d720c666487a35a71858ab0a58edf26b65e5",
+          "resourceCatalogDigest": "sha256:396826c626607c6cd6dc9b44dd1fee02144d216661f2937f0f6828b4f4920f13"
+        },
+        "queryDigests": [
+          "sha256:64f00069af08b1107ffce02ccfc16890bae5e4ee61af6ca7ec83f6ad03411318",
+          "sha256:39e3064a22daf712e534f774108c74a30c8fe72cb116d503916842cfc62569e4",
+          "sha256:7e93f5781739af8f4cdbd74433cad9ae1031489e2da424cef9d7daa64f24a8b4"
+        ]
+      }
+    },
+    {
+      "eventId": "planning:plan:goal:run:a4dd844a40379265bd585efbc7d9b473d5b87cd54aa1ede3ae2dc437d38a1912:completed:run:a4dd844a40379265bd585efbc7d9b473d5b87cd54aa1ede3ae2dc437d38a1912",
+      "occurredAt": "2026-08-15T13:44:14.587Z",
+      "type": "planning.completed",
+      "payload": {
+        "semanticPlan": {
+          "id": "plan:goal:run:a4dd844a40379265bd585efbc7d9b473d5b87cd54aa1ede3ae2dc437d38a1912",
+          "revision": 1,
+          "goalContract": {
+            "id": "goal:run:a4dd844a40379265bd585efbc7d9b473d5b87cd54aa1ede3ae2dc437d38a1912",
+            "revision": 1,
+            "digest": "sha256:06ce5022fd93a1adaa574a7316f03d7c5b9b4b68fa0fd293e5886d3509085585"
+          },
+          "repositorySnapshot": {
+            "id": "sha256:f10cdda1239d4ea7c77dc4c14ac27ab5d74e45947ff3d07b59f0c3f4ad121c3c",
+            "digest": "sha256:b5a59d675f86204b9a4da82a17327792d6fbc2390a4c02b11fb98a7431d66d6e"
+          },
+          "repositoryView": {
+            "digest": "sha256:ad7a03837f75f4ccd6022c7e8acd0bc056e1864a900a7ae3ccd142b727380977",
+            "treeSha": "4230d720c666487a35a71858ab0a58edf26b65e5",
+            "resourceCatalogDigest": "sha256:396826c626607c6cd6dc9b44dd1fee02144d216661f2937f0f6828b4f4920f13"
+          },
+          "rootUnitId": "unit:root",
+          "units": {
+            "unit:root": {
+              "id": "unit:root",
+              "role": "composite",
+              "title": "Tokenizer and word-count modules with explicit contract",
+              "objective": "Own the boundary between tokenizer.js and word-count.js and prove the contract between them holds.",
+              "boundary": {
+                "kind": "vertical_slice",
+                "evidenceRefs": [
+                  "evidence:0a50e848f832783c20353cf1"
+                ]
+              },
+              "outcomes": [
+                {
+                  "id": "outcome:integrated",
+                  "statement": "tokenizer.js and word-count.js work together through an explicit tokenize contract, each independently tested with node:test."
+                }
+              ],
+              "criteria": [
+                {
+                  "criterionId": "criterion:root-refinement",
+                  "statement": "Two independent modules exist with an explicit contract: tokenizer.js exports tokenize(text) returning lowercase punctuation-free words, word-count.js imports tokenize and exports countWords(text) returning a frequency object, each with its own node:test file, without modifying stage8-probe.js.",
+                  "sourceCriterionId": "criterion:run:a4dd844a40379265bd585efbc7d9b473d5b87cd54aa1ede3ae2dc437d38a1912:1"
+                }
+              ],
+              "repositorySurface": {
+                "resourceRefs": [
+                  "catalog-resource:2f1d3f15679905d420d8f837"
+                ],
+                "pathHints": [
+                  "src/tokenizer.js",
+                  "src/tokenizer.test.js",
+                  "src/word-count.js",
+                  "src/word-count.test.js"
+                ]
+              },
+              "resourceIntents": [],
+              "consumes": [
+                "artifact:tokenizer-change",
+                "artifact:word-count-change"
+              ],
+              "produces": [],
+              "seamRefs": [
+                "seam:tokenize-contract"
+              ],
+              "validation": [
+                {
+                  "obligationId": "validation:integration",
+                  "criterionId": "criterion:root-refinement",
+                  "proofStrategyId": "proof:validation:integration",
+                  "layer": "integration",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid"
+                }
+              ],
+              "uncertainty": [],
+              "granularity": {
+                "disposition": "split",
+                "feasibility": {
+                  "coherentResponsibility": true,
+                  "boundedContext": "yes",
+                  "boundedChangeSurface": "yes",
+                  "independentlyValidatable": "yes",
+                  "unresolvedArchitectureDecision": false
+                },
+                "splitReasons": [
+                  "independent_delivery",
+                  "integration_boundary"
+                ],
+                "expectedBenefits": [
+                  "tokenizer and word-count are validated independently before proving the composed behaviour."
+                ],
+                "expectedCosts": [
+                  "The tokenize export signature between the two modules must stay compatible."
+                ],
+                "integrationObligationId": "validation:integration",
+                "evidenceRefs": [
+                  "evidence:0a50e848f832783c20353cf1"
+                ],
+                "epistemic": {
+                  "state": "known",
+                  "confidence": "high",
+                  "evidenceRefs": [
+                    "evidence:0a50e848f832783c20353cf1"
+                  ]
+                }
+              },
+              "expansion": "expanded",
+              "integration": {
+                "obligationId": "validation:integration",
+                "objective": "Compose tokenizer.js and word-count.js and prove countWords relies correctly on tokenize across full test suite.",
+                "criterionIds": [
+                  "criterion:root-refinement"
+                ],
+                "proofStrategyId": "proof:validation:integration",
+                "artifactIds": [
+                  "artifact:tokenizer-change",
+                  "artifact:word-count-change"
+                ],
+                "seamIds": [
+                  "seam:tokenize-contract"
+                ]
+              }
+            },
+            "unit:tokenizer": {
+              "id": "unit:tokenizer",
+              "parentId": "unit:root",
+              "role": "leaf",
+              "title": "Tokenizer module",
+              "objective": "Implement src/tokenizer.js exporting tokenize(text), returning an array of lowercase, punctuation-free words, with its own node:test file.",
+              "boundary": {
+                "kind": "module",
+                "evidenceRefs": [
+                  "evidence:4960b286fe62d7d0de6e16c8"
+                ]
+              },
+              "outcomes": [
+                {
+                  "id": "outcome:tokenizer",
+                  "statement": "tokenize(text) is exported from src/tokenizer.js and returns lowercase words with punctuation stripped."
+                }
+              ],
+              "criteria": [
+                {
+                  "criterionId": "criterion:tokenizer",
+                  "statement": "src/tokenizer.js exports tokenize(text) returning an array of lowercase, punctuation-free words, verified by its own node:test file.",
+                  "sourceCriterionId": "criterion:root-refinement"
+                }
+              ],
+              "repositorySurface": {
+                "resourceRefs": [
+                  "catalog-resource:2f1d3f15679905d420d8f837"
+                ],
+                "pathHints": [
+                  "src/tokenizer.js",
+                  "src/tokenizer.test.js"
+                ]
+              },
+              "resourceIntents": [
+                {
+                  "resourceId": "catalog-resource:2f1d3f15679905d420d8f837",
+                  "access": "modify",
+                  "ownerPhase": "implementation",
+                  "outputArtifactId": "artifact:tokenizer-change",
+                  "evidenceRefs": [
+                    "evidence:4960b286fe62d7d0de6e16c8"
+                  ],
+                  "epistemic": {
+                    "state": "known",
+                    "confidence": "high",
+                    "evidenceRefs": [
+                      "evidence:4960b286fe62d7d0de6e16c8"
+                    ]
+                  }
+                }
+              ],
+              "consumes": [],
+              "produces": [
+                "artifact:tokenizer-change"
+              ],
+              "seamRefs": [
+                "seam:tokenize-contract"
+              ],
+              "validation": [
+                {
+                  "obligationId": "validation:tokenizer",
+                  "criterionId": "criterion:tokenizer",
+                  "proofStrategyId": "proof:validation:tokenizer",
+                  "layer": "unit",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid"
+                }
+              ],
+              "uncertainty": [],
+              "granularity": {
+                "disposition": "leaf",
+                "feasibility": {
+                  "coherentResponsibility": true,
+                  "boundedContext": "yes",
+                  "boundedChangeSurface": "yes",
+                  "independentlyValidatable": "yes",
+                  "unresolvedArchitectureDecision": false
+                },
+                "splitReasons": [],
+                "expectedBenefits": [],
+                "expectedCosts": [],
+                "evidenceRefs": [
+                  "evidence:4960b286fe62d7d0de6e16c8"
+                ],
+                "epistemic": {
+                  "state": "known",
+                  "confidence": "high",
+                  "evidenceRefs": [
+                    "evidence:4960b286fe62d7d0de6e16c8"
+                  ]
+                }
+              },
+              "expansion": "leaf"
+            },
+            "unit:word-count": {
+              "id": "unit:word-count",
+              "parentId": "unit:root",
+              "role": "leaf",
+              "title": "Word-count module",
+              "objective": "Implement src/word-count.js exporting countWords(text), importing tokenize from tokenizer.js and returning a per-word frequency object, with its own node:test file.",
+              "boundary": {
+                "kind": "module",
+                "evidenceRefs": [
+                  "evidence:5cd4bb421b674f11224cbeb0"
+                ]
+              },
+              "outcomes": [
+                {
+                  "id": "outcome:word-count",
+                  "statement": "countWords(text) is exported from src/word-count.js, uses tokenize from src/tokenizer.js, and returns a word frequency object."
+                }
+              ],
+              "criteria": [
+                {
+                  "criterionId": "criterion:word-count",
+                  "statement": "src/word-count.js imports tokenize from tokenizer.js and exports countWords(text) returning a frequency object, verified by its own node:test file.",
+                  "sourceCriterionId": "criterion:root-refinement"
+                }
+              ],
+              "repositorySurface": {
+                "resourceRefs": [
+                  "catalog-resource:2f1d3f15679905d420d8f837"
+                ],
+                "pathHints": [
+                  "src/word-count.js",
+                  "src/word-count.test.js"
+                ]
+              },
+              "resourceIntents": [
+                {
+                  "resourceId": "catalog-resource:2f1d3f15679905d420d8f837",
+                  "access": "modify",
+                  "ownerPhase": "implementation",
+                  "inputArtifactId": "artifact:tokenizer-change",
+                  "outputArtifactId": "artifact:word-count-change",
+                  "evidenceRefs": [
+                    "evidence:5cd4bb421b674f11224cbeb0"
+                  ],
+                  "epistemic": {
+                    "state": "known",
+                    "confidence": "high",
+                    "evidenceRefs": [
+                      "evidence:5cd4bb421b674f11224cbeb0"
+                    ]
+                  }
+                }
+              ],
+              "consumes": [
+                "artifact:tokenizer-change"
+              ],
+              "produces": [
+                "artifact:word-count-change"
+              ],
+              "seamRefs": [
+                "seam:tokenize-contract"
+              ],
+              "validation": [
+                {
+                  "obligationId": "validation:word-count",
+                  "criterionId": "criterion:word-count",
+                  "proofStrategyId": "proof:validation:word-count",
+                  "layer": "unit",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid"
+                }
+              ],
+              "uncertainty": [],
+              "granularity": {
+                "disposition": "leaf",
+                "feasibility": {
+                  "coherentResponsibility": true,
+                  "boundedContext": "yes",
+                  "boundedChangeSurface": "yes",
+                  "independentlyValidatable": "yes",
+                  "unresolvedArchitectureDecision": false
+                },
+                "splitReasons": [],
+                "expectedBenefits": [],
+                "expectedCosts": [],
+                "evidenceRefs": [
+                  "evidence:5cd4bb421b674f11224cbeb0"
+                ],
+                "epistemic": {
+                  "state": "known",
+                  "confidence": "high",
+                  "evidenceRefs": [
+                    "evidence:5cd4bb421b674f11224cbeb0"
+                  ]
+                }
+              },
+              "expansion": "leaf"
+            }
+          },
+          "seams": {
+            "seam:tokenize-contract": {
+              "id": "seam:tokenize-contract",
+              "kind": "api",
+              "specification": "src/tokenizer.js exports tokenize(text): string[] returning lowercase, punctuation-free words; src/word-count.js imports and calls it.",
+              "producerUnitId": "unit:tokenizer",
+              "consumerUnitIds": [
+                "unit:root",
+                "unit:word-count"
+              ],
+              "semanticFacts": {
+                "export": "tokenize",
+                "signature": "tokenize(text: string): string[]",
+                "normalization": "lowercase, punctuation stripped"
+              },
+              "compatibility": {
+                "mode": "exact",
+                "rules": [
+                  "tokenize continues to accept a single string argument and return an array of lowercase, punctuation-free word strings."
+                ]
+              },
+              "artifactId": "artifact:tokenizer-change",
+              "validationObligationIds": [
+                "validation:word-count"
+              ]
+            }
+          },
+          "artifacts": {
+            "artifact:tokenizer-change": {
+              "id": "artifact:tokenizer-change",
+              "producerUnitId": "unit:tokenizer",
+              "consumerUnitIds": [
+                "unit:root",
+                "unit:word-count"
+              ],
+              "artifactType": "source_change",
+              "materialization": "files",
+              "expectedPaths": [
+                "src/tokenizer.js",
+                "src/tokenizer.test.js"
+              ]
+            },
+            "artifact:word-count-change": {
+              "id": "artifact:word-count-change",
+              "producerUnitId": "unit:word-count",
+              "consumerUnitIds": [
+                "unit:root"
+              ],
+              "artifactType": "source_change",
+              "materialization": "files",
+              "expectedPaths": [
+                "src/word-count.js",
+                "src/word-count.test.js"
+              ]
+            }
+          },
+          "decisions": [],
+          "evidence": [
+            {
+              "id": "evidence:0a50e848f832783c20353cf1",
+              "snapshotId": "sha256:f10cdda1239d4ea7c77dc4c14ac27ab5d74e45947ff3d07b59f0c3f4ad121c3c",
+              "kind": "symbol",
+              "locator": "src/stage8-probe.js#stage8Probe",
+              "digest": "sha256:500d298f7783e46e917c62174663e99b8dda0ba377cc9c9b47a563dc493b28a2",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:0db77f7676f15913fe32c509",
+              "snapshotId": "sha256:f10cdda1239d4ea7c77dc4c14ac27ab5d74e45947ff3d07b59f0c3f4ad121c3c",
+              "kind": "relationship",
+              "locator": "src/stage8-probe.test.js->node:assert/strict",
+              "digest": "sha256:512324729b0583c94bc143266ef2dee2933c1ba211efac9eaf2b740cf9f32332",
+              "epistemic": {
+                "state": "partial",
+                "confidence": "low",
+                "evidenceRefs": [
+                  "evidence:851e67021098ef89f70cd102"
+                ]
+              }
+            },
+            {
+              "id": "evidence:22fa6cadff546cf94d2e21c5",
+              "snapshotId": "sha256:f10cdda1239d4ea7c77dc4c14ac27ab5d74e45947ff3d07b59f0c3f4ad121c3c",
+              "kind": "symbol",
+              "locator": "src/stage8-probe.js#export:stage8Probe",
+              "digest": "sha256:1461eb0381974d37397e756d5e2875d513944041a99abedf07f41d66a1e787a2",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:23469dcb0eb83bb13be86195",
+              "snapshotId": "sha256:f10cdda1239d4ea7c77dc4c14ac27ab5d74e45947ff3d07b59f0c3f4ad121c3c",
+              "kind": "relationship",
+              "locator": "src/stage8-probe.test.js->node:test",
+              "digest": "sha256:b5ae1a2fd0d0743e05a00d8db44a2b5b9ac22908dcee300bf7d91b962dd169e6",
+              "epistemic": {
+                "state": "partial",
+                "confidence": "low",
+                "evidenceRefs": [
+                  "evidence:3f13f49bd1a6836a3f60ba7a"
+                ]
+              }
+            },
+            {
+              "id": "evidence:4960b286fe62d7d0de6e16c8",
+              "snapshotId": "sha256:f10cdda1239d4ea7c77dc4c14ac27ab5d74e45947ff3d07b59f0c3f4ad121c3c",
+              "kind": "command",
+              "locator": "package.json#scripts.test",
+              "digest": "sha256:d84f8cc3847f99868cabbf96e29114a80ccc00f45b1d3e3dfedfb34f4b87a576",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:5cd4bb421b674f11224cbeb0",
+              "snapshotId": "sha256:f10cdda1239d4ea7c77dc4c14ac27ab5d74e45947ff3d07b59f0c3f4ad121c3c",
+              "kind": "file",
+              "locator": "package.json",
+              "digest": "sha256:f1db2e4b7736f529adc40ce9227611aef753c1669d2db2451b31e4b43d790e08",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:6fa05cbcef105edfc9554b50",
+              "snapshotId": "sha256:f10cdda1239d4ea7c77dc4c14ac27ab5d74e45947ff3d07b59f0c3f4ad121c3c",
+              "kind": "test",
+              "locator": "src/stage8-probe.test.js",
+              "digest": "sha256:81559a95ec4123e6a3cf43c707adf6012689f8e66c88593ca5548a24c18b3192",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:a94c57886ae5499dc39ec59f",
+              "snapshotId": "sha256:f10cdda1239d4ea7c77dc4c14ac27ab5d74e45947ff3d07b59f0c3f4ad121c3c",
+              "kind": "file",
+              "locator": "src/stage8-probe.test.js",
+              "digest": "sha256:f977df4b78384ed9a14664db69d10b227aba70bcc02807b10e72b9cd9421b0ff",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:d5d92a1d195729f7d9b48bc8",
+              "snapshotId": "sha256:f10cdda1239d4ea7c77dc4c14ac27ab5d74e45947ff3d07b59f0c3f4ad121c3c",
+              "kind": "relationship",
+              "locator": "src/stage8-probe.test.js->./stage8-probe.js",
+              "digest": "sha256:4f7648f36ed07f598b38de1d6d9b346ab9620e044f2100a5aec6e4b4df1bbe76",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:fc60f23623612dbebcc8035f",
+              "snapshotId": "sha256:f10cdda1239d4ea7c77dc4c14ac27ab5d74e45947ff3d07b59f0c3f4ad121c3c",
+              "kind": "file",
+              "locator": "src/stage8-probe.js",
+              "digest": "sha256:5af6b386cb92a1f15841258a05abda58ce5623b4416c6bb97bf9a7df186e7395",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            }
+          ],
+          "status": "ready",
+          "digest": "sha256:48056d11167fa01bdbe3174d85ced96f07d9584cb676895ade0ff357b242a512"
+        },
+        "trace": {
+          "budget": {
+            "modelCalls": 3,
+            "repositoryQueries": 3,
+            "queryBytes": 65536,
+            "revisions": 3,
+            "repairs": 2,
+            "expansions": 0
+          },
+          "consumed": {
+            "modelCalls": 1,
+            "repositoryQueries": 3,
+            "queryBytes": 3589,
+            "revisions": 1,
+            "repairs": 0,
+            "expansions": 0
+          },
+          "revisions": [
+            {
+              "index": 1,
+              "cause": "initial",
+              "budget": {
+                "modelCalls": 3,
+                "repositoryQueries": 3,
+                "queryBytes": 65536,
+                "revisions": 3,
+                "repairs": 2,
+                "expansions": 0
+              },
+              "consumed": {
+                "modelCalls": 1,
+                "repositoryQueries": 3,
+                "queryBytes": 3589,
+                "revisions": 1,
+                "repairs": 0,
+                "expansions": 0
+              },
+              "queryReceipts": [
+                "sha256:39e3064a22daf712e534f774108c74a30c8fe72cb116d503916842cfc62569e4",
+                "sha256:64f00069af08b1107ffce02ccfc16890bae5e4ee61af6ca7ec83f6ad03411318",
+                "sha256:7e93f5781739af8f4cdbd74433cad9ae1031489e2da424cef9d7daa64f24a8b4"
+              ],
+              "evidenceRefs": [
+                "evidence:0a50e848f832783c20353cf1",
+                "evidence:4960b286fe62d7d0de6e16c8",
+                "evidence:5cd4bb421b674f11224cbeb0",
+                "evidence:a94c57886ae5499dc39ec59f",
+                "evidence:fc60f23623612dbebcc8035f"
+              ],
+              "changedDecisionIds": [],
+              "changedFindingCodes": [
+                "repository_model_coverage_incomplete",
+                "resource_catalog_coverage_incomplete"
+              ],
+              "proposalDigest": "sha256:48056d11167fa01bdbe3174d85ced96f07d9584cb676895ade0ff357b242a512",
+              "causalStateDigest": "sha256:c0c03ec4477fb49d86685120e8b2f3da58dfeb8079cdf157caf94b83996b466f",
+              "digest": "sha256:b0bfd34a0ca13bfeb7974f0a8505bcaf6eb12a48ae22efccfde3f37372673b9c"
+            }
+          ],
+          "advisoryFindings": [
+            {
+              "code": "repository_model_coverage_incomplete",
+              "severity": "warning",
+              "authority": "repository",
+              "message": "Repository model coverage is partial.",
+              "evidenceRefs": [
+                "evidence:0a50e848f832783c20353cf1",
+                "evidence:0db77f7676f15913fe32c509",
+                "evidence:22fa6cadff546cf94d2e21c5",
+                "evidence:23469dcb0eb83bb13be86195",
+                "evidence:4960b286fe62d7d0de6e16c8",
+                "evidence:5cd4bb421b674f11224cbeb0",
+                "evidence:6fa05cbcef105edfc9554b50",
+                "evidence:a94c57886ae5499dc39ec59f",
+                "evidence:d5d92a1d195729f7d9b48bc8",
+                "evidence:fc60f23623612dbebcc8035f"
+              ],
+              "resolution": "none"
+            },
+            {
+              "code": "resource_catalog_coverage_incomplete",
+              "severity": "warning",
+              "authority": "repository",
+              "message": "Resource catalog coverage is partial.",
+              "evidenceRefs": [
+                "evidence:0a50e848f832783c20353cf1",
+                "evidence:0db77f7676f15913fe32c509",
+                "evidence:22fa6cadff546cf94d2e21c5",
+                "evidence:23469dcb0eb83bb13be86195",
+                "evidence:4960b286fe62d7d0de6e16c8",
+                "evidence:5cd4bb421b674f11224cbeb0",
+                "evidence:6fa05cbcef105edfc9554b50",
+                "evidence:a94c57886ae5499dc39ec59f",
+                "evidence:d5d92a1d195729f7d9b48bc8",
+                "evidence:fc60f23623612dbebcc8035f"
+              ],
+              "resolution": "none"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "graph:graph-plan:goal:run:a4dd844a40379265bd585efbc7d9b473d5-da242396a9:r1:compiled",
+      "occurredAt": "2026-08-15T13:44:14.587Z",
+      "type": "graph.compiled",
+      "payload": {
+        "graphId": "graph-plan:goal:run:a4dd844a40379265bd585efbc7d9b473d5-da242396a9",
+        "revision": 1,
+        "graph": {
+          "graphId": "graph-plan:goal:run:a4dd844a40379265bd585efbc7d9b473d5-da242396a9",
+          "revision": 1,
+          "semanticPlan": {
+            "id": "plan:goal:run:a4dd844a40379265bd585efbc7d9b473d5b87cd54aa1ede3ae2dc437d38a1912",
+            "revision": 1,
+            "digest": "sha256:48056d11167fa01bdbe3174d85ced96f07d9584cb676895ade0ff357b242a512"
+          },
+          "repositoryView": {
+            "digest": "sha256:ad7a03837f75f4ccd6022c7e8acd0bc056e1864a900a7ae3ccd142b727380977",
+            "treeSha": "4230d720c666487a35a71858ab0a58edf26b65e5",
+            "resourceCatalogDigest": "sha256:396826c626607c6cd6dc9b44dd1fee02144d216661f2937f0f6828b4f4920f13"
+          },
+          "rootId": "unit:root",
+          "nodes": {
+            "unit:root": {
+              "id": "unit:root",
+              "parentId": null,
+              "kind": "root",
+              "title": "Tokenizer and word-count modules with explicit contract",
+              "goal": "Own the boundary between tokenizer.js and word-count.js and prove the contract between them holds.",
+              "contractRef": {
+                "id": "task:unit:root",
+                "revision": 1,
+                "digest": "sha256:3985d3bea534c4387b675f793b250497e4bef76a12200182658d3be6aff83ab9"
+              }
+            },
+            "unit:tokenizer": {
+              "id": "unit:tokenizer",
+              "parentId": "unit:root",
+              "kind": "leaf",
+              "title": "Tokenizer module",
+              "goal": "Implement src/tokenizer.js exporting tokenize(text), returning an array of lowercase, punctuation-free words, with its own node:test file.",
+              "contractRef": {
+                "id": "task:unit:tokenizer",
+                "revision": 1,
+                "digest": "sha256:5f934b0eeedb7d44b51f421457c3445bad18ad3db3787ad4a8d015a557395c58"
+              }
+            },
+            "unit:word-count": {
+              "id": "unit:word-count",
+              "parentId": "unit:root",
+              "kind": "leaf",
+              "title": "Word-count module",
+              "goal": "Implement src/word-count.js exporting countWords(text), importing tokenize from tokenizer.js and returning a per-word frequency object, with its own node:test file.",
+              "contractRef": {
+                "id": "task:unit:word-count",
+                "revision": 1,
+                "digest": "sha256:001762c08ee4990a17a91d83d3e1acf5396d47c7c937b105eb9d44144cbf46ab"
+              }
+            }
+          },
+          "artifactRequirements": [
+            {
+              "id": "artifact-requirement-artifact:tokenizer-change:unit:root-ce8909118a",
+              "producerNodeId": "unit:tokenizer",
+              "consumerNodeId": "unit:root",
+              "artifactContract": {
+                "id": "artifact:tokenizer-change",
+                "revision": 1,
+                "digest": "sha256:0e1736f81ad06fdc2c783ac4d6f3b855958669c0ec963f14de04b422c594f777"
+              },
+              "consumerInputName": "artifact:tokenizer-change",
+              "acceptedManifestKinds": [
+                "candidate_tree",
+                "change_set"
+              ]
+            },
+            {
+              "id": "artifact-requirement-artifact:tokenizer-change:unit:word-count-8d49190edc",
+              "producerNodeId": "unit:tokenizer",
+              "consumerNodeId": "unit:word-count",
+              "artifactContract": {
+                "id": "artifact:tokenizer-change",
+                "revision": 1,
+                "digest": "sha256:0e1736f81ad06fdc2c783ac4d6f3b855958669c0ec963f14de04b422c594f777"
+              },
+              "consumerInputName": "artifact:tokenizer-change",
+              "acceptedManifestKinds": [
+                "candidate_tree",
+                "change_set"
+              ]
+            },
+            {
+              "id": "artifact-requirement-artifact:word-count-change:unit:root-f2139932b8",
+              "producerNodeId": "unit:word-count",
+              "consumerNodeId": "unit:root",
+              "artifactContract": {
+                "id": "artifact:word-count-change",
+                "revision": 1,
+                "digest": "sha256:bcb6d4149ec0f0541ad4af7e6db06268936da5c843cd4ceacdc2203eaf444b92"
+              },
+              "consumerInputName": "artifact:word-count-change",
+              "acceptedManifestKinds": [
+                "candidate_tree",
+                "change_set"
+              ]
+            }
+          ],
+          "seamBindings": [
+            {
+              "id": "seam-binding-seam:tokenize-contract:unit:root-23929ad0e8",
+              "producerNodeId": "unit:tokenizer",
+              "consumerNodeId": "unit:root",
+              "seamContract": {
+                "id": "seam:tokenize-contract",
+                "revision": 1,
+                "digest": "sha256:c29eba4638ec6f375fca5ee183353d8c307a772d94baf140a074c81c4c7aa33f"
+              },
+              "artifactRequirementId": "artifact-requirement-artifact:tokenizer-change:unit:root-ce8909118a",
+              "validationObligationIds": [
+                "validation:word-count"
+              ]
+            },
+            {
+              "id": "seam-binding-seam:tokenize-contract:unit:word-count-a63af62d1b",
+              "producerNodeId": "unit:tokenizer",
+              "consumerNodeId": "unit:word-count",
+              "seamContract": {
+                "id": "seam:tokenize-contract",
+                "revision": 1,
+                "digest": "sha256:c29eba4638ec6f375fca5ee183353d8c307a772d94baf140a074c81c4c7aa33f"
+              },
+              "artifactRequirementId": "artifact-requirement-artifact:tokenizer-change:unit:word-count-8d49190edc",
+              "validationObligationIds": [
+                "validation:word-count"
+              ]
+            }
+          ],
+          "resourceClaims": [
+            {
+              "id": "resource-claim-unit:tokenizer:catalog-resource:2f1d3f15679905d4-d34b357bd6",
+              "nodeId": "unit:tokenizer",
+              "resourceId": "catalog-resource:2f1d3f15679905d420d8f837",
+              "source": "planner",
+              "evidenceRefs": [
+                "evidence:4960b286fe62d7d0de6e16c8"
+              ],
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "evidence:4960b286fe62d7d0de6e16c8"
+                ]
+              },
+              "access": "modify",
+              "ownerPhase": "implementation",
+              "inputVersion": {
+                "kind": "repository_view",
+                "digest": "sha256:ad7a03837f75f4ccd6022c7e8acd0bc056e1864a900a7ae3ccd142b727380977"
+              },
+              "outputArtifact": {
+                "id": "artifact:tokenizer-change",
+                "revision": 1,
+                "digest": "sha256:0e1736f81ad06fdc2c783ac4d6f3b855958669c0ec963f14de04b422c594f777"
+              }
+            },
+            {
+              "id": "resource-claim-unit:word-count:catalog-resource:2f1d3f15679905d-602336d655",
+              "nodeId": "unit:word-count",
+              "resourceId": "catalog-resource:2f1d3f15679905d420d8f837",
+              "source": "planner",
+              "evidenceRefs": [
+                "evidence:5cd4bb421b674f11224cbeb0"
+              ],
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "evidence:5cd4bb421b674f11224cbeb0"
+                ]
+              },
+              "access": "modify",
+              "ownerPhase": "implementation",
+              "inputVersion": {
+                "kind": "artifact_contract",
+                "ref": {
+                  "id": "artifact:tokenizer-change",
+                  "revision": 1,
+                  "digest": "sha256:0e1736f81ad06fdc2c783ac4d6f3b855958669c0ec963f14de04b422c594f777"
+                }
+              },
+              "outputArtifact": {
+                "id": "artifact:word-count-change",
+                "revision": 1,
+                "digest": "sha256:bcb6d4149ec0f0541ad4af7e6db06268936da5c843cd4ceacdc2203eaf444b92"
+              }
+            }
+          ],
+          "runtimeLeaseClaims": [],
+          "contractRefs": [
+            {
+              "id": "artifact:tokenizer-change",
+              "revision": 1,
+              "digest": "sha256:0e1736f81ad06fdc2c783ac4d6f3b855958669c0ec963f14de04b422c594f777"
+            },
+            {
+              "id": "artifact:word-count-change",
+              "revision": 1,
+              "digest": "sha256:bcb6d4149ec0f0541ad4af7e6db06268936da5c843cd4ceacdc2203eaf444b92"
+            },
+            {
+              "id": "integration:unit:root",
+              "revision": 1,
+              "digest": "sha256:fad5c6530ef48ffbce672851c4cfaf0bf6923df5cf3f849da628fa5e07d12c86"
+            },
+            {
+              "id": "proof:validation:integration",
+              "revision": 1,
+              "digest": "sha256:4ed3591eedea80eb4dd0fcad1d634fdbaa7bcfc5bc2521c929729489fdb97b23"
+            },
+            {
+              "id": "proof:validation:tokenizer",
+              "revision": 1,
+              "digest": "sha256:c130342c18304166ba2782fcb20f8fd7a5100e53286a88524e08a6eb249f200c"
+            },
+            {
+              "id": "proof:validation:word-count",
+              "revision": 1,
+              "digest": "sha256:d737877c98dc14540b24500cc4e314cf3549eaf902e412c92d751fa05214f8a6"
+            },
+            {
+              "id": "scope:unit:root",
+              "revision": 1,
+              "digest": "sha256:390a4bf86226f769f2ee338e4fa9d3145fa04f6b319c18298fe3a6b4b8ad202f"
+            },
+            {
+              "id": "scope:unit:tokenizer",
+              "revision": 1,
+              "digest": "sha256:24fc418d6e78dac7ecb0a869cad7c74a4ed47a08ec6811fce18aa7a953b0f165"
+            },
+            {
+              "id": "scope:unit:word-count",
+              "revision": 1,
+              "digest": "sha256:764ceb7c58ab316baca6132c546033376081890b42dba96f867971ba70edd252"
+            },
+            {
+              "id": "seam:tokenize-contract",
+              "revision": 1,
+              "digest": "sha256:c29eba4638ec6f375fca5ee183353d8c307a772d94baf140a074c81c4c7aa33f"
+            },
+            {
+              "id": "task:unit:root",
+              "revision": 1,
+              "digest": "sha256:3985d3bea534c4387b675f793b250497e4bef76a12200182658d3be6aff83ab9"
+            },
+            {
+              "id": "task:unit:tokenizer",
+              "revision": 1,
+              "digest": "sha256:5f934b0eeedb7d44b51f421457c3445bad18ad3db3787ad4a8d015a557395c58"
+            },
+            {
+              "id": "task:unit:word-count",
+              "revision": 1,
+              "digest": "sha256:001762c08ee4990a17a91d83d3e1acf5396d47c7c937b105eb9d44144cbf46ab"
+            },
+            {
+              "id": "validation-contract:unit:root",
+              "revision": 1,
+              "digest": "sha256:326fa7a2ca6576e0b40ac65234c61e43a04c59b9c76c7f1f5ecedf7464010b97"
+            },
+            {
+              "id": "validation-contract:unit:tokenizer",
+              "revision": 1,
+              "digest": "sha256:1d1edc3a407db9a88a49688ee8ac7f665172e07e6386d5d2fb7cd4136f25409b"
+            },
+            {
+              "id": "validation-contract:unit:word-count",
+              "revision": 1,
+              "digest": "sha256:cf107deda63d20e8f9906d8d21fd2d768bce19a43f0634bdf17bbb83534fe990"
+            },
+            {
+              "id": "validation:integration",
+              "revision": 1,
+              "digest": "sha256:2acc42d622afc8a2e63e43b755a975b50531f5c44e2549c5fdb5ee4823e358f9"
+            },
+            {
+              "id": "validation:tokenizer",
+              "revision": 1,
+              "digest": "sha256:56cbb0864bf88587144d04af32c1d3bd312e63a356d9f942f5106708576b42b2"
+            },
+            {
+              "id": "validation:word-count",
+              "revision": 1,
+              "digest": "sha256:a94ca116971430bba4bba69069cee823f56430a60e2391777e893814ef08af04"
+            }
+          ],
+          "digest": "sha256:4d3db573ca3b5f32659254990e9d875bd0959b79c3e2c87e5eec50276a7861c5"
+        },
+        "contracts": [
+          {
+            "schemaVersion": 2,
+            "task": {
+              "schemaVersion": 2,
+              "id": "task:unit:root",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:root",
+              "goal": "Own the boundary between tokenizer.js and word-count.js and prove the contract between them holds.",
+              "acceptanceCriteria": [
+                {
+                  "id": "criterion:root-refinement",
+                  "kind": "integration",
+                  "description": "Two independent modules exist with an explicit contract: tokenizer.js exports tokenize(text) returning lowercase punctuation-free words, word-count.js imports tokenize and exports countWords(text) returning a frequency object, each with its own node:test file, without modifying stage8-probe.js.",
+                  "required": true
+                }
+              ],
+              "scope": {
+                "id": "scope:unit:root",
+                "revision": "1"
+              },
+              "consumes": [
+                {
+                  "id": "artifact:tokenizer-change",
+                  "revision": "1"
+                },
+                {
+                  "id": "artifact:word-count-change",
+                  "revision": "1"
+                }
+              ],
+              "produces": [],
+              "seams": [
+                {
+                  "id": "seam:tokenize-contract",
+                  "revision": "1"
+                }
+              ],
+              "validation": {
+                "id": "validation-contract:unit:root",
+                "revision": "1"
+              },
+              "constraints": []
+            },
+            "scope": {
+              "schemaVersion": 2,
+              "id": "scope:unit:root",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:root",
+              "allowedPaths": [
+                "src/tokenizer.js",
+                "src/tokenizer.test.js",
+                "src/word-count.js",
+                "src/word-count.test.js"
+              ],
+              "forbiddenPaths": [],
+              "coordinationPaths": [],
+              "outputRoots": []
+            },
+            "seams": [
+              {
+                "schemaVersion": 2,
+                "id": "seam:tokenize-contract",
+                "revision": "1",
+                "provenance": "compiled",
+                "kind": "api",
+                "specification": "src/tokenizer.js exports tokenize(text): string[] returning lowercase, punctuation-free words; src/word-count.js imports and calls it.",
+                "producerNodeId": "unit:tokenizer",
+                "consumerNodeIds": [
+                  "unit:root",
+                  "unit:word-count"
+                ],
+                "semanticFacts": {
+                  "export": "tokenize",
+                  "signature": "tokenize(text: string): string[]",
+                  "normalization": "lowercase, punctuation stripped"
+                },
+                "compatibility": {
+                  "mode": "exact",
+                  "rules": [
+                    "tokenize continues to accept a single string argument and return an array of lowercase, punctuation-free word strings."
+                  ]
+                },
+                "baselineArtifactContractId": "artifact:tokenizer-change"
+              }
+            ],
+            "artifacts": [
+              {
+                "schemaVersion": 2,
+                "id": "artifact:tokenizer-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:tokenizer",
+                "consumerNodeIds": [
+                  "unit:root",
+                  "unit:word-count"
+                ],
+                "artifactType": "source_change",
+                "materialization": "files",
+                "expectedPaths": [
+                  "src/tokenizer.js",
+                  "src/tokenizer.test.js"
+                ]
+              },
+              {
+                "schemaVersion": 2,
+                "id": "artifact:word-count-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:word-count",
+                "consumerNodeIds": [
+                  "unit:root"
+                ],
+                "artifactType": "source_change",
+                "materialization": "files",
+                "expectedPaths": [
+                  "src/word-count.js",
+                  "src/word-count.test.js"
+                ]
+              }
+            ],
+            "validation": {
+              "schemaVersion": 2,
+              "id": "validation-contract:unit:root",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:root",
+              "obligations": [
+                {
+                  "id": "validation:integration",
+                  "criterionId": "criterion:root-refinement",
+                  "layer": "integration",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid"
+                }
+              ]
+            }
+          },
+          {
+            "schemaVersion": 2,
+            "task": {
+              "schemaVersion": 2,
+              "id": "task:unit:tokenizer",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:tokenizer",
+              "goal": "Implement src/tokenizer.js exporting tokenize(text), returning an array of lowercase, punctuation-free words, with its own node:test file.",
+              "acceptanceCriteria": [
+                {
+                  "id": "criterion:tokenizer",
+                  "kind": "unit",
+                  "description": "src/tokenizer.js exports tokenize(text) returning an array of lowercase, punctuation-free words, verified by its own node:test file.",
+                  "required": true
+                }
+              ],
+              "scope": {
+                "id": "scope:unit:tokenizer",
+                "revision": "1"
+              },
+              "consumes": [],
+              "produces": [
+                {
+                  "id": "artifact:tokenizer-change",
+                  "revision": "1"
+                }
+              ],
+              "seams": [
+                {
+                  "id": "seam:tokenize-contract",
+                  "revision": "1"
+                }
+              ],
+              "validation": {
+                "id": "validation-contract:unit:tokenizer",
+                "revision": "1"
+              },
+              "constraints": []
+            },
+            "scope": {
+              "schemaVersion": 2,
+              "id": "scope:unit:tokenizer",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:tokenizer",
+              "allowedPaths": [
+                "src/tokenizer.js",
+                "src/tokenizer.test.js"
+              ],
+              "forbiddenPaths": [],
+              "coordinationPaths": [],
+              "outputRoots": []
+            },
+            "seams": [
+              {
+                "schemaVersion": 2,
+                "id": "seam:tokenize-contract",
+                "revision": "1",
+                "provenance": "compiled",
+                "kind": "api",
+                "specification": "src/tokenizer.js exports tokenize(text): string[] returning lowercase, punctuation-free words; src/word-count.js imports and calls it.",
+                "producerNodeId": "unit:tokenizer",
+                "consumerNodeIds": [
+                  "unit:root",
+                  "unit:word-count"
+                ],
+                "semanticFacts": {
+                  "export": "tokenize",
+                  "signature": "tokenize(text: string): string[]",
+                  "normalization": "lowercase, punctuation stripped"
+                },
+                "compatibility": {
+                  "mode": "exact",
+                  "rules": [
+                    "tokenize continues to accept a single string argument and return an array of lowercase, punctuation-free word strings."
+                  ]
+                },
+                "baselineArtifactContractId": "artifact:tokenizer-change"
+              }
+            ],
+            "artifacts": [
+              {
+                "schemaVersion": 2,
+                "id": "artifact:tokenizer-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:tokenizer",
+                "consumerNodeIds": [
+                  "unit:root",
+                  "unit:word-count"
+                ],
+                "artifactType": "source_change",
+                "materialization": "files",
+                "expectedPaths": [
+                  "src/tokenizer.js",
+                  "src/tokenizer.test.js"
+                ]
+              }
+            ],
+            "validation": {
+              "schemaVersion": 2,
+              "id": "validation-contract:unit:tokenizer",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:tokenizer",
+              "obligations": [
+                {
+                  "id": "validation:tokenizer",
+                  "criterionId": "criterion:tokenizer",
+                  "layer": "unit",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid"
+                }
+              ]
+            }
+          },
+          {
+            "schemaVersion": 2,
+            "task": {
+              "schemaVersion": 2,
+              "id": "task:unit:word-count",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:word-count",
+              "goal": "Implement src/word-count.js exporting countWords(text), importing tokenize from tokenizer.js and returning a per-word frequency object, with its own node:test file.",
+              "acceptanceCriteria": [
+                {
+                  "id": "criterion:word-count",
+                  "kind": "unit",
+                  "description": "src/word-count.js imports tokenize from tokenizer.js and exports countWords(text) returning a frequency object, verified by its own node:test file.",
+                  "required": true
+                }
+              ],
+              "scope": {
+                "id": "scope:unit:word-count",
+                "revision": "1"
+              },
+              "consumes": [
+                {
+                  "id": "artifact:tokenizer-change",
+                  "revision": "1"
+                }
+              ],
+              "produces": [
+                {
+                  "id": "artifact:word-count-change",
+                  "revision": "1"
+                }
+              ],
+              "seams": [
+                {
+                  "id": "seam:tokenize-contract",
+                  "revision": "1"
+                }
+              ],
+              "validation": {
+                "id": "validation-contract:unit:word-count",
+                "revision": "1"
+              },
+              "constraints": []
+            },
+            "scope": {
+              "schemaVersion": 2,
+              "id": "scope:unit:word-count",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:word-count",
+              "allowedPaths": [
+                "src/word-count.js",
+                "src/word-count.test.js"
+              ],
+              "forbiddenPaths": [],
+              "coordinationPaths": [],
+              "outputRoots": []
+            },
+            "seams": [
+              {
+                "schemaVersion": 2,
+                "id": "seam:tokenize-contract",
+                "revision": "1",
+                "provenance": "compiled",
+                "kind": "api",
+                "specification": "src/tokenizer.js exports tokenize(text): string[] returning lowercase, punctuation-free words; src/word-count.js imports and calls it.",
+                "producerNodeId": "unit:tokenizer",
+                "consumerNodeIds": [
+                  "unit:root",
+                  "unit:word-count"
+                ],
+                "semanticFacts": {
+                  "export": "tokenize",
+                  "signature": "tokenize(text: string): string[]",
+                  "normalization": "lowercase, punctuation stripped"
+                },
+                "compatibility": {
+                  "mode": "exact",
+                  "rules": [
+                    "tokenize continues to accept a single string argument and return an array of lowercase, punctuation-free word strings."
+                  ]
+                },
+                "baselineArtifactContractId": "artifact:tokenizer-change"
+              }
+            ],
+            "artifacts": [
+              {
+                "schemaVersion": 2,
+                "id": "artifact:tokenizer-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:tokenizer",
+                "consumerNodeIds": [
+                  "unit:root",
+                  "unit:word-count"
+                ],
+                "artifactType": "source_change",
+                "materialization": "files",
+                "expectedPaths": [
+                  "src/tokenizer.js",
+                  "src/tokenizer.test.js"
+                ]
+              },
+              {
+                "schemaVersion": 2,
+                "id": "artifact:word-count-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:word-count",
+                "consumerNodeIds": [
+                  "unit:root"
+                ],
+                "artifactType": "source_change",
+                "materialization": "files",
+                "expectedPaths": [
+                  "src/word-count.js",
+                  "src/word-count.test.js"
+                ]
+              }
+            ],
+            "validation": {
+              "schemaVersion": 2,
+              "id": "validation-contract:unit:word-count",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:word-count",
+              "obligations": [
+                {
+                  "id": "validation:word-count",
+                  "criterionId": "criterion:word-count",
+                  "layer": "unit",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid"
+                }
+              ]
+            }
+          }
+        ],
+        "evidenceAuthority": {
+          "goal": {
+            "id": "goal:run:a4dd844a40379265bd585efbc7d9b473d5b87cd54aa1ede3ae2dc437d38a1912",
+            "revision": 1,
+            "goal": "Agregá dos módulos independientes con un contrato explícito entre ellos. src/tokenizer.js exporta tokenize(text) que devuelve un array de palabras en minúscula sin puntuación. src/word-count.js exporta countWords(text) que importa tokenize desde tokenizer.js y devuelve un objeto con la frecuencia de cada palabra. Cada módulo con su propio archivo de test usando node:test. No modifiques src/stage8-probe.js.",
+            "acceptanceCriteria": [
+              {
+                "id": "criterion:run:a4dd844a40379265bd585efbc7d9b473d5b87cd54aa1ede3ae2dc437d38a1912:1",
+                "statement": "Agregá dos módulos independientes con un contrato explícito entre ellos. src/tokenizer.js exporta tokenize(text) que devuelve un array de palabras en minúscula sin puntuación. src/word-count.js exporta countWords(text) que importa tokenize desde tokenizer.js y devuelve un objeto con la frecuencia de cada palabra. Cada módulo con su propio archivo de test usando node:test. No modifiques src/stage8-probe.js.",
+                "required": true,
+                "level": "product",
+                "protectedReferences": [],
+                "verification": {
+                  "allowedProofs": [
+                    {
+                      "mode": "executable",
+                      "authority": "orchestrator_deterministic"
+                    }
+                  ],
+                  "independence": "independent_required"
+                }
+              }
+            ],
+            "constraints": [],
+            "qualityAttributes": [],
+            "target": {
+              "repositoryId": "mh8-r0-sandbox",
+              "baseCommit": "00273f055e7d4a7bdb706d02a90e88f65d9a370c",
+              "treeSha": "4230d720c666487a35a71858ab0a58edf26b65e5"
+            },
+            "digest": "sha256:06ce5022fd93a1adaa574a7316f03d7c5b9b4b68fa0fd293e5886d3509085585"
+          },
+          "validationObligations": [
+            {
+              "digest": "sha256:2acc42d622afc8a2e63e43b755a975b50531f5c44e2549c5fdb5ee4823e358f9",
+              "id": "validation:integration",
+              "revision": 1,
+              "criterionId": "criterion:run:a4dd844a40379265bd585efbc7d9b473d5b87cd54aa1ede3ae2dc437d38a1912:1",
+              "ownerNodeId": "unit:root",
+              "required": true,
+              "proofStrategy": {
+                "id": "proof:validation:integration",
+                "revision": 1,
+                "digest": "sha256:4ed3591eedea80eb4dd0fcad1d634fdbaa7bcfc5bc2521c929729489fdb97b23"
+              }
+            },
+            {
+              "digest": "sha256:56cbb0864bf88587144d04af32c1d3bd312e63a356d9f942f5106708576b42b2",
+              "id": "validation:tokenizer",
+              "revision": 1,
+              "criterionId": "criterion:run:a4dd844a40379265bd585efbc7d9b473d5b87cd54aa1ede3ae2dc437d38a1912:1",
+              "ownerNodeId": "unit:tokenizer",
+              "required": true,
+              "proofStrategy": {
+                "id": "proof:validation:tokenizer",
+                "revision": 1,
+                "digest": "sha256:c130342c18304166ba2782fcb20f8fd7a5100e53286a88524e08a6eb249f200c"
+              }
+            },
+            {
+              "digest": "sha256:a94ca116971430bba4bba69069cee823f56430a60e2391777e893814ef08af04",
+              "id": "validation:word-count",
+              "revision": 1,
+              "criterionId": "criterion:run:a4dd844a40379265bd585efbc7d9b473d5b87cd54aa1ede3ae2dc437d38a1912:1",
+              "ownerNodeId": "unit:word-count",
+              "required": true,
+              "proofStrategy": {
+                "id": "proof:validation:word-count",
+                "revision": 1,
+                "digest": "sha256:d737877c98dc14540b24500cc4e314cf3549eaf902e412c92d751fa05214f8a6"
+              }
+            }
+          ],
+          "proofStrategies": [
+            {
+              "id": "proof:validation:integration",
+              "revision": 1,
+              "goalContractDigest": "sha256:06ce5022fd93a1adaa574a7316f03d7c5b9b4b68fa0fd293e5886d3509085585",
+              "criterionId": "criterion:run:a4dd844a40379265bd585efbc7d9b473d5b87cd54aa1ede3ae2dc437d38a1912:1",
+              "obligationId": "validation:integration",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "repositoryViewDigest": "sha256:ad7a03837f75f4ccd6022c7e8acd0bc056e1864a900a7ae3ccd142b727380977",
+              "procedureRef": "command:stage6-transitional-validation",
+              "environmentPolicyDigest": "sha256:stage6-transitional-environment",
+              "independence": "independent_required",
+              "digest": "sha256:4ed3591eedea80eb4dd0fcad1d634fdbaa7bcfc5bc2521c929729489fdb97b23"
+            },
+            {
+              "id": "proof:validation:tokenizer",
+              "revision": 1,
+              "goalContractDigest": "sha256:06ce5022fd93a1adaa574a7316f03d7c5b9b4b68fa0fd293e5886d3509085585",
+              "criterionId": "criterion:run:a4dd844a40379265bd585efbc7d9b473d5b87cd54aa1ede3ae2dc437d38a1912:1",
+              "obligationId": "validation:tokenizer",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "repositoryViewDigest": "sha256:ad7a03837f75f4ccd6022c7e8acd0bc056e1864a900a7ae3ccd142b727380977",
+              "procedureRef": "command:stage6-transitional-validation",
+              "environmentPolicyDigest": "sha256:stage6-transitional-environment",
+              "independence": "independent_required",
+              "digest": "sha256:c130342c18304166ba2782fcb20f8fd7a5100e53286a88524e08a6eb249f200c"
+            },
+            {
+              "id": "proof:validation:word-count",
+              "revision": 1,
+              "goalContractDigest": "sha256:06ce5022fd93a1adaa574a7316f03d7c5b9b4b68fa0fd293e5886d3509085585",
+              "criterionId": "criterion:run:a4dd844a40379265bd585efbc7d9b473d5b87cd54aa1ede3ae2dc437d38a1912:1",
+              "obligationId": "validation:word-count",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "repositoryViewDigest": "sha256:ad7a03837f75f4ccd6022c7e8acd0bc056e1864a900a7ae3ccd142b727380977",
+              "procedureRef": "command:stage6-transitional-validation",
+              "environmentPolicyDigest": "sha256:stage6-transitional-environment",
+              "independence": "independent_required",
+              "digest": "sha256:d737877c98dc14540b24500cc4e314cf3549eaf902e412c92d751fa05214f8a6"
+            }
+          ]
+        },
+        "review": {
+          "findings": [
+            {
+              "code": "repository_model_coverage_incomplete",
+              "severity": "warning",
+              "authority": "repository",
+              "message": "Repository model coverage is partial.",
+              "evidenceRefs": [
+                "evidence:0a50e848f832783c20353cf1",
+                "evidence:0db77f7676f15913fe32c509",
+                "evidence:22fa6cadff546cf94d2e21c5",
+                "evidence:23469dcb0eb83bb13be86195",
+                "evidence:4960b286fe62d7d0de6e16c8",
+                "evidence:5cd4bb421b674f11224cbeb0",
+                "evidence:6fa05cbcef105edfc9554b50",
+                "evidence:a94c57886ae5499dc39ec59f",
+                "evidence:d5d92a1d195729f7d9b48bc8",
+                "evidence:fc60f23623612dbebcc8035f"
+              ],
+              "resolution": "none"
+            },
+            {
+              "code": "resource_catalog_coverage_incomplete",
+              "severity": "warning",
+              "authority": "repository",
+              "message": "Resource catalog coverage is partial.",
+              "evidenceRefs": [
+                "evidence:0a50e848f832783c20353cf1",
+                "evidence:0db77f7676f15913fe32c509",
+                "evidence:22fa6cadff546cf94d2e21c5",
+                "evidence:23469dcb0eb83bb13be86195",
+                "evidence:4960b286fe62d7d0de6e16c8",
+                "evidence:5cd4bb421b674f11224cbeb0",
+                "evidence:6fa05cbcef105edfc9554b50",
+                "evidence:a94c57886ae5499dc39ec59f",
+                "evidence:d5d92a1d195729f7d9b48bc8",
+                "evidence:fc60f23623612dbebcc8035f"
+              ],
+              "resolution": "none"
+            }
+          ]
+        },
+        "trace": {
+          "budget": {
+            "modelCalls": 3,
+            "repositoryQueries": 3,
+            "queryBytes": 65536,
+            "revisions": 3,
+            "repairs": 2,
+            "expansions": 0
+          },
+          "consumed": {
+            "modelCalls": 1,
+            "repositoryQueries": 3,
+            "queryBytes": 3589,
+            "revisions": 1,
+            "repairs": 0,
+            "expansions": 0
+          },
+          "revisions": [
+            {
+              "index": 1,
+              "cause": "initial",
+              "budget": {
+                "modelCalls": 3,
+                "repositoryQueries": 3,
+                "queryBytes": 65536,
+                "revisions": 3,
+                "repairs": 2,
+                "expansions": 0
+              },
+              "consumed": {
+                "modelCalls": 1,
+                "repositoryQueries": 3,
+                "queryBytes": 3589,
+                "revisions": 1,
+                "repairs": 0,
+                "expansions": 0
+              },
+              "queryReceipts": [
+                "sha256:39e3064a22daf712e534f774108c74a30c8fe72cb116d503916842cfc62569e4",
+                "sha256:64f00069af08b1107ffce02ccfc16890bae5e4ee61af6ca7ec83f6ad03411318",
+                "sha256:7e93f5781739af8f4cdbd74433cad9ae1031489e2da424cef9d7daa64f24a8b4"
+              ],
+              "evidenceRefs": [
+                "evidence:0a50e848f832783c20353cf1",
+                "evidence:4960b286fe62d7d0de6e16c8",
+                "evidence:5cd4bb421b674f11224cbeb0",
+                "evidence:a94c57886ae5499dc39ec59f",
+                "evidence:fc60f23623612dbebcc8035f"
+              ],
+              "changedDecisionIds": [],
+              "changedFindingCodes": [
+                "repository_model_coverage_incomplete",
+                "resource_catalog_coverage_incomplete"
+              ],
+              "proposalDigest": "sha256:48056d11167fa01bdbe3174d85ced96f07d9584cb676895ade0ff357b242a512",
+              "causalStateDigest": "sha256:c0c03ec4477fb49d86685120e8b2f3da58dfeb8079cdf157caf94b83996b466f",
+              "digest": "sha256:b0bfd34a0ca13bfeb7974f0a8505bcaf6eb12a48ae22efccfde3f37372673b9c"
+            }
+          ],
+          "advisoryFindings": [
+            {
+              "code": "repository_model_coverage_incomplete",
+              "severity": "warning",
+              "authority": "repository",
+              "message": "Repository model coverage is partial.",
+              "evidenceRefs": [
+                "evidence:0a50e848f832783c20353cf1",
+                "evidence:0db77f7676f15913fe32c509",
+                "evidence:22fa6cadff546cf94d2e21c5",
+                "evidence:23469dcb0eb83bb13be86195",
+                "evidence:4960b286fe62d7d0de6e16c8",
+                "evidence:5cd4bb421b674f11224cbeb0",
+                "evidence:6fa05cbcef105edfc9554b50",
+                "evidence:a94c57886ae5499dc39ec59f",
+                "evidence:d5d92a1d195729f7d9b48bc8",
+                "evidence:fc60f23623612dbebcc8035f"
+              ],
+              "resolution": "none"
+            },
+            {
+              "code": "resource_catalog_coverage_incomplete",
+              "severity": "warning",
+              "authority": "repository",
+              "message": "Resource catalog coverage is partial.",
+              "evidenceRefs": [
+                "evidence:0a50e848f832783c20353cf1",
+                "evidence:0db77f7676f15913fe32c509",
+                "evidence:22fa6cadff546cf94d2e21c5",
+                "evidence:23469dcb0eb83bb13be86195",
+                "evidence:4960b286fe62d7d0de6e16c8",
+                "evidence:5cd4bb421b674f11224cbeb0",
+                "evidence:6fa05cbcef105edfc9554b50",
+                "evidence:a94c57886ae5499dc39ec59f",
+                "evidence:d5d92a1d195729f7d9b48bc8",
+                "evidence:fc60f23623612dbebcc8035f"
+              ],
+              "resolution": "none"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "graph:graph-plan:goal:run:a4dd844a40379265bd585efbc7d9b473d5-da242396a9:r1:proposed",
+      "occurredAt": "2026-08-15T13:44:14.587Z",
+      "type": "graph.revision.proposed",
+      "payload": {
+        "graphId": "graph-plan:goal:run:a4dd844a40379265bd585efbc7d9b473d5-da242396a9",
+        "revision": 1
+      }
+    },
+    {
+      "eventId": "approve-plan:graph-plan:goal:run:a4dd844a40379265bd585efbc7d9b473d5-da242396a9:r1",
+      "occurredAt": "2026-08-15T13:44:14.587Z",
+      "type": "decision.raised",
+      "payload": {
+        "decision": {
+          "id": "approve-plan:graph-plan:goal:run:a4dd844a40379265bd585efbc7d9b473d5-da242396a9:r1",
+          "kind": "approve_plan",
+          "question": "Approve graph revision 1?",
+          "options": [
+            {
+              "id": "approve",
+              "label": "Approve plan"
+            },
+            {
+              "id": "request_changes",
+              "label": "Request changes"
+            }
+          ],
+          "affectedNodeIds": [
+            "unit:root"
+          ],
+          "evidenceRefs": [
+            "graph:graph-plan:goal:run:a4dd844a40379265bd585efbc7d9b473d5-da242396a9:r1"
+          ],
+          "impact": "acceptance"
+        }
+      }
+    }
+  ]
+}

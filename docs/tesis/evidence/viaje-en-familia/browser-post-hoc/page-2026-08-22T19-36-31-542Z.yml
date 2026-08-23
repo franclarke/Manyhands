@@ -1,0 +1,64 @@
+- generic [ref=e3]:
+  - link "Saltar al contenido" [ref=e4] [cursor=pointer]:
+    - /url: "#dashboard-main"
+  - generic [ref=e5]:
+    - banner [ref=e6]:
+      - generic [ref=e7]:
+        - paragraph [ref=e8]: Presentación del viaje
+        - heading "Viaje en familia" [level=1] [ref=e9]
+        - paragraph [ref=e10]: Fechas por definir
+      - generic [ref=e11]:
+        - article [ref=e12]:
+          - paragraph [ref=e13]: Eventos
+          - strong [ref=e14]: "0"
+          - paragraph [ref=e15]: Próximas actividades visibles
+        - article [ref=e16]:
+          - paragraph [ref=e17]: Presupuesto
+          - strong [ref=e18]: 0/0
+          - paragraph [ref=e19]: Disponible 0
+        - article [ref=e20]:
+          - paragraph [ref=e21]: Equipaje
+          - strong [ref=e22]: 0/0
+          - paragraph [ref=e23]: Progreso total de preparación
+      - navigation "Secciones del dashboard" [ref=e24]:
+        - link "Eventos" [ref=e25] [cursor=pointer]:
+          - /url: "#events"
+        - link "Presupuesto" [ref=e26] [cursor=pointer]:
+          - /url: "#budget"
+        - link "Equipaje" [ref=e27] [cursor=pointer]:
+          - /url: "#packing"
+        - link "Recuerdos" [ref=e28] [cursor=pointer]:
+          - /url: "#memories"
+      - button "Actualizar" [ref=e29] [cursor=pointer]
+    - main [ref=e30]:
+      - generic [ref=e31]:
+        - paragraph [ref=e32]: Agenda
+        - heading "Próximos eventos" [level=2] [ref=e33]
+        - list [ref=e34]:
+          - listitem [ref=e35]: Todavía no hay eventos cargados.
+      - generic [ref=e36]:
+        - paragraph [ref=e37]: Presupuesto
+        - heading "Resumen del presupuesto" [level=2] [ref=e38]
+        - paragraph [ref=e39]: Gastado 0 de 0. Disponible 0.
+        - list [ref=e41]:
+          - listitem [ref=e42]: Todavía no hay gastos registrados.
+      - generic [ref=e43]:
+        - paragraph [ref=e44]: Equipaje
+        - heading "Progreso de equipaje" [level=2] [ref=e45]
+        - paragraph [ref=e46]: Llevas 0 de 0 elementos listos.
+        - paragraph [ref=e48]: 0% completado
+      - generic [ref=e49]:
+        - paragraph [ref=e50]: Recuerdos
+        - heading "Recuerdos destacados" [level=2] [ref=e51]
+        - list [ref=e52]:
+          - listitem [ref=e53]: Aún no hay recuerdos destacados.
+      - generic [ref=e54]:
+        - paragraph [ref=e55]: Notas
+        - heading "Notas del viaje" [level=2] [ref=e56]
+        - list [ref=e57]:
+          - listitem [ref=e58]: No hay notas todavía.
+      - generic [ref=e59]:
+        - paragraph [ref=e60]: Favoritos
+        - heading "Marcados como favoritos" [level=2] [ref=e61]
+        - list [ref=e62]:
+          - listitem [ref=e63]: Todavía no hay favoritos.

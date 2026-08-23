@@ -1,0 +1,3648 @@
+{
+  "events": [
+    {
+      "eventId": "repository:sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310:inspection",
+      "occurredAt": "2026-08-16T07:49:37.749Z",
+      "type": "repository.inspected",
+      "payload": {
+        "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+        "disposition": "complete",
+        "snapshot": {
+          "schemaVersion": 1,
+          "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+          "repositoryId": "mh8-r0-sandbox",
+          "rootPath": "C:\\Users\\franc\\Documents\\mh8-r0-sandbox",
+          "targetFingerprint": "c8384b3ee9e9ad12",
+          "baseCommit": "3b84716162e45788027d3f017f7fd3ff4a5f8820",
+          "indexSchemaVersion": 1,
+          "capturedAt": "2026-08-16T07:40:41.935Z",
+          "inspectionDisposition": "complete",
+          "capabilities": {
+            "scripts": {
+              "test": "node --test"
+            },
+            "baselineCommands": [
+              {
+                "kind": "test",
+                "command": "npm",
+                "args": [
+                  "test"
+                ],
+                "sourceScript": "test"
+              }
+            ],
+            "languages": [
+              {
+                "language": "javascript",
+                "coverage": "structural",
+                "confidence": 0.95,
+                "evidence": [
+                  "src/stage8-probe.js",
+                  "src/stage8-probe.test.js",
+                  "src/tokenizer.js",
+                  "src/tokenizer.test.js",
+                  "src/word-count.js",
+                  "src/word-count.test.js"
+                ]
+              }
+            ],
+            "stack": []
+          },
+          "diagnostics": [],
+          "indexHash": "47faa9a8e544de3f24f834e1a9a32baca7bbac57963f032469f8facb69a56b81",
+          "index": {
+            "repositoryId": "mh8-r0-sandbox",
+            "rootPath": "C:\\Users\\franc\\Documents\\mh8-r0-sandbox",
+            "indexedAt": "2026-08-16T07:23:05.198Z",
+            "files": [
+              {
+                "path": "src/stage8-probe.js",
+                "kind": "source",
+                "contentHash": "c9b1c56919970057d1d1f7aaf2ab4923e6a5f72b9600ebba836a1f1d57fee40b",
+                "byteSize": 58,
+                "lineCount": 4,
+                "exportedSymbols": [
+                  "stage8Probe"
+                ],
+                "importedSymbols": [],
+                "declaredSymbols": [
+                  "stage8Probe"
+                ]
+              },
+              {
+                "path": "src/stage8-probe.test.js",
+                "kind": "test",
+                "contentHash": "113ce62f8d3e3668f7154d2cc0b616ddeab027ef260660eaf8444c20e9c59a88",
+                "byteSize": 228,
+                "lineCount": 9,
+                "exportedSymbols": [],
+                "importedSymbols": [],
+                "declaredSymbols": []
+              },
+              {
+                "path": "src/tokenizer.js",
+                "kind": "source",
+                "contentHash": "b666a7ea08b1c6f73b6f03b9a30223a70510eb4a6a835d5ebe5bed3da9f48322",
+                "byteSize": 209,
+                "lineCount": 9,
+                "exportedSymbols": [
+                  "tokenize"
+                ],
+                "importedSymbols": [],
+                "declaredSymbols": [
+                  "tokenize"
+                ]
+              },
+              {
+                "path": "src/tokenizer.test.js",
+                "kind": "test",
+                "contentHash": "0d770e23c26a95613c4dd362690608102e2f27155632ce33cba6c18a6181266a",
+                "byteSize": 1246,
+                "lineCount": 53,
+                "exportedSymbols": [],
+                "importedSymbols": [],
+                "declaredSymbols": []
+              },
+              {
+                "path": "src/word-count.js",
+                "kind": "source",
+                "contentHash": "25efd522d30050f1a1f5ee8b4d5ae59dd0da52c589892705ae9e0be814b344e5",
+                "byteSize": 243,
+                "lineCount": 13,
+                "exportedSymbols": [
+                  "countWords"
+                ],
+                "importedSymbols": [],
+                "declaredSymbols": [
+                  "countWords"
+                ]
+              },
+              {
+                "path": "src/word-count.test.js",
+                "kind": "test",
+                "contentHash": "e3f08ce46865d12c11340c35f5843afad4c724972a25419f3b71af81fc86358a",
+                "byteSize": 1095,
+                "lineCount": 47,
+                "exportedSymbols": [],
+                "importedSymbols": [],
+                "declaredSymbols": []
+              }
+            ],
+            "symbols": [
+              {
+                "name": "stage8Probe",
+                "kind": "function",
+                "filePath": "src/stage8-probe.js",
+                "exported": true,
+                "line": 1
+              },
+              {
+                "name": "tokenize",
+                "kind": "function",
+                "filePath": "src/tokenizer.js",
+                "exported": true,
+                "line": 1
+              },
+              {
+                "name": "countWords",
+                "kind": "function",
+                "filePath": "src/word-count.js",
+                "exported": true,
+                "line": 3
+              }
+            ],
+            "imports": [],
+            "exports": [
+              {
+                "filePath": "src/stage8-probe.js",
+                "exportedSymbols": [
+                  "stage8Probe"
+                ]
+              },
+              {
+                "filePath": "src/tokenizer.js",
+                "exportedSymbols": [
+                  "tokenize"
+                ]
+              },
+              {
+                "filePath": "src/word-count.js",
+                "exportedSymbols": [
+                  "countWords"
+                ]
+              }
+            ],
+            "diagnostics": [],
+            "metadata": {
+              "indexer": "ripgrep-native-v2",
+              "deterministic": true,
+              "fileCount": 6,
+              "symbolCount": 3,
+              "importCount": 0,
+              "exportCount": 3
+            }
+          }
+        },
+        "repositoryModelDigest": "sha256:69a472eb3b36bbcd478ef269b833e9faee7f7a807e9b123d66e17dd4bb01f489",
+        "repositoryView": {
+          "digest": "sha256:ea3a7da0fcfb7619727fb669dbdc6a810141097b627b1beafaa6b18013e3baf9",
+          "treeSha": "5d33daec17568a5ba47c8f5fa4130902cb418b43",
+          "resourceCatalogDigest": "sha256:c6e9550a987bcf361ee5acd0849d7b377f17c5ad85d8e42db7635546f44eee61"
+        },
+        "queryDigests": [
+          "sha256:6f28d05c9a74dee6d406a314d9a3f41d108e1226bfb9837803d422e56fded1c1",
+          "sha256:fdf1afc1ca98fd3eedafd71fe012f3c9335ba17f8bc5e16933bf9e232c179913",
+          "sha256:ac7d34064ae4764065ff123b85a4273bd0c9883b309feeefa1b5a5d37a070833"
+        ]
+      }
+    },
+    {
+      "eventId": "planning:plan:goal:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:completed:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5",
+      "occurredAt": "2026-08-16T07:49:37.759Z",
+      "type": "planning.completed",
+      "payload": {
+        "semanticPlan": {
+          "id": "plan:goal:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5",
+          "revision": 1,
+          "goalContract": {
+            "id": "goal:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5",
+            "revision": 1,
+            "digest": "sha256:8304648ac2ba3e9f2e0d749bae90fc5265cf11326288ce4b004046da93f33093"
+          },
+          "repositorySnapshot": {
+            "id": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+            "digest": "sha256:47faa9a8e544de3f24f834e1a9a32baca7bbac57963f032469f8facb69a56b81"
+          },
+          "repositoryView": {
+            "digest": "sha256:ea3a7da0fcfb7619727fb669dbdc6a810141097b627b1beafaa6b18013e3baf9",
+            "treeSha": "5d33daec17568a5ba47c8f5fa4130902cb418b43",
+            "resourceCatalogDigest": "sha256:c6e9550a987bcf361ee5acd0849d7b377f17c5ad85d8e42db7635546f44eee61"
+          },
+          "rootUnitId": "unit:root",
+          "units": {
+            "unit:root": {
+              "id": "unit:root",
+              "role": "composite",
+              "title": "Reporte de legibilidad CLI",
+              "objective": "Integrar cuatro módulos de métricas de legibilidad detrás de un único comando CLI que sólo compone y formatea.",
+              "boundary": {
+                "kind": "vertical_slice",
+                "evidenceRefs": [
+                  "evidence:0a50e848f832783c20353cf1"
+                ]
+              },
+              "outcomes": [
+                {
+                  "id": "outcome:readability-report",
+                  "statement": "node src/cli.js produce un reporte de legibilidad completo para un archivo de texto."
+                }
+              ],
+              "criteria": [
+                {
+                  "criterionId": "criterion:root-cli-output",
+                  "statement": "node src/cli.js sobre un archivo de texto imprime las cuatro métricas sin fallar.",
+                  "sourceCriterionId": "criterion:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:1"
+                },
+                {
+                  "criterionId": "criterion:root-module-tests",
+                  "statement": "Cada métrica nueva vive en su propio módulo con tests propios que pasan con npm run test.",
+                  "sourceCriterionId": "criterion:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:2"
+                },
+                {
+                  "criterionId": "criterion:root-tokenizer-reuse",
+                  "statement": "Ningún módulo nuevo reimplementa la tokenización; todos usan el tokenizer existente.",
+                  "sourceCriterionId": "criterion:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:3"
+                },
+                {
+                  "criterionId": "criterion:root-cli-no-compute",
+                  "statement": "El CLI no calcula métricas, sólo llama a los módulos y da formato a la salida.",
+                  "sourceCriterionId": "criterion:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:4"
+                }
+              ],
+              "repositorySurface": {
+                "resourceRefs": [
+                  "catalog-resource:e2e48b3a0768ff71ee5d8a24"
+                ],
+                "pathHints": [
+                  "src/cli.js",
+                  "src/cli.test.js",
+                  "src/reading-time.js",
+                  "src/reading-time.test.js",
+                  "src/sentence-length.js",
+                  "src/sentence-length.test.js",
+                  "src/top-words.js",
+                  "src/top-words.test.js",
+                  "src/word-total.js",
+                  "src/word-total.test.js"
+                ]
+              },
+              "resourceIntents": [],
+              "consumes": [
+                "artifact:cli-change",
+                "artifact:reading-time-change",
+                "artifact:sentence-length-change",
+                "artifact:top-words-change",
+                "artifact:word-total-change"
+              ],
+              "produces": [],
+              "seamRefs": [],
+              "validation": [
+                {
+                  "obligationId": "validation:integration",
+                  "criterionId": "criterion:root-cli-output",
+                  "proofStrategyId": "proof:validation:integration",
+                  "layer": "integration",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "src/word-total.test.js",
+                      "src/top-words.test.js",
+                      "src/sentence-length.test.js",
+                      "src/reading-time.test.js",
+                      "src/cli.test.js"
+                    ],
+                    "references": [
+                      "src/word-total.test.js",
+                      "src/top-words.test.js",
+                      "src/sentence-length.test.js",
+                      "src/reading-time.test.js",
+                      "src/cli.test.js"
+                    ]
+                  }
+                }
+              ],
+              "uncertainty": [],
+              "granularity": {
+                "disposition": "split",
+                "feasibility": {
+                  "coherentResponsibility": true,
+                  "boundedContext": "yes",
+                  "boundedChangeSurface": "yes",
+                  "independentlyValidatable": "yes",
+                  "unresolvedArchitectureDecision": false
+                },
+                "splitReasons": [
+                  "independent_delivery",
+                  "parallelism"
+                ],
+                "expectedBenefits": [
+                  "Cada métrica se valida de forma independiente con sus propios tests.",
+                  "El CLI queda desacoplado del cálculo de métricas."
+                ],
+                "expectedCosts": [
+                  "El CLI depende de la interfaz expuesta por cada módulo de métrica."
+                ],
+                "integrationObligationId": "validation:integration",
+                "evidenceRefs": [
+                  "evidence:0a50e848f832783c20353cf1"
+                ],
+                "epistemic": {
+                  "state": "known",
+                  "confidence": "high",
+                  "evidenceRefs": [
+                    "evidence:0a50e848f832783c20353cf1"
+                  ]
+                }
+              },
+              "expansion": "expanded",
+              "integration": {
+                "obligationId": "validation:integration",
+                "objective": "Componer los cuatro módulos de métricas detrás del CLI y probar que el reporte se imprime correctamente.",
+                "criterionIds": [
+                  "criterion:root-cli-no-compute",
+                  "criterion:root-cli-output",
+                  "criterion:root-module-tests",
+                  "criterion:root-tokenizer-reuse"
+                ],
+                "proofStrategyId": "proof:validation:integration",
+                "artifactIds": [
+                  "artifact:cli-change",
+                  "artifact:reading-time-change",
+                  "artifact:sentence-length-change",
+                  "artifact:top-words-change",
+                  "artifact:word-total-change"
+                ],
+                "seamIds": []
+              }
+            },
+            "unit:word-total": {
+              "id": "unit:word-total",
+              "parentId": "unit:root",
+              "role": "leaf",
+              "title": "Módulo de total de palabras",
+              "objective": "Calcular el total de palabras de un texto reutilizando el tokenizer existente.",
+              "boundary": {
+                "kind": "module",
+                "evidenceRefs": [
+                  "evidence:13e1f48bb845416263b45c4a"
+                ]
+              },
+              "outcomes": [
+                {
+                  "id": "outcome:word-total",
+                  "statement": "Existe una función que devuelve el total de palabras de un texto."
+                }
+              ],
+              "criteria": [
+                {
+                  "criterionId": "criterion:word-total-refinement",
+                  "statement": "El módulo de total de palabras vive por separado con sus propios tests que pasan con npm run test.",
+                  "sourceCriterionId": "criterion:root-module-tests"
+                }
+              ],
+              "repositorySurface": {
+                "resourceRefs": [
+                  "catalog-resource:193b0e8667bd836bf508e30e",
+                  "catalog-resource:e2e48b3a0768ff71ee5d8a24"
+                ],
+                "pathHints": [
+                  "src/word-total.js",
+                  "src/word-total.test.js"
+                ]
+              },
+              "resourceIntents": [
+                {
+                  "resourceId": "catalog-resource:193b0e8667bd836bf508e30e",
+                  "access": "observe",
+                  "evidenceRefs": [
+                    "evidence:13e1f48bb845416263b45c4a"
+                  ],
+                  "epistemic": {
+                    "state": "known",
+                    "confidence": "high",
+                    "evidenceRefs": [
+                      "evidence:13e1f48bb845416263b45c4a"
+                    ]
+                  }
+                },
+                {
+                  "resourceId": "catalog-resource:e2e48b3a0768ff71ee5d8a24",
+                  "access": "modify",
+                  "ownerPhase": "implementation",
+                  "outputArtifactId": "artifact:word-total-change",
+                  "evidenceRefs": [
+                    "evidence:13e1f48bb845416263b45c4a"
+                  ],
+                  "epistemic": {
+                    "state": "known",
+                    "confidence": "high",
+                    "evidenceRefs": [
+                      "evidence:13e1f48bb845416263b45c4a"
+                    ]
+                  }
+                }
+              ],
+              "consumes": [],
+              "produces": [
+                "artifact:word-total-change"
+              ],
+              "seamRefs": [],
+              "validation": [
+                {
+                  "obligationId": "validation:word-total",
+                  "criterionId": "criterion:word-total-refinement",
+                  "proofStrategyId": "proof:validation:word-total",
+                  "layer": "unit",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "src/word-total.test.js"
+                    ],
+                    "references": [
+                      "src/word-total.test.js"
+                    ]
+                  }
+                }
+              ],
+              "uncertainty": [],
+              "granularity": {
+                "disposition": "leaf",
+                "feasibility": {
+                  "coherentResponsibility": true,
+                  "boundedContext": "yes",
+                  "boundedChangeSurface": "yes",
+                  "independentlyValidatable": "yes",
+                  "unresolvedArchitectureDecision": false
+                },
+                "splitReasons": [],
+                "expectedBenefits": [],
+                "expectedCosts": [],
+                "evidenceRefs": [
+                  "evidence:13e1f48bb845416263b45c4a"
+                ],
+                "epistemic": {
+                  "state": "known",
+                  "confidence": "high",
+                  "evidenceRefs": [
+                    "evidence:13e1f48bb845416263b45c4a"
+                  ]
+                }
+              },
+              "expansion": "leaf"
+            },
+            "unit:top-words": {
+              "id": "unit:top-words",
+              "parentId": "unit:root",
+              "role": "leaf",
+              "title": "Módulo de palabras más frecuentes",
+              "objective": "Calcular las cinco palabras más frecuentes con su cuenta reutilizando el tokenizer existente.",
+              "boundary": {
+                "kind": "module",
+                "evidenceRefs": [
+                  "evidence:1654d85bae770152375596b4"
+                ]
+              },
+              "outcomes": [
+                {
+                  "id": "outcome:top-words",
+                  "statement": "Existe una función que devuelve las cinco palabras más frecuentes con su cuenta."
+                }
+              ],
+              "criteria": [
+                {
+                  "criterionId": "criterion:top-words-refinement",
+                  "statement": "El módulo de palabras más frecuentes reutiliza el tokenizer existente en lugar de reimplementar la tokenización.",
+                  "sourceCriterionId": "criterion:root-tokenizer-reuse"
+                }
+              ],
+              "repositorySurface": {
+                "resourceRefs": [
+                  "catalog-resource:193b0e8667bd836bf508e30e",
+                  "catalog-resource:e2e48b3a0768ff71ee5d8a24"
+                ],
+                "pathHints": [
+                  "src/top-words.js",
+                  "src/top-words.test.js"
+                ]
+              },
+              "resourceIntents": [
+                {
+                  "resourceId": "catalog-resource:193b0e8667bd836bf508e30e",
+                  "access": "observe",
+                  "evidenceRefs": [
+                    "evidence:1654d85bae770152375596b4"
+                  ],
+                  "epistemic": {
+                    "state": "known",
+                    "confidence": "high",
+                    "evidenceRefs": [
+                      "evidence:1654d85bae770152375596b4"
+                    ]
+                  }
+                },
+                {
+                  "resourceId": "catalog-resource:e2e48b3a0768ff71ee5d8a24",
+                  "access": "modify",
+                  "ownerPhase": "implementation",
+                  "inputArtifactId": "artifact:word-total-change",
+                  "outputArtifactId": "artifact:top-words-change",
+                  "evidenceRefs": [
+                    "evidence:1654d85bae770152375596b4"
+                  ],
+                  "epistemic": {
+                    "state": "known",
+                    "confidence": "high",
+                    "evidenceRefs": [
+                      "evidence:1654d85bae770152375596b4"
+                    ]
+                  }
+                }
+              ],
+              "consumes": [
+                "artifact:word-total-change"
+              ],
+              "produces": [
+                "artifact:top-words-change"
+              ],
+              "seamRefs": [],
+              "validation": [
+                {
+                  "obligationId": "validation:top-words",
+                  "criterionId": "criterion:top-words-refinement",
+                  "proofStrategyId": "proof:validation:top-words",
+                  "layer": "unit",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "src/top-words.test.js"
+                    ],
+                    "references": [
+                      "src/top-words.test.js"
+                    ]
+                  }
+                }
+              ],
+              "uncertainty": [],
+              "granularity": {
+                "disposition": "leaf",
+                "feasibility": {
+                  "coherentResponsibility": true,
+                  "boundedContext": "yes",
+                  "boundedChangeSurface": "yes",
+                  "independentlyValidatable": "yes",
+                  "unresolvedArchitectureDecision": false
+                },
+                "splitReasons": [],
+                "expectedBenefits": [],
+                "expectedCosts": [],
+                "evidenceRefs": [
+                  "evidence:1654d85bae770152375596b4"
+                ],
+                "epistemic": {
+                  "state": "known",
+                  "confidence": "high",
+                  "evidenceRefs": [
+                    "evidence:1654d85bae770152375596b4"
+                  ]
+                }
+              },
+              "expansion": "leaf"
+            },
+            "unit:sentence-length": {
+              "id": "unit:sentence-length",
+              "parentId": "unit:root",
+              "role": "leaf",
+              "title": "Módulo de longitud media de oración",
+              "objective": "Calcular la longitud media de oración en palabras reutilizando el tokenizer existente.",
+              "boundary": {
+                "kind": "module",
+                "evidenceRefs": [
+                  "evidence:214910fa16c5030d95de9a8a"
+                ]
+              },
+              "outcomes": [
+                {
+                  "id": "outcome:sentence-length",
+                  "statement": "Existe una función que devuelve la longitud media de oración en palabras."
+                }
+              ],
+              "criteria": [
+                {
+                  "criterionId": "criterion:sentence-length-refinement",
+                  "statement": "El módulo de longitud media de oración vive por separado con sus propios tests que pasan con npm run test.",
+                  "sourceCriterionId": "criterion:root-module-tests"
+                }
+              ],
+              "repositorySurface": {
+                "resourceRefs": [
+                  "catalog-resource:193b0e8667bd836bf508e30e",
+                  "catalog-resource:e2e48b3a0768ff71ee5d8a24"
+                ],
+                "pathHints": [
+                  "src/sentence-length.js",
+                  "src/sentence-length.test.js"
+                ]
+              },
+              "resourceIntents": [
+                {
+                  "resourceId": "catalog-resource:193b0e8667bd836bf508e30e",
+                  "access": "observe",
+                  "evidenceRefs": [
+                    "evidence:214910fa16c5030d95de9a8a"
+                  ],
+                  "epistemic": {
+                    "state": "known",
+                    "confidence": "high",
+                    "evidenceRefs": [
+                      "evidence:214910fa16c5030d95de9a8a"
+                    ]
+                  }
+                },
+                {
+                  "resourceId": "catalog-resource:e2e48b3a0768ff71ee5d8a24",
+                  "access": "modify",
+                  "ownerPhase": "implementation",
+                  "inputArtifactId": "artifact:top-words-change",
+                  "outputArtifactId": "artifact:sentence-length-change",
+                  "evidenceRefs": [
+                    "evidence:214910fa16c5030d95de9a8a"
+                  ],
+                  "epistemic": {
+                    "state": "known",
+                    "confidence": "high",
+                    "evidenceRefs": [
+                      "evidence:214910fa16c5030d95de9a8a"
+                    ]
+                  }
+                }
+              ],
+              "consumes": [
+                "artifact:top-words-change"
+              ],
+              "produces": [
+                "artifact:sentence-length-change"
+              ],
+              "seamRefs": [],
+              "validation": [
+                {
+                  "obligationId": "validation:sentence-length",
+                  "criterionId": "criterion:sentence-length-refinement",
+                  "proofStrategyId": "proof:validation:sentence-length",
+                  "layer": "unit",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "src/sentence-length.test.js"
+                    ],
+                    "references": [
+                      "src/sentence-length.test.js"
+                    ]
+                  }
+                }
+              ],
+              "uncertainty": [],
+              "granularity": {
+                "disposition": "leaf",
+                "feasibility": {
+                  "coherentResponsibility": true,
+                  "boundedContext": "yes",
+                  "boundedChangeSurface": "yes",
+                  "independentlyValidatable": "yes",
+                  "unresolvedArchitectureDecision": false
+                },
+                "splitReasons": [],
+                "expectedBenefits": [],
+                "expectedCosts": [],
+                "evidenceRefs": [
+                  "evidence:214910fa16c5030d95de9a8a"
+                ],
+                "epistemic": {
+                  "state": "known",
+                  "confidence": "high",
+                  "evidenceRefs": [
+                    "evidence:214910fa16c5030d95de9a8a"
+                  ]
+                }
+              },
+              "expansion": "leaf"
+            },
+            "unit:reading-time": {
+              "id": "unit:reading-time",
+              "parentId": "unit:root",
+              "role": "leaf",
+              "title": "Módulo de tiempo estimado de lectura",
+              "objective": "Calcular el tiempo estimado de lectura en minutos a 200 palabras por minuto reutilizando el tokenizer existente.",
+              "boundary": {
+                "kind": "module",
+                "evidenceRefs": [
+                  "evidence:4739f2e2c0e13ca4f5765930"
+                ]
+              },
+              "outcomes": [
+                {
+                  "id": "outcome:reading-time",
+                  "statement": "Existe una función que devuelve el tiempo estimado de lectura en minutos."
+                }
+              ],
+              "criteria": [
+                {
+                  "criterionId": "criterion:reading-time-refinement",
+                  "statement": "El módulo de tiempo de lectura reutiliza el tokenizer existente en lugar de reimplementar la tokenización.",
+                  "sourceCriterionId": "criterion:root-tokenizer-reuse"
+                }
+              ],
+              "repositorySurface": {
+                "resourceRefs": [
+                  "catalog-resource:193b0e8667bd836bf508e30e",
+                  "catalog-resource:e2e48b3a0768ff71ee5d8a24"
+                ],
+                "pathHints": [
+                  "src/reading-time.js",
+                  "src/reading-time.test.js"
+                ]
+              },
+              "resourceIntents": [
+                {
+                  "resourceId": "catalog-resource:193b0e8667bd836bf508e30e",
+                  "access": "observe",
+                  "evidenceRefs": [
+                    "evidence:4739f2e2c0e13ca4f5765930"
+                  ],
+                  "epistemic": {
+                    "state": "known",
+                    "confidence": "high",
+                    "evidenceRefs": [
+                      "evidence:4739f2e2c0e13ca4f5765930"
+                    ]
+                  }
+                },
+                {
+                  "resourceId": "catalog-resource:e2e48b3a0768ff71ee5d8a24",
+                  "access": "modify",
+                  "ownerPhase": "implementation",
+                  "inputArtifactId": "artifact:sentence-length-change",
+                  "outputArtifactId": "artifact:reading-time-change",
+                  "evidenceRefs": [
+                    "evidence:4739f2e2c0e13ca4f5765930"
+                  ],
+                  "epistemic": {
+                    "state": "known",
+                    "confidence": "high",
+                    "evidenceRefs": [
+                      "evidence:4739f2e2c0e13ca4f5765930"
+                    ]
+                  }
+                }
+              ],
+              "consumes": [
+                "artifact:sentence-length-change"
+              ],
+              "produces": [
+                "artifact:reading-time-change"
+              ],
+              "seamRefs": [],
+              "validation": [
+                {
+                  "obligationId": "validation:reading-time",
+                  "criterionId": "criterion:reading-time-refinement",
+                  "proofStrategyId": "proof:validation:reading-time",
+                  "layer": "unit",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "src/reading-time.test.js"
+                    ],
+                    "references": [
+                      "src/reading-time.test.js"
+                    ]
+                  }
+                }
+              ],
+              "uncertainty": [],
+              "granularity": {
+                "disposition": "leaf",
+                "feasibility": {
+                  "coherentResponsibility": true,
+                  "boundedContext": "yes",
+                  "boundedChangeSurface": "yes",
+                  "independentlyValidatable": "yes",
+                  "unresolvedArchitectureDecision": false
+                },
+                "splitReasons": [],
+                "expectedBenefits": [],
+                "expectedCosts": [],
+                "evidenceRefs": [
+                  "evidence:4739f2e2c0e13ca4f5765930"
+                ],
+                "epistemic": {
+                  "state": "known",
+                  "confidence": "high",
+                  "evidenceRefs": [
+                    "evidence:4739f2e2c0e13ca4f5765930"
+                  ]
+                }
+              },
+              "expansion": "leaf"
+            },
+            "unit:cli": {
+              "id": "unit:cli",
+              "parentId": "unit:root",
+              "role": "leaf",
+              "title": "CLI de reporte de legibilidad",
+              "objective": "Componer los cuatro módulos de métricas y formatear el reporte impreso por node src/cli.js, sin calcular ninguna métrica por su cuenta.",
+              "boundary": {
+                "kind": "module",
+                "evidenceRefs": [
+                  "evidence:4960b286fe62d7d0de6e16c8"
+                ]
+              },
+              "outcomes": [
+                {
+                  "id": "outcome:cli",
+                  "statement": "node src/cli.js <archivo> imprime las cuatro métricas formateadas."
+                }
+              ],
+              "criteria": [
+                {
+                  "criterionId": "criterion:cli-refinement",
+                  "statement": "El CLI sólo compone y formatea, delegando todo el cálculo a los módulos de métricas.",
+                  "sourceCriterionId": "criterion:root-cli-no-compute"
+                }
+              ],
+              "repositorySurface": {
+                "resourceRefs": [
+                  "catalog-resource:e2e48b3a0768ff71ee5d8a24"
+                ],
+                "pathHints": [
+                  "src/cli.js",
+                  "src/cli.test.js"
+                ]
+              },
+              "resourceIntents": [
+                {
+                  "resourceId": "catalog-resource:e2e48b3a0768ff71ee5d8a24",
+                  "access": "modify",
+                  "ownerPhase": "implementation",
+                  "inputArtifactId": "artifact:reading-time-change",
+                  "outputArtifactId": "artifact:cli-change",
+                  "evidenceRefs": [
+                    "evidence:4960b286fe62d7d0de6e16c8"
+                  ],
+                  "epistemic": {
+                    "state": "known",
+                    "confidence": "high",
+                    "evidenceRefs": [
+                      "evidence:4960b286fe62d7d0de6e16c8"
+                    ]
+                  }
+                }
+              ],
+              "consumes": [
+                "artifact:reading-time-change"
+              ],
+              "produces": [
+                "artifact:cli-change"
+              ],
+              "seamRefs": [],
+              "validation": [
+                {
+                  "obligationId": "validation:cli",
+                  "criterionId": "criterion:cli-refinement",
+                  "proofStrategyId": "proof:validation:cli",
+                  "layer": "unit",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "src/cli.test.js"
+                    ],
+                    "references": [
+                      "src/cli.test.js"
+                    ]
+                  }
+                }
+              ],
+              "uncertainty": [],
+              "granularity": {
+                "disposition": "leaf",
+                "feasibility": {
+                  "coherentResponsibility": true,
+                  "boundedContext": "yes",
+                  "boundedChangeSurface": "yes",
+                  "independentlyValidatable": "yes",
+                  "unresolvedArchitectureDecision": false
+                },
+                "splitReasons": [],
+                "expectedBenefits": [],
+                "expectedCosts": [],
+                "evidenceRefs": [
+                  "evidence:4960b286fe62d7d0de6e16c8"
+                ],
+                "epistemic": {
+                  "state": "known",
+                  "confidence": "high",
+                  "evidenceRefs": [
+                    "evidence:4960b286fe62d7d0de6e16c8"
+                  ]
+                }
+              },
+              "expansion": "leaf"
+            }
+          },
+          "seams": {},
+          "artifacts": {
+            "artifact:word-total-change": {
+              "id": "artifact:word-total-change",
+              "producerUnitId": "unit:word-total",
+              "consumerUnitIds": [
+                "unit:root",
+                "unit:top-words"
+              ],
+              "artifactType": "source_change",
+              "materialization": "patch",
+              "expectedPaths": [
+                "src/word-total.js",
+                "src/word-total.test.js"
+              ]
+            },
+            "artifact:top-words-change": {
+              "id": "artifact:top-words-change",
+              "producerUnitId": "unit:top-words",
+              "consumerUnitIds": [
+                "unit:root",
+                "unit:sentence-length"
+              ],
+              "artifactType": "source_change",
+              "materialization": "patch",
+              "expectedPaths": [
+                "src/top-words.js",
+                "src/top-words.test.js"
+              ]
+            },
+            "artifact:sentence-length-change": {
+              "id": "artifact:sentence-length-change",
+              "producerUnitId": "unit:sentence-length",
+              "consumerUnitIds": [
+                "unit:reading-time",
+                "unit:root"
+              ],
+              "artifactType": "source_change",
+              "materialization": "patch",
+              "expectedPaths": [
+                "src/sentence-length.js",
+                "src/sentence-length.test.js"
+              ]
+            },
+            "artifact:reading-time-change": {
+              "id": "artifact:reading-time-change",
+              "producerUnitId": "unit:reading-time",
+              "consumerUnitIds": [
+                "unit:cli",
+                "unit:root"
+              ],
+              "artifactType": "source_change",
+              "materialization": "patch",
+              "expectedPaths": [
+                "src/reading-time.js",
+                "src/reading-time.test.js"
+              ]
+            },
+            "artifact:cli-change": {
+              "id": "artifact:cli-change",
+              "producerUnitId": "unit:cli",
+              "consumerUnitIds": [
+                "unit:root"
+              ],
+              "artifactType": "source_change",
+              "materialization": "patch",
+              "expectedPaths": [
+                "src/cli.js",
+                "src/cli.test.js"
+              ]
+            }
+          },
+          "decisions": [],
+          "evidence": [
+            {
+              "id": "evidence:0a50e848f832783c20353cf1",
+              "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+              "kind": "symbol",
+              "locator": "src/stage8-probe.js#stage8Probe",
+              "digest": "sha256:500d298f7783e46e917c62174663e99b8dda0ba377cc9c9b47a563dc493b28a2",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:0db77f7676f15913fe32c509",
+              "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+              "kind": "relationship",
+              "locator": "src/stage8-probe.test.js->node:assert/strict",
+              "digest": "sha256:512324729b0583c94bc143266ef2dee2933c1ba211efac9eaf2b740cf9f32332",
+              "epistemic": {
+                "state": "partial",
+                "confidence": "low",
+                "evidenceRefs": [
+                  "evidence:851e67021098ef89f70cd102"
+                ]
+              }
+            },
+            {
+              "id": "evidence:13e1f48bb845416263b45c4a",
+              "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+              "kind": "symbol",
+              "locator": "src/tokenizer.js#tokenize",
+              "digest": "sha256:2fbcfbbe254086caaf6cbb88a92d1968f0eb262dec983a9e7cf027d5ec6e038b",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:1560cef225e97d1ecb5ccf71",
+              "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+              "kind": "relationship",
+              "locator": "src/word-count.test.js->node:test",
+              "digest": "sha256:398d1455007d49bd2c5f39761c857caa5a2a3a4e08734017ec3c4dce192905c3",
+              "epistemic": {
+                "state": "partial",
+                "confidence": "low",
+                "evidenceRefs": [
+                  "evidence:3f13f49bd1a6836a3f60ba7a"
+                ]
+              }
+            },
+            {
+              "id": "evidence:1654d85bae770152375596b4",
+              "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+              "kind": "file",
+              "locator": "src/word-count.js",
+              "digest": "sha256:d1b005dbc72119830d52dd23a848244793bb3258f0254d8033ed2c68fdfd7516",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:1938151cdbaae57044e3bf14",
+              "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+              "kind": "relationship",
+              "locator": "src/tokenizer.test.js->node:assert/strict",
+              "digest": "sha256:aec21080516affeaee0ee846bb39a0fce7fcf869358402cc59dc34cb1f365751",
+              "epistemic": {
+                "state": "partial",
+                "confidence": "low",
+                "evidenceRefs": [
+                  "evidence:851e67021098ef89f70cd102"
+                ]
+              }
+            },
+            {
+              "id": "evidence:1d8c5c55bd6272719429a933",
+              "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+              "kind": "test",
+              "locator": "src/tokenizer.test.js",
+              "digest": "sha256:1142fdb86a15771f18f914d9110e5389224b3b0268a8b5a578b5b899e30a76a5",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:214910fa16c5030d95de9a8a",
+              "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+              "kind": "file",
+              "locator": "src/tokenizer.js",
+              "digest": "sha256:e0ac4838f19d7f86c7c2bbc82e79594baa6e7f626f54db6055ccccfc055b5727",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:22fa6cadff546cf94d2e21c5",
+              "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+              "kind": "symbol",
+              "locator": "src/stage8-probe.js#export:stage8Probe",
+              "digest": "sha256:1461eb0381974d37397e756d5e2875d513944041a99abedf07f41d66a1e787a2",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:23469dcb0eb83bb13be86195",
+              "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+              "kind": "relationship",
+              "locator": "src/stage8-probe.test.js->node:test",
+              "digest": "sha256:b5ae1a2fd0d0743e05a00d8db44a2b5b9ac22908dcee300bf7d91b962dd169e6",
+              "epistemic": {
+                "state": "partial",
+                "confidence": "low",
+                "evidenceRefs": [
+                  "evidence:3f13f49bd1a6836a3f60ba7a"
+                ]
+              }
+            },
+            {
+              "id": "evidence:440fdc87bbae7dc1e1b9550e",
+              "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+              "kind": "relationship",
+              "locator": "src/word-count.test.js->node:assert/strict",
+              "digest": "sha256:482436c09f46b6f529acf8c2b2b81bca0da38fb0af3e28282bc298ad68f53889",
+              "epistemic": {
+                "state": "partial",
+                "confidence": "low",
+                "evidenceRefs": [
+                  "evidence:851e67021098ef89f70cd102"
+                ]
+              }
+            },
+            {
+              "id": "evidence:4739f2e2c0e13ca4f5765930",
+              "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+              "kind": "file",
+              "locator": "src/tokenizer.test.js",
+              "digest": "sha256:4176852b9da80d92fc9b4349fdb687408e0a202652bfd1714bd2780854cf8f1c",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:4960b286fe62d7d0de6e16c8",
+              "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+              "kind": "command",
+              "locator": "package.json#scripts.test",
+              "digest": "sha256:d84f8cc3847f99868cabbf96e29114a80ccc00f45b1d3e3dfedfb34f4b87a576",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:5cd4bb421b674f11224cbeb0",
+              "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+              "kind": "file",
+              "locator": "package.json",
+              "digest": "sha256:f1db2e4b7736f529adc40ce9227611aef753c1669d2db2451b31e4b43d790e08",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:6fa05cbcef105edfc9554b50",
+              "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+              "kind": "test",
+              "locator": "src/stage8-probe.test.js",
+              "digest": "sha256:81559a95ec4123e6a3cf43c707adf6012689f8e66c88593ca5548a24c18b3192",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:9c4d082fa1d821371200d1d7",
+              "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+              "kind": "relationship",
+              "locator": "src/word-count.test.js->./word-count.js",
+              "digest": "sha256:745166bcaff6cf5ede093fc7c03bd5ed04b604d967678381192b32881e98b943",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:a94c57886ae5499dc39ec59f",
+              "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+              "kind": "file",
+              "locator": "src/stage8-probe.test.js",
+              "digest": "sha256:f977df4b78384ed9a14664db69d10b227aba70bcc02807b10e72b9cd9421b0ff",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:aa5d3330953fa4e9e0a4fb07",
+              "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+              "kind": "test",
+              "locator": "src/word-count.test.js",
+              "digest": "sha256:a0b8c808daaf5909045183954717b732433c41e4473d4b74ea9eb2310e7ad53e",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:c27fa90e9b57773176b87c27",
+              "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+              "kind": "relationship",
+              "locator": "src/tokenizer.test.js->./tokenizer.js",
+              "digest": "sha256:32269aea7582066f3219dd2ec7ed9be797f86941912560f1cd1e717d89cb7294",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:ca4b089e37c76443e9362952",
+              "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+              "kind": "relationship",
+              "locator": "src/word-count.js->./tokenizer.js",
+              "digest": "sha256:4bf249e2def6e8eb2031ab4fd7296da7bfddfa0a8b1e39a91fe327c805e4336c",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:d5b3f80805dffdfd7ba69f32",
+              "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+              "kind": "symbol",
+              "locator": "src/word-count.js#export:countWords",
+              "digest": "sha256:5bf094563bf28365592e605750fb5eb89b13093663d79362c07ebc1acb76c326",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:d5d92a1d195729f7d9b48bc8",
+              "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+              "kind": "relationship",
+              "locator": "src/stage8-probe.test.js->./stage8-probe.js",
+              "digest": "sha256:4f7648f36ed07f598b38de1d6d9b346ab9620e044f2100a5aec6e4b4df1bbe76",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:ea4b8a6e9f840cd3e5fc64d0",
+              "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+              "kind": "symbol",
+              "locator": "src/word-count.js#countWords",
+              "digest": "sha256:b707411568ffe7ffd50855987c03c5382017001f706d286fb5cccc6599a6dc47",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:ec802d5fbf8acb7c35900e4d",
+              "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+              "kind": "relationship",
+              "locator": "src/tokenizer.test.js->node:test",
+              "digest": "sha256:6b20b4851b4071009d715625d4cd3e88405ddd28a818956c601987469f730c40",
+              "epistemic": {
+                "state": "partial",
+                "confidence": "low",
+                "evidenceRefs": [
+                  "evidence:3f13f49bd1a6836a3f60ba7a"
+                ]
+              }
+            },
+            {
+              "id": "evidence:f36a98761c8b0498d2f8f726",
+              "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+              "kind": "symbol",
+              "locator": "src/tokenizer.js#export:tokenize",
+              "digest": "sha256:ed98dccefed1074f6c4abbdb94393c5d39d06ac93512e8d77198f63b919e0909",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:fba2653fa998ff93d195b3be",
+              "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+              "kind": "file",
+              "locator": "src/word-count.test.js",
+              "digest": "sha256:a0be7b32b147213a72e0a246ed3313092ea9e5b2dcf9a83c70e0d6262a820c8c",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:fc60f23623612dbebcc8035f",
+              "snapshotId": "sha256:e2e366c8baaa283770bdfcb35c3fdc7c5fba0af4e4fbf69d6cd4820870bb6310",
+              "kind": "file",
+              "locator": "src/stage8-probe.js",
+              "digest": "sha256:5af6b386cb92a1f15841258a05abda58ce5623b4416c6bb97bf9a7df186e7395",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            }
+          ],
+          "status": "ready",
+          "digest": "sha256:7ed3bf074360e624404547116a7f84c212dcf826c41585824ec5497cdb787f9d"
+        },
+        "trace": {
+          "budget": {
+            "modelCalls": 3,
+            "repositoryQueries": 3,
+            "queryBytes": 65536,
+            "revisions": 3,
+            "repairs": 2,
+            "expansions": 0
+          },
+          "consumed": {
+            "modelCalls": 2,
+            "repositoryQueries": 3,
+            "queryBytes": 8351,
+            "revisions": 2,
+            "repairs": 1,
+            "expansions": 0
+          },
+          "revisions": [
+            {
+              "index": 1,
+              "cause": "initial",
+              "budget": {
+                "modelCalls": 3,
+                "repositoryQueries": 3,
+                "queryBytes": 65536,
+                "revisions": 3,
+                "repairs": 2,
+                "expansions": 0
+              },
+              "consumed": {
+                "modelCalls": 1,
+                "repositoryQueries": 3,
+                "queryBytes": 8351,
+                "revisions": 1,
+                "repairs": 0,
+                "expansions": 0
+              },
+              "queryReceipts": [
+                "sha256:6f28d05c9a74dee6d406a314d9a3f41d108e1226bfb9837803d422e56fded1c1",
+                "sha256:ac7d34064ae4764065ff123b85a4273bd0c9883b309feeefa1b5a5d37a070833",
+                "sha256:fdf1afc1ca98fd3eedafd71fe012f3c9335ba17f8bc5e16933bf9e232c179913"
+              ],
+              "evidenceRefs": [
+                "evidence:0a50e848f832783c20353cf1",
+                "evidence:13e1f48bb845416263b45c4a",
+                "evidence:1654d85bae770152375596b4",
+                "evidence:214910fa16c5030d95de9a8a",
+                "evidence:4739f2e2c0e13ca4f5765930",
+                "evidence:4960b286fe62d7d0de6e16c8",
+                "evidence:5cd4bb421b674f11224cbeb0",
+                "evidence:a94c57886ae5499dc39ec59f",
+                "evidence:ea4b8a6e9f840cd3e5fc64d0",
+                "evidence:fba2653fa998ff93d195b3be",
+                "evidence:fc60f23623612dbebcc8035f"
+              ],
+              "changedDecisionIds": [],
+              "changedFindingCodes": [
+                "schema_invalid"
+              ],
+              "proposalDigest": "sha256:cfd20dca163d39e6bc4e4260824d1d84eeac70ef4d831fe53c1dcacfbde4bc20",
+              "causalStateDigest": "sha256:4b3784d0d357267da3d0140f114a3a7eec797e666c469738ac3a4291308ef8db",
+              "digest": "sha256:c61d4bf38e5b070d4143fe39e1e5f4fde87cc89d51198d62d6ce1d0658f66c2b"
+            },
+            {
+              "index": 2,
+              "parentDigest": "sha256:c61d4bf38e5b070d4143fe39e1e5f4fde87cc89d51198d62d6ce1d0658f66c2b",
+              "cause": "deterministic_repair",
+              "budget": {
+                "modelCalls": 3,
+                "repositoryQueries": 3,
+                "queryBytes": 65536,
+                "revisions": 3,
+                "repairs": 2,
+                "expansions": 0
+              },
+              "consumed": {
+                "modelCalls": 2,
+                "repositoryQueries": 3,
+                "queryBytes": 8351,
+                "revisions": 2,
+                "repairs": 1,
+                "expansions": 0
+              },
+              "queryReceipts": [
+                "sha256:6f28d05c9a74dee6d406a314d9a3f41d108e1226bfb9837803d422e56fded1c1",
+                "sha256:ac7d34064ae4764065ff123b85a4273bd0c9883b309feeefa1b5a5d37a070833",
+                "sha256:fdf1afc1ca98fd3eedafd71fe012f3c9335ba17f8bc5e16933bf9e232c179913"
+              ],
+              "evidenceRefs": [
+                "evidence:0a50e848f832783c20353cf1",
+                "evidence:13e1f48bb845416263b45c4a",
+                "evidence:1654d85bae770152375596b4",
+                "evidence:214910fa16c5030d95de9a8a",
+                "evidence:4739f2e2c0e13ca4f5765930",
+                "evidence:4960b286fe62d7d0de6e16c8",
+                "evidence:5cd4bb421b674f11224cbeb0",
+                "evidence:a94c57886ae5499dc39ec59f",
+                "evidence:ea4b8a6e9f840cd3e5fc64d0",
+                "evidence:fba2653fa998ff93d195b3be",
+                "evidence:fc60f23623612dbebcc8035f"
+              ],
+              "changedDecisionIds": [],
+              "changedFindingCodes": [
+                "repository_model_coverage_incomplete",
+                "resource_catalog_coverage_incomplete"
+              ],
+              "proposalDigest": "sha256:7ed3bf074360e624404547116a7f84c212dcf826c41585824ec5497cdb787f9d",
+              "causalStateDigest": "sha256:5440ef504550aeff88322bc8f6aedc430ad176443c28f58832da6b94bc7dda85",
+              "digest": "sha256:925400bce878f82daa648fa318325972e909848cd536a53b712abf05e086f599"
+            }
+          ],
+          "advisoryFindings": [
+            {
+              "code": "repository_model_coverage_incomplete",
+              "severity": "warning",
+              "authority": "repository",
+              "message": "Repository model coverage is partial.",
+              "evidenceRefs": [
+                "evidence:0a50e848f832783c20353cf1",
+                "evidence:0db77f7676f15913fe32c509",
+                "evidence:13e1f48bb845416263b45c4a",
+                "evidence:1560cef225e97d1ecb5ccf71",
+                "evidence:1654d85bae770152375596b4",
+                "evidence:1938151cdbaae57044e3bf14",
+                "evidence:1d8c5c55bd6272719429a933",
+                "evidence:214910fa16c5030d95de9a8a",
+                "evidence:22fa6cadff546cf94d2e21c5",
+                "evidence:23469dcb0eb83bb13be86195",
+                "evidence:440fdc87bbae7dc1e1b9550e",
+                "evidence:4739f2e2c0e13ca4f5765930",
+                "evidence:4960b286fe62d7d0de6e16c8",
+                "evidence:5cd4bb421b674f11224cbeb0",
+                "evidence:6fa05cbcef105edfc9554b50",
+                "evidence:9c4d082fa1d821371200d1d7",
+                "evidence:a94c57886ae5499dc39ec59f",
+                "evidence:aa5d3330953fa4e9e0a4fb07",
+                "evidence:c27fa90e9b57773176b87c27",
+                "evidence:ca4b089e37c76443e9362952",
+                "evidence:d5b3f80805dffdfd7ba69f32",
+                "evidence:d5d92a1d195729f7d9b48bc8",
+                "evidence:ea4b8a6e9f840cd3e5fc64d0",
+                "evidence:ec802d5fbf8acb7c35900e4d",
+                "evidence:f36a98761c8b0498d2f8f726",
+                "evidence:fba2653fa998ff93d195b3be",
+                "evidence:fc60f23623612dbebcc8035f"
+              ],
+              "resolution": "none"
+            },
+            {
+              "code": "resource_catalog_coverage_incomplete",
+              "severity": "warning",
+              "authority": "repository",
+              "message": "Resource catalog coverage is partial.",
+              "evidenceRefs": [
+                "evidence:0a50e848f832783c20353cf1",
+                "evidence:0db77f7676f15913fe32c509",
+                "evidence:13e1f48bb845416263b45c4a",
+                "evidence:1560cef225e97d1ecb5ccf71",
+                "evidence:1654d85bae770152375596b4",
+                "evidence:1938151cdbaae57044e3bf14",
+                "evidence:1d8c5c55bd6272719429a933",
+                "evidence:214910fa16c5030d95de9a8a",
+                "evidence:22fa6cadff546cf94d2e21c5",
+                "evidence:23469dcb0eb83bb13be86195",
+                "evidence:440fdc87bbae7dc1e1b9550e",
+                "evidence:4739f2e2c0e13ca4f5765930",
+                "evidence:4960b286fe62d7d0de6e16c8",
+                "evidence:5cd4bb421b674f11224cbeb0",
+                "evidence:6fa05cbcef105edfc9554b50",
+                "evidence:9c4d082fa1d821371200d1d7",
+                "evidence:a94c57886ae5499dc39ec59f",
+                "evidence:aa5d3330953fa4e9e0a4fb07",
+                "evidence:c27fa90e9b57773176b87c27",
+                "evidence:ca4b089e37c76443e9362952",
+                "evidence:d5b3f80805dffdfd7ba69f32",
+                "evidence:d5d92a1d195729f7d9b48bc8",
+                "evidence:ea4b8a6e9f840cd3e5fc64d0",
+                "evidence:ec802d5fbf8acb7c35900e4d",
+                "evidence:f36a98761c8b0498d2f8f726",
+                "evidence:fba2653fa998ff93d195b3be",
+                "evidence:fc60f23623612dbebcc8035f"
+              ],
+              "resolution": "none"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "graph:graph-plan:goal:run:7fb26b869ccb95c5a715197d1927384b3a-f024965559:r1:compiled",
+      "occurredAt": "2026-08-16T07:49:37.759Z",
+      "type": "graph.compiled",
+      "payload": {
+        "graphId": "graph-plan:goal:run:7fb26b869ccb95c5a715197d1927384b3a-f024965559",
+        "revision": 1,
+        "graph": {
+          "graphId": "graph-plan:goal:run:7fb26b869ccb95c5a715197d1927384b3a-f024965559",
+          "revision": 1,
+          "semanticPlan": {
+            "id": "plan:goal:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5",
+            "revision": 1,
+            "digest": "sha256:7ed3bf074360e624404547116a7f84c212dcf826c41585824ec5497cdb787f9d"
+          },
+          "repositoryView": {
+            "digest": "sha256:ea3a7da0fcfb7619727fb669dbdc6a810141097b627b1beafaa6b18013e3baf9",
+            "treeSha": "5d33daec17568a5ba47c8f5fa4130902cb418b43",
+            "resourceCatalogDigest": "sha256:c6e9550a987bcf361ee5acd0849d7b377f17c5ad85d8e42db7635546f44eee61"
+          },
+          "rootId": "unit:root",
+          "nodes": {
+            "unit:root": {
+              "id": "unit:root",
+              "parentId": null,
+              "kind": "root",
+              "title": "Reporte de legibilidad CLI",
+              "goal": "Integrar cuatro módulos de métricas de legibilidad detrás de un único comando CLI que sólo compone y formatea.",
+              "contractRef": {
+                "id": "task:unit:root",
+                "revision": 1,
+                "digest": "sha256:8a2d07a59dbfdb06634b2944a77ee4a0bf95973da75d975e07a438ec7b8793da"
+              }
+            },
+            "unit:word-total": {
+              "id": "unit:word-total",
+              "parentId": "unit:root",
+              "kind": "leaf",
+              "title": "Módulo de total de palabras",
+              "goal": "Calcular el total de palabras de un texto reutilizando el tokenizer existente.",
+              "contractRef": {
+                "id": "task:unit:word-total",
+                "revision": 1,
+                "digest": "sha256:2b959fa248784c42b289c38b4d4da2666834cf03a115a1c51e87cfcd232c8459"
+              }
+            },
+            "unit:top-words": {
+              "id": "unit:top-words",
+              "parentId": "unit:root",
+              "kind": "leaf",
+              "title": "Módulo de palabras más frecuentes",
+              "goal": "Calcular las cinco palabras más frecuentes con su cuenta reutilizando el tokenizer existente.",
+              "contractRef": {
+                "id": "task:unit:top-words",
+                "revision": 1,
+                "digest": "sha256:5498380d7c9f70d863a9c1bcd36ffda1622a37ce19dff65bc4ed7b913436216b"
+              }
+            },
+            "unit:sentence-length": {
+              "id": "unit:sentence-length",
+              "parentId": "unit:root",
+              "kind": "leaf",
+              "title": "Módulo de longitud media de oración",
+              "goal": "Calcular la longitud media de oración en palabras reutilizando el tokenizer existente.",
+              "contractRef": {
+                "id": "task:unit:sentence-length",
+                "revision": 1,
+                "digest": "sha256:a6b9de6c9b286ead201f9ab886cecc13ccf88ba6a773a786537d729e81d8c9e1"
+              }
+            },
+            "unit:reading-time": {
+              "id": "unit:reading-time",
+              "parentId": "unit:root",
+              "kind": "leaf",
+              "title": "Módulo de tiempo estimado de lectura",
+              "goal": "Calcular el tiempo estimado de lectura en minutos a 200 palabras por minuto reutilizando el tokenizer existente.",
+              "contractRef": {
+                "id": "task:unit:reading-time",
+                "revision": 1,
+                "digest": "sha256:5cdfdd75bd333ce71af8f7a05f88dead69eabd2271fca6cbd02cc2045ba057fc"
+              }
+            },
+            "unit:cli": {
+              "id": "unit:cli",
+              "parentId": "unit:root",
+              "kind": "leaf",
+              "title": "CLI de reporte de legibilidad",
+              "goal": "Componer los cuatro módulos de métricas y formatear el reporte impreso por node src/cli.js, sin calcular ninguna métrica por su cuenta.",
+              "contractRef": {
+                "id": "task:unit:cli",
+                "revision": 1,
+                "digest": "sha256:4c1a4e3108b58f5a30be4dd5562d57c9abd12e245a779ba59f6e3c1383db7d33"
+              }
+            }
+          },
+          "artifactRequirements": [
+            {
+              "id": "artifact-requirement-artifact:cli-change:unit:root-d06d2ab149",
+              "producerNodeId": "unit:cli",
+              "consumerNodeId": "unit:root",
+              "artifactContract": {
+                "id": "artifact:cli-change",
+                "revision": 1,
+                "digest": "sha256:1ae391be339ff606b49205bef571617fb6543b089c52b3c975e8b52a344db82a"
+              },
+              "consumerInputName": "artifact:cli-change",
+              "acceptedManifestKinds": [
+                "candidate_tree",
+                "change_set"
+              ]
+            },
+            {
+              "id": "artifact-requirement-artifact:reading-time-change:unit:cli-e9d7e1ec8a",
+              "producerNodeId": "unit:reading-time",
+              "consumerNodeId": "unit:cli",
+              "artifactContract": {
+                "id": "artifact:reading-time-change",
+                "revision": 1,
+                "digest": "sha256:4a399377ba1348d0117bf96abad889779029046e58ee63a26425326a2a60d07f"
+              },
+              "consumerInputName": "artifact:reading-time-change",
+              "acceptedManifestKinds": [
+                "candidate_tree",
+                "change_set"
+              ]
+            },
+            {
+              "id": "artifact-requirement-artifact:reading-time-change:unit:root-7b0dc94955",
+              "producerNodeId": "unit:reading-time",
+              "consumerNodeId": "unit:root",
+              "artifactContract": {
+                "id": "artifact:reading-time-change",
+                "revision": 1,
+                "digest": "sha256:4a399377ba1348d0117bf96abad889779029046e58ee63a26425326a2a60d07f"
+              },
+              "consumerInputName": "artifact:reading-time-change",
+              "acceptedManifestKinds": [
+                "candidate_tree",
+                "change_set"
+              ]
+            },
+            {
+              "id": "artifact-requirement-artifact:sentence-length-change:unit:reading-tim-ccdcd58c9a",
+              "producerNodeId": "unit:sentence-length",
+              "consumerNodeId": "unit:reading-time",
+              "artifactContract": {
+                "id": "artifact:sentence-length-change",
+                "revision": 1,
+                "digest": "sha256:d3bdb90da760e65bc3250c370db5fc003a4597fecf1416086da6b7dc0bff0788"
+              },
+              "consumerInputName": "artifact:sentence-length-change",
+              "acceptedManifestKinds": [
+                "candidate_tree",
+                "change_set"
+              ]
+            },
+            {
+              "id": "artifact-requirement-artifact:sentence-length-change:unit:root-1a9cdd3a10",
+              "producerNodeId": "unit:sentence-length",
+              "consumerNodeId": "unit:root",
+              "artifactContract": {
+                "id": "artifact:sentence-length-change",
+                "revision": 1,
+                "digest": "sha256:d3bdb90da760e65bc3250c370db5fc003a4597fecf1416086da6b7dc0bff0788"
+              },
+              "consumerInputName": "artifact:sentence-length-change",
+              "acceptedManifestKinds": [
+                "candidate_tree",
+                "change_set"
+              ]
+            },
+            {
+              "id": "artifact-requirement-artifact:top-words-change:unit:root-8a6fc5830c",
+              "producerNodeId": "unit:top-words",
+              "consumerNodeId": "unit:root",
+              "artifactContract": {
+                "id": "artifact:top-words-change",
+                "revision": 1,
+                "digest": "sha256:d017e59626199bbdb3b5a8bd3f9bacf01a02228418fc5b2045c458a9eabb8500"
+              },
+              "consumerInputName": "artifact:top-words-change",
+              "acceptedManifestKinds": [
+                "candidate_tree",
+                "change_set"
+              ]
+            },
+            {
+              "id": "artifact-requirement-artifact:top-words-change:unit:sentence-length-ab45146a9d",
+              "producerNodeId": "unit:top-words",
+              "consumerNodeId": "unit:sentence-length",
+              "artifactContract": {
+                "id": "artifact:top-words-change",
+                "revision": 1,
+                "digest": "sha256:d017e59626199bbdb3b5a8bd3f9bacf01a02228418fc5b2045c458a9eabb8500"
+              },
+              "consumerInputName": "artifact:top-words-change",
+              "acceptedManifestKinds": [
+                "candidate_tree",
+                "change_set"
+              ]
+            },
+            {
+              "id": "artifact-requirement-artifact:word-total-change:unit:root-2374d951e9",
+              "producerNodeId": "unit:word-total",
+              "consumerNodeId": "unit:root",
+              "artifactContract": {
+                "id": "artifact:word-total-change",
+                "revision": 1,
+                "digest": "sha256:22724b4de2422e082233f6dd92d7de20bc8cd6953b56dd036ede81f87fb745ed"
+              },
+              "consumerInputName": "artifact:word-total-change",
+              "acceptedManifestKinds": [
+                "candidate_tree",
+                "change_set"
+              ]
+            },
+            {
+              "id": "artifact-requirement-artifact:word-total-change:unit:top-words-85509b1e95",
+              "producerNodeId": "unit:word-total",
+              "consumerNodeId": "unit:top-words",
+              "artifactContract": {
+                "id": "artifact:word-total-change",
+                "revision": 1,
+                "digest": "sha256:22724b4de2422e082233f6dd92d7de20bc8cd6953b56dd036ede81f87fb745ed"
+              },
+              "consumerInputName": "artifact:word-total-change",
+              "acceptedManifestKinds": [
+                "candidate_tree",
+                "change_set"
+              ]
+            }
+          ],
+          "seamBindings": [],
+          "resourceClaims": [
+            {
+              "id": "resource-claim-unit:cli:catalog-resource:e2e48b3a0768ff71ee5d8a-1842ec381a",
+              "nodeId": "unit:cli",
+              "resourceId": "catalog-resource:e2e48b3a0768ff71ee5d8a24",
+              "source": "planner",
+              "evidenceRefs": [
+                "evidence:4960b286fe62d7d0de6e16c8"
+              ],
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "evidence:4960b286fe62d7d0de6e16c8"
+                ]
+              },
+              "access": "modify",
+              "ownerPhase": "implementation",
+              "inputVersion": {
+                "kind": "artifact_contract",
+                "ref": {
+                  "id": "artifact:reading-time-change",
+                  "revision": 1,
+                  "digest": "sha256:4a399377ba1348d0117bf96abad889779029046e58ee63a26425326a2a60d07f"
+                }
+              },
+              "outputArtifact": {
+                "id": "artifact:cli-change",
+                "revision": 1,
+                "digest": "sha256:1ae391be339ff606b49205bef571617fb6543b089c52b3c975e8b52a344db82a"
+              }
+            },
+            {
+              "id": "resource-claim-unit:reading-time:catalog-resource:193b0e8667bd8-c805db499a",
+              "nodeId": "unit:reading-time",
+              "resourceId": "catalog-resource:193b0e8667bd836bf508e30e",
+              "source": "planner",
+              "evidenceRefs": [
+                "evidence:4739f2e2c0e13ca4f5765930"
+              ],
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "evidence:4739f2e2c0e13ca4f5765930"
+                ]
+              },
+              "access": "observe",
+              "inputVersion": {
+                "kind": "repository_view",
+                "digest": "sha256:ea3a7da0fcfb7619727fb669dbdc6a810141097b627b1beafaa6b18013e3baf9"
+              }
+            },
+            {
+              "id": "resource-claim-unit:reading-time:catalog-resource:e2e48b3a0768f-0574edee8f",
+              "nodeId": "unit:reading-time",
+              "resourceId": "catalog-resource:e2e48b3a0768ff71ee5d8a24",
+              "source": "planner",
+              "evidenceRefs": [
+                "evidence:4739f2e2c0e13ca4f5765930"
+              ],
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "evidence:4739f2e2c0e13ca4f5765930"
+                ]
+              },
+              "access": "modify",
+              "ownerPhase": "implementation",
+              "inputVersion": {
+                "kind": "artifact_contract",
+                "ref": {
+                  "id": "artifact:sentence-length-change",
+                  "revision": 1,
+                  "digest": "sha256:d3bdb90da760e65bc3250c370db5fc003a4597fecf1416086da6b7dc0bff0788"
+                }
+              },
+              "outputArtifact": {
+                "id": "artifact:reading-time-change",
+                "revision": 1,
+                "digest": "sha256:4a399377ba1348d0117bf96abad889779029046e58ee63a26425326a2a60d07f"
+              }
+            },
+            {
+              "id": "resource-claim-unit:sentence-length:catalog-resource:193b0e8667-515bcd4bd8",
+              "nodeId": "unit:sentence-length",
+              "resourceId": "catalog-resource:193b0e8667bd836bf508e30e",
+              "source": "planner",
+              "evidenceRefs": [
+                "evidence:214910fa16c5030d95de9a8a"
+              ],
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "evidence:214910fa16c5030d95de9a8a"
+                ]
+              },
+              "access": "observe",
+              "inputVersion": {
+                "kind": "repository_view",
+                "digest": "sha256:ea3a7da0fcfb7619727fb669dbdc6a810141097b627b1beafaa6b18013e3baf9"
+              }
+            },
+            {
+              "id": "resource-claim-unit:sentence-length:catalog-resource:e2e48b3a07-16ce2c701e",
+              "nodeId": "unit:sentence-length",
+              "resourceId": "catalog-resource:e2e48b3a0768ff71ee5d8a24",
+              "source": "planner",
+              "evidenceRefs": [
+                "evidence:214910fa16c5030d95de9a8a"
+              ],
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "evidence:214910fa16c5030d95de9a8a"
+                ]
+              },
+              "access": "modify",
+              "ownerPhase": "implementation",
+              "inputVersion": {
+                "kind": "artifact_contract",
+                "ref": {
+                  "id": "artifact:top-words-change",
+                  "revision": 1,
+                  "digest": "sha256:d017e59626199bbdb3b5a8bd3f9bacf01a02228418fc5b2045c458a9eabb8500"
+                }
+              },
+              "outputArtifact": {
+                "id": "artifact:sentence-length-change",
+                "revision": 1,
+                "digest": "sha256:d3bdb90da760e65bc3250c370db5fc003a4597fecf1416086da6b7dc0bff0788"
+              }
+            },
+            {
+              "id": "resource-claim-unit:top-words:catalog-resource:193b0e8667bd836b-4426e4ff23",
+              "nodeId": "unit:top-words",
+              "resourceId": "catalog-resource:193b0e8667bd836bf508e30e",
+              "source": "planner",
+              "evidenceRefs": [
+                "evidence:1654d85bae770152375596b4"
+              ],
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "evidence:1654d85bae770152375596b4"
+                ]
+              },
+              "access": "observe",
+              "inputVersion": {
+                "kind": "repository_view",
+                "digest": "sha256:ea3a7da0fcfb7619727fb669dbdc6a810141097b627b1beafaa6b18013e3baf9"
+              }
+            },
+            {
+              "id": "resource-claim-unit:top-words:catalog-resource:e2e48b3a0768ff71-dbc437ff59",
+              "nodeId": "unit:top-words",
+              "resourceId": "catalog-resource:e2e48b3a0768ff71ee5d8a24",
+              "source": "planner",
+              "evidenceRefs": [
+                "evidence:1654d85bae770152375596b4"
+              ],
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "evidence:1654d85bae770152375596b4"
+                ]
+              },
+              "access": "modify",
+              "ownerPhase": "implementation",
+              "inputVersion": {
+                "kind": "artifact_contract",
+                "ref": {
+                  "id": "artifact:word-total-change",
+                  "revision": 1,
+                  "digest": "sha256:22724b4de2422e082233f6dd92d7de20bc8cd6953b56dd036ede81f87fb745ed"
+                }
+              },
+              "outputArtifact": {
+                "id": "artifact:top-words-change",
+                "revision": 1,
+                "digest": "sha256:d017e59626199bbdb3b5a8bd3f9bacf01a02228418fc5b2045c458a9eabb8500"
+              }
+            },
+            {
+              "id": "resource-claim-unit:word-total:catalog-resource:193b0e8667bd836-ccefd138af",
+              "nodeId": "unit:word-total",
+              "resourceId": "catalog-resource:193b0e8667bd836bf508e30e",
+              "source": "planner",
+              "evidenceRefs": [
+                "evidence:13e1f48bb845416263b45c4a"
+              ],
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "evidence:13e1f48bb845416263b45c4a"
+                ]
+              },
+              "access": "observe",
+              "inputVersion": {
+                "kind": "repository_view",
+                "digest": "sha256:ea3a7da0fcfb7619727fb669dbdc6a810141097b627b1beafaa6b18013e3baf9"
+              }
+            },
+            {
+              "id": "resource-claim-unit:word-total:catalog-resource:e2e48b3a0768ff7-29f19c5903",
+              "nodeId": "unit:word-total",
+              "resourceId": "catalog-resource:e2e48b3a0768ff71ee5d8a24",
+              "source": "planner",
+              "evidenceRefs": [
+                "evidence:13e1f48bb845416263b45c4a"
+              ],
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "evidence:13e1f48bb845416263b45c4a"
+                ]
+              },
+              "access": "modify",
+              "ownerPhase": "implementation",
+              "inputVersion": {
+                "kind": "repository_view",
+                "digest": "sha256:ea3a7da0fcfb7619727fb669dbdc6a810141097b627b1beafaa6b18013e3baf9"
+              },
+              "outputArtifact": {
+                "id": "artifact:word-total-change",
+                "revision": 1,
+                "digest": "sha256:22724b4de2422e082233f6dd92d7de20bc8cd6953b56dd036ede81f87fb745ed"
+              }
+            }
+          ],
+          "runtimeLeaseClaims": [],
+          "contractRefs": [
+            {
+              "id": "artifact:cli-change",
+              "revision": 1,
+              "digest": "sha256:1ae391be339ff606b49205bef571617fb6543b089c52b3c975e8b52a344db82a"
+            },
+            {
+              "id": "artifact:reading-time-change",
+              "revision": 1,
+              "digest": "sha256:4a399377ba1348d0117bf96abad889779029046e58ee63a26425326a2a60d07f"
+            },
+            {
+              "id": "artifact:sentence-length-change",
+              "revision": 1,
+              "digest": "sha256:d3bdb90da760e65bc3250c370db5fc003a4597fecf1416086da6b7dc0bff0788"
+            },
+            {
+              "id": "artifact:top-words-change",
+              "revision": 1,
+              "digest": "sha256:d017e59626199bbdb3b5a8bd3f9bacf01a02228418fc5b2045c458a9eabb8500"
+            },
+            {
+              "id": "artifact:word-total-change",
+              "revision": 1,
+              "digest": "sha256:22724b4de2422e082233f6dd92d7de20bc8cd6953b56dd036ede81f87fb745ed"
+            },
+            {
+              "id": "integration:unit:root",
+              "revision": 1,
+              "digest": "sha256:1a44de583afd46204d811dd1624f5fbd54038de7a6a50bfc797634e39b92c9c0"
+            },
+            {
+              "id": "proof:validation:cli",
+              "revision": 1,
+              "digest": "sha256:1bdadcba46af796535a309464969a7825bfa5719e2e711f52d7fc6e8aa5f3602"
+            },
+            {
+              "id": "proof:validation:integration",
+              "revision": 1,
+              "digest": "sha256:5f6bb56050956b543380988d1ddea87b6812c6d1a7049288e0c84096a6c7090f"
+            },
+            {
+              "id": "proof:validation:reading-time",
+              "revision": 1,
+              "digest": "sha256:9e0e7acfeb6c4c06b046abb80eb891464c52eb708836372ba959f84b90d9297e"
+            },
+            {
+              "id": "proof:validation:sentence-length",
+              "revision": 1,
+              "digest": "sha256:ced88db56c9565228157db7e13caa8047a58183cda620326071c05e97ba265c2"
+            },
+            {
+              "id": "proof:validation:top-words",
+              "revision": 1,
+              "digest": "sha256:7c86b323e0936810b4ead82ba53a594fdfad3c5e3a0f31dbd0fde62ccf438543"
+            },
+            {
+              "id": "proof:validation:word-total",
+              "revision": 1,
+              "digest": "sha256:2efd57437edc870be9a700d40a8201ba125d5405da103854aafe45413b497836"
+            },
+            {
+              "id": "scope:unit:cli",
+              "revision": 1,
+              "digest": "sha256:8beba035590b0f4182d49d082a1d110ba1b9071a9e1dfae3f510a6c7320dc974"
+            },
+            {
+              "id": "scope:unit:reading-time",
+              "revision": 1,
+              "digest": "sha256:4da3c943cc76a2d12b3d6135499680b888a7846996ac9192bf6441835f57cbbf"
+            },
+            {
+              "id": "scope:unit:root",
+              "revision": 1,
+              "digest": "sha256:750c36dc94eac759c0c473bf8d25abc24087e20c68c3ab10e55919041d71f9bb"
+            },
+            {
+              "id": "scope:unit:sentence-length",
+              "revision": 1,
+              "digest": "sha256:2fe645df4a74bcd1bc9888561007755fe12ee1e7b12c1504d593753cd329fadd"
+            },
+            {
+              "id": "scope:unit:top-words",
+              "revision": 1,
+              "digest": "sha256:17e3d96f3c43934162141f16f8e67e570fb622e2315b2ce697d183ac87a3d75d"
+            },
+            {
+              "id": "scope:unit:word-total",
+              "revision": 1,
+              "digest": "sha256:4fe038711e1de55e57317d4567dd10b3bed8df68f7567ba1a67858ea89f063b2"
+            },
+            {
+              "id": "task:unit:cli",
+              "revision": 1,
+              "digest": "sha256:4c1a4e3108b58f5a30be4dd5562d57c9abd12e245a779ba59f6e3c1383db7d33"
+            },
+            {
+              "id": "task:unit:reading-time",
+              "revision": 1,
+              "digest": "sha256:5cdfdd75bd333ce71af8f7a05f88dead69eabd2271fca6cbd02cc2045ba057fc"
+            },
+            {
+              "id": "task:unit:root",
+              "revision": 1,
+              "digest": "sha256:8a2d07a59dbfdb06634b2944a77ee4a0bf95973da75d975e07a438ec7b8793da"
+            },
+            {
+              "id": "task:unit:sentence-length",
+              "revision": 1,
+              "digest": "sha256:a6b9de6c9b286ead201f9ab886cecc13ccf88ba6a773a786537d729e81d8c9e1"
+            },
+            {
+              "id": "task:unit:top-words",
+              "revision": 1,
+              "digest": "sha256:5498380d7c9f70d863a9c1bcd36ffda1622a37ce19dff65bc4ed7b913436216b"
+            },
+            {
+              "id": "task:unit:word-total",
+              "revision": 1,
+              "digest": "sha256:2b959fa248784c42b289c38b4d4da2666834cf03a115a1c51e87cfcd232c8459"
+            },
+            {
+              "id": "validation-contract:unit:cli",
+              "revision": 1,
+              "digest": "sha256:4b49f288d917f430276dbe5e1b9ed4702e45f9038e65bc4b9df5561130d49eea"
+            },
+            {
+              "id": "validation-contract:unit:reading-time",
+              "revision": 1,
+              "digest": "sha256:2118ceda1da7116b68822f5ef32c21aafc20a874d257e42496b280cad4e28198"
+            },
+            {
+              "id": "validation-contract:unit:root",
+              "revision": 1,
+              "digest": "sha256:149a0a3468698a32ac1a700acf3f68e748119f65ea8ab87fd15e5b8ab402d2d4"
+            },
+            {
+              "id": "validation-contract:unit:sentence-length",
+              "revision": 1,
+              "digest": "sha256:ec666facd7eed5bba632030e57d03be55cd33dcc6e244c73c56387a0689a0657"
+            },
+            {
+              "id": "validation-contract:unit:top-words",
+              "revision": 1,
+              "digest": "sha256:89456b764b2b77117ff36c5827345b3714c199d64f00fe2cd4436cf1c01d4f12"
+            },
+            {
+              "id": "validation-contract:unit:word-total",
+              "revision": 1,
+              "digest": "sha256:fdc3a40e296e9378599618215bd7ab43754297a892feaffeecea2e31251a2bc4"
+            },
+            {
+              "id": "validation:cli",
+              "revision": 1,
+              "digest": "sha256:58c7d8ff65cccfd3cefef65e856b02d845403fc68c2972db9fada72e7e7c29cc"
+            },
+            {
+              "id": "validation:integration",
+              "revision": 1,
+              "digest": "sha256:83f5db1a1e10f4b8d024b50cf03b4556fc18667ae36fa8217a52c30b17d4c119"
+            },
+            {
+              "id": "validation:reading-time",
+              "revision": 1,
+              "digest": "sha256:4987ca9ceadb573312307da3d485e2170c9f081764f9e8b964c0acf00cab5a9b"
+            },
+            {
+              "id": "validation:sentence-length",
+              "revision": 1,
+              "digest": "sha256:3563a910abc495db6d4ccf2af5003cc5668f909f3c46105b04652373b8780476"
+            },
+            {
+              "id": "validation:top-words",
+              "revision": 1,
+              "digest": "sha256:fb5b710cd7e9d073468f99260375d4b62a1ea78753dd36065539465c8be7e199"
+            },
+            {
+              "id": "validation:word-total",
+              "revision": 1,
+              "digest": "sha256:602acd1a440689f4f625e769eb5256f64f44b460bc023f5a40b7021adb626648"
+            }
+          ],
+          "digest": "sha256:5df1112737223010cd96705c467545b3ec50c90585c75a681a540d29f988c223"
+        },
+        "contracts": [
+          {
+            "schemaVersion": 2,
+            "task": {
+              "schemaVersion": 2,
+              "id": "task:unit:cli",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:cli",
+              "goal": "Componer los cuatro módulos de métricas y formatear el reporte impreso por node src/cli.js, sin calcular ninguna métrica por su cuenta.",
+              "acceptanceCriteria": [
+                {
+                  "id": "criterion:cli-refinement",
+                  "kind": "unit",
+                  "description": "El CLI sólo compone y formatea, delegando todo el cálculo a los módulos de métricas.",
+                  "required": true
+                }
+              ],
+              "scope": {
+                "id": "scope:unit:cli",
+                "revision": "1"
+              },
+              "consumes": [
+                {
+                  "id": "artifact:reading-time-change",
+                  "revision": "1"
+                }
+              ],
+              "produces": [
+                {
+                  "id": "artifact:cli-change",
+                  "revision": "1"
+                }
+              ],
+              "seams": [],
+              "validation": {
+                "id": "validation-contract:unit:cli",
+                "revision": "1"
+              },
+              "constraints": []
+            },
+            "scope": {
+              "schemaVersion": 2,
+              "id": "scope:unit:cli",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:cli",
+              "allowedPaths": [
+                "src/cli.js",
+                "src/cli.test.js"
+              ],
+              "forbiddenPaths": [],
+              "coordinationPaths": [],
+              "outputRoots": []
+            },
+            "seams": [],
+            "artifacts": [
+              {
+                "schemaVersion": 2,
+                "id": "artifact:cli-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:cli",
+                "consumerNodeIds": [
+                  "unit:root"
+                ],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  "src/cli.js",
+                  "src/cli.test.js"
+                ]
+              },
+              {
+                "schemaVersion": 2,
+                "id": "artifact:reading-time-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:reading-time",
+                "consumerNodeIds": [
+                  "unit:cli",
+                  "unit:root"
+                ],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  "src/reading-time.js",
+                  "src/reading-time.test.js"
+                ]
+              }
+            ],
+            "validation": {
+              "schemaVersion": 2,
+              "id": "validation-contract:unit:cli",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:cli",
+              "obligations": [
+                {
+                  "id": "validation:cli",
+                  "criterionId": "criterion:cli-refinement",
+                  "layer": "unit",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "src/cli.test.js"
+                    ],
+                    "references": [
+                      "src/cli.test.js"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "schemaVersion": 2,
+            "task": {
+              "schemaVersion": 2,
+              "id": "task:unit:reading-time",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:reading-time",
+              "goal": "Calcular el tiempo estimado de lectura en minutos a 200 palabras por minuto reutilizando el tokenizer existente.",
+              "acceptanceCriteria": [
+                {
+                  "id": "criterion:reading-time-refinement",
+                  "kind": "unit",
+                  "description": "El módulo de tiempo de lectura reutiliza el tokenizer existente en lugar de reimplementar la tokenización.",
+                  "required": true
+                }
+              ],
+              "scope": {
+                "id": "scope:unit:reading-time",
+                "revision": "1"
+              },
+              "consumes": [
+                {
+                  "id": "artifact:sentence-length-change",
+                  "revision": "1"
+                }
+              ],
+              "produces": [
+                {
+                  "id": "artifact:reading-time-change",
+                  "revision": "1"
+                }
+              ],
+              "seams": [],
+              "validation": {
+                "id": "validation-contract:unit:reading-time",
+                "revision": "1"
+              },
+              "constraints": []
+            },
+            "scope": {
+              "schemaVersion": 2,
+              "id": "scope:unit:reading-time",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:reading-time",
+              "allowedPaths": [
+                "src/reading-time.js",
+                "src/reading-time.test.js",
+                "src/tokenizer.js"
+              ],
+              "forbiddenPaths": [],
+              "coordinationPaths": [],
+              "outputRoots": []
+            },
+            "seams": [],
+            "artifacts": [
+              {
+                "schemaVersion": 2,
+                "id": "artifact:reading-time-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:reading-time",
+                "consumerNodeIds": [
+                  "unit:cli",
+                  "unit:root"
+                ],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  "src/reading-time.js",
+                  "src/reading-time.test.js"
+                ]
+              },
+              {
+                "schemaVersion": 2,
+                "id": "artifact:sentence-length-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:sentence-length",
+                "consumerNodeIds": [
+                  "unit:reading-time",
+                  "unit:root"
+                ],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  "src/sentence-length.js",
+                  "src/sentence-length.test.js"
+                ]
+              }
+            ],
+            "validation": {
+              "schemaVersion": 2,
+              "id": "validation-contract:unit:reading-time",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:reading-time",
+              "obligations": [
+                {
+                  "id": "validation:reading-time",
+                  "criterionId": "criterion:reading-time-refinement",
+                  "layer": "unit",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "src/reading-time.test.js"
+                    ],
+                    "references": [
+                      "src/reading-time.test.js"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "schemaVersion": 2,
+            "task": {
+              "schemaVersion": 2,
+              "id": "task:unit:root",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:root",
+              "goal": "Integrar cuatro módulos de métricas de legibilidad detrás de un único comando CLI que sólo compone y formatea.",
+              "acceptanceCriteria": [
+                {
+                  "id": "criterion:root-cli-output",
+                  "kind": "integration",
+                  "description": "node src/cli.js sobre un archivo de texto imprime las cuatro métricas sin fallar.",
+                  "required": true
+                },
+                {
+                  "id": "criterion:root-module-tests",
+                  "kind": "integration",
+                  "description": "Cada métrica nueva vive en su propio módulo con tests propios que pasan con npm run test.",
+                  "required": false
+                },
+                {
+                  "id": "criterion:root-tokenizer-reuse",
+                  "kind": "integration",
+                  "description": "Ningún módulo nuevo reimplementa la tokenización; todos usan el tokenizer existente.",
+                  "required": false
+                },
+                {
+                  "id": "criterion:root-cli-no-compute",
+                  "kind": "integration",
+                  "description": "El CLI no calcula métricas, sólo llama a los módulos y da formato a la salida.",
+                  "required": false
+                }
+              ],
+              "scope": {
+                "id": "scope:unit:root",
+                "revision": "1"
+              },
+              "consumes": [
+                {
+                  "id": "artifact:cli-change",
+                  "revision": "1"
+                },
+                {
+                  "id": "artifact:reading-time-change",
+                  "revision": "1"
+                },
+                {
+                  "id": "artifact:sentence-length-change",
+                  "revision": "1"
+                },
+                {
+                  "id": "artifact:top-words-change",
+                  "revision": "1"
+                },
+                {
+                  "id": "artifact:word-total-change",
+                  "revision": "1"
+                }
+              ],
+              "produces": [],
+              "seams": [],
+              "validation": {
+                "id": "validation-contract:unit:root",
+                "revision": "1"
+              },
+              "constraints": []
+            },
+            "scope": {
+              "schemaVersion": 2,
+              "id": "scope:unit:root",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:root",
+              "allowedPaths": [
+                "src/cli.js",
+                "src/cli.test.js",
+                "src/reading-time.js",
+                "src/reading-time.test.js",
+                "src/sentence-length.js",
+                "src/sentence-length.test.js",
+                "src/top-words.js",
+                "src/top-words.test.js",
+                "src/word-total.js",
+                "src/word-total.test.js"
+              ],
+              "forbiddenPaths": [],
+              "coordinationPaths": [],
+              "outputRoots": []
+            },
+            "seams": [],
+            "artifacts": [
+              {
+                "schemaVersion": 2,
+                "id": "artifact:cli-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:cli",
+                "consumerNodeIds": [
+                  "unit:root"
+                ],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  "src/cli.js",
+                  "src/cli.test.js"
+                ]
+              },
+              {
+                "schemaVersion": 2,
+                "id": "artifact:reading-time-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:reading-time",
+                "consumerNodeIds": [
+                  "unit:cli",
+                  "unit:root"
+                ],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  "src/reading-time.js",
+                  "src/reading-time.test.js"
+                ]
+              },
+              {
+                "schemaVersion": 2,
+                "id": "artifact:sentence-length-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:sentence-length",
+                "consumerNodeIds": [
+                  "unit:reading-time",
+                  "unit:root"
+                ],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  "src/sentence-length.js",
+                  "src/sentence-length.test.js"
+                ]
+              },
+              {
+                "schemaVersion": 2,
+                "id": "artifact:top-words-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:top-words",
+                "consumerNodeIds": [
+                  "unit:root",
+                  "unit:sentence-length"
+                ],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  "src/top-words.js",
+                  "src/top-words.test.js"
+                ]
+              },
+              {
+                "schemaVersion": 2,
+                "id": "artifact:word-total-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:word-total",
+                "consumerNodeIds": [
+                  "unit:root",
+                  "unit:top-words"
+                ],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  "src/word-total.js",
+                  "src/word-total.test.js"
+                ]
+              }
+            ],
+            "validation": {
+              "schemaVersion": 2,
+              "id": "validation-contract:unit:root",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:root",
+              "obligations": [
+                {
+                  "id": "validation:integration",
+                  "criterionId": "criterion:root-cli-output",
+                  "layer": "integration",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "src/word-total.test.js",
+                      "src/top-words.test.js",
+                      "src/sentence-length.test.js",
+                      "src/reading-time.test.js",
+                      "src/cli.test.js"
+                    ],
+                    "references": [
+                      "src/word-total.test.js",
+                      "src/top-words.test.js",
+                      "src/sentence-length.test.js",
+                      "src/reading-time.test.js",
+                      "src/cli.test.js"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "schemaVersion": 2,
+            "task": {
+              "schemaVersion": 2,
+              "id": "task:unit:sentence-length",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:sentence-length",
+              "goal": "Calcular la longitud media de oración en palabras reutilizando el tokenizer existente.",
+              "acceptanceCriteria": [
+                {
+                  "id": "criterion:sentence-length-refinement",
+                  "kind": "unit",
+                  "description": "El módulo de longitud media de oración vive por separado con sus propios tests que pasan con npm run test.",
+                  "required": true
+                }
+              ],
+              "scope": {
+                "id": "scope:unit:sentence-length",
+                "revision": "1"
+              },
+              "consumes": [
+                {
+                  "id": "artifact:top-words-change",
+                  "revision": "1"
+                }
+              ],
+              "produces": [
+                {
+                  "id": "artifact:sentence-length-change",
+                  "revision": "1"
+                }
+              ],
+              "seams": [],
+              "validation": {
+                "id": "validation-contract:unit:sentence-length",
+                "revision": "1"
+              },
+              "constraints": []
+            },
+            "scope": {
+              "schemaVersion": 2,
+              "id": "scope:unit:sentence-length",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:sentence-length",
+              "allowedPaths": [
+                "src/sentence-length.js",
+                "src/sentence-length.test.js",
+                "src/tokenizer.js"
+              ],
+              "forbiddenPaths": [],
+              "coordinationPaths": [],
+              "outputRoots": []
+            },
+            "seams": [],
+            "artifacts": [
+              {
+                "schemaVersion": 2,
+                "id": "artifact:sentence-length-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:sentence-length",
+                "consumerNodeIds": [
+                  "unit:reading-time",
+                  "unit:root"
+                ],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  "src/sentence-length.js",
+                  "src/sentence-length.test.js"
+                ]
+              },
+              {
+                "schemaVersion": 2,
+                "id": "artifact:top-words-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:top-words",
+                "consumerNodeIds": [
+                  "unit:root",
+                  "unit:sentence-length"
+                ],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  "src/top-words.js",
+                  "src/top-words.test.js"
+                ]
+              }
+            ],
+            "validation": {
+              "schemaVersion": 2,
+              "id": "validation-contract:unit:sentence-length",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:sentence-length",
+              "obligations": [
+                {
+                  "id": "validation:sentence-length",
+                  "criterionId": "criterion:sentence-length-refinement",
+                  "layer": "unit",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "src/sentence-length.test.js"
+                    ],
+                    "references": [
+                      "src/sentence-length.test.js"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "schemaVersion": 2,
+            "task": {
+              "schemaVersion": 2,
+              "id": "task:unit:top-words",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:top-words",
+              "goal": "Calcular las cinco palabras más frecuentes con su cuenta reutilizando el tokenizer existente.",
+              "acceptanceCriteria": [
+                {
+                  "id": "criterion:top-words-refinement",
+                  "kind": "unit",
+                  "description": "El módulo de palabras más frecuentes reutiliza el tokenizer existente en lugar de reimplementar la tokenización.",
+                  "required": true
+                }
+              ],
+              "scope": {
+                "id": "scope:unit:top-words",
+                "revision": "1"
+              },
+              "consumes": [
+                {
+                  "id": "artifact:word-total-change",
+                  "revision": "1"
+                }
+              ],
+              "produces": [
+                {
+                  "id": "artifact:top-words-change",
+                  "revision": "1"
+                }
+              ],
+              "seams": [],
+              "validation": {
+                "id": "validation-contract:unit:top-words",
+                "revision": "1"
+              },
+              "constraints": []
+            },
+            "scope": {
+              "schemaVersion": 2,
+              "id": "scope:unit:top-words",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:top-words",
+              "allowedPaths": [
+                "src/tokenizer.js",
+                "src/top-words.js",
+                "src/top-words.test.js"
+              ],
+              "forbiddenPaths": [],
+              "coordinationPaths": [],
+              "outputRoots": []
+            },
+            "seams": [],
+            "artifacts": [
+              {
+                "schemaVersion": 2,
+                "id": "artifact:top-words-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:top-words",
+                "consumerNodeIds": [
+                  "unit:root",
+                  "unit:sentence-length"
+                ],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  "src/top-words.js",
+                  "src/top-words.test.js"
+                ]
+              },
+              {
+                "schemaVersion": 2,
+                "id": "artifact:word-total-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:word-total",
+                "consumerNodeIds": [
+                  "unit:root",
+                  "unit:top-words"
+                ],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  "src/word-total.js",
+                  "src/word-total.test.js"
+                ]
+              }
+            ],
+            "validation": {
+              "schemaVersion": 2,
+              "id": "validation-contract:unit:top-words",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:top-words",
+              "obligations": [
+                {
+                  "id": "validation:top-words",
+                  "criterionId": "criterion:top-words-refinement",
+                  "layer": "unit",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "src/top-words.test.js"
+                    ],
+                    "references": [
+                      "src/top-words.test.js"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "schemaVersion": 2,
+            "task": {
+              "schemaVersion": 2,
+              "id": "task:unit:word-total",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:word-total",
+              "goal": "Calcular el total de palabras de un texto reutilizando el tokenizer existente.",
+              "acceptanceCriteria": [
+                {
+                  "id": "criterion:word-total-refinement",
+                  "kind": "unit",
+                  "description": "El módulo de total de palabras vive por separado con sus propios tests que pasan con npm run test.",
+                  "required": true
+                }
+              ],
+              "scope": {
+                "id": "scope:unit:word-total",
+                "revision": "1"
+              },
+              "consumes": [],
+              "produces": [
+                {
+                  "id": "artifact:word-total-change",
+                  "revision": "1"
+                }
+              ],
+              "seams": [],
+              "validation": {
+                "id": "validation-contract:unit:word-total",
+                "revision": "1"
+              },
+              "constraints": []
+            },
+            "scope": {
+              "schemaVersion": 2,
+              "id": "scope:unit:word-total",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:word-total",
+              "allowedPaths": [
+                "src/tokenizer.js",
+                "src/word-total.js",
+                "src/word-total.test.js"
+              ],
+              "forbiddenPaths": [],
+              "coordinationPaths": [],
+              "outputRoots": []
+            },
+            "seams": [],
+            "artifacts": [
+              {
+                "schemaVersion": 2,
+                "id": "artifact:word-total-change",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:word-total",
+                "consumerNodeIds": [
+                  "unit:root",
+                  "unit:top-words"
+                ],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  "src/word-total.js",
+                  "src/word-total.test.js"
+                ]
+              }
+            ],
+            "validation": {
+              "schemaVersion": 2,
+              "id": "validation-contract:unit:word-total",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:word-total",
+              "obligations": [
+                {
+                  "id": "validation:word-total",
+                  "criterionId": "criterion:word-total-refinement",
+                  "layer": "unit",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "src/word-total.test.js"
+                    ],
+                    "references": [
+                      "src/word-total.test.js"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "evidenceAuthority": {
+          "goal": {
+            "id": "goal:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5",
+            "revision": 1,
+            "goal": "Necesito un reporte de legibilidad para archivos de texto. Agregá un comando `node src/cli.js <archivo>` que imprima cuatro cosas: el total de palabras, las cinco palabras más frecuentes con su cuenta, la longitud media de oración en palabras, y el tiempo estimado de lectura en minutos a 200 palabras por minuto. Cada capacidad nueva tiene que vivir en su propio módulo reutilizable con sus tests de `node --test`, apoyándose en el tokenizer que ya existe en vez de reimplementarlo. El CLI sólo compone y formatea: no calcula ninguna métrica por su cuenta.",
+            "acceptanceCriteria": [
+              {
+                "id": "criterion:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:1",
+                "statement": "node src/cli.js sobre un archivo de texto imprime las cuatro métricas sin fallar",
+                "required": true,
+                "level": "product",
+                "protectedReferences": [],
+                "verification": {
+                  "allowedProofs": [
+                    {
+                      "mode": "executable",
+                      "authority": "orchestrator_deterministic"
+                    }
+                  ],
+                  "independence": "independent_required"
+                }
+              },
+              {
+                "id": "criterion:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:2",
+                "statement": "cada métrica nueva vive en su propio módulo con tests propios que pasan con npm run test",
+                "required": true,
+                "level": "product",
+                "protectedReferences": [],
+                "verification": {
+                  "allowedProofs": [
+                    {
+                      "mode": "executable",
+                      "authority": "orchestrator_deterministic"
+                    }
+                  ],
+                  "independence": "independent_required"
+                }
+              },
+              {
+                "id": "criterion:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:3",
+                "statement": "ningún módulo nuevo reimplementa la tokenización: todos usan el tokenizer existente",
+                "required": true,
+                "level": "product",
+                "protectedReferences": [],
+                "verification": {
+                  "allowedProofs": [
+                    {
+                      "mode": "executable",
+                      "authority": "orchestrator_deterministic"
+                    }
+                  ],
+                  "independence": "independent_required"
+                }
+              },
+              {
+                "id": "criterion:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:4",
+                "statement": "el CLI no calcula métricas, sólo llama a los módulos y da formato a la salida",
+                "required": true,
+                "level": "product",
+                "protectedReferences": [],
+                "verification": {
+                  "allowedProofs": [
+                    {
+                      "mode": "executable",
+                      "authority": "orchestrator_deterministic"
+                    }
+                  ],
+                  "independence": "independent_required"
+                }
+              }
+            ],
+            "constraints": [],
+            "qualityAttributes": [],
+            "target": {
+              "repositoryId": "mh8-r0-sandbox",
+              "baseCommit": "3b84716162e45788027d3f017f7fd3ff4a5f8820",
+              "treeSha": "5d33daec17568a5ba47c8f5fa4130902cb418b43"
+            },
+            "digest": "sha256:8304648ac2ba3e9f2e0d749bae90fc5265cf11326288ce4b004046da93f33093"
+          },
+          "validationObligations": [
+            {
+              "digest": "sha256:58c7d8ff65cccfd3cefef65e856b02d845403fc68c2972db9fada72e7e7c29cc",
+              "id": "validation:cli",
+              "revision": 1,
+              "criterionId": "criterion:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:4",
+              "ownerNodeId": "unit:cli",
+              "required": true,
+              "proofStrategy": {
+                "id": "proof:validation:cli",
+                "revision": 1,
+                "digest": "sha256:1bdadcba46af796535a309464969a7825bfa5719e2e711f52d7fc6e8aa5f3602"
+              }
+            },
+            {
+              "digest": "sha256:83f5db1a1e10f4b8d024b50cf03b4556fc18667ae36fa8217a52c30b17d4c119",
+              "id": "validation:integration",
+              "revision": 1,
+              "criterionId": "criterion:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:1",
+              "ownerNodeId": "unit:root",
+              "required": true,
+              "proofStrategy": {
+                "id": "proof:validation:integration",
+                "revision": 1,
+                "digest": "sha256:5f6bb56050956b543380988d1ddea87b6812c6d1a7049288e0c84096a6c7090f"
+              }
+            },
+            {
+              "digest": "sha256:4987ca9ceadb573312307da3d485e2170c9f081764f9e8b964c0acf00cab5a9b",
+              "id": "validation:reading-time",
+              "revision": 1,
+              "criterionId": "criterion:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:3",
+              "ownerNodeId": "unit:reading-time",
+              "required": true,
+              "proofStrategy": {
+                "id": "proof:validation:reading-time",
+                "revision": 1,
+                "digest": "sha256:9e0e7acfeb6c4c06b046abb80eb891464c52eb708836372ba959f84b90d9297e"
+              }
+            },
+            {
+              "digest": "sha256:3563a910abc495db6d4ccf2af5003cc5668f909f3c46105b04652373b8780476",
+              "id": "validation:sentence-length",
+              "revision": 1,
+              "criterionId": "criterion:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:2",
+              "ownerNodeId": "unit:sentence-length",
+              "required": true,
+              "proofStrategy": {
+                "id": "proof:validation:sentence-length",
+                "revision": 1,
+                "digest": "sha256:ced88db56c9565228157db7e13caa8047a58183cda620326071c05e97ba265c2"
+              }
+            },
+            {
+              "digest": "sha256:fb5b710cd7e9d073468f99260375d4b62a1ea78753dd36065539465c8be7e199",
+              "id": "validation:top-words",
+              "revision": 1,
+              "criterionId": "criterion:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:3",
+              "ownerNodeId": "unit:top-words",
+              "required": true,
+              "proofStrategy": {
+                "id": "proof:validation:top-words",
+                "revision": 1,
+                "digest": "sha256:7c86b323e0936810b4ead82ba53a594fdfad3c5e3a0f31dbd0fde62ccf438543"
+              }
+            },
+            {
+              "digest": "sha256:602acd1a440689f4f625e769eb5256f64f44b460bc023f5a40b7021adb626648",
+              "id": "validation:word-total",
+              "revision": 1,
+              "criterionId": "criterion:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:2",
+              "ownerNodeId": "unit:word-total",
+              "required": true,
+              "proofStrategy": {
+                "id": "proof:validation:word-total",
+                "revision": 1,
+                "digest": "sha256:2efd57437edc870be9a700d40a8201ba125d5405da103854aafe45413b497836"
+              }
+            }
+          ],
+          "proofStrategies": [
+            {
+              "id": "proof:validation:cli",
+              "revision": 1,
+              "goalContractDigest": "sha256:8304648ac2ba3e9f2e0d749bae90fc5265cf11326288ce4b004046da93f33093",
+              "criterionId": "criterion:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:4",
+              "obligationId": "validation:cli",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "repositoryViewDigest": "sha256:ea3a7da0fcfb7619727fb669dbdc6a810141097b627b1beafaa6b18013e3baf9",
+              "procedureRef": "command:stage6-transitional-validation",
+              "selectorDigest": "sha256:9a81364c33766ec1107e14d44d002918708266e5ae460089e715a6ef0414e4df",
+              "environmentPolicyDigest": "sha256:stage6-transitional-environment",
+              "independence": "independent_required",
+              "digest": "sha256:1bdadcba46af796535a309464969a7825bfa5719e2e711f52d7fc6e8aa5f3602"
+            },
+            {
+              "id": "proof:validation:integration",
+              "revision": 1,
+              "goalContractDigest": "sha256:8304648ac2ba3e9f2e0d749bae90fc5265cf11326288ce4b004046da93f33093",
+              "criterionId": "criterion:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:1",
+              "obligationId": "validation:integration",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "repositoryViewDigest": "sha256:ea3a7da0fcfb7619727fb669dbdc6a810141097b627b1beafaa6b18013e3baf9",
+              "procedureRef": "command:stage6-transitional-validation",
+              "selectorDigest": "sha256:e967375c5505c23e483b7b35d5095b153ac155f3094c6e64437b6cf64fa45b68",
+              "environmentPolicyDigest": "sha256:stage6-transitional-environment",
+              "independence": "independent_required",
+              "digest": "sha256:5f6bb56050956b543380988d1ddea87b6812c6d1a7049288e0c84096a6c7090f"
+            },
+            {
+              "id": "proof:validation:reading-time",
+              "revision": 1,
+              "goalContractDigest": "sha256:8304648ac2ba3e9f2e0d749bae90fc5265cf11326288ce4b004046da93f33093",
+              "criterionId": "criterion:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:3",
+              "obligationId": "validation:reading-time",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "repositoryViewDigest": "sha256:ea3a7da0fcfb7619727fb669dbdc6a810141097b627b1beafaa6b18013e3baf9",
+              "procedureRef": "command:stage6-transitional-validation",
+              "selectorDigest": "sha256:0bd4bc196da6ced7b2a0aaba4f16e45314faabc2a8586df91a0d804b71d723fe",
+              "environmentPolicyDigest": "sha256:stage6-transitional-environment",
+              "independence": "independent_required",
+              "digest": "sha256:9e0e7acfeb6c4c06b046abb80eb891464c52eb708836372ba959f84b90d9297e"
+            },
+            {
+              "id": "proof:validation:sentence-length",
+              "revision": 1,
+              "goalContractDigest": "sha256:8304648ac2ba3e9f2e0d749bae90fc5265cf11326288ce4b004046da93f33093",
+              "criterionId": "criterion:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:2",
+              "obligationId": "validation:sentence-length",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "repositoryViewDigest": "sha256:ea3a7da0fcfb7619727fb669dbdc6a810141097b627b1beafaa6b18013e3baf9",
+              "procedureRef": "command:stage6-transitional-validation",
+              "selectorDigest": "sha256:d8f8e862733f54e88537144f1a1a5995f2f7b1bee739b43dbafb0778eb87b1c8",
+              "environmentPolicyDigest": "sha256:stage6-transitional-environment",
+              "independence": "independent_required",
+              "digest": "sha256:ced88db56c9565228157db7e13caa8047a58183cda620326071c05e97ba265c2"
+            },
+            {
+              "id": "proof:validation:top-words",
+              "revision": 1,
+              "goalContractDigest": "sha256:8304648ac2ba3e9f2e0d749bae90fc5265cf11326288ce4b004046da93f33093",
+              "criterionId": "criterion:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:3",
+              "obligationId": "validation:top-words",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "repositoryViewDigest": "sha256:ea3a7da0fcfb7619727fb669dbdc6a810141097b627b1beafaa6b18013e3baf9",
+              "procedureRef": "command:stage6-transitional-validation",
+              "selectorDigest": "sha256:f3b56ea6934e0e2246a9aa3370ec632b3bb05f439fcc8d1bc15ea957576742b4",
+              "environmentPolicyDigest": "sha256:stage6-transitional-environment",
+              "independence": "independent_required",
+              "digest": "sha256:7c86b323e0936810b4ead82ba53a594fdfad3c5e3a0f31dbd0fde62ccf438543"
+            },
+            {
+              "id": "proof:validation:word-total",
+              "revision": 1,
+              "goalContractDigest": "sha256:8304648ac2ba3e9f2e0d749bae90fc5265cf11326288ce4b004046da93f33093",
+              "criterionId": "criterion:run:7fb26b869ccb95c5a715197d1927384b3ac2275bce786bea69d7dd94f9062ef5:2",
+              "obligationId": "validation:word-total",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "repositoryViewDigest": "sha256:ea3a7da0fcfb7619727fb669dbdc6a810141097b627b1beafaa6b18013e3baf9",
+              "procedureRef": "command:stage6-transitional-validation",
+              "selectorDigest": "sha256:5997d2a50bae0536d59293211ef32258e40f7af7ae2f7d9ed352068cc95e85e1",
+              "environmentPolicyDigest": "sha256:stage6-transitional-environment",
+              "independence": "independent_required",
+              "digest": "sha256:2efd57437edc870be9a700d40a8201ba125d5405da103854aafe45413b497836"
+            }
+          ]
+        },
+        "review": {
+          "findings": [
+            {
+              "code": "repository_model_coverage_incomplete",
+              "severity": "warning",
+              "authority": "repository",
+              "message": "Repository model coverage is partial.",
+              "evidenceRefs": [
+                "evidence:0a50e848f832783c20353cf1",
+                "evidence:0db77f7676f15913fe32c509",
+                "evidence:13e1f48bb845416263b45c4a",
+                "evidence:1560cef225e97d1ecb5ccf71",
+                "evidence:1654d85bae770152375596b4",
+                "evidence:1938151cdbaae57044e3bf14",
+                "evidence:1d8c5c55bd6272719429a933",
+                "evidence:214910fa16c5030d95de9a8a",
+                "evidence:22fa6cadff546cf94d2e21c5",
+                "evidence:23469dcb0eb83bb13be86195",
+                "evidence:440fdc87bbae7dc1e1b9550e",
+                "evidence:4739f2e2c0e13ca4f5765930",
+                "evidence:4960b286fe62d7d0de6e16c8",
+                "evidence:5cd4bb421b674f11224cbeb0",
+                "evidence:6fa05cbcef105edfc9554b50",
+                "evidence:9c4d082fa1d821371200d1d7",
+                "evidence:a94c57886ae5499dc39ec59f",
+                "evidence:aa5d3330953fa4e9e0a4fb07",
+                "evidence:c27fa90e9b57773176b87c27",
+                "evidence:ca4b089e37c76443e9362952",
+                "evidence:d5b3f80805dffdfd7ba69f32",
+                "evidence:d5d92a1d195729f7d9b48bc8",
+                "evidence:ea4b8a6e9f840cd3e5fc64d0",
+                "evidence:ec802d5fbf8acb7c35900e4d",
+                "evidence:f36a98761c8b0498d2f8f726",
+                "evidence:fba2653fa998ff93d195b3be",
+                "evidence:fc60f23623612dbebcc8035f"
+              ],
+              "resolution": "none"
+            },
+            {
+              "code": "resource_catalog_coverage_incomplete",
+              "severity": "warning",
+              "authority": "repository",
+              "message": "Resource catalog coverage is partial.",
+              "evidenceRefs": [
+                "evidence:0a50e848f832783c20353cf1",
+                "evidence:0db77f7676f15913fe32c509",
+                "evidence:13e1f48bb845416263b45c4a",
+                "evidence:1560cef225e97d1ecb5ccf71",
+                "evidence:1654d85bae770152375596b4",
+                "evidence:1938151cdbaae57044e3bf14",
+                "evidence:1d8c5c55bd6272719429a933",
+                "evidence:214910fa16c5030d95de9a8a",
+                "evidence:22fa6cadff546cf94d2e21c5",
+                "evidence:23469dcb0eb83bb13be86195",
+                "evidence:440fdc87bbae7dc1e1b9550e",
+                "evidence:4739f2e2c0e13ca4f5765930",
+                "evidence:4960b286fe62d7d0de6e16c8",
+                "evidence:5cd4bb421b674f11224cbeb0",
+                "evidence:6fa05cbcef105edfc9554b50",
+                "evidence:9c4d082fa1d821371200d1d7",
+                "evidence:a94c57886ae5499dc39ec59f",
+                "evidence:aa5d3330953fa4e9e0a4fb07",
+                "evidence:c27fa90e9b57773176b87c27",
+                "evidence:ca4b089e37c76443e9362952",
+                "evidence:d5b3f80805dffdfd7ba69f32",
+                "evidence:d5d92a1d195729f7d9b48bc8",
+                "evidence:ea4b8a6e9f840cd3e5fc64d0",
+                "evidence:ec802d5fbf8acb7c35900e4d",
+                "evidence:f36a98761c8b0498d2f8f726",
+                "evidence:fba2653fa998ff93d195b3be",
+                "evidence:fc60f23623612dbebcc8035f"
+              ],
+              "resolution": "none"
+            }
+          ]
+        },
+        "trace": {
+          "budget": {
+            "modelCalls": 3,
+            "repositoryQueries": 3,
+            "queryBytes": 65536,
+            "revisions": 3,
+            "repairs": 2,
+            "expansions": 0
+          },
+          "consumed": {
+            "modelCalls": 2,
+            "repositoryQueries": 3,
+            "queryBytes": 8351,
+            "revisions": 2,
+            "repairs": 1,
+            "expansions": 0
+          },
+          "revisions": [
+            {
+              "index": 1,
+              "cause": "initial",
+              "budget": {
+                "modelCalls": 3,
+                "repositoryQueries": 3,
+                "queryBytes": 65536,
+                "revisions": 3,
+                "repairs": 2,
+                "expansions": 0
+              },
+              "consumed": {
+                "modelCalls": 1,
+                "repositoryQueries": 3,
+                "queryBytes": 8351,
+                "revisions": 1,
+                "repairs": 0,
+                "expansions": 0
+              },
+              "queryReceipts": [
+                "sha256:6f28d05c9a74dee6d406a314d9a3f41d108e1226bfb9837803d422e56fded1c1",
+                "sha256:ac7d34064ae4764065ff123b85a4273bd0c9883b309feeefa1b5a5d37a070833",
+                "sha256:fdf1afc1ca98fd3eedafd71fe012f3c9335ba17f8bc5e16933bf9e232c179913"
+              ],
+              "evidenceRefs": [
+                "evidence:0a50e848f832783c20353cf1",
+                "evidence:13e1f48bb845416263b45c4a",
+                "evidence:1654d85bae770152375596b4",
+                "evidence:214910fa16c5030d95de9a8a",
+                "evidence:4739f2e2c0e13ca4f5765930",
+                "evidence:4960b286fe62d7d0de6e16c8",
+                "evidence:5cd4bb421b674f11224cbeb0",
+                "evidence:a94c57886ae5499dc39ec59f",
+                "evidence:ea4b8a6e9f840cd3e5fc64d0",
+                "evidence:fba2653fa998ff93d195b3be",
+                "evidence:fc60f23623612dbebcc8035f"
+              ],
+              "changedDecisionIds": [],
+              "changedFindingCodes": [
+                "schema_invalid"
+              ],
+              "proposalDigest": "sha256:cfd20dca163d39e6bc4e4260824d1d84eeac70ef4d831fe53c1dcacfbde4bc20",
+              "causalStateDigest": "sha256:4b3784d0d357267da3d0140f114a3a7eec797e666c469738ac3a4291308ef8db",
+              "digest": "sha256:c61d4bf38e5b070d4143fe39e1e5f4fde87cc89d51198d62d6ce1d0658f66c2b"
+            },
+            {
+              "index": 2,
+              "parentDigest": "sha256:c61d4bf38e5b070d4143fe39e1e5f4fde87cc89d51198d62d6ce1d0658f66c2b",
+              "cause": "deterministic_repair",
+              "budget": {
+                "modelCalls": 3,
+                "repositoryQueries": 3,
+                "queryBytes": 65536,
+                "revisions": 3,
+                "repairs": 2,
+                "expansions": 0
+              },
+              "consumed": {
+                "modelCalls": 2,
+                "repositoryQueries": 3,
+                "queryBytes": 8351,
+                "revisions": 2,
+                "repairs": 1,
+                "expansions": 0
+              },
+              "queryReceipts": [
+                "sha256:6f28d05c9a74dee6d406a314d9a3f41d108e1226bfb9837803d422e56fded1c1",
+                "sha256:ac7d34064ae4764065ff123b85a4273bd0c9883b309feeefa1b5a5d37a070833",
+                "sha256:fdf1afc1ca98fd3eedafd71fe012f3c9335ba17f8bc5e16933bf9e232c179913"
+              ],
+              "evidenceRefs": [
+                "evidence:0a50e848f832783c20353cf1",
+                "evidence:13e1f48bb845416263b45c4a",
+                "evidence:1654d85bae770152375596b4",
+                "evidence:214910fa16c5030d95de9a8a",
+                "evidence:4739f2e2c0e13ca4f5765930",
+                "evidence:4960b286fe62d7d0de6e16c8",
+                "evidence:5cd4bb421b674f11224cbeb0",
+                "evidence:a94c57886ae5499dc39ec59f",
+                "evidence:ea4b8a6e9f840cd3e5fc64d0",
+                "evidence:fba2653fa998ff93d195b3be",
+                "evidence:fc60f23623612dbebcc8035f"
+              ],
+              "changedDecisionIds": [],
+              "changedFindingCodes": [
+                "repository_model_coverage_incomplete",
+                "resource_catalog_coverage_incomplete"
+              ],
+              "proposalDigest": "sha256:7ed3bf074360e624404547116a7f84c212dcf826c41585824ec5497cdb787f9d",
+              "causalStateDigest": "sha256:5440ef504550aeff88322bc8f6aedc430ad176443c28f58832da6b94bc7dda85",
+              "digest": "sha256:925400bce878f82daa648fa318325972e909848cd536a53b712abf05e086f599"
+            }
+          ],
+          "advisoryFindings": [
+            {
+              "code": "repository_model_coverage_incomplete",
+              "severity": "warning",
+              "authority": "repository",
+              "message": "Repository model coverage is partial.",
+              "evidenceRefs": [
+                "evidence:0a50e848f832783c20353cf1",
+                "evidence:0db77f7676f15913fe32c509",
+                "evidence:13e1f48bb845416263b45c4a",
+                "evidence:1560cef225e97d1ecb5ccf71",
+                "evidence:1654d85bae770152375596b4",
+                "evidence:1938151cdbaae57044e3bf14",
+                "evidence:1d8c5c55bd6272719429a933",
+                "evidence:214910fa16c5030d95de9a8a",
+                "evidence:22fa6cadff546cf94d2e21c5",
+                "evidence:23469dcb0eb83bb13be86195",
+                "evidence:440fdc87bbae7dc1e1b9550e",
+                "evidence:4739f2e2c0e13ca4f5765930",
+                "evidence:4960b286fe62d7d0de6e16c8",
+                "evidence:5cd4bb421b674f11224cbeb0",
+                "evidence:6fa05cbcef105edfc9554b50",
+                "evidence:9c4d082fa1d821371200d1d7",
+                "evidence:a94c57886ae5499dc39ec59f",
+                "evidence:aa5d3330953fa4e9e0a4fb07",
+                "evidence:c27fa90e9b57773176b87c27",
+                "evidence:ca4b089e37c76443e9362952",
+                "evidence:d5b3f80805dffdfd7ba69f32",
+                "evidence:d5d92a1d195729f7d9b48bc8",
+                "evidence:ea4b8a6e9f840cd3e5fc64d0",
+                "evidence:ec802d5fbf8acb7c35900e4d",
+                "evidence:f36a98761c8b0498d2f8f726",
+                "evidence:fba2653fa998ff93d195b3be",
+                "evidence:fc60f23623612dbebcc8035f"
+              ],
+              "resolution": "none"
+            },
+            {
+              "code": "resource_catalog_coverage_incomplete",
+              "severity": "warning",
+              "authority": "repository",
+              "message": "Resource catalog coverage is partial.",
+              "evidenceRefs": [
+                "evidence:0a50e848f832783c20353cf1",
+                "evidence:0db77f7676f15913fe32c509",
+                "evidence:13e1f48bb845416263b45c4a",
+                "evidence:1560cef225e97d1ecb5ccf71",
+                "evidence:1654d85bae770152375596b4",
+                "evidence:1938151cdbaae57044e3bf14",
+                "evidence:1d8c5c55bd6272719429a933",
+                "evidence:214910fa16c5030d95de9a8a",
+                "evidence:22fa6cadff546cf94d2e21c5",
+                "evidence:23469dcb0eb83bb13be86195",
+                "evidence:440fdc87bbae7dc1e1b9550e",
+                "evidence:4739f2e2c0e13ca4f5765930",
+                "evidence:4960b286fe62d7d0de6e16c8",
+                "evidence:5cd4bb421b674f11224cbeb0",
+                "evidence:6fa05cbcef105edfc9554b50",
+                "evidence:9c4d082fa1d821371200d1d7",
+                "evidence:a94c57886ae5499dc39ec59f",
+                "evidence:aa5d3330953fa4e9e0a4fb07",
+                "evidence:c27fa90e9b57773176b87c27",
+                "evidence:ca4b089e37c76443e9362952",
+                "evidence:d5b3f80805dffdfd7ba69f32",
+                "evidence:d5d92a1d195729f7d9b48bc8",
+                "evidence:ea4b8a6e9f840cd3e5fc64d0",
+                "evidence:ec802d5fbf8acb7c35900e4d",
+                "evidence:f36a98761c8b0498d2f8f726",
+                "evidence:fba2653fa998ff93d195b3be",
+                "evidence:fc60f23623612dbebcc8035f"
+              ],
+              "resolution": "none"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "graph:graph-plan:goal:run:7fb26b869ccb95c5a715197d1927384b3a-f024965559:r1:proposed",
+      "occurredAt": "2026-08-16T07:49:37.759Z",
+      "type": "graph.revision.proposed",
+      "payload": {
+        "graphId": "graph-plan:goal:run:7fb26b869ccb95c5a715197d1927384b3a-f024965559",
+        "revision": 1
+      }
+    },
+    {
+      "eventId": "approve-plan:graph-plan:goal:run:7fb26b869ccb95c5a715197d1927384b3a-f024965559:r1",
+      "occurredAt": "2026-08-16T07:49:37.759Z",
+      "type": "decision.raised",
+      "payload": {
+        "decision": {
+          "id": "approve-plan:graph-plan:goal:run:7fb26b869ccb95c5a715197d1927384b3a-f024965559:r1",
+          "kind": "approve_plan",
+          "question": "Approve graph revision 1?",
+          "options": [
+            {
+              "id": "approve",
+              "label": "Approve plan"
+            },
+            {
+              "id": "request_changes",
+              "label": "Request changes"
+            }
+          ],
+          "affectedNodeIds": [
+            "unit:root"
+          ],
+          "evidenceRefs": [
+            "graph:graph-plan:goal:run:7fb26b869ccb95c5a715197d1927384b3a-f024965559:r1"
+          ],
+          "impact": "acceptance"
+        }
+      }
+    }
+  ]
+}

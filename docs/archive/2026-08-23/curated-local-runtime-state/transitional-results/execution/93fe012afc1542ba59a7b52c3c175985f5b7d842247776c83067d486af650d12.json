@@ -1,0 +1,392 @@
+{
+  "events": [
+    {
+      "eventId": "run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:readiness.observed:25",
+      "occurredAt": "2026-08-17T06:25:11.209Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:domain"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:domain",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:cuentas-claras",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:domain-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:interface-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:settlement-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:interface",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:domain-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:settlement-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:settlement",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:domain-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:domain-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:settlement-change",
+                "revision": 1
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:cuentas-claras",
+            "unit:domain",
+            "unit:settlement",
+            "unit:storage",
+            "unit:interface"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:cuentas-claras",
+            "unit:domain",
+            "unit:settlement",
+            "unit:storage",
+            "unit:interface"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-17T06:25:11.199Z"
+      }
+    },
+    {
+      "eventId": "run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:wave.selected:26",
+      "occurredAt": "2026-08-17T06:25:11.231Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:wave:2",
+        "nodeIds": [
+          "unit:domain"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:cuentas-claras",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:domain-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:interface-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:settlement-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:interface",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:domain-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:settlement-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:settlement",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:domain-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:domain-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:settlement-change",
+                "revision": 1
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-17T06:25:11.223Z"
+      }
+    },
+    {
+      "eventId": "run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:attempt:unit:domain:2:started",
+      "occurredAt": "2026-08-17T06:25:11.248Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:attempt:unit:domain:2",
+        "nodeId": "unit:domain",
+        "inputFingerprint": "sha256:2b51e1b7bb33861d33ad562f0b321fa1944f013ad0bb838804ada0f00b260905",
+        "retryOfAttemptId": "run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:attempt:unit:domain:1",
+        "executorProfile": {
+          "id": "claude-code-cli",
+          "revision": "sha256:d4d7f01afe76cf13f9f84653825ce5f81d972399f0fec54b9cc1deae9e598ed9"
+        }
+      }
+    },
+    {
+      "eventId": "run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:attempt:unit:domain:2:failed",
+      "occurredAt": "2026-08-17T06:25:11.263Z",
+      "type": "attempt.failed",
+      "payload": {
+        "attemptId": "run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:attempt:unit:domain:2",
+        "nodeId": "unit:domain",
+        "reason": "Required validation obligations cannot be materialized: validation:domain-unit."
+      }
+    },
+    {
+      "eventId": "run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:attempt:unit:domain:2:decision",
+      "occurredAt": "2026-08-17T06:25:11.263Z",
+      "type": "decision.raised",
+      "payload": {
+        "decision": {
+          "id": "run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:attempt:unit:domain:2:decision",
+          "kind": "resolve_conflict",
+          "question": "Execution for Módulo de Dominio y Participantes requires guidance: Required validation obligations cannot be materialized: validation:domain-unit.",
+          "options": [
+            {
+              "id": "retry",
+              "label": "Retry with guidance"
+            },
+            {
+              "id": "stop",
+              "label": "Stop this work"
+            }
+          ],
+          "affectedNodeIds": [
+            "unit:domain"
+          ],
+          "repairTargetNodeId": "unit:domain",
+          "evidenceRefs": [
+            "run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:attempt:unit:domain:2",
+            "input-fingerprint:sha256:2b51e1b7bb33861d33ad562f0b321fa1944f013ad0bb838804ada0f00b260905"
+          ],
+          "impact": "behavior",
+          "raisedAtGraphRevision": 1
+        }
+      }
+    },
+    {
+      "eventId": "run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:readiness.observed:30",
+      "occurredAt": "2026-08-17T06:25:11.292Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [],
+        "pendingDecisionIds": [
+          "run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:attempt:unit:domain:2:decision"
+        ],
+        "explanations": [
+          {
+            "nodeId": "unit:cuentas-claras",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:domain-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:interface-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:settlement-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:domain",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:a36e115ad61dc33357661d553517e1854105721c4334251c93acd3c0e1c639ba:attempt:unit:domain:2:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:interface",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:domain-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:settlement-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:settlement",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:domain-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:domain-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:settlement-change",
+                "revision": 1
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:cuentas-claras",
+            "unit:domain",
+            "unit:settlement",
+            "unit:storage",
+            "unit:interface"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:cuentas-claras",
+            "unit:domain",
+            "unit:settlement",
+            "unit:storage",
+            "unit:interface"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-17T06:25:11.284Z"
+      }
+    }
+  ]
+}

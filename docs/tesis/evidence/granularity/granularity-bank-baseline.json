@@ -1,0 +1,5732 @@
+[
+  {
+    "caseId": "final-experiment/runs/M-C-r1/21f2aebf-9218-4c2e-9e96-b8b60b86fc59.events.v2.jsonl",
+    "unitKey": "api-backorder-observability",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "final-experiment/runs/M-C-r1/21f2aebf-9218-4c2e-9e96-b8b60b86fc59.events.v2.jsonl",
+    "unitKey": "application-backorder-eventing",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "final-experiment/runs/M-C-r1/21f2aebf-9218-4c2e-9e96-b8b60b86fc59.events.v2.jsonl",
+    "unitKey": "domain-priority-and-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "final-experiment/runs/M-C-r1/21f2aebf-9218-4c2e-9e96-b8b60b86fc59.events.v2.jsonl",
+    "unitKey": "root",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": true
+  },
+  {
+    "caseId": "final-experiment/runs/M-C-r2/99c0c50f-8e76-49ef-8bd4-bb020b1240b9.events.v2.jsonl",
+    "unitKey": "api-current-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "final-experiment/runs/M-C-r2/99c0c50f-8e76-49ef-8bd4-bb020b1240b9.events.v2.jsonl",
+    "unitKey": "application-backorder-events",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "final-experiment/runs/M-C-r2/99c0c50f-8e76-49ef-8bd4-bb020b1240b9.events.v2.jsonl",
+    "unitKey": "domain-priority-and-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "final-experiment/runs/M-C-r2/99c0c50f-8e76-49ef-8bd4-bb020b1240b9.events.v2.jsonl",
+    "unitKey": "root",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": true
+  },
+  {
+    "caseId": "final-experiment/runs/rehearsal/062e496e-572f-48e8-843a-31542082c6a9.events.v2.jsonl",
+    "unitKey": "domain-inventory-summary",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "final-experiment/runs/rehearsal/062e496e-572f-48e8-843a-31542082c6a9.events.v2.jsonl",
+    "unitKey": "root",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "final-experiment/runs/S-C-r1/a74c6959-8981-41b7-9341-899fca9a504e.events.v2.jsonl",
+    "unitKey": "add-summarize-inventory-domain-test",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "final-experiment/runs/S-C-r1/a74c6959-8981-41b7-9341-899fca9a504e.events.v2.jsonl",
+    "unitKey": "root",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "final-experiment/runs/S-C-r2/d611c700-b392-41d0-88ae-39ebead48119.events.v2.jsonl",
+    "unitKey": "inventory-summary-domain",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "final-experiment/runs/S-C-r2/d611c700-b392-41d0-88ae-39ebead48119.events.v2.jsonl",
+    "unitKey": "root",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-01-T1-A-r1-codex-medium/run.events.v2.jsonl",
+    "unitKey": "warehouse-orders-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-02-T1-C-r1-remediation-6/run.events.v2.jsonl",
+    "unitKey": "api-current-state-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-02-T1-C-r1-remediation-6/run.events.v2.jsonl",
+    "unitKey": "domain-order-priority-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-02-T1-C-r1-remediation-6/run.events.v2.jsonl",
+    "unitKey": "durability-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-02-T1-C-r1-remediation-6/run.events.v2.jsonl",
+    "unitKey": "fulfillment-wave-priority",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-02-T1-C-r1-remediation-6/run.events.v2.jsonl",
+    "unitKey": "presentation-order-priority-svg",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-02-T1-C-r1-remediation-6/run.events.v2.jsonl",
+    "unitKey": "probe-g6-deterministic-output",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-02-T1-C-r1-remediation-6/run.events.v2.jsonl",
+    "unitKey": "warehouse-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
+    "unitKey": "api-server-backorder-exposure",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
+    "unitKey": "application-warehouse-service-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
+    "unitKey": "domain-orders-priority-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
+    "unitKey": "durability-journal-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
+    "unitKey": "fulfillment-planner-priority-wave",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
+    "unitKey": "presentation-tower-priority-svg",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
+    "unitKey": "probe-g6-deterministic-json",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
+    "unitKey": "warehouse-order-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
+    "unitKey": "api-server-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
+    "unitKey": "application-warehouse-service",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
+    "unitKey": "domain-order-contracts",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
+    "unitKey": "durability-journal-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
+    "unitKey": "fulfillment-plan-priority",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
+    "unitKey": "presentation-tower-priority",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
+    "unitKey": "probe-g6-study",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
+    "unitKey": "warehouse-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-05-T1-A-r2-full/run.events.v2.jsonl",
+    "unitKey": "order-priority-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-06-T1-B-r2-remediation-39-full/run.events.v2.jsonl",
+    "unitKey": "api-backorders-exposure",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-06-T1-B-r2-remediation-39-full/run.events.v2.jsonl",
+    "unitKey": "application-backorder-events",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-06-T1-B-r2-remediation-39-full/run.events.v2.jsonl",
+    "unitKey": "domain-order-contract",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-06-T1-B-r2-remediation-39-full/run.events.v2.jsonl",
+    "unitKey": "durability-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-06-T1-B-r2-remediation-39-full/run.events.v2.jsonl",
+    "unitKey": "fulfillment-priority-rendering",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-06-T1-B-r2-remediation-39-full/run.events.v2.jsonl",
+    "unitKey": "g6-order-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/canonical-runs/g6-06-T1-B-r2-remediation-39-full/run.events.v2.jsonl",
+    "unitKey": "probe-g6-study",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/binding-check/run.events.v2.jsonl",
+    "unitKey": "order-priority-and-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/discarded-c52f823e/c52f823e-2979-4869-b5ec-9963e05d05d0.events.v2.jsonl",
+    "unitKey": "order-priority-and-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/discarded-c52f823e/run.events.v2.jsonl",
+    "unitKey": "order-priority-and-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-01-T1-A-r1-codex-medium/run.events.v2.jsonl",
+    "unitKey": "warehouse-orders-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-01-T1-A-r1/run.events.v2.jsonl",
+    "unitKey": "wc4-order-priority-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-01-T1-A-r1/runtime/5a5cb4e7-398d-4981-86db-391d68a524fe.events.v2.jsonl",
+    "unitKey": "wc4-order-priority-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-planning/run.events.v2.jsonl",
+    "unitKey": "semantic-api-server",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-planning/run.events.v2.jsonl",
+    "unitKey": "semantic-application-warehouse-service",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-planning/run.events.v2.jsonl",
+    "unitKey": "semantic-domain-orders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-planning/run.events.v2.jsonl",
+    "unitKey": "semantic-durability-journal",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-planning/run.events.v2.jsonl",
+    "unitKey": "semantic-fulfillment-planner",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-planning/run.events.v2.jsonl",
+    "unitKey": "semantic-presentation-tower",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-planning/run.events.v2.jsonl",
+    "unitKey": "semantic-probe-g6",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-planning/run.events.v2.jsonl",
+    "unitKey": "semantic-warehouse-order-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1-planning/run.events.v2.jsonl",
+    "unitKey": "semantic-api-server",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1-planning/run.events.v2.jsonl",
+    "unitKey": "semantic-domain-orders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1-planning/run.events.v2.jsonl",
+    "unitKey": "semantic-durability-journal",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1-planning/run.events.v2.jsonl",
+    "unitKey": "semantic-fulfillment-planner",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1-planning/run.events.v2.jsonl",
+    "unitKey": "semantic-order-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1-planning/run.events.v2.jsonl",
+    "unitKey": "semantic-presentation-tower",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1-planning/run.events.v2.jsonl",
+    "unitKey": "semantic-probe-g6",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1-planning/run.events.v2.jsonl",
+    "unitKey": "semantic-warehouse-service",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1/run.events.v2.jsonl",
+    "unitKey": "api-backorders-exposure",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1/run.events.v2.jsonl",
+    "unitKey": "application-backorder-emission",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1/run.events.v2.jsonl",
+    "unitKey": "domain-order-priority-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1/run.events.v2.jsonl",
+    "unitKey": "durability-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1/run.events.v2.jsonl",
+    "unitKey": "fulfillment-express-first-wave",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1/run.events.v2.jsonl",
+    "unitKey": "presentation-order-priority-svg",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1/run.events.v2.jsonl",
+    "unitKey": "probe-g6-deterministic-output",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-1/run.events.v2.jsonl",
+    "unitKey": "warehouse-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-2-planning/run.events.v2.jsonl",
+    "unitKey": "api-current-state-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-2-planning/run.events.v2.jsonl",
+    "unitKey": "application-warehouse-service-backorder-events",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-2-planning/run.events.v2.jsonl",
+    "unitKey": "domain-orders-priority-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-2-planning/run.events.v2.jsonl",
+    "unitKey": "durability-history-backorders-count",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-2-planning/run.events.v2.jsonl",
+    "unitKey": "fulfillment-wave-priority-ordering",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-2-planning/run.events.v2.jsonl",
+    "unitKey": "presentation-tower-priority-svg",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-2-planning/run.events.v2.jsonl",
+    "unitKey": "probe-g6-study-script",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-2-planning/run.events.v2.jsonl",
+    "unitKey": "warehouse-order-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-6/run.events.v2.jsonl",
+    "unitKey": "api-current-state-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-6/run.events.v2.jsonl",
+    "unitKey": "domain-order-priority-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-6/run.events.v2.jsonl",
+    "unitKey": "durability-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-6/run.events.v2.jsonl",
+    "unitKey": "fulfillment-wave-priority",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-6/run.events.v2.jsonl",
+    "unitKey": "presentation-order-priority-svg",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-6/run.events.v2.jsonl",
+    "unitKey": "probe-g6-deterministic-output",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1-remediation-6/run.events.v2.jsonl",
+    "unitKey": "warehouse-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1/run.events.v2.jsonl",
+    "unitKey": "api-server-backorders-exposure",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1/run.events.v2.jsonl",
+    "unitKey": "application-warehouse-service-backorder-events",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1/run.events.v2.jsonl",
+    "unitKey": "domain-orders-priority-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1/run.events.v2.jsonl",
+    "unitKey": "durability-journal-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1/run.events.v2.jsonl",
+    "unitKey": "fulfillment-wave-priority-ordering",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1/run.events.v2.jsonl",
+    "unitKey": "presentation-tower-priority-distinction",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1/run.events.v2.jsonl",
+    "unitKey": "probe-g6-deterministic-output",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-02-T1-C-r1/run.events.v2.jsonl",
+    "unitKey": "semantic-warehouse-order-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1-planning/run.events.v2.jsonl",
+    "unitKey": "api-backorders-exposure",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1-planning/run.events.v2.jsonl",
+    "unitKey": "application-backorder-events",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1-planning/run.events.v2.jsonl",
+    "unitKey": "domain-order-priority-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1-planning/run.events.v2.jsonl",
+    "unitKey": "durability-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1-planning/run.events.v2.jsonl",
+    "unitKey": "fulfillment-priority-wave-ordering",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1-planning/run.events.v2.jsonl",
+    "unitKey": "presentation-priority-svg",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1-planning/run.events.v2.jsonl",
+    "unitKey": "probe-g6-deterministic-json",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1-planning/run.events.v2.jsonl",
+    "unitKey": "warehouse-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1/run.events.v2.jsonl",
+    "unitKey": "fulfillment-express-wave-ordering",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1/run.events.v2.jsonl",
+    "unitKey": "g6-probe-deterministic-output",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1/run.events.v2.jsonl",
+    "unitKey": "journal-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1/run.events.v2.jsonl",
+    "unitKey": "orders-domain-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1/run.events.v2.jsonl",
+    "unitKey": "tower-express-rendering",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1/run.events.v2.jsonl",
+    "unitKey": "warehouse-priority-backorder-plan",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-1/run.events.v2.jsonl",
+    "unitKey": "warehouse-service-api-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-full/run.events.v2.jsonl",
+    "unitKey": "api-backorders-surface",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-full/run.events.v2.jsonl",
+    "unitKey": "domain-priority-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-full/run.events.v2.jsonl",
+    "unitKey": "g6-deterministic-probe",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-full/run.events.v2.jsonl",
+    "unitKey": "history-backorder-count",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-full/run.events.v2.jsonl",
+    "unitKey": "order-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-full/run.events.v2.jsonl",
+    "unitKey": "service-backorder-events",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-full/run.events.v2.jsonl",
+    "unitKey": "tower-priority-rendering",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-full/run.events.v2.jsonl",
+    "unitKey": "wave-priority-ordering",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-planning/run.events.v2.jsonl",
+    "unitKey": "api-current-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-planning/run.events.v2.jsonl",
+    "unitKey": "application-warehouse-backorder-events",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-planning/run.events.v2.jsonl",
+    "unitKey": "domain-orders-priority-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-planning/run.events.v2.jsonl",
+    "unitKey": "durability-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-planning/run.events.v2.jsonl",
+    "unitKey": "fulfillment-express-wave-ordering",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-planning/run.events.v2.jsonl",
+    "unitKey": "presentation-express-order-rendering",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-planning/run.events.v2.jsonl",
+    "unitKey": "probe-g6-deterministic-json",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-10-planning/run.events.v2.jsonl",
+    "unitKey": "warehouse-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-full/run.events.v2.jsonl",
+    "unitKey": "api-backorder-exposure",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-full/run.events.v2.jsonl",
+    "unitKey": "application-backorder-operations",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-full/run.events.v2.jsonl",
+    "unitKey": "domain-order-backorder-contract",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-full/run.events.v2.jsonl",
+    "unitKey": "durability-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-full/run.events.v2.jsonl",
+    "unitKey": "fulfillment-wave-priority",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-full/run.events.v2.jsonl",
+    "unitKey": "presentation-order-priority-svg",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-full/run.events.v2.jsonl",
+    "unitKey": "probe-g6-study",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-full/run.events.v2.jsonl",
+    "unitKey": "warehouse-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-planning/run.events.v2.jsonl",
+    "unitKey": "application-backorder-api",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-planning/run.events.v2.jsonl",
+    "unitKey": "domain-order-priority-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-planning/run.events.v2.jsonl",
+    "unitKey": "durability-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-planning/run.events.v2.jsonl",
+    "unitKey": "fulfillment-priority-wave",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-planning/run.events.v2.jsonl",
+    "unitKey": "presentation-tower-priority",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-planning/run.events.v2.jsonl",
+    "unitKey": "probe-g6-determinism",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-11-planning/run.events.v2.jsonl",
+    "unitKey": "warehouse-priority-backorder-workbreakdown",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-full/run.events.v2.jsonl",
+    "unitKey": "domain-orders-priority-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-full/run.events.v2.jsonl",
+    "unitKey": "fulfillment-priority-wave",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-full/run.events.v2.jsonl",
+    "unitKey": "g6-study-probe",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-full/run.events.v2.jsonl",
+    "unitKey": "journal-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-full/run.events.v2.jsonl",
+    "unitKey": "tower-priority-svg",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-full/run.events.v2.jsonl",
+    "unitKey": "warehouse-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-full/run.events.v2.jsonl",
+    "unitKey": "warehouse-service-api-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-planning/run.events.v2.jsonl",
+    "unitKey": "api-backorder-exposure",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-planning/run.events.v2.jsonl",
+    "unitKey": "domain-order-contract",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-planning/run.events.v2.jsonl",
+    "unitKey": "durability-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-planning/run.events.v2.jsonl",
+    "unitKey": "fulfillment-express-wave",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-planning/run.events.v2.jsonl",
+    "unitKey": "presentation-order-badges",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-planning/run.events.v2.jsonl",
+    "unitKey": "probe-g6-study",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-planning/run.events.v2.jsonl",
+    "unitKey": "service-backorder-ops",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-12c-planning/run.events.v2.jsonl",
+    "unitKey": "warehouse-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-full/run.events.v2.jsonl",
+    "unitKey": "api-current-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-full/run.events.v2.jsonl",
+    "unitKey": "fulfillment-wave-express-priority",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-full/run.events.v2.jsonl",
+    "unitKey": "g6-stable-study-probe",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-full/run.events.v2.jsonl",
+    "unitKey": "journal-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-full/run.events.v2.jsonl",
+    "unitKey": "orders-domain-priority-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-full/run.events.v2.jsonl",
+    "unitKey": "tower-express-order-rendering",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-full/run.events.v2.jsonl",
+    "unitKey": "warehouse-order-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-full/run.events.v2.jsonl",
+    "unitKey": "warehouse-service-backorder-events",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-planning/run.events.v2.jsonl",
+    "unitKey": "api-backorder-exposure",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-planning/run.events.v2.jsonl",
+    "unitKey": "application-backorder-events",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-planning/run.events.v2.jsonl",
+    "unitKey": "domain-order-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-planning/run.events.v2.jsonl",
+    "unitKey": "durability-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-planning/run.events.v2.jsonl",
+    "unitKey": "fulfillment-priority-wave",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-planning/run.events.v2.jsonl",
+    "unitKey": "presentation-priority-svg",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-planning/run.events.v2.jsonl",
+    "unitKey": "probe-g6-deterministic",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-14-planning/run.events.v2.jsonl",
+    "unitKey": "warehouse-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-full/run.events.v2.jsonl",
+    "unitKey": "api-server-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-full/run.events.v2.jsonl",
+    "unitKey": "application-warehouse-service-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-full/run.events.v2.jsonl",
+    "unitKey": "domain-orders-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-full/run.events.v2.jsonl",
+    "unitKey": "durability-journal-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-full/run.events.v2.jsonl",
+    "unitKey": "fulfillment-planner-priority",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-full/run.events.v2.jsonl",
+    "unitKey": "presentation-tower-priority",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-full/run.events.v2.jsonl",
+    "unitKey": "probe-g6-determinism",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-full/run.events.v2.jsonl",
+    "unitKey": "warehouse-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-planning/run.events.v2.jsonl",
+    "unitKey": "api-backorders-exposure",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-planning/run.events.v2.jsonl",
+    "unitKey": "application-backorder-events",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-planning/run.events.v2.jsonl",
+    "unitKey": "domain-orders-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-planning/run.events.v2.jsonl",
+    "unitKey": "durability-backorder-history",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-planning/run.events.v2.jsonl",
+    "unitKey": "fulfillment-wave-priority",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-planning/run.events.v2.jsonl",
+    "unitKey": "presentation-order-priority-svg",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-planning/run.events.v2.jsonl",
+    "unitKey": "probe-g6-contract",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-15-planning/run.events.v2.jsonl",
+    "unitKey": "warehouse-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-full/run.events.v2.jsonl",
+    "unitKey": "api-backorders-exposure",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-full/run.events.v2.jsonl",
+    "unitKey": "application-warehouse-service-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-full/run.events.v2.jsonl",
+    "unitKey": "domain-orders-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-full/run.events.v2.jsonl",
+    "unitKey": "durability-journal-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-full/run.events.v2.jsonl",
+    "unitKey": "fulfillment-express-wave-ordering",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-full/run.events.v2.jsonl",
+    "unitKey": "presentation-order-priority-svg",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-full/run.events.v2.jsonl",
+    "unitKey": "probe-g6-deterministic-json",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-full/run.events.v2.jsonl",
+    "unitKey": "warehouse-order-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-planning/run.events.v2.jsonl",
+    "unitKey": "api-server-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-planning/run.events.v2.jsonl",
+    "unitKey": "application-warehouse-service",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-planning/run.events.v2.jsonl",
+    "unitKey": "domain-orders-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-planning/run.events.v2.jsonl",
+    "unitKey": "durability-journal-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-planning/run.events.v2.jsonl",
+    "unitKey": "fulfillment-priority-wave",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-planning/run.events.v2.jsonl",
+    "unitKey": "presentation-tower-orders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-planning/run.events.v2.jsonl",
+    "unitKey": "probe-g6-cli",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-16-planning/run.events.v2.jsonl",
+    "unitKey": "warehouse-order-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-full/run.events.v2.jsonl",
+    "unitKey": "api-current-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-full/run.events.v2.jsonl",
+    "unitKey": "application-warehouse-service-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-full/run.events.v2.jsonl",
+    "unitKey": "domain-orders-priority-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-full/run.events.v2.jsonl",
+    "unitKey": "durability-history-analytics-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-full/run.events.v2.jsonl",
+    "unitKey": "fulfillment-wave-ordering",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-full/run.events.v2.jsonl",
+    "unitKey": "presentation-order-priority-svg",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-full/run.events.v2.jsonl",
+    "unitKey": "probe-g6-deterministic-output",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-full/run.events.v2.jsonl",
+    "unitKey": "warehouse-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-planning/run.events.v2.jsonl",
+    "unitKey": "add-order-priority-and-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-planning/run.events.v2.jsonl",
+    "unitKey": "api-backorders-exposure",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-planning/run.events.v2.jsonl",
+    "unitKey": "application-backorder-events",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-planning/run.events.v2.jsonl",
+    "unitKey": "domain-order-priority-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-planning/run.events.v2.jsonl",
+    "unitKey": "durability-backorders-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-planning/run.events.v2.jsonl",
+    "unitKey": "fulfillment-express-first-wave",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-planning/run.events.v2.jsonl",
+    "unitKey": "presentation-priority-svg",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-17-planning/run.events.v2.jsonl",
+    "unitKey": "probe-g6-deterministic-output",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-full/run.events.v2.jsonl",
+    "unitKey": "api-backorders-exposure",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-full/run.events.v2.jsonl",
+    "unitKey": "application-backorder-flow",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-full/run.events.v2.jsonl",
+    "unitKey": "domain-order-contract",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-full/run.events.v2.jsonl",
+    "unitKey": "durability-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-full/run.events.v2.jsonl",
+    "unitKey": "fulfillment-priority-wave",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-full/run.events.v2.jsonl",
+    "unitKey": "presentation-priority-rendering",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-full/run.events.v2.jsonl",
+    "unitKey": "probe-g6-deterministic",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-full/run.events.v2.jsonl",
+    "unitKey": "warehouse-order-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-planning/run.events.v2.jsonl",
+    "unitKey": "api-backorders-surface",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-planning/run.events.v2.jsonl",
+    "unitKey": "domain-service-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-planning/run.events.v2.jsonl",
+    "unitKey": "fulfillment-priority-wave",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-planning/run.events.v2.jsonl",
+    "unitKey": "journal-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-planning/run.events.v2.jsonl",
+    "unitKey": "presentation-priority-distinction",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-planning/run.events.v2.jsonl",
+    "unitKey": "probe-g6-determinism",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-18-planning/run.events.v2.jsonl",
+    "unitKey": "warehouse-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-19-planning/run.events.v2.jsonl",
+    "unitKey": "api-backorders-exposure",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-19-planning/run.events.v2.jsonl",
+    "unitKey": "application-backorder-events",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-19-planning/run.events.v2.jsonl",
+    "unitKey": "domain-order-backorder-rules",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-19-planning/run.events.v2.jsonl",
+    "unitKey": "durability-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-19-planning/run.events.v2.jsonl",
+    "unitKey": "fulfillment-express-wave-ordering",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-19-planning/run.events.v2.jsonl",
+    "unitKey": "g6-order-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-19-planning/run.events.v2.jsonl",
+    "unitKey": "presentation-order-priority-svg",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-19-planning/run.events.v2.jsonl",
+    "unitKey": "probe-g6-determinism",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-2/run.events.v2.jsonl",
+    "unitKey": "warehouse-api-backorders-exposure",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-2/run.events.v2.jsonl",
+    "unitKey": "warehouse-application-backorder-flow",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-2/run.events.v2.jsonl",
+    "unitKey": "warehouse-domain-orders-priority-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-2/run.events.v2.jsonl",
+    "unitKey": "warehouse-durability-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-2/run.events.v2.jsonl",
+    "unitKey": "warehouse-fulfillment-priority-wave",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-2/run.events.v2.jsonl",
+    "unitKey": "warehouse-order-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-2/run.events.v2.jsonl",
+    "unitKey": "warehouse-presentation-order-priority",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-2/run.events.v2.jsonl",
+    "unitKey": "warehouse-probe-g6-determinism",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-full/run.events.v2.jsonl",
+    "unitKey": "api-server-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-full/run.events.v2.jsonl",
+    "unitKey": "application-warehouse-service-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-full/run.events.v2.jsonl",
+    "unitKey": "domain-orders-priority-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-full/run.events.v2.jsonl",
+    "unitKey": "durability-journal-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-full/run.events.v2.jsonl",
+    "unitKey": "fulfillment-planner-priority",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-full/run.events.v2.jsonl",
+    "unitKey": "presentation-tower-priority",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-full/run.events.v2.jsonl",
+    "unitKey": "probe-g6-study",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-full/run.events.v2.jsonl",
+    "unitKey": "warehouse-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-planning/run.events.v2.jsonl",
+    "unitKey": "api-server-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-planning/run.events.v2.jsonl",
+    "unitKey": "application-warehouse-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-planning/run.events.v2.jsonl",
+    "unitKey": "domain-orders-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-planning/run.events.v2.jsonl",
+    "unitKey": "durability-history-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-planning/run.events.v2.jsonl",
+    "unitKey": "fulfillment-priority-wave",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-planning/run.events.v2.jsonl",
+    "unitKey": "presentation-tower-priority",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-planning/run.events.v2.jsonl",
+    "unitKey": "probe-g6-determinism",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-20-planning/run.events.v2.jsonl",
+    "unitKey": "warehouse-order-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-full/run.events.v2.jsonl",
+    "unitKey": "api-backorders-exposure",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-full/run.events.v2.jsonl",
+    "unitKey": "application-warehouse-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-full/run.events.v2.jsonl",
+    "unitKey": "domain-orders-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-full/run.events.v2.jsonl",
+    "unitKey": "durability-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-full/run.events.v2.jsonl",
+    "unitKey": "fulfillment-priority-wave",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-full/run.events.v2.jsonl",
+    "unitKey": "presentation-order-priority-svg",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-full/run.events.v2.jsonl",
+    "unitKey": "probe-g6-entrypoint",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-full/run.events.v2.jsonl",
+    "unitKey": "warehouse-order-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-planning/run.events.v2.jsonl",
+    "unitKey": "semantic-api-server",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-planning/run.events.v2.jsonl",
+    "unitKey": "semantic-application-warehouse-service",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-planning/run.events.v2.jsonl",
+    "unitKey": "semantic-domain-orders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-planning/run.events.v2.jsonl",
+    "unitKey": "semantic-durability-journal",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-planning/run.events.v2.jsonl",
+    "unitKey": "semantic-fulfillment-planner",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-planning/run.events.v2.jsonl",
+    "unitKey": "semantic-presentation-tower",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-planning/run.events.v2.jsonl",
+    "unitKey": "semantic-probe-g6",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-21-planning/run.events.v2.jsonl",
+    "unitKey": "semantic-root-order-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-full/run.events.v2.jsonl",
+    "unitKey": "api-backorders-surface",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-full/run.events.v2.jsonl",
+    "unitKey": "application-warehouse-service-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-full/run.events.v2.jsonl",
+    "unitKey": "domain-orders-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-full/run.events.v2.jsonl",
+    "unitKey": "durability-journal-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-full/run.events.v2.jsonl",
+    "unitKey": "fulfillment-wave-priority",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-full/run.events.v2.jsonl",
+    "unitKey": "presentation-tower-priority",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-full/run.events.v2.jsonl",
+    "unitKey": "probe-g6-script",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-full/run.events.v2.jsonl",
+    "unitKey": "warehouse-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-planning/run.events.v2.jsonl",
+    "unitKey": "application-backorder-service-api",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-planning/run.events.v2.jsonl",
+    "unitKey": "domain-order-contract",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-planning/run.events.v2.jsonl",
+    "unitKey": "durability-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-planning/run.events.v2.jsonl",
+    "unitKey": "fulfillment-priority-wave-planner",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-planning/run.events.v2.jsonl",
+    "unitKey": "presentation-order-priority-svg",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-planning/run.events.v2.jsonl",
+    "unitKey": "probe-g6-deterministic-json",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-24-planning/run.events.v2.jsonl",
+    "unitKey": "warehouse-order-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-25-planning/run.events.v2.jsonl",
+    "unitKey": "api-backorders-exposure",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-25-planning/run.events.v2.jsonl",
+    "unitKey": "durability-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-25-planning/run.events.v2.jsonl",
+    "unitKey": "fulfillment-priority-wave-ordering",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-25-planning/run.events.v2.jsonl",
+    "unitKey": "orders-domain-priority-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-25-planning/run.events.v2.jsonl",
+    "unitKey": "presentation-priority-svg",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-25-planning/run.events.v2.jsonl",
+    "unitKey": "probe-g6-deterministic-script",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-25-planning/run.events.v2.jsonl",
+    "unitKey": "warehouse-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-25-planning/run.events.v2.jsonl",
+    "unitKey": "warehouse-service-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
+    "unitKey": "api-server-backorder-exposure",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
+    "unitKey": "application-warehouse-service-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
+    "unitKey": "domain-orders-priority-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
+    "unitKey": "durability-journal-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
+    "unitKey": "fulfillment-planner-priority-wave",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
+    "unitKey": "presentation-tower-priority-svg",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
+    "unitKey": "probe-g6-deterministic-json",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-26-full/run.events.v2.jsonl",
+    "unitKey": "warehouse-order-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-26-planning/run.events.v2.jsonl",
+    "unitKey": "domain-priority-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-26-planning/run.events.v2.jsonl",
+    "unitKey": "fulfillment-wave-priority",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-26-planning/run.events.v2.jsonl",
+    "unitKey": "g6-probe-determinism",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-26-planning/run.events.v2.jsonl",
+    "unitKey": "service-analytics-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-26-planning/run.events.v2.jsonl",
+    "unitKey": "surface-backorders-and-priority",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-26-planning/run.events.v2.jsonl",
+    "unitKey": "warehouse-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3-planning/run.events.v2.jsonl",
+    "unitKey": "api-backorders-exposure",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3-planning/run.events.v2.jsonl",
+    "unitKey": "application-backorder-event",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3-planning/run.events.v2.jsonl",
+    "unitKey": "domain-orders-priority-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3-planning/run.events.v2.jsonl",
+    "unitKey": "durability-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3-planning/run.events.v2.jsonl",
+    "unitKey": "fulfillment-priority-wave",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3-planning/run.events.v2.jsonl",
+    "unitKey": "presentation-priority-svg",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3-planning/run.events.v2.jsonl",
+    "unitKey": "probe-g6-deterministic-output",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3-planning/run.events.v2.jsonl",
+    "unitKey": "semantic-warehouse-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3/run.events.v2.jsonl",
+    "unitKey": "api-backorders-surface",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3/run.events.v2.jsonl",
+    "unitKey": "application-warehouse-backorder-events",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3/run.events.v2.jsonl",
+    "unitKey": "domain-orders-priority-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3/run.events.v2.jsonl",
+    "unitKey": "durability-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3/run.events.v2.jsonl",
+    "unitKey": "fulfillment-wave-priority",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3/run.events.v2.jsonl",
+    "unitKey": "presentation-express-orders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3/run.events.v2.jsonl",
+    "unitKey": "probe-g6-deterministic-json",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-3/run.events.v2.jsonl",
+    "unitKey": "warehouse-order-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-4/run.events.v2.jsonl",
+    "unitKey": "api-server",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-4/run.events.v2.jsonl",
+    "unitKey": "application-warehouse-service",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-4/run.events.v2.jsonl",
+    "unitKey": "domain-orders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-4/run.events.v2.jsonl",
+    "unitKey": "durability-journal",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-4/run.events.v2.jsonl",
+    "unitKey": "fulfillment-planner",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-4/run.events.v2.jsonl",
+    "unitKey": "presentation-tower",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-4/run.events.v2.jsonl",
+    "unitKey": "probe-g6",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-4/run.events.v2.jsonl",
+    "unitKey": "warehouse-orders-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-6/run.events.v2.jsonl",
+    "unitKey": "leaf-api-backorders-state",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-6/run.events.v2.jsonl",
+    "unitKey": "leaf-application-backorder-event",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-6/run.events.v2.jsonl",
+    "unitKey": "leaf-domain-order-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-6/run.events.v2.jsonl",
+    "unitKey": "leaf-durability-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-6/run.events.v2.jsonl",
+    "unitKey": "leaf-fulfillment-priority-wave",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-6/run.events.v2.jsonl",
+    "unitKey": "leaf-presentation-priority-svg",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-6/run.events.v2.jsonl",
+    "unitKey": "leaf-probe-g6-script",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-6/run.events.v2.jsonl",
+    "unitKey": "warehouse-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-7/run.events.v2.jsonl",
+    "unitKey": "api-backorder-surface",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-7/run.events.v2.jsonl",
+    "unitKey": "domain-order-contract",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-7/run.events.v2.jsonl",
+    "unitKey": "fulfillment-priority-wave",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-7/run.events.v2.jsonl",
+    "unitKey": "g6-probe-stability",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-7/run.events.v2.jsonl",
+    "unitKey": "journal-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-7/run.events.v2.jsonl",
+    "unitKey": "presentation-express-surface",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-7/run.events.v2.jsonl",
+    "unitKey": "warehouse-order-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-7/run.events.v2.jsonl",
+    "unitKey": "warehouse-service-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-9-full/run.events.v2.jsonl",
+    "unitKey": "application-api-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-9-full/run.events.v2.jsonl",
+    "unitKey": "domain-orders-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-9-full/run.events.v2.jsonl",
+    "unitKey": "durability-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-9-full/run.events.v2.jsonl",
+    "unitKey": "fulfillment-priority-wave",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-9-full/run.events.v2.jsonl",
+    "unitKey": "presentation-probe-output",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-9-full/run.events.v2.jsonl",
+    "unitKey": "warehouse-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-9/run.events.v2.jsonl",
+    "unitKey": "api-server-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-9/run.events.v2.jsonl",
+    "unitKey": "application-warehouse-backorder-events",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-9/run.events.v2.jsonl",
+    "unitKey": "domain-orders-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-9/run.events.v2.jsonl",
+    "unitKey": "durability-history-backorders-count",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-9/run.events.v2.jsonl",
+    "unitKey": "fulfillment-wave-priority",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-9/run.events.v2.jsonl",
+    "unitKey": "presentation-tower-order-priority",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-9/run.events.v2.jsonl",
+    "unitKey": "probe-g6-deterministic-json",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-03-T1-B-r1-remediation-9/run.events.v2.jsonl",
+    "unitKey": "warehouse-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
+    "unitKey": "api-server-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
+    "unitKey": "application-warehouse-service",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
+    "unitKey": "domain-order-contracts",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
+    "unitKey": "durability-journal-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
+    "unitKey": "fulfillment-plan-priority",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
+    "unitKey": "presentation-tower-priority",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
+    "unitKey": "probe-g6-study",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-04-T1-C-r2-full/run.events.v2.jsonl",
+    "unitKey": "warehouse-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-04-T1-C-r2-planning/run.events.v2.jsonl",
+    "unitKey": "api-server-leaf",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-04-T1-C-r2-planning/run.events.v2.jsonl",
+    "unitKey": "application-warehouse-service-leaf",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-04-T1-C-r2-planning/run.events.v2.jsonl",
+    "unitKey": "domain-orders-leaf",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-04-T1-C-r2-planning/run.events.v2.jsonl",
+    "unitKey": "durability-journal-leaf",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-04-T1-C-r2-planning/run.events.v2.jsonl",
+    "unitKey": "fulfillment-planner-leaf",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-04-T1-C-r2-planning/run.events.v2.jsonl",
+    "unitKey": "presentation-tower-leaf",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-04-T1-C-r2-planning/run.events.v2.jsonl",
+    "unitKey": "probe-g6-leaf",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-04-T1-C-r2-planning/run.events.v2.jsonl",
+    "unitKey": "warehouse-priority-backorders-root",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-05-T1-A-r2-full/run.events.v2.jsonl",
+    "unitKey": "order-priority-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-05-T1-A-r2-planning/run.events.v2.jsonl",
+    "unitKey": "warehouse-priority-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-planning/run.events.v2.jsonl",
+    "unitKey": "api-backorders-state",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-planning/run.events.v2.jsonl",
+    "unitKey": "application-warehouse-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-planning/run.events.v2.jsonl",
+    "unitKey": "domain-orders-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-planning/run.events.v2.jsonl",
+    "unitKey": "durability-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-planning/run.events.v2.jsonl",
+    "unitKey": "fulfillment-priority-wave",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-planning/run.events.v2.jsonl",
+    "unitKey": "presentation-order-priority",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-planning/run.events.v2.jsonl",
+    "unitKey": "probe-g6-determinism",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-planning/run.events.v2.jsonl",
+    "unitKey": "warehouse-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-29-planning/run.events.v2.jsonl",
+    "unitKey": "api-server-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-29-planning/run.events.v2.jsonl",
+    "unitKey": "application-warehouse-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-29-planning/run.events.v2.jsonl",
+    "unitKey": "domain-orders-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-29-planning/run.events.v2.jsonl",
+    "unitKey": "durability-history-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-29-planning/run.events.v2.jsonl",
+    "unitKey": "fulfillment-priority-wave",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-29-planning/run.events.v2.jsonl",
+    "unitKey": "presentation-tower-priority",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-29-planning/run.events.v2.jsonl",
+    "unitKey": "probe-g6-script",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-29-planning/run.events.v2.jsonl",
+    "unitKey": "warehouse-order-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-31-full/run.events.v2.jsonl",
+    "unitKey": "api-current-state-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-31-full/run.events.v2.jsonl",
+    "unitKey": "application-warehouse-backorder-events",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-31-full/run.events.v2.jsonl",
+    "unitKey": "domain-orders-priority-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-31-full/run.events.v2.jsonl",
+    "unitKey": "durability-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-31-full/run.events.v2.jsonl",
+    "unitKey": "fulfillment-wave-priority-ordering",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-31-full/run.events.v2.jsonl",
+    "unitKey": "presentation-priority-svg",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-31-full/run.events.v2.jsonl",
+    "unitKey": "probe-g6-script",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-31-full/run.events.v2.jsonl",
+    "unitKey": "warehouse-backorders-priority-rollout",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-35-full/run.events.v2.jsonl",
+    "unitKey": "api-backorders-state-leaf",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-35-full/run.events.v2.jsonl",
+    "unitKey": "domain-order-backorders-leaf",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-35-full/run.events.v2.jsonl",
+    "unitKey": "fulfillment-priority-wave-ordering-leaf",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-35-full/run.events.v2.jsonl",
+    "unitKey": "journal-backorder-analytics-leaf",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-35-full/run.events.v2.jsonl",
+    "unitKey": "probe-g6-determinism-leaf",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-35-full/run.events.v2.jsonl",
+    "unitKey": "tower-order-priority-rendering-leaf",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-35-full/run.events.v2.jsonl",
+    "unitKey": "warehouse-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-35-full/run.events.v2.jsonl",
+    "unitKey": "warehouse-service-backorder-events-leaf",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-36-full/run.events.v2.jsonl",
+    "unitKey": "add-order-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-36-full/run.events.v2.jsonl",
+    "unitKey": "api-backorders-exposure",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-36-full/run.events.v2.jsonl",
+    "unitKey": "domain-order-contract",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-36-full/run.events.v2.jsonl",
+    "unitKey": "durability-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-36-full/run.events.v2.jsonl",
+    "unitKey": "fulfillment-wave-priority",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-36-full/run.events.v2.jsonl",
+    "unitKey": "presentation-order-priority",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-36-full/run.events.v2.jsonl",
+    "unitKey": "probe-study-g6",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-36-full/run.events.v2.jsonl",
+    "unitKey": "warehouse-service-backorder-events",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-38-full/run.events.v2.jsonl",
+    "unitKey": "add-order-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-38-full/run.events.v2.jsonl",
+    "unitKey": "api-server-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-38-full/run.events.v2.jsonl",
+    "unitKey": "application-warehouse-service-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-38-full/run.events.v2.jsonl",
+    "unitKey": "domain-orders-priority-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-38-full/run.events.v2.jsonl",
+    "unitKey": "durability-journal-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-38-full/run.events.v2.jsonl",
+    "unitKey": "fulfillment-planner-priority-wave",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-38-full/run.events.v2.jsonl",
+    "unitKey": "presentation-tower-order-priority",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-38-full/run.events.v2.jsonl",
+    "unitKey": "probe-g6-determinism",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-39-full/run.events.v2.jsonl",
+    "unitKey": "api-backorders-exposure",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-39-full/run.events.v2.jsonl",
+    "unitKey": "application-backorder-events",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-39-full/run.events.v2.jsonl",
+    "unitKey": "domain-order-contract",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-39-full/run.events.v2.jsonl",
+    "unitKey": "durability-backorder-analytics",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-39-full/run.events.v2.jsonl",
+    "unitKey": "fulfillment-priority-rendering",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-39-full/run.events.v2.jsonl",
+    "unitKey": "g6-order-priority-backorders",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "g6/runs/g6-06-T1-B-r2-remediation-39-full/run.events.v2.jsonl",
+    "unitKey": "probe-g6-study",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "stage-7-rehearsals/runs/rehearsal-04w-v5/run.events.v2.jsonl",
+    "unitKey": "api-backorder-observability",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "stage-7-rehearsals/runs/rehearsal-04w-v5/run.events.v2.jsonl",
+    "unitKey": "application-backorder-event",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "stage-7-rehearsals/runs/rehearsal-04w-v5/run.events.v2.jsonl",
+    "unitKey": "domain-priority-backorders",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "stage-7-rehearsals/runs/rehearsal-04w-v5/run.events.v2.jsonl",
+    "unitKey": "root",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": true
+  },
+  {
+    "caseId": "stage-7-rehearsals/runs/sp2-cell-01/run.events.v2.jsonl",
+    "unitKey": "api-backorder-surface",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "stage-7-rehearsals/runs/sp2-cell-01/run.events.v2.jsonl",
+    "unitKey": "application-backorder-events",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "stage-7-rehearsals/runs/sp2-cell-01/run.events.v2.jsonl",
+    "unitKey": "domain-priority-and-backorder-data",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "stage-7-rehearsals/runs/sp2-cell-01/run.events.v2.jsonl",
+    "unitKey": "root",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": true
+  },
+  {
+    "caseId": "stage-7-rehearsals/runs/sp2-cell-02/run.events.v2.jsonl",
+    "unitKey": "api-backorder-surface",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "stage-7-rehearsals/runs/sp2-cell-02/run.events.v2.jsonl",
+    "unitKey": "application-backorder-events",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "stage-7-rehearsals/runs/sp2-cell-02/run.events.v2.jsonl",
+    "unitKey": "domain-priority-backorder-state",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "stage-7-rehearsals/runs/sp2-cell-02/run.events.v2.jsonl",
+    "unitKey": "root",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": true
+  },
+  {
+    "caseId": "ui-demo-run/runs/0cffb470-09e0-4bd9-bf89-8909a177a674/0cffb470-09e0-4bd9-bf89-8909a177a674.events.v2.jsonl",
+    "unitKey": "api-reservation-endpoints",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "ui-demo-run/runs/0cffb470-09e0-4bd9-bf89-8909a177a674/0cffb470-09e0-4bd9-bf89-8909a177a674.events.v2.jsonl",
+    "unitKey": "application-reservation-service",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "ui-demo-run/runs/0cffb470-09e0-4bd9-bf89-8909a177a674/0cffb470-09e0-4bd9-bf89-8909a177a674.events.v2.jsonl",
+    "unitKey": "dashboard-reservation-summary",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "ui-demo-run/runs/0cffb470-09e0-4bd9-bf89-8909a177a674/0cffb470-09e0-4bd9-bf89-8909a177a674.events.v2.jsonl",
+    "unitKey": "domain-reservation-lifecycle",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "ui-demo-run/runs/0cffb470-09e0-4bd9-bf89-8909a177a674/0cffb470-09e0-4bd9-bf89-8909a177a674.events.v2.jsonl",
+    "unitKey": "end-to-end-reservation-flow",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "ui-demo-run/runs/0cffb470-09e0-4bd9-bf89-8909a177a674/0cffb470-09e0-4bd9-bf89-8909a177a674.events.v2.jsonl",
+    "unitKey": "infrastructure-reservation-repository",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "ui-demo-run/runs/0cffb470-09e0-4bd9-bf89-8909a177a674/0cffb470-09e0-4bd9-bf89-8909a177a674.events.v2.jsonl",
+    "unitKey": "root",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "ui-demo-run/runs/2fcea3bd-a85b-4a3d-a987-9d0badeb7f5f/2fcea3bd-a85b-4a3d-a987-9d0badeb7f5f.events.v2.jsonl",
+    "unitKey": "fix-reservation-api-adapter-contract",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "ui-demo-run/runs/2fcea3bd-a85b-4a3d-a987-9d0badeb7f5f/2fcea3bd-a85b-4a3d-a987-9d0badeb7f5f.events.v2.jsonl",
+    "unitKey": "fix-reservation-e2e-contract-assertions",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "ui-demo-run/runs/2fcea3bd-a85b-4a3d-a987-9d0badeb7f5f/2fcea3bd-a85b-4a3d-a987-9d0badeb7f5f.events.v2.jsonl",
+    "unitKey": "root",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "ui-demo-run/runs/41ba47d5-d44a-4ec2-a470-d84437c6d076/41ba47d5-d44a-4ec2-a470-d84437c6d076.events.v2.jsonl",
+    "unitKey": "normalize-api-boundary-contract",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "ui-demo-run/runs/41ba47d5-d44a-4ec2-a470-d84437c6d076/41ba47d5-d44a-4ec2-a470-d84437c6d076.events.v2.jsonl",
+    "unitKey": "root",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "ui-demo-run/runs/41ba47d5-d44a-4ec2-a470-d84437c6d076/41ba47d5-d44a-4ec2-a470-d84437c6d076.events.v2.jsonl",
+    "unitKey": "update-reservation-e2e-contract-assertions",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "ui-demo-run/runs/766ccb97-7a39-45c2-bfcf-0818b97ed907/766ccb97-7a39-45c2-bfcf-0818b97ed907.events.v2.jsonl",
+    "unitKey": "normalize-public-reservation-api-contract",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "ui-demo-run/runs/766ccb97-7a39-45c2-bfcf-0818b97ed907/766ccb97-7a39-45c2-bfcf-0818b97ed907.events.v2.jsonl",
+    "unitKey": "root",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "ui-demo-run/runs/87e7fe2c-a4c1-4c21-895c-7c1c33efc154/87e7fe2c-a4c1-4c21-895c-7c1c33efc154.events.v2.jsonl",
+    "unitKey": "api-reservation-endpoints",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "ui-demo-run/runs/87e7fe2c-a4c1-4c21-895c-7c1c33efc154/87e7fe2c-a4c1-4c21-895c-7c1c33efc154.events.v2.jsonl",
+    "unitKey": "application-reservation-service",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "ui-demo-run/runs/87e7fe2c-a4c1-4c21-895c-7c1c33efc154/87e7fe2c-a4c1-4c21-895c-7c1c33efc154.events.v2.jsonl",
+    "unitKey": "dashboard-reservation-view",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "ui-demo-run/runs/87e7fe2c-a4c1-4c21-895c-7c1c33efc154/87e7fe2c-a4c1-4c21-895c-7c1c33efc154.events.v2.jsonl",
+    "unitKey": "domain-reservation-lifecycle",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "ui-demo-run/runs/87e7fe2c-a4c1-4c21-895c-7c1c33efc154/87e7fe2c-a4c1-4c21-895c-7c1c33efc154.events.v2.jsonl",
+    "unitKey": "infrastructure-reservation-repository",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "ui-demo-run/runs/87e7fe2c-a4c1-4c21-895c-7c1c33efc154/87e7fe2c-a4c1-4c21-895c-7c1c33efc154.events.v2.jsonl",
+    "unitKey": "reservation-lifecycle-e2e-tests",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "ui-demo-run/runs/87e7fe2c-a4c1-4c21-895c-7c1c33efc154/87e7fe2c-a4c1-4c21-895c-7c1c33efc154.events.v2.jsonl",
+    "unitKey": "root",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-executor-stuck/run.events.v2.jsonl",
+    "unitKey": "analytics-contract",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-executor-stuck/run.events.v2.jsonl",
+    "unitKey": "analytics-registry",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-executor-stuck/run.events.v2.jsonl",
+    "unitKey": "projection-bin-occupancy",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-executor-stuck/run.events.v2.jsonl",
+    "unitKey": "projection-sku-bin-spread",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-executor-stuck/run.events.v2.jsonl",
+    "unitKey": "projection-sku-unit-totals",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-executor-stuck/run.events.v2.jsonl",
+    "unitKey": "projection-zone-unit-totals",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-executor-stuck/run.events.v2.jsonl",
+    "unitKey": "warehouse-analytics-root",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-executor-stuck/run.events.v2.jsonl",
+    "unitKey": "wide-graph-study-script",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-runtime-dir-mismatch/run.events.v2.jsonl",
+    "unitKey": "analytics-contract",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-runtime-dir-mismatch/run.events.v2.jsonl",
+    "unitKey": "analytics-registry",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-runtime-dir-mismatch/run.events.v2.jsonl",
+    "unitKey": "projection-bin-occupancy",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-runtime-dir-mismatch/run.events.v2.jsonl",
+    "unitKey": "projection-sku-bin-spread",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-runtime-dir-mismatch/run.events.v2.jsonl",
+    "unitKey": "projection-sku-unit-totals",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-runtime-dir-mismatch/run.events.v2.jsonl",
+    "unitKey": "projection-zone-unit-totals",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-runtime-dir-mismatch/run.events.v2.jsonl",
+    "unitKey": "study-wide-graph-output",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n04-runtime-dir-mismatch/run.events.v2.jsonl",
+    "unitKey": "warehouse-analytics-w1",
+    "selected": "split",
+    "leafFeasible": false,
+    "splitViable": true,
+    "doesNotFit": true,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n08-executor-stuck/run.events.v2.jsonl",
+    "unitKey": "analytics-contract",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n08-executor-stuck/run.events.v2.jsonl",
+    "unitKey": "analytics-registry",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n08-executor-stuck/run.events.v2.jsonl",
+    "unitKey": "analytics-wide-root",
+    "selected": "split",
+    "leafFeasible": false,
+    "splitViable": true,
+    "doesNotFit": true,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n08-executor-stuck/run.events.v2.jsonl",
+    "unitKey": "projection-01-zone-unit-totals",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n08-executor-stuck/run.events.v2.jsonl",
+    "unitKey": "projection-02-sku-unit-totals",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n08-executor-stuck/run.events.v2.jsonl",
+    "unitKey": "projection-03-bin-occupancy",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n08-executor-stuck/run.events.v2.jsonl",
+    "unitKey": "projection-04-sku-bin-spread",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n08-executor-stuck/run.events.v2.jsonl",
+    "unitKey": "projection-05-zone-sku-mix",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n08-executor-stuck/run.events.v2.jsonl",
+    "unitKey": "projection-06-top-bin-by-units",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n08-executor-stuck/run.events.v2.jsonl",
+    "unitKey": "projection-07-empty-bin-ids",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n08-executor-stuck/run.events.v2.jsonl",
+    "unitKey": "projection-08-median-occupied-bin-units",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runs/warehouse-wide-n08-executor-stuck/run.events.v2.jsonl",
+    "unitKey": "wide-graph-study-script",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runtime-runs/4e853223-1fff-47d5-a0f3-e59fdbfb3c76.events.v2.jsonl",
+    "unitKey": "analytics-contract",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runtime-runs/4e853223-1fff-47d5-a0f3-e59fdbfb3c76.events.v2.jsonl",
+    "unitKey": "analytics-registry",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runtime-runs/4e853223-1fff-47d5-a0f3-e59fdbfb3c76.events.v2.jsonl",
+    "unitKey": "analytics-wide-root",
+    "selected": "split",
+    "leafFeasible": false,
+    "splitViable": true,
+    "doesNotFit": true,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runtime-runs/4e853223-1fff-47d5-a0f3-e59fdbfb3c76.events.v2.jsonl",
+    "unitKey": "projection-01-zone-unit-totals",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runtime-runs/4e853223-1fff-47d5-a0f3-e59fdbfb3c76.events.v2.jsonl",
+    "unitKey": "projection-02-sku-unit-totals",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runtime-runs/4e853223-1fff-47d5-a0f3-e59fdbfb3c76.events.v2.jsonl",
+    "unitKey": "projection-03-bin-occupancy",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runtime-runs/4e853223-1fff-47d5-a0f3-e59fdbfb3c76.events.v2.jsonl",
+    "unitKey": "projection-04-sku-bin-spread",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runtime-runs/4e853223-1fff-47d5-a0f3-e59fdbfb3c76.events.v2.jsonl",
+    "unitKey": "projection-05-zone-sku-mix",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runtime-runs/4e853223-1fff-47d5-a0f3-e59fdbfb3c76.events.v2.jsonl",
+    "unitKey": "projection-06-top-bin-by-units",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runtime-runs/4e853223-1fff-47d5-a0f3-e59fdbfb3c76.events.v2.jsonl",
+    "unitKey": "projection-07-empty-bin-ids",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runtime-runs/4e853223-1fff-47d5-a0f3-e59fdbfb3c76.events.v2.jsonl",
+    "unitKey": "projection-08-median-occupied-bin-units",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runtime-runs/4e853223-1fff-47d5-a0f3-e59fdbfb3c76.events.v2.jsonl",
+    "unitKey": "wide-graph-study-script",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runtime-runs/67b52f91-d4d4-4d1f-a1de-4f09cdf80363.events.v2.jsonl",
+    "unitKey": "analytics-contract",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runtime-runs/67b52f91-d4d4-4d1f-a1de-4f09cdf80363.events.v2.jsonl",
+    "unitKey": "analytics-registry",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runtime-runs/67b52f91-d4d4-4d1f-a1de-4f09cdf80363.events.v2.jsonl",
+    "unitKey": "projection-bin-occupancy",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runtime-runs/67b52f91-d4d4-4d1f-a1de-4f09cdf80363.events.v2.jsonl",
+    "unitKey": "projection-sku-bin-spread",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runtime-runs/67b52f91-d4d4-4d1f-a1de-4f09cdf80363.events.v2.jsonl",
+    "unitKey": "projection-sku-unit-totals",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runtime-runs/67b52f91-d4d4-4d1f-a1de-4f09cdf80363.events.v2.jsonl",
+    "unitKey": "projection-zone-unit-totals",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runtime-runs/67b52f91-d4d4-4d1f-a1de-4f09cdf80363.events.v2.jsonl",
+    "unitKey": "warehouse-analytics-root",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-11/runtime-runs/67b52f91-d4d4-4d1f-a1de-4f09cdf80363.events.v2.jsonl",
+    "unitKey": "wide-graph-study-script",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n04/run.events.v2.jsonl",
+    "unitKey": "analytics-contract",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n04/run.events.v2.jsonl",
+    "unitKey": "analytics-registry",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n04/run.events.v2.jsonl",
+    "unitKey": "analytics-w1-four-projections",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n04/run.events.v2.jsonl",
+    "unitKey": "projection-bin-occupancy",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n04/run.events.v2.jsonl",
+    "unitKey": "projection-sku-bin-spread",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n04/run.events.v2.jsonl",
+    "unitKey": "projection-sku-unit-totals",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n04/run.events.v2.jsonl",
+    "unitKey": "projection-zone-unit-totals",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n04/run.events.v2.jsonl",
+    "unitKey": "study-wide-graph-cli",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n08/run.events.v2.jsonl",
+    "unitKey": "analytics-contract",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n08/run.events.v2.jsonl",
+    "unitKey": "analytics-registry",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n08/run.events.v2.jsonl",
+    "unitKey": "projection-01-zone-unit-totals",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n08/run.events.v2.jsonl",
+    "unitKey": "projection-02-sku-unit-totals",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n08/run.events.v2.jsonl",
+    "unitKey": "projection-03-bin-occupancy",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n08/run.events.v2.jsonl",
+    "unitKey": "projection-04-sku-bin-spread",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n08/run.events.v2.jsonl",
+    "unitKey": "projection-05-zone-sku-mix",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n08/run.events.v2.jsonl",
+    "unitKey": "projection-06-top-bin-by-units",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n08/run.events.v2.jsonl",
+    "unitKey": "projection-07-empty-bin-ids",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n08/run.events.v2.jsonl",
+    "unitKey": "projection-08-median-occupied-bin-units",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n08/run.events.v2.jsonl",
+    "unitKey": "warehouse-analytics-modules",
+    "selected": "split",
+    "leafFeasible": false,
+    "splitViable": true,
+    "doesNotFit": true,
+    "runsInParallel": true,
+    "verifiableApart": true
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runs/warehouse-wide-n08/run.events.v2.jsonl",
+    "unitKey": "wide-graph-script",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/1664d097-a69d-448c-b058-258cd1097075.events.v2.jsonl",
+    "unitKey": "analytics-contract",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/1664d097-a69d-448c-b058-258cd1097075.events.v2.jsonl",
+    "unitKey": "analytics-registry",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/1664d097-a69d-448c-b058-258cd1097075.events.v2.jsonl",
+    "unitKey": "analytics-w1-four-projections",
+    "selected": "split",
+    "leafFeasible": true,
+    "splitViable": true,
+    "doesNotFit": false,
+    "runsInParallel": true,
+    "verifiableApart": true
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/1664d097-a69d-448c-b058-258cd1097075.events.v2.jsonl",
+    "unitKey": "projection-bin-occupancy",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/1664d097-a69d-448c-b058-258cd1097075.events.v2.jsonl",
+    "unitKey": "projection-sku-bin-spread",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/1664d097-a69d-448c-b058-258cd1097075.events.v2.jsonl",
+    "unitKey": "projection-sku-unit-totals",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/1664d097-a69d-448c-b058-258cd1097075.events.v2.jsonl",
+    "unitKey": "projection-zone-unit-totals",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/1664d097-a69d-448c-b058-258cd1097075.events.v2.jsonl",
+    "unitKey": "study-wide-graph-cli",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/4ba80bca-879a-4fa3-af4c-e5ca10721d1d.events.v2.jsonl",
+    "unitKey": "analytics-contract",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/4ba80bca-879a-4fa3-af4c-e5ca10721d1d.events.v2.jsonl",
+    "unitKey": "analytics-registry",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/4ba80bca-879a-4fa3-af4c-e5ca10721d1d.events.v2.jsonl",
+    "unitKey": "projection-01-zone-unit-totals",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/4ba80bca-879a-4fa3-af4c-e5ca10721d1d.events.v2.jsonl",
+    "unitKey": "projection-02-sku-unit-totals",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/4ba80bca-879a-4fa3-af4c-e5ca10721d1d.events.v2.jsonl",
+    "unitKey": "projection-03-bin-occupancy",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/4ba80bca-879a-4fa3-af4c-e5ca10721d1d.events.v2.jsonl",
+    "unitKey": "projection-04-sku-bin-spread",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/4ba80bca-879a-4fa3-af4c-e5ca10721d1d.events.v2.jsonl",
+    "unitKey": "projection-05-zone-sku-mix",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/4ba80bca-879a-4fa3-af4c-e5ca10721d1d.events.v2.jsonl",
+    "unitKey": "projection-06-top-bin-by-units",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/4ba80bca-879a-4fa3-af4c-e5ca10721d1d.events.v2.jsonl",
+    "unitKey": "projection-07-empty-bin-ids",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/4ba80bca-879a-4fa3-af4c-e5ca10721d1d.events.v2.jsonl",
+    "unitKey": "projection-08-median-occupied-bin-units",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/4ba80bca-879a-4fa3-af4c-e5ca10721d1d.events.v2.jsonl",
+    "unitKey": "warehouse-analytics-modules",
+    "selected": "split",
+    "leafFeasible": false,
+    "splitViable": true,
+    "doesNotFit": true,
+    "runsInParallel": true,
+    "verifiableApart": true
+  },
+  {
+    "caseId": "warehouse/wide-graph/retry-12-measure/runtime-runs/4ba80bca-879a-4fa3-af4c-e5ca10721d1d.events.v2.jsonl",
+    "unitKey": "wide-graph-script",
+    "selected": "leaf",
+    "leafFeasible": true,
+    "splitViable": false,
+    "doesNotFit": false,
+    "runsInParallel": false,
+    "verifiableApart": false
+  }
+]

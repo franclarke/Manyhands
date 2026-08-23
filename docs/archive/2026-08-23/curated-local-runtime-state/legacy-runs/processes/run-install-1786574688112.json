@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "processes": [
+    {
+      "pid": 40076,
+      "label": "install",
+      "command": "C:\\Users\\franc\\AppData\\Local\\pnpm\\node.exe",
+      "operationId": "op-install",
+      "registeredAt": "2026-08-12T22:44:48.588Z",
+      "exitedAt": "2026-08-12T22:44:49.257Z"
+    }
+  ],
+  "updatedAt": "2026-08-12T22:44:49.269Z"
+}

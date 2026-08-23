@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "processes": [
+    {
+      "pid": 18408,
+      "label": "planning-decomposer",
+      "command": "C:\\Users\\franc\\AppData\\Local\\pnpm\\node.exe",
+      "registeredAt": "2026-08-12T22:44:49.327Z",
+      "exitedAt": "2026-08-12T22:44:49.970Z"
+    }
+  ],
+  "updatedAt": "2026-08-12T22:44:49.986Z"
+}

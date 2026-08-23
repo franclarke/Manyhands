@@ -1,0 +1,643 @@
+{
+  "events": [
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:readiness.observed:52",
+      "occurredAt": "2026-08-21T04:15:58.647Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:itinerary-stops",
+          "unit:organization-packing"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:itinerary-stops",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:organization-packing",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-agenda",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-search",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-stops",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-stops",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-agenda",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-stops",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organization-packing",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organization-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:shell",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:shell",
+            "unit:itinerary",
+            "unit:itinerary-stops",
+            "unit:itinerary-agenda",
+            "unit:itinerary-search",
+            "unit:organization",
+            "unit:organization-budget",
+            "unit:organization-packing",
+            "unit:memories",
+            "unit:memories-notes",
+            "unit:memories-favorites"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:shell",
+            "unit:itinerary",
+            "unit:itinerary-stops",
+            "unit:itinerary-agenda",
+            "unit:itinerary-search",
+            "unit:organization",
+            "unit:organization-budget",
+            "unit:organization-packing",
+            "unit:memories",
+            "unit:memories-notes",
+            "unit:memories-favorites"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T04:15:58.628Z"
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:wave.selected:53",
+      "occurredAt": "2026-08-21T04:15:58.691Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:wave:4",
+        "nodeIds": [
+          "unit:itinerary-stops",
+          "unit:organization-packing"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-agenda",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-search",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-stops",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-stops",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-agenda",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-stops",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organization-packing",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organization-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:shell",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-21T04:15:58.674Z"
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-stops:2:started",
+      "occurredAt": "2026-08-21T04:15:58.729Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-stops:2",
+        "nodeId": "unit:itinerary-stops",
+        "inputFingerprint": "sha256:9b09a4f2ad49099d8b71160b4bb18811a2e3ce5cd1cab72ec1d26e321f07cb4e",
+        "retryOfAttemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-stops:1",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization-packing:2:started",
+      "occurredAt": "2026-08-21T04:15:58.730Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization-packing:2",
+        "nodeId": "unit:organization-packing",
+        "inputFingerprint": "sha256:254a6b774cfa381c17cb2a9adb1233b0cf482d7711cb0250d7ad9070da88bc0b",
+        "retryOfAttemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization-packing:1",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-stops:2:failed",
+      "occurredAt": "2026-08-21T04:21:11.536Z",
+      "type": "attempt.failed",
+      "payload": {
+        "attemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-stops:2",
+        "nodeId": "unit:itinerary-stops",
+        "reason": "validation_failed: exact candidate 22590e57295f15373cd3ef4503d29e3c9ff8c9d0 failed matrix matrix-cf8e91afbee5b1be. Failed criteria: validation:itinerary-stops: Validation fails, but the same failure exists in the baseline.",
+        "usage": {
+          "tokensTotal": 51171,
+          "costUsd": 0.23026950000000002,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-stops:2:decision",
+      "occurredAt": "2026-08-21T04:21:11.536Z",
+      "type": "decision.raised",
+      "payload": {
+        "decision": {
+          "id": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-stops:2:decision",
+          "kind": "resolve_conflict",
+          "question": "Execution for Destinos y paradas requires guidance: validation_failed: exact candidate 22590e57295f15373cd3ef4503d29e3c9ff8c9d0 failed matrix matrix-cf8e91afbee5b1be. Failed criteria: validation:itinerary-stops: Validation fails, but the same failure exists in the baseline.",
+          "options": [
+            {
+              "id": "retry",
+              "label": "Retry with guidance"
+            },
+            {
+              "id": "stop",
+              "label": "Stop this work"
+            }
+          ],
+          "affectedNodeIds": [
+            "unit:itinerary-stops"
+          ],
+          "repairTargetNodeId": "unit:itinerary-stops",
+          "evidenceRefs": [
+            "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-stops:2",
+            "input-fingerprint:sha256:9b09a4f2ad49099d8b71160b4bb18811a2e3ce5cd1cab72ec1d26e321f07cb4e"
+          ],
+          "impact": "behavior",
+          "raisedAtGraphRevision": 1
+        }
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization-packing:2:failed",
+      "occurredAt": "2026-08-21T04:23:10.477Z",
+      "type": "attempt.failed",
+      "payload": {
+        "attemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization-packing:2",
+        "nodeId": "unit:organization-packing",
+        "reason": "validation_failed: exact candidate a695711348f838d63ce35039aa4ac5e871bc3fae failed matrix matrix-fc6a816a974e7c18. Failed criteria: validation:organization-packing: Validation fails, but the same failure exists in the baseline.",
+        "usage": {
+          "tokensTotal": 73730,
+          "costUsd": 0.331785,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization-packing:2:decision",
+      "occurredAt": "2026-08-21T04:23:10.477Z",
+      "type": "decision.raised",
+      "payload": {
+        "decision": {
+          "id": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization-packing:2:decision",
+          "kind": "resolve_conflict",
+          "question": "Execution for Checklist de equipaje requires guidance: validation_failed: exact candidate a695711348f838d63ce35039aa4ac5e871bc3fae failed matrix matrix-fc6a816a974e7c18. Failed criteria: validation:organization-packing: Validation fails, but the same failure exists in the baseline.",
+          "options": [
+            {
+              "id": "retry",
+              "label": "Retry with guidance"
+            },
+            {
+              "id": "stop",
+              "label": "Stop this work"
+            }
+          ],
+          "affectedNodeIds": [
+            "unit:organization-packing"
+          ],
+          "repairTargetNodeId": "unit:organization-packing",
+          "evidenceRefs": [
+            "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization-packing:2",
+            "input-fingerprint:sha256:254a6b774cfa381c17cb2a9adb1233b0cf482d7711cb0250d7ad9070da88bc0b"
+          ],
+          "impact": "behavior",
+          "raisedAtGraphRevision": 1
+        }
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:readiness.observed:60",
+      "occurredAt": "2026-08-21T04:23:10.557Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [],
+        "pendingDecisionIds": [
+          "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-stops:2:decision",
+          "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization-packing:2:decision"
+        ],
+        "explanations": [
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-agenda",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-search",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-stops",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-stops",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-agenda",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-stops",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-stops:2:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organization-packing",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization-packing:2:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organization-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:shell",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:shell",
+            "unit:itinerary",
+            "unit:itinerary-stops",
+            "unit:itinerary-agenda",
+            "unit:itinerary-search",
+            "unit:organization",
+            "unit:organization-budget",
+            "unit:organization-packing",
+            "unit:memories",
+            "unit:memories-notes",
+            "unit:memories-favorites"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:shell",
+            "unit:itinerary",
+            "unit:itinerary-stops",
+            "unit:itinerary-agenda",
+            "unit:itinerary-search",
+            "unit:organization",
+            "unit:organization-budget",
+            "unit:organization-packing",
+            "unit:memories",
+            "unit:memories-notes",
+            "unit:memories-favorites"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T04:23:10.530Z"
+      }
+    }
+  ]
+}

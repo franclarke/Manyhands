@@ -160,6 +160,10 @@ specifications. See `CONTEXT-MAP.md` and `docs/agents/domain.md`.
   oracles. A minimal standard-library target and source-pattern checks are only
   control-plane smoke evidence, never proof of rich decomposition or usable
   software.
+- In the ManyHands thesis, explain the complete system end to end before giving
+  selective depth to its main contributions. Name every subsystem in one
+  functional map and follow one run from intake through delivery so a general
+  systems reader never has to infer a missing architectural stage.
 - For sandboxed live workers, scope brokered credentials to the supervised
   process identity and remove that scope from the supervisor on every verified
   terminal outcome. A worker `finally` is not sufficient after timeout,

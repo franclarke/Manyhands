@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "processes": [
+    {
+      "pid": 15076,
+      "label": "validation",
+      "command": "C:\\Program Files\\nodejs\\node.exe",
+      "operationId": "op-validate",
+      "registeredAt": "2026-08-12T17:55:52.384Z",
+      "exitedAt": "2026-08-12T17:55:52.848Z"
+    }
+  ],
+  "updatedAt": "2026-08-12T17:55:52.857Z"
+}

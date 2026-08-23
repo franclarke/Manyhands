@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "processes": [
+    {
+      "pid": 18084,
+      "label": "planning-decomposer",
+      "command": "C:\\mh-runtime-c781-09\\node-v22.22.0-win-x64\\node.exe",
+      "registeredAt": "2026-08-13T07:13:12.460Z"
+    }
+  ],
+  "updatedAt": "2026-08-13T07:13:12.487Z"
+}

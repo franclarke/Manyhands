@@ -1,0 +1,2762 @@
+{
+  "events": [
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:readiness.observed:67",
+      "occurredAt": "2026-08-21T04:23:13.043Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:itinerary-stops",
+          "unit:organization-packing"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:itinerary-stops",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:organization-packing",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-agenda",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-search",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-stops",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-stops",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-agenda",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-stops",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organization-packing",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organization-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:shell",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:shell",
+            "unit:itinerary",
+            "unit:itinerary-stops",
+            "unit:itinerary-agenda",
+            "unit:itinerary-search",
+            "unit:organization",
+            "unit:organization-budget",
+            "unit:organization-packing",
+            "unit:memories",
+            "unit:memories-notes",
+            "unit:memories-favorites"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:shell",
+            "unit:itinerary",
+            "unit:itinerary-stops",
+            "unit:itinerary-agenda",
+            "unit:itinerary-search",
+            "unit:organization",
+            "unit:organization-budget",
+            "unit:organization-packing",
+            "unit:memories",
+            "unit:memories-notes",
+            "unit:memories-favorites"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T04:23:13.015Z"
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:wave.selected:68",
+      "occurredAt": "2026-08-21T04:23:13.116Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:wave:5",
+        "nodeIds": [
+          "unit:itinerary-stops",
+          "unit:organization-packing"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-agenda",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-search",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-stops",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-stops",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-agenda",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-stops",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organization-packing",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organization-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:shell",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-21T04:23:13.086Z"
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-stops:3:started",
+      "occurredAt": "2026-08-21T04:23:13.164Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-stops:3",
+        "nodeId": "unit:itinerary-stops",
+        "inputFingerprint": "sha256:12f220f6c7e08b8f0bd469ff4862a1ee54acaa985f4934bc29ebde268b033e8b",
+        "retryOfAttemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-stops:2",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization-packing:3:started",
+      "occurredAt": "2026-08-21T04:23:13.165Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization-packing:3",
+        "nodeId": "unit:organization-packing",
+        "inputFingerprint": "sha256:77edb31a5da17680c62fae256dd1fe5e19810322ce9397b06200b183f8e086d6",
+        "retryOfAttemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization-packing:2",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-stops:3:candidate",
+      "occurredAt": "2026-08-21T04:27:36.505Z",
+      "type": "attempt.candidate_created",
+      "payload": {
+        "attemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-stops:3",
+        "nodeId": "unit:itinerary-stops",
+        "candidateCommit": "9f7e6489047750b929cee7ff3e2662238cdee585",
+        "candidate": {
+          "manifestDigest": "sha256:0cfcd88b0435ef9e9b232dc694a052d3b334cf154edea016d12bdcf98f78b86c",
+          "commitOid": "9f7e6489047750b929cee7ff3e2662238cdee585",
+          "treeOid": "1e2360e2c8ed2d9b071daf670c2af9f58728917f"
+        },
+        "outputDigest": "sha256:f3fe7a6fdf3f030481cb74a95e2353c109d2c7e140dc012f7c33fe145e177a6e",
+        "changedFiles": [
+          "public/itinerary-stops/stops.mjs",
+          "public/itinerary-stops/stops.test.mjs"
+        ],
+        "usage": {
+          "tokensTotal": 44573,
+          "costUsd": 0.2005785,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-stops:3:validated",
+      "occurredAt": "2026-08-21T04:27:36.505Z",
+      "type": "validation.completed",
+      "payload": {
+        "attemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-stops:3",
+        "nodeId": "unit:itinerary-stops",
+        "matrix": {
+          "matrixId": "matrix-e9dba66cedb5d45f",
+          "candidateCommit": "9f7e6489047750b929cee7ff3e2662238cdee585",
+          "validationContract": {
+            "id": "validation-contract:unit:itinerary-stops",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:itinerary-stops",
+              "obligationId": "validation:itinerary-stops",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-bd56a75144d53fcfb4d186d67ea72e793e2c3cee92c7b6d6191bc155f31a2c98:attempt:1",
+                "validation:itinerary-stops:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:9b8c1e57abc93c64d89534bb0e10ba61658c9bbea860add09296488c00787673",
+          "observations": [
+            {
+              "evidenceId": "command-bd56a75144d53fcfb4d186d67ea72e793e2c3cee92c7b6d6191bc155f31a2c98:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "bd56a75144d53fcfb4d186d67ea72e793e2c3cee92c7b6d6191bc155f31a2c98",
+              "durationMs": 890.5626000000047,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "b4ed0b0cf05c84807c148a2682b138ec7c75c9e134a1fce96f566878a04d0126",
+              "criterionIds": [
+                "criterion:itinerary-stops"
+              ],
+              "obligationIds": [
+                "validation:itinerary-stops"
+              ],
+              "references": [
+                "public/itinerary-stops/stops.test.mjs"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-e9dba66cedb5d45f:validation:itinerary-stops",
+              "revision": 1,
+              "goalContractDigest": "sha256:363ef3da5c73b077aecabba2a37f0ec0454c87b07345cc4fa065c456955f11b9",
+              "criterionId": "criterion:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:1",
+              "obligationId": "validation:itinerary-stops",
+              "candidate": {
+                "manifestDigest": "sha256:0cfcd88b0435ef9e9b232dc694a052d3b334cf154edea016d12bdcf98f78b86c",
+                "commitOid": "9f7e6489047750b929cee7ff3e2662238cdee585",
+                "treeOid": "1e2360e2c8ed2d9b071daf670c2af9f58728917f"
+              },
+              "baseline": {
+                "commitOid": "68300b3e50785c27fa6e298cbec1ebd288e80f66",
+                "treeOid": "1555e640f7399b75338f2ecbfcd9ad268cd814d9"
+              },
+              "proofStrategyDigest": "sha256:14bd9effb281d40ff3b2331aca3608111a06b2cea1046972cfb788670dc5ef19",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:9b8c1e57abc93c64d89534bb0e10ba61658c9bbea860add09296488c00787673",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:d4af0bcfbec6a161c844289ef195c3ba2531aaad8d4fa0bf063dcec7c2a14c91",
+              "outputDigest": "sha256:b4ed0b0cf05c84807c148a2682b138ec7c75c9e134a1fce96f566878a04d0126",
+              "outcome": "satisfied",
+              "digest": "sha256:6866ef365ac95672408c9514554ed9f9cb4a07b9798efb962e13313f09c481ae"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:itinerary-stops:negative-control",
+              "obligationId": "validation:itinerary-stops",
+              "detectedFailure": true,
+              "outputDigest": "a9176854185f28b2c94fa103d77d173a33b76d013b1e3b0981a70a35b3ec7121"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-stops:3:artifact:artifact:itinerary-stops",
+      "occurredAt": "2026-08-21T04:27:36.505Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:itinerary-stops:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-stops:3",
+          "runId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48",
+          "nodeId": "unit:itinerary-stops",
+          "digest": "sha256:35d22e950584e7cbe270caa0304ade074e874f276b054328be5d7c3f3960cce8",
+          "producerAttemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-stops:3",
+          "contract": {
+            "id": "artifact:itinerary-stops",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:35d22e950584e7cbe270caa0304ade074e874f276b054328be5d7c3f3960cce8",
+          "manifest": {
+            "id": "artifact:itinerary-stops",
+            "contract": {
+              "id": "artifact:itinerary-stops",
+              "revision": 1,
+              "digest": "sha256:e15436f8c18eccd9e271f76924dbfbaef5fbf88063b1e7965bb4ebf42348a7eb"
+            },
+            "producerNodeId": "unit:itinerary-stops",
+            "producerAttemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-stops:3",
+            "inputFingerprint": "sha256:12f220f6c7e08b8f0bd469ff4862a1ee54acaa985f4934bc29ebde268b033e8b",
+            "repositoryObjectStoreId": "object-store:da43506cfceb37ba",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "9f7e6489047750b929cee7ff3e2662238cdee585",
+              "treeOid": "1e2360e2c8ed2d9b071daf670c2af9f58728917f"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-d1f12793420461dbdf17bccf631d597a-10b06ba9e79a/attempts/run-d1f12793420461dbdf17bccf631d597a-911640651697/artifacts/artifact-itinerary-stops-a48a079c9569",
+            "kind": "change_set",
+            "baseTreeSha": "8faed28739ee771a5b8592d80ce841e415839de2",
+            "resultTreeSha": "1e2360e2c8ed2d9b071daf670c2af9f58728917f",
+            "entries": [
+              {
+                "newPath": "public/itinerary-stops/stops.mjs",
+                "operation": "add",
+                "newOid": "6445872e25d815ccef1b8dc543861095cb03d98c",
+                "newMode": "100644"
+              },
+              {
+                "newPath": "public/itinerary-stops/stops.test.mjs",
+                "operation": "add",
+                "newOid": "88937bdac5c7b1136b20362b290983955593c65d",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:35d22e950584e7cbe270caa0304ade074e874f276b054328be5d7c3f3960cce8"
+          },
+          "adoptedAt": "2026-08-21T04:27:36.505Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization-packing:3:candidate",
+      "occurredAt": "2026-08-21T04:28:32.314Z",
+      "type": "attempt.candidate_created",
+      "payload": {
+        "attemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization-packing:3",
+        "nodeId": "unit:organization-packing",
+        "candidateCommit": "9c35de0386d0404844e2399ac32bf3024ce4ad06",
+        "candidate": {
+          "manifestDigest": "sha256:c1cbb430d43b2983e469787ca911212f6b1daf4581659041ac9226b18da0f463",
+          "commitOid": "9c35de0386d0404844e2399ac32bf3024ce4ad06",
+          "treeOid": "a242c81407bde9c988e732fe3fea16c44ece2ff2"
+        },
+        "outputDigest": "sha256:678cce0b1dfc9e31ff227622ee32e53a71eef056b922f647b3cd597068e0133b",
+        "changedFiles": [
+          "public/organization-packing/packing.mjs",
+          "public/organization-packing/packing.test.mjs"
+        ],
+        "usage": {
+          "tokensTotal": 55138,
+          "costUsd": 0.248121,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization-packing:3:validated",
+      "occurredAt": "2026-08-21T04:28:32.314Z",
+      "type": "validation.completed",
+      "payload": {
+        "attemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization-packing:3",
+        "nodeId": "unit:organization-packing",
+        "matrix": {
+          "matrixId": "matrix-807071ab61fb9455",
+          "candidateCommit": "9c35de0386d0404844e2399ac32bf3024ce4ad06",
+          "validationContract": {
+            "id": "validation-contract:unit:organization-packing",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:organization-packing",
+              "obligationId": "validation:organization-packing",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-e22f7fbc948979ad6b2eb55cf2b1993bdfeedbf1d1eeee7153c68f816c13e867:attempt:1",
+                "validation:organization-packing:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:6d85aa0c6b086597a7000ddef25c7b54f524f40dff170b890732cd2ec70561c1",
+          "observations": [
+            {
+              "evidenceId": "command-e22f7fbc948979ad6b2eb55cf2b1993bdfeedbf1d1eeee7153c68f816c13e867:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "e22f7fbc948979ad6b2eb55cf2b1993bdfeedbf1d1eeee7153c68f816c13e867",
+              "durationMs": 858.0860999999568,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "de46fd8df7b0fa6d33a80459883f36ca703a38bdcecbf4534d0d7b8af9364d8e",
+              "criterionIds": [
+                "criterion:organization-packing"
+              ],
+              "obligationIds": [
+                "validation:organization-packing"
+              ],
+              "references": [
+                "public/organization-packing/packing.test.mjs"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-807071ab61fb9455:validation:organization-packing",
+              "revision": 1,
+              "goalContractDigest": "sha256:363ef3da5c73b077aecabba2a37f0ec0454c87b07345cc4fa065c456955f11b9",
+              "criterionId": "criterion:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:1",
+              "obligationId": "validation:organization-packing",
+              "candidate": {
+                "manifestDigest": "sha256:c1cbb430d43b2983e469787ca911212f6b1daf4581659041ac9226b18da0f463",
+                "commitOid": "9c35de0386d0404844e2399ac32bf3024ce4ad06",
+                "treeOid": "a242c81407bde9c988e732fe3fea16c44ece2ff2"
+              },
+              "baseline": {
+                "commitOid": "68300b3e50785c27fa6e298cbec1ebd288e80f66",
+                "treeOid": "1555e640f7399b75338f2ecbfcd9ad268cd814d9"
+              },
+              "proofStrategyDigest": "sha256:097cdd630ebd6539090650a3a591fb37669b41025584de02ec05fc0ca6412362",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:6d85aa0c6b086597a7000ddef25c7b54f524f40dff170b890732cd2ec70561c1",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:43188721ea423959a944972512134612c14a3eb2f44b4b65d0ab21bcc76fe074",
+              "outputDigest": "sha256:de46fd8df7b0fa6d33a80459883f36ca703a38bdcecbf4534d0d7b8af9364d8e",
+              "outcome": "satisfied",
+              "digest": "sha256:37803018c087b6012fb28f03131e7181867a988950594328d2cf283a2aebeb68"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:organization-packing:negative-control",
+              "obligationId": "validation:organization-packing",
+              "detectedFailure": true,
+              "outputDigest": "71c1fb135f0844c576ee233f1c735507340ce3039adf294fd31f3ccef2d3f11a"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization-packing:3:artifact:artifact:organization-packing",
+      "occurredAt": "2026-08-21T04:28:32.314Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:organization-packing:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization-packing:3",
+          "runId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48",
+          "nodeId": "unit:organization-packing",
+          "digest": "sha256:aedae0a260d2652b0184758700b51efd341e9ae8aad9b38460db0d0b4258c251",
+          "producerAttemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization-packing:3",
+          "contract": {
+            "id": "artifact:organization-packing",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:aedae0a260d2652b0184758700b51efd341e9ae8aad9b38460db0d0b4258c251",
+          "manifest": {
+            "id": "artifact:organization-packing",
+            "contract": {
+              "id": "artifact:organization-packing",
+              "revision": 1,
+              "digest": "sha256:659900d33ab13e162ece9d610a88422c655fbdc329da0380e34b1c9588d4d653"
+            },
+            "producerNodeId": "unit:organization-packing",
+            "producerAttemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization-packing:3",
+            "inputFingerprint": "sha256:77edb31a5da17680c62fae256dd1fe5e19810322ce9397b06200b183f8e086d6",
+            "repositoryObjectStoreId": "object-store:da43506cfceb37ba",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "9c35de0386d0404844e2399ac32bf3024ce4ad06",
+              "treeOid": "a242c81407bde9c988e732fe3fea16c44ece2ff2"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-d1f12793420461dbdf17bccf631d597a-10b06ba9e79a/attempts/run-d1f12793420461dbdf17bccf631d597a-c237c7215de5/artifacts/artifact-organization-packing-3a236b59fef2",
+            "kind": "change_set",
+            "baseTreeSha": "8faed28739ee771a5b8592d80ce841e415839de2",
+            "resultTreeSha": "a242c81407bde9c988e732fe3fea16c44ece2ff2",
+            "entries": [
+              {
+                "newPath": "public/organization-packing/packing.mjs",
+                "operation": "add",
+                "newOid": "3f41bfd9135b137e124022283b3f8e770b5b0d90",
+                "newMode": "100644"
+              },
+              {
+                "newPath": "public/organization-packing/packing.test.mjs",
+                "operation": "add",
+                "newOid": "e6d480b0562d78948d3735d342b6a24c23f8c348",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:aedae0a260d2652b0184758700b51efd341e9ae8aad9b38460db0d0b4258c251"
+          },
+          "adoptedAt": "2026-08-21T04:28:32.314Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:readiness.observed:77",
+      "occurredAt": "2026-08-21T04:28:32.459Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:itinerary-agenda",
+          "unit:organization"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:itinerary-agenda",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-agenda",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-search",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-agenda",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organization-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:shell",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:shell",
+            "unit:itinerary",
+            "unit:itinerary-stops",
+            "unit:itinerary-agenda",
+            "unit:itinerary-search",
+            "unit:organization",
+            "unit:organization-budget",
+            "unit:organization-packing",
+            "unit:memories",
+            "unit:memories-notes",
+            "unit:memories-favorites"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:shell",
+            "unit:itinerary",
+            "unit:itinerary-stops",
+            "unit:itinerary-agenda",
+            "unit:itinerary-search",
+            "unit:organization",
+            "unit:organization-budget",
+            "unit:organization-packing",
+            "unit:memories",
+            "unit:memories-notes",
+            "unit:memories-favorites"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T04:28:32.421Z"
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:wave.selected:78",
+      "occurredAt": "2026-08-21T04:28:32.545Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:wave:6",
+        "nodeIds": [
+          "unit:itinerary-agenda",
+          "unit:organization"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-agenda",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-search",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-agenda",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organization-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:shell",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-21T04:28:32.511Z"
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-agenda:1:started",
+      "occurredAt": "2026-08-21T04:28:32.611Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-agenda:1",
+        "nodeId": "unit:itinerary-agenda",
+        "inputFingerprint": "sha256:ea32ae17f706667132a4664ba46207b3aed8db839b5988d1185b28929d75a770",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization:1:started",
+      "occurredAt": "2026-08-21T04:28:32.612Z",
+      "type": "integration.started",
+      "payload": {
+        "attemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization:1",
+        "nodeId": "unit:organization",
+        "inputFingerprint": "sha256:89c20f58364223dbba74ed02eca686e38e2196855dd87ceb166da9f382b25d37",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        },
+        "requiredArtifactIds": [
+          "artifact:shell-storage:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:shell:1",
+          "artifact:organization-budget:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization-budget:1",
+          "artifact:organization-packing:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization-packing:3"
+        ]
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization:1:integrated",
+      "occurredAt": "2026-08-21T04:31:29.726Z",
+      "type": "integration.completed",
+      "payload": {
+        "attemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization:1",
+        "nodeId": "unit:organization",
+        "manifestId": "integration-result-integration-request-5906ad5f767ac1af",
+        "candidateCommit": "c77127c04d1d3c9bbf576786d2c9c1d669a42b4b",
+        "candidate": {
+          "manifestDigest": "sha256:2aa005c019297b4d6569111bdf88c5cf1b85f0f7589220ef501df40b3e5aa0ea",
+          "commitOid": "c77127c04d1d3c9bbf576786d2c9c1d669a42b4b",
+          "treeOid": "833ae9e1a8d93463cd6e2080071ec3fb9a30f924"
+        },
+        "matrix": {
+          "matrixId": "matrix-9653e2fcef1a9570",
+          "candidateCommit": "c77127c04d1d3c9bbf576786d2c9c1d669a42b4b",
+          "validationContract": {
+            "id": "validation-contract:unit:organization",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:organization",
+              "obligationId": "validation:organization-integration",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-0c37734cd27daa922fc269c3f552045bf0dc179b1fad7428171ec591827742b9:attempt:1",
+                "validation:organization-integration:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:c8be94eee554c666edd8602eba9eddad2b78f69a081cad59380b5156f9aa4132",
+          "observations": [
+            {
+              "evidenceId": "command-0c37734cd27daa922fc269c3f552045bf0dc179b1fad7428171ec591827742b9:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "0c37734cd27daa922fc269c3f552045bf0dc179b1fad7428171ec591827742b9",
+              "durationMs": 843.672600000049,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "df3709a0b9067df0f600bc7f1b0ae82364274d408676633d92e560dc8390f451",
+              "criterionIds": [
+                "criterion:organization"
+              ],
+              "obligationIds": [
+                "validation:organization-integration"
+              ],
+              "references": [
+                "public/organization/index.test.mjs"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-9653e2fcef1a9570:validation:organization-integration",
+              "revision": 1,
+              "goalContractDigest": "sha256:363ef3da5c73b077aecabba2a37f0ec0454c87b07345cc4fa065c456955f11b9",
+              "criterionId": "criterion:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:1",
+              "obligationId": "validation:organization-integration",
+              "candidate": {
+                "manifestDigest": "sha256:2aa005c019297b4d6569111bdf88c5cf1b85f0f7589220ef501df40b3e5aa0ea",
+                "commitOid": "c77127c04d1d3c9bbf576786d2c9c1d669a42b4b",
+                "treeOid": "833ae9e1a8d93463cd6e2080071ec3fb9a30f924"
+              },
+              "baseline": {
+                "commitOid": "68300b3e50785c27fa6e298cbec1ebd288e80f66",
+                "treeOid": "1555e640f7399b75338f2ecbfcd9ad268cd814d9"
+              },
+              "proofStrategyDigest": "sha256:7e07d4ed817228e59c9f50506f40382698c7de16727323ed90b86e1c5c940390",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:c8be94eee554c666edd8602eba9eddad2b78f69a081cad59380b5156f9aa4132",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:9118c52eac5dd427bd3042efae1b44581ee64fefc2cfc3d5d01d59f5cb7e2761",
+              "outputDigest": "sha256:df3709a0b9067df0f600bc7f1b0ae82364274d408676633d92e560dc8390f451",
+              "outcome": "satisfied",
+              "digest": "sha256:e913aa198a60bdac800c02ef4acb572f9123164fedb996e152d0f9de6485a707"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:organization-integration:negative-control",
+              "obligationId": "validation:organization-integration",
+              "detectedFailure": true,
+              "outputDigest": "cfa03c5a68890567c28cb4e46116056b99b9aa6b1b421cb16917e60b65099f4c"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization:1:artifact:artifact:organization-integration",
+      "occurredAt": "2026-08-21T04:31:29.726Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:organization-integration:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization:1",
+          "runId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48",
+          "nodeId": "unit:organization",
+          "digest": "sha256:f3d2c1454d4482e2cf2978dfa2342c3e99e0e46e744fc3dfb629297b3b6728ff",
+          "producerAttemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization:1",
+          "contract": {
+            "id": "artifact:organization-integration",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:f3d2c1454d4482e2cf2978dfa2342c3e99e0e46e744fc3dfb629297b3b6728ff",
+          "manifest": {
+            "id": "artifact:organization-integration",
+            "contract": {
+              "id": "artifact:organization-integration",
+              "revision": 1,
+              "digest": "sha256:715005e909fefe1b3e74897d193e4695e9990850530eb8521c9ae2af206d8628"
+            },
+            "producerNodeId": "unit:organization",
+            "producerAttemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization:1",
+            "inputFingerprint": "sha256:89c20f58364223dbba74ed02eca686e38e2196855dd87ceb166da9f382b25d37",
+            "repositoryObjectStoreId": "object-store:da43506cfceb37ba",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "c77127c04d1d3c9bbf576786d2c9c1d669a42b4b",
+              "treeOid": "833ae9e1a8d93463cd6e2080071ec3fb9a30f924"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-d1f12793420461dbdf17bccf631d597a-10b06ba9e79a/attempts/run-d1f12793420461dbdf17bccf631d597a-7866e7d47c6c/artifacts/artifact-organization-integration-a59bbbb67167",
+            "kind": "change_set",
+            "baseTreeSha": "dad18efaa43d10dac846fb00acc5b58ff4504df5",
+            "resultTreeSha": "833ae9e1a8d93463cd6e2080071ec3fb9a30f924",
+            "entries": [
+              {
+                "newPath": "public/organization/index.mjs",
+                "operation": "add",
+                "newOid": "a6cf36ecda282e159f5f333c957f449de46cb9de",
+                "newMode": "100644"
+              },
+              {
+                "newPath": "public/organization/index.test.mjs",
+                "operation": "add",
+                "newOid": "c7cdb36723204977b55d5018edf00672fb6133e9",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:f3d2c1454d4482e2cf2978dfa2342c3e99e0e46e744fc3dfb629297b3b6728ff"
+          },
+          "adoptedAt": "2026-08-21T04:31:29.726Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-agenda:1:candidate",
+      "occurredAt": "2026-08-21T04:33:24.033Z",
+      "type": "attempt.candidate_created",
+      "payload": {
+        "attemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-agenda:1",
+        "nodeId": "unit:itinerary-agenda",
+        "candidateCommit": "239fada05e9af8164f7f0c81c62759abdf58ee16",
+        "candidate": {
+          "manifestDigest": "sha256:31635b493189269c54f107c3734157a04aa713423a0d5aa212e0a8e913f3dd1c",
+          "commitOid": "239fada05e9af8164f7f0c81c62759abdf58ee16",
+          "treeOid": "f40d2cd072371fa17bcb65a03353a7632640a169"
+        },
+        "outputDigest": "sha256:06f04a5d6f1c48732435ce42c77e39aae600ee1d10d205a805ce8eab9c5d432c",
+        "changedFiles": [
+          "public/itinerary-agenda/agenda.mjs",
+          "public/itinerary-agenda/agenda.test.mjs"
+        ],
+        "usage": {
+          "tokensTotal": 57615,
+          "costUsd": 0.2592675,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-agenda:1:validated",
+      "occurredAt": "2026-08-21T04:33:24.033Z",
+      "type": "validation.completed",
+      "payload": {
+        "attemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-agenda:1",
+        "nodeId": "unit:itinerary-agenda",
+        "matrix": {
+          "matrixId": "matrix-5b86d4679da7bcab",
+          "candidateCommit": "239fada05e9af8164f7f0c81c62759abdf58ee16",
+          "validationContract": {
+            "id": "validation-contract:unit:itinerary-agenda",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:itinerary-agenda",
+              "obligationId": "validation:itinerary-agenda",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-dbe0784041eed71e8bacd874f7791f7f72ea6a998ff565b124e177ace3301fe7:attempt:1",
+                "validation:itinerary-agenda:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:3cff19a0ee2175fa418225d1c6bb8984fe281c305f07840105568324f85a3218",
+          "observations": [
+            {
+              "evidenceId": "command-dbe0784041eed71e8bacd874f7791f7f72ea6a998ff565b124e177ace3301fe7:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "dbe0784041eed71e8bacd874f7791f7f72ea6a998ff565b124e177ace3301fe7",
+              "durationMs": 828.0045000000391,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "362c27b63ab9107e8e5376fb8926a825b9eebad67dc8b606489d5c17b439679b",
+              "criterionIds": [
+                "criterion:itinerary-agenda"
+              ],
+              "obligationIds": [
+                "validation:itinerary-agenda"
+              ],
+              "references": [
+                "public/itinerary-agenda/agenda.test.mjs"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-5b86d4679da7bcab:validation:itinerary-agenda",
+              "revision": 1,
+              "goalContractDigest": "sha256:363ef3da5c73b077aecabba2a37f0ec0454c87b07345cc4fa065c456955f11b9",
+              "criterionId": "criterion:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:1",
+              "obligationId": "validation:itinerary-agenda",
+              "candidate": {
+                "manifestDigest": "sha256:31635b493189269c54f107c3734157a04aa713423a0d5aa212e0a8e913f3dd1c",
+                "commitOid": "239fada05e9af8164f7f0c81c62759abdf58ee16",
+                "treeOid": "f40d2cd072371fa17bcb65a03353a7632640a169"
+              },
+              "baseline": {
+                "commitOid": "68300b3e50785c27fa6e298cbec1ebd288e80f66",
+                "treeOid": "1555e640f7399b75338f2ecbfcd9ad268cd814d9"
+              },
+              "proofStrategyDigest": "sha256:57f3c9dc069276ba4627e2a86001dcf8a44c2c2d9e6cfed8bc89e0381c0ab906",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:3cff19a0ee2175fa418225d1c6bb8984fe281c305f07840105568324f85a3218",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:641e09c3116422e5309c421f6766cc0f473d2603fd9f084c7bf51fcf117a08cd",
+              "outputDigest": "sha256:362c27b63ab9107e8e5376fb8926a825b9eebad67dc8b606489d5c17b439679b",
+              "outcome": "satisfied",
+              "digest": "sha256:80ae744f6631f149d6df9110dedf56dff6bac36e8b2f58d0c3b2b611b0d05c8d"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:itinerary-agenda:negative-control",
+              "obligationId": "validation:itinerary-agenda",
+              "detectedFailure": true,
+              "outputDigest": "97eaf78cfdbba58cdcd5c6eb164e4935613caafe9232f4d74b2be162703f5164"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-agenda:1:artifact:artifact:itinerary-agenda",
+      "occurredAt": "2026-08-21T04:33:24.033Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:itinerary-agenda:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-agenda:1",
+          "runId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48",
+          "nodeId": "unit:itinerary-agenda",
+          "digest": "sha256:99685bb78b4a493602dae3fe43862b88d15b8bfbd9893b0d1f59fa49b3287bd8",
+          "producerAttemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-agenda:1",
+          "contract": {
+            "id": "artifact:itinerary-agenda",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:99685bb78b4a493602dae3fe43862b88d15b8bfbd9893b0d1f59fa49b3287bd8",
+          "manifest": {
+            "id": "artifact:itinerary-agenda",
+            "contract": {
+              "id": "artifact:itinerary-agenda",
+              "revision": 1,
+              "digest": "sha256:8798206bddc0bdb7aacbab31448f7766447295cae4e0473647d799fe0525e157"
+            },
+            "producerNodeId": "unit:itinerary-agenda",
+            "producerAttemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-agenda:1",
+            "inputFingerprint": "sha256:ea32ae17f706667132a4664ba46207b3aed8db839b5988d1185b28929d75a770",
+            "repositoryObjectStoreId": "object-store:da43506cfceb37ba",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "239fada05e9af8164f7f0c81c62759abdf58ee16",
+              "treeOid": "f40d2cd072371fa17bcb65a03353a7632640a169"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-d1f12793420461dbdf17bccf631d597a-10b06ba9e79a/attempts/run-d1f12793420461dbdf17bccf631d597a-41b38f517c8f/artifacts/artifact-itinerary-agenda-6712866a13f8",
+            "kind": "change_set",
+            "baseTreeSha": "1e2360e2c8ed2d9b071daf670c2af9f58728917f",
+            "resultTreeSha": "f40d2cd072371fa17bcb65a03353a7632640a169",
+            "entries": [
+              {
+                "newPath": "public/itinerary-agenda/agenda.mjs",
+                "operation": "add",
+                "newOid": "879388c15f51848e510f95f3f4a10a9afc117c53",
+                "newMode": "100644"
+              },
+              {
+                "newPath": "public/itinerary-agenda/agenda.test.mjs",
+                "operation": "add",
+                "newOid": "a7cd6bf7fcf4bfd2a169b27170da9ca8d355af66",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:99685bb78b4a493602dae3fe43862b88d15b8bfbd9893b0d1f59fa49b3287bd8"
+          },
+          "adoptedAt": "2026-08-21T04:33:24.033Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:readiness.observed:86",
+      "occurredAt": "2026-08-21T04:33:24.159Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:itinerary-search"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:itinerary-search",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-search",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:shell",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:shell",
+            "unit:itinerary",
+            "unit:itinerary-stops",
+            "unit:itinerary-agenda",
+            "unit:itinerary-search",
+            "unit:organization",
+            "unit:organization-budget",
+            "unit:organization-packing",
+            "unit:memories",
+            "unit:memories-notes",
+            "unit:memories-favorites"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:shell",
+            "unit:itinerary",
+            "unit:itinerary-stops",
+            "unit:itinerary-agenda",
+            "unit:itinerary-search",
+            "unit:organization",
+            "unit:organization-budget",
+            "unit:organization-packing",
+            "unit:memories",
+            "unit:memories-notes",
+            "unit:memories-favorites"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T04:33:24.114Z"
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:wave.selected:87",
+      "occurredAt": "2026-08-21T04:33:24.277Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:wave:7",
+        "nodeIds": [
+          "unit:itinerary-search"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-search",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:shell",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-21T04:33:24.243Z"
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-search:1:started",
+      "occurredAt": "2026-08-21T04:33:24.361Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-search:1",
+        "nodeId": "unit:itinerary-search",
+        "inputFingerprint": "sha256:30ad74d2127b6947e65ec9db8bb9f942048501c4c2d9c379ce4ce4562b4d8659",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-search:1:candidate",
+      "occurredAt": "2026-08-21T04:39:45.321Z",
+      "type": "attempt.candidate_created",
+      "payload": {
+        "attemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-search:1",
+        "nodeId": "unit:itinerary-search",
+        "candidateCommit": "3dd16acfb50e94245e947dba4e906ee58f90a95a",
+        "candidate": {
+          "manifestDigest": "sha256:4fecc636529207c48cbbec101deab207ca53c6cab5e4bf7f40cf632241b8231a",
+          "commitOid": "3dd16acfb50e94245e947dba4e906ee58f90a95a",
+          "treeOid": "b18fd53404954eb0e3480f7ad4a51e9b73f9d95f"
+        },
+        "outputDigest": "sha256:4fda736b3aa686c6437a0c0d42103b0f2eda467e3d33fa1815f5af4c0102ac34",
+        "changedFiles": [
+          "public/itinerary-search/search.mjs",
+          "public/itinerary-search/search.test.mjs"
+        ],
+        "usage": {
+          "tokensTotal": 71640,
+          "costUsd": 0.32238,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-search:1:validated",
+      "occurredAt": "2026-08-21T04:39:45.321Z",
+      "type": "validation.completed",
+      "payload": {
+        "attemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-search:1",
+        "nodeId": "unit:itinerary-search",
+        "matrix": {
+          "matrixId": "matrix-99575bad7cec6633",
+          "candidateCommit": "3dd16acfb50e94245e947dba4e906ee58f90a95a",
+          "validationContract": {
+            "id": "validation-contract:unit:itinerary-search",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:itinerary-search",
+              "obligationId": "validation:itinerary-search",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-821d6143a1f841d07a040cc7fdf2f3c147f6c946c99143f902fcae404f45193c:attempt:1",
+                "validation:itinerary-search:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:8572f0ccd6c8d3932a30b3153f929e130a9d0a52fd0f35aefaa4c0993aa347d7",
+          "observations": [
+            {
+              "evidenceId": "command-821d6143a1f841d07a040cc7fdf2f3c147f6c946c99143f902fcae404f45193c:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "821d6143a1f841d07a040cc7fdf2f3c147f6c946c99143f902fcae404f45193c",
+              "durationMs": 935.8620999999112,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "4d9a526ffb112aa89216f96174ab07bc4fb0911ae1c93960e5a9b540bdfbe761",
+              "criterionIds": [
+                "criterion:itinerary-search"
+              ],
+              "obligationIds": [
+                "validation:itinerary-search"
+              ],
+              "references": [
+                "public/itinerary-search/search.test.mjs"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-99575bad7cec6633:validation:itinerary-search",
+              "revision": 1,
+              "goalContractDigest": "sha256:363ef3da5c73b077aecabba2a37f0ec0454c87b07345cc4fa065c456955f11b9",
+              "criterionId": "criterion:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:1",
+              "obligationId": "validation:itinerary-search",
+              "candidate": {
+                "manifestDigest": "sha256:4fecc636529207c48cbbec101deab207ca53c6cab5e4bf7f40cf632241b8231a",
+                "commitOid": "3dd16acfb50e94245e947dba4e906ee58f90a95a",
+                "treeOid": "b18fd53404954eb0e3480f7ad4a51e9b73f9d95f"
+              },
+              "baseline": {
+                "commitOid": "68300b3e50785c27fa6e298cbec1ebd288e80f66",
+                "treeOid": "1555e640f7399b75338f2ecbfcd9ad268cd814d9"
+              },
+              "proofStrategyDigest": "sha256:0b0f272f0cd3b693b95300bc5ff634fa33fbd83a4c50f85a58fdaf156dc09f27",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:8572f0ccd6c8d3932a30b3153f929e130a9d0a52fd0f35aefaa4c0993aa347d7",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:32494fc9ed8fd6834edf9b401f50692e3040312117aae5ad438f05e62eac780c",
+              "outputDigest": "sha256:4d9a526ffb112aa89216f96174ab07bc4fb0911ae1c93960e5a9b540bdfbe761",
+              "outcome": "satisfied",
+              "digest": "sha256:eb8d22805a884fc788aff690309cdbf40e9a1c2d84acd9f9f5fc84d4ecad1540"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:itinerary-search:negative-control",
+              "obligationId": "validation:itinerary-search",
+              "detectedFailure": true,
+              "outputDigest": "9e9f0cbf3f5839934643eaa4386e6ddaf22dcb982e729a0bc78506efc2a18510"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-search:1:artifact:artifact:itinerary-search",
+      "occurredAt": "2026-08-21T04:39:45.321Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:itinerary-search:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-search:1",
+          "runId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48",
+          "nodeId": "unit:itinerary-search",
+          "digest": "sha256:30841c0d2bd3fa62ba5e286a50d0802266d1f998223ff9c99e769877e37fdbea",
+          "producerAttemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-search:1",
+          "contract": {
+            "id": "artifact:itinerary-search",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:30841c0d2bd3fa62ba5e286a50d0802266d1f998223ff9c99e769877e37fdbea",
+          "manifest": {
+            "id": "artifact:itinerary-search",
+            "contract": {
+              "id": "artifact:itinerary-search",
+              "revision": 1,
+              "digest": "sha256:abc200db4f34037b8c5ca0a9523ef29d576632661163f5b64117e45f3215d83c"
+            },
+            "producerNodeId": "unit:itinerary-search",
+            "producerAttemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-search:1",
+            "inputFingerprint": "sha256:30ad74d2127b6947e65ec9db8bb9f942048501c4c2d9c379ce4ce4562b4d8659",
+            "repositoryObjectStoreId": "object-store:da43506cfceb37ba",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "3dd16acfb50e94245e947dba4e906ee58f90a95a",
+              "treeOid": "b18fd53404954eb0e3480f7ad4a51e9b73f9d95f"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-d1f12793420461dbdf17bccf631d597a-10b06ba9e79a/attempts/run-d1f12793420461dbdf17bccf631d597a-f0f0ed48e951/artifacts/artifact-itinerary-search-750d10f2bd77",
+            "kind": "change_set",
+            "baseTreeSha": "f40d2cd072371fa17bcb65a03353a7632640a169",
+            "resultTreeSha": "b18fd53404954eb0e3480f7ad4a51e9b73f9d95f",
+            "entries": [
+              {
+                "newPath": "public/itinerary-search/search.mjs",
+                "operation": "add",
+                "newOid": "c97a0aac8d0f252634a22a2d374008b16dc1c60b",
+                "newMode": "100644"
+              },
+              {
+                "newPath": "public/itinerary-search/search.test.mjs",
+                "operation": "add",
+                "newOid": "c6d8c5b670dbadca79217c7bdb3517dc976fce86",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:30841c0d2bd3fa62ba5e286a50d0802266d1f998223ff9c99e769877e37fdbea"
+          },
+          "adoptedAt": "2026-08-21T04:39:45.321Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:readiness.observed:92",
+      "occurredAt": "2026-08-21T04:39:45.460Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:itinerary"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:itinerary",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:itinerary-agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:shell",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:shell",
+            "unit:itinerary",
+            "unit:itinerary-stops",
+            "unit:itinerary-agenda",
+            "unit:itinerary-search",
+            "unit:organization",
+            "unit:organization-budget",
+            "unit:organization-packing",
+            "unit:memories",
+            "unit:memories-notes",
+            "unit:memories-favorites"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:shell",
+            "unit:itinerary",
+            "unit:itinerary-stops",
+            "unit:itinerary-agenda",
+            "unit:itinerary-search",
+            "unit:organization",
+            "unit:organization-budget",
+            "unit:organization-packing",
+            "unit:memories",
+            "unit:memories-notes",
+            "unit:memories-favorites"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T04:39:45.416Z"
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:wave.selected:93",
+      "occurredAt": "2026-08-21T04:39:45.586Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:wave:8",
+        "nodeIds": [
+          "unit:itinerary"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:itinerary-agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:shell",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-21T04:39:45.539Z"
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary:1:started",
+      "occurredAt": "2026-08-21T04:39:45.688Z",
+      "type": "integration.started",
+      "payload": {
+        "attemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary:1",
+        "nodeId": "unit:itinerary",
+        "inputFingerprint": "sha256:2dfa63e1a1fb5cf4fb4d5612294fb42dd9d1f9777f518f407bea11d2ca56ec03",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        },
+        "requiredArtifactIds": [
+          "artifact:shell-storage:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:shell:1",
+          "artifact:itinerary-stops:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-stops:3",
+          "artifact:itinerary-agenda:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-agenda:1",
+          "artifact:itinerary-search:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-search:1"
+        ]
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary:1:integrated",
+      "occurredAt": "2026-08-21T04:47:20.727Z",
+      "type": "integration.completed",
+      "payload": {
+        "attemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary:1",
+        "nodeId": "unit:itinerary",
+        "manifestId": "integration-result-integration-request-f070ecac7e3e210b",
+        "candidateCommit": "a274c2e065a887e035c882439477c876cd97b375",
+        "candidate": {
+          "manifestDigest": "sha256:7e5f5797c487c3bb99dce85c644000b2ce5f7f956427e228f54d738fd34482d1",
+          "commitOid": "a274c2e065a887e035c882439477c876cd97b375",
+          "treeOid": "c66c9f05eb42726470534aac3029ffa3a3a33ec4"
+        },
+        "matrix": {
+          "matrixId": "matrix-ac621c8e5ff0fb03",
+          "candidateCommit": "a274c2e065a887e035c882439477c876cd97b375",
+          "validationContract": {
+            "id": "validation-contract:unit:itinerary",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:itinerary",
+              "obligationId": "validation:itinerary-integration",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-012b09be0b3e02f0be2047f5f0b9e91c9ac1ba4c9fe1c83cbdf6a6dfcb645a04:attempt:1",
+                "validation:itinerary-integration:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:fe8444014b8120ae5462d57bd6466fb6c7bbdfd8ec7023ef5140e2a86090e851",
+          "observations": [
+            {
+              "evidenceId": "command-012b09be0b3e02f0be2047f5f0b9e91c9ac1ba4c9fe1c83cbdf6a6dfcb645a04:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "012b09be0b3e02f0be2047f5f0b9e91c9ac1ba4c9fe1c83cbdf6a6dfcb645a04",
+              "durationMs": 899.340499999933,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "00386050a6341bdf8fa289bb437a6bcd5ab6bec063de1eee2b835b14e8ba0068",
+              "criterionIds": [
+                "criterion:itinerary"
+              ],
+              "obligationIds": [
+                "validation:itinerary-integration"
+              ],
+              "references": [
+                "public/itinerary/index.test.mjs"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-ac621c8e5ff0fb03:validation:itinerary-integration",
+              "revision": 1,
+              "goalContractDigest": "sha256:363ef3da5c73b077aecabba2a37f0ec0454c87b07345cc4fa065c456955f11b9",
+              "criterionId": "criterion:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:1",
+              "obligationId": "validation:itinerary-integration",
+              "candidate": {
+                "manifestDigest": "sha256:7e5f5797c487c3bb99dce85c644000b2ce5f7f956427e228f54d738fd34482d1",
+                "commitOid": "a274c2e065a887e035c882439477c876cd97b375",
+                "treeOid": "c66c9f05eb42726470534aac3029ffa3a3a33ec4"
+              },
+              "baseline": {
+                "commitOid": "68300b3e50785c27fa6e298cbec1ebd288e80f66",
+                "treeOid": "1555e640f7399b75338f2ecbfcd9ad268cd814d9"
+              },
+              "proofStrategyDigest": "sha256:dab2112759bfd63b212dc20b21c0eac3d8c71348167056b6b7e40560a4d9e5a8",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:fe8444014b8120ae5462d57bd6466fb6c7bbdfd8ec7023ef5140e2a86090e851",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:3e63a3fa11a0d2dd185c952738ec682eebc625ddc538e2917ce80ef78a64b8e1",
+              "outputDigest": "sha256:00386050a6341bdf8fa289bb437a6bcd5ab6bec063de1eee2b835b14e8ba0068",
+              "outcome": "satisfied",
+              "digest": "sha256:40a6142ff66915c735b21a9caa3edb76a8bf08623c4f482a39b7da67f1f6a9d9"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:itinerary-integration:negative-control",
+              "obligationId": "validation:itinerary-integration",
+              "detectedFailure": true,
+              "outputDigest": "e7dbe7776c0074969c1426b80029ef7ca0570fddad6d6f88c50f8a565480792a"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary:1:artifact:artifact:itinerary-integration",
+      "occurredAt": "2026-08-21T04:47:20.727Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:itinerary-integration:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary:1",
+          "runId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48",
+          "nodeId": "unit:itinerary",
+          "digest": "sha256:00d1f27e0749e2a604150a7caae2e1389d79464c2047ed7f857d41e547c3190a",
+          "producerAttemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary:1",
+          "contract": {
+            "id": "artifact:itinerary-integration",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:00d1f27e0749e2a604150a7caae2e1389d79464c2047ed7f857d41e547c3190a",
+          "manifest": {
+            "id": "artifact:itinerary-integration",
+            "contract": {
+              "id": "artifact:itinerary-integration",
+              "revision": 1,
+              "digest": "sha256:f527a0c1f276b01de73d0728b3b72ec2b30d62a362748dacfcb8f589477d9756"
+            },
+            "producerNodeId": "unit:itinerary",
+            "producerAttemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary:1",
+            "inputFingerprint": "sha256:2dfa63e1a1fb5cf4fb4d5612294fb42dd9d1f9777f518f407bea11d2ca56ec03",
+            "repositoryObjectStoreId": "object-store:da43506cfceb37ba",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "a274c2e065a887e035c882439477c876cd97b375",
+              "treeOid": "c66c9f05eb42726470534aac3029ffa3a3a33ec4"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-d1f12793420461dbdf17bccf631d597a-10b06ba9e79a/attempts/run-d1f12793420461dbdf17bccf631d597a-d5a9aa1b9811/artifacts/artifact-itinerary-integration-749700c8dc83",
+            "kind": "change_set",
+            "baseTreeSha": "b18fd53404954eb0e3480f7ad4a51e9b73f9d95f",
+            "resultTreeSha": "c66c9f05eb42726470534aac3029ffa3a3a33ec4",
+            "entries": [
+              {
+                "newPath": "public/itinerary/index.mjs",
+                "operation": "add",
+                "newOid": "cb325d09e69ade0c08c77e29a81a80e4a7fa541b",
+                "newMode": "100644"
+              },
+              {
+                "newPath": "public/itinerary/index.test.mjs",
+                "operation": "add",
+                "newOid": "2f6a506a010f90e422b89b892e21d4d388968a26",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:00d1f27e0749e2a604150a7caae2e1389d79464c2047ed7f857d41e547c3190a"
+          },
+          "adoptedAt": "2026-08-21T04:47:20.727Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:readiness.observed:97",
+      "occurredAt": "2026-08-21T04:47:20.861Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:root"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:root",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:shell",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:shell",
+            "unit:itinerary",
+            "unit:itinerary-stops",
+            "unit:itinerary-agenda",
+            "unit:itinerary-search",
+            "unit:organization",
+            "unit:organization-budget",
+            "unit:organization-packing",
+            "unit:memories",
+            "unit:memories-notes",
+            "unit:memories-favorites"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:shell",
+            "unit:itinerary",
+            "unit:itinerary-stops",
+            "unit:itinerary-agenda",
+            "unit:itinerary-search",
+            "unit:organization",
+            "unit:organization-budget",
+            "unit:organization-packing",
+            "unit:memories",
+            "unit:memories-notes",
+            "unit:memories-favorites"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T04:47:20.818Z"
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:wave.selected:98",
+      "occurredAt": "2026-08-21T04:47:21.001Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:wave:9",
+        "nodeIds": [
+          "unit:root"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:shell",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-21T04:47:20.954Z"
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:root:1:started",
+      "occurredAt": "2026-08-21T04:47:21.091Z",
+      "type": "integration.started",
+      "payload": {
+        "attemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:root:1",
+        "nodeId": "unit:root",
+        "inputFingerprint": "sha256:77b0185d9bee668654861ba0538167e5ab94fecfa2fa978472918f8978f66165",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        },
+        "requiredArtifactIds": [
+          "artifact:shell-storage:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:shell:1",
+          "artifact:itinerary-stops:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-stops:3",
+          "artifact:itinerary-agenda:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-agenda:1",
+          "artifact:itinerary-search:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-search:1",
+          "artifact:itinerary-integration:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary:1",
+          "artifact:memories-favorites:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:memories-favorites:1",
+          "artifact:memories-notes:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:memories-notes:1",
+          "artifact:memories-integration:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:memories:1",
+          "artifact:organization-budget:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization-budget:1",
+          "artifact:organization-packing:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization-packing:3",
+          "artifact:organization-integration:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization:1"
+        ]
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:root:1:failed",
+      "occurredAt": "2026-08-21T04:57:26.997Z",
+      "type": "attempt.failed",
+      "payload": {
+        "attemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:root:1",
+        "nodeId": "unit:root",
+        "reason": "The operation was aborted due to timeout"
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:root:1:decision",
+      "occurredAt": "2026-08-21T04:57:26.997Z",
+      "type": "decision.raised",
+      "payload": {
+        "decision": {
+          "id": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:root:1:decision",
+          "kind": "resolve_conflict",
+          "question": "Execution for Dashboard integrado de Viaje en Familia requires guidance: The operation was aborted due to timeout",
+          "options": [
+            {
+              "id": "retry",
+              "label": "Retry with guidance"
+            },
+            {
+              "id": "stop",
+              "label": "Stop this work"
+            }
+          ],
+          "affectedNodeIds": [
+            "unit:root"
+          ],
+          "repairTargetNodeId": "unit:root",
+          "evidenceRefs": [
+            "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:root:1",
+            "input-fingerprint:sha256:77b0185d9bee668654861ba0538167e5ab94fecfa2fa978472918f8978f66165"
+          ],
+          "impact": "behavior",
+          "raisedAtGraphRevision": 1
+        }
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:readiness.observed:102",
+      "occurredAt": "2026-08-21T04:57:27.160Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [],
+        "pendingDecisionIds": [
+          "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:root:1:decision"
+        ],
+        "explanations": [
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:root:1:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:shell",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:shell",
+            "unit:itinerary",
+            "unit:itinerary-stops",
+            "unit:itinerary-agenda",
+            "unit:itinerary-search",
+            "unit:organization",
+            "unit:organization-budget",
+            "unit:organization-packing",
+            "unit:memories",
+            "unit:memories-notes",
+            "unit:memories-favorites"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:shell",
+            "unit:itinerary",
+            "unit:itinerary-stops",
+            "unit:itinerary-agenda",
+            "unit:itinerary-search",
+            "unit:organization",
+            "unit:organization-budget",
+            "unit:organization-packing",
+            "unit:memories",
+            "unit:memories-notes",
+            "unit:memories-favorites"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T04:57:27.114Z"
+      }
+    }
+  ]
+}

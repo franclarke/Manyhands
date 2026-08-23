@@ -1,0 +1,1233 @@
+{
+  "events": [
+    {
+      "eventId": "repository:sha256:c2fe34bfdb080b1090c426187e96c72872b222e6a6dc514c6815f12d63e5002c:inspection",
+      "occurredAt": "2026-08-17T04:53:59.189Z",
+      "type": "repository.inspected",
+      "payload": {
+        "snapshotId": "sha256:c2fe34bfdb080b1090c426187e96c72872b222e6a6dc514c6815f12d63e5002c",
+        "disposition": "partial",
+        "snapshot": {
+          "schemaVersion": 1,
+          "snapshotId": "sha256:c2fe34bfdb080b1090c426187e96c72872b222e6a6dc514c6815f12d63e5002c",
+          "repositoryId": "Cuentas-Claras",
+          "rootPath": "C:\\Users\\franc\\Documents\\Proyectos\\Cuentas Claras",
+          "targetFingerprint": "7b304907cce55b6e",
+          "baseCommit": "680018b7a2dd7fff3660431df84e19c10af7b53b",
+          "indexSchemaVersion": 1,
+          "capturedAt": "2026-08-17T04:51:03.800Z",
+          "inspectionDisposition": "partial",
+          "capabilities": {
+            "scripts": {},
+            "baselineCommands": [],
+            "languages": [],
+            "stack": []
+          },
+          "diagnostics": [
+            {
+              "code": "no_supported_source_files",
+              "severity": "warning",
+              "message": "Repository contains no structurally indexed TypeScript or JavaScript source files."
+            }
+          ],
+          "indexHash": "acba1ed6ef4c8ac2bc69f401ffe93a98e8f67b34f42341ef37ea5f53790852ec",
+          "index": {
+            "repositoryId": "Cuentas-Claras",
+            "rootPath": "C:\\Users\\franc\\Documents\\Proyectos\\Cuentas Claras",
+            "indexedAt": "2026-08-17T04:51:03.800Z",
+            "files": [],
+            "symbols": [],
+            "imports": [],
+            "exports": [],
+            "diagnostics": [],
+            "metadata": {
+              "indexer": "ripgrep-native-v2",
+              "deterministic": true,
+              "fileCount": 0,
+              "symbolCount": 0,
+              "importCount": 0,
+              "exportCount": 0
+            }
+          }
+        },
+        "repositoryModelDigest": "sha256:fbd7979d2ff0dbaa85067ae3c0bd90768e5f4c0946d3de72247f9ad429dd0725",
+        "repositoryView": {
+          "digest": "sha256:cf41d54ed3a39e8237e52bca411e771d842d140661fc024442a3d0b02b66ee03",
+          "treeSha": "aa4b1fc231cbff6853853ab8b07c786d16c51948",
+          "resourceCatalogDigest": "sha256:ff2c20729ffc81cb34424af43dc54f5cced7541eb3ecba699c41b0e572413d1f"
+        },
+        "queryDigests": [
+          "sha256:f88b0c253a18dff76265382a19f9bce36093edc63a29f9208dd9e6da76713ec1",
+          "sha256:437ef2cb58c3413e6dfa82d396dc4018305fe4121a84b0ce04774a63b9b52132"
+        ]
+      }
+    },
+    {
+      "eventId": "planning:plan:goal:run:dfb70040fba4396164e85b170efb64c28349d61f3ad333df4774a26910ccea18:completed:run:dfb70040fba4396164e85b170efb64c28349d61f3ad333df4774a26910ccea18",
+      "occurredAt": "2026-08-17T04:53:59.197Z",
+      "type": "planning.completed",
+      "payload": {
+        "semanticPlan": {
+          "id": "plan:goal:run:dfb70040fba4396164e85b170efb64c28349d61f3ad333df4774a26910ccea18",
+          "revision": 1,
+          "goalContract": {
+            "id": "goal:run:dfb70040fba4396164e85b170efb64c28349d61f3ad333df4774a26910ccea18",
+            "revision": 1,
+            "digest": "sha256:95a8335ee5d7d39137ec3148b228eb72ae0ecbc8f5507cf1c4dad02102b57403"
+          },
+          "repositorySnapshot": {
+            "id": "sha256:c2fe34bfdb080b1090c426187e96c72872b222e6a6dc514c6815f12d63e5002c",
+            "digest": "sha256:acba1ed6ef4c8ac2bc69f401ffe93a98e8f67b34f42341ef37ea5f53790852ec"
+          },
+          "repositoryView": {
+            "digest": "sha256:cf41d54ed3a39e8237e52bca411e771d842d140661fc024442a3d0b02b66ee03",
+            "treeSha": "aa4b1fc231cbff6853853ab8b07c786d16c51948",
+            "resourceCatalogDigest": "sha256:ff2c20729ffc81cb34424af43dc54f5cced7541eb3ecba699c41b0e572413d1f"
+          },
+          "rootUnitId": "unit:app",
+          "units": {
+            "unit:app": {
+              "id": "unit:app",
+              "role": "leaf",
+              "title": "Cuentas Claras app",
+              "objective": "Build the complete modular Cuentas Claras Node.js app: domain/participants, balance/settlement algorithm, JSON storage and WhatsApp-style reports, HTTP+CLI interfaces, and an automated test suite.",
+              "boundary": {
+                "kind": "application",
+                "evidenceRefs": [
+                  "evidence:996eaf54f95aee8a26505531"
+                ]
+              },
+              "outcomes": [
+                {
+                  "id": "outcome:app",
+                  "statement": "Cuentas Claras runs as a modular Node.js app that registers people and expenses, computes minimal-transfer settlements, persists events to JSON, generates WhatsApp-ready text reports, exposes /api/events, /api/expenses and /api/settlement, offers an interactive CLI, and is covered by unit and E2E tests run with node --test."
+                }
+              ],
+              "criteria": [
+                {
+                  "criterionId": "criterion:domain",
+                  "statement": "People and expenses (payer, amount, category, participants) can be registered and modeled correctly.",
+                  "sourceCriterionId": "criterion:run:dfb70040fba4396164e85b170efb64c28349d61f3ad333df4774a26910ccea18:1"
+                },
+                {
+                  "criterionId": "criterion:settlement",
+                  "statement": "Balances are computed per person and the minimum set of transfers to settle all debts is produced.",
+                  "sourceCriterionId": "criterion:run:dfb70040fba4396164e85b170efb64c28349d61f3ad333df4774a26910ccea18:1"
+                },
+                {
+                  "criterionId": "criterion:storage-reports",
+                  "statement": "Events and expenses persist to local JSON files and a formatted, emoji-rich WhatsApp-ready report is generated with totals, per-person averages and the final settlement.",
+                  "sourceCriterionId": "criterion:run:dfb70040fba4396164e85b170efb64c28349d61f3ad333df4774a26910ccea18:1"
+                },
+                {
+                  "criterionId": "criterion:server-cli",
+                  "statement": "An HTTP server exposes /api/events, /api/expenses and /api/settlement, and an interactive CLI can create events and print the console summary.",
+                  "sourceCriterionId": "criterion:run:dfb70040fba4396164e85b170efb64c28349d61f3ad333df4774a26910ccea18:1"
+                },
+                {
+                  "criterionId": "criterion:e2e",
+                  "statement": "An E2E test validates the full flow end to end using node --test.",
+                  "sourceCriterionId": "criterion:run:dfb70040fba4396164e85b170efb64c28349d61f3ad333df4774a26910ccea18:1"
+                }
+              ],
+              "repositorySurface": {
+                "resourceRefs": [
+                  "catalog-resource:7b603415b99b6ff97a7f3743",
+                  "catalog-resource:da1eb632922eb70b1ac8d256"
+                ],
+                "pathHints": [
+                  ".gitignore",
+                  "package.json",
+                  "README.md",
+                  "src/cli/cli.js",
+                  "src/domain/expenses.js",
+                  "src/domain/index.js",
+                  "src/domain/participants.js",
+                  "src/index.js",
+                  "src/server/http.js",
+                  "src/server/routes.js",
+                  "src/settlement/balance.js",
+                  "src/settlement/settle.js",
+                  "src/storage/eventStore.js",
+                  "src/storage/report.js",
+                  "test/domain.test.js",
+                  "test/e2e.test.js",
+                  "test/server.test.js",
+                  "test/settlement.test.js",
+                  "test/storage.test.js"
+                ]
+              },
+              "resourceIntents": [
+                {
+                  "resourceId": "catalog-resource:7b603415b99b6ff97a7f3743",
+                  "access": "modify",
+                  "ownerPhase": "implementation",
+                  "outputArtifactId": "artifact:gitignore-update",
+                  "evidenceRefs": [
+                    "evidence:996eaf54f95aee8a26505531"
+                  ],
+                  "epistemic": {
+                    "state": "known",
+                    "confidence": "high",
+                    "evidenceRefs": [
+                      "evidence:996eaf54f95aee8a26505531"
+                    ]
+                  }
+                },
+                {
+                  "resourceId": "catalog-resource:da1eb632922eb70b1ac8d256",
+                  "access": "modify",
+                  "ownerPhase": "implementation",
+                  "outputArtifactId": "artifact:readme-update",
+                  "evidenceRefs": [
+                    "evidence:996eaf54f95aee8a26505531"
+                  ],
+                  "epistemic": {
+                    "state": "known",
+                    "confidence": "high",
+                    "evidenceRefs": [
+                      "evidence:996eaf54f95aee8a26505531"
+                    ]
+                  }
+                }
+              ],
+              "consumes": [],
+              "produces": [
+                "artifact:gitignore-update",
+                "artifact:readme-update"
+              ],
+              "seamRefs": [],
+              "validation": [
+                {
+                  "obligationId": "validation:domain-tests",
+                  "criterionId": "criterion:domain",
+                  "proofStrategyId": "proof:validation:domain-tests",
+                  "layer": "unit",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "test/domain.test.js"
+                    ],
+                    "references": [
+                      "test/domain.test.js"
+                    ]
+                  }
+                },
+                {
+                  "obligationId": "validation:e2e-tests",
+                  "criterionId": "criterion:e2e",
+                  "proofStrategyId": "proof:validation:e2e-tests",
+                  "layer": "e2e",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "test/e2e.test.js"
+                    ],
+                    "references": [
+                      "test/e2e.test.js"
+                    ]
+                  }
+                },
+                {
+                  "obligationId": "validation:server-cli-tests",
+                  "criterionId": "criterion:server-cli",
+                  "proofStrategyId": "proof:validation:server-cli-tests",
+                  "layer": "integration",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "test/server.test.js"
+                    ],
+                    "references": [
+                      "test/server.test.js"
+                    ]
+                  }
+                },
+                {
+                  "obligationId": "validation:settlement-tests",
+                  "criterionId": "criterion:settlement",
+                  "proofStrategyId": "proof:validation:settlement-tests",
+                  "layer": "unit",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "test/settlement.test.js"
+                    ],
+                    "references": [
+                      "test/settlement.test.js"
+                    ]
+                  }
+                },
+                {
+                  "obligationId": "validation:storage-reports-tests",
+                  "criterionId": "criterion:storage-reports",
+                  "proofStrategyId": "proof:validation:storage-reports-tests",
+                  "layer": "unit",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "test/storage.test.js"
+                    ],
+                    "references": [
+                      "test/storage.test.js"
+                    ]
+                  }
+                }
+              ],
+              "uncertainty": [],
+              "granularity": {
+                "disposition": "leaf",
+                "feasibility": {
+                  "coherentResponsibility": true,
+                  "boundedContext": "yes",
+                  "boundedChangeSurface": "yes",
+                  "independentlyValidatable": "yes",
+                  "unresolvedArchitectureDecision": false
+                },
+                "splitReasons": [],
+                "expectedBenefits": [],
+                "expectedCosts": [],
+                "evidenceRefs": [
+                  "evidence:996eaf54f95aee8a26505531"
+                ],
+                "epistemic": {
+                  "state": "known",
+                  "confidence": "high",
+                  "evidenceRefs": [
+                    "evidence:996eaf54f95aee8a26505531"
+                  ]
+                }
+              },
+              "expansion": "leaf"
+            }
+          },
+          "seams": {},
+          "artifacts": {
+            "artifact:gitignore-update": {
+              "id": "artifact:gitignore-update",
+              "producerUnitId": "unit:app",
+              "consumerUnitIds": [],
+              "artifactType": "source_change",
+              "materialization": "patch",
+              "expectedPaths": [
+                ".gitignore"
+              ]
+            },
+            "artifact:readme-update": {
+              "id": "artifact:readme-update",
+              "producerUnitId": "unit:app",
+              "consumerUnitIds": [],
+              "artifactType": "source_change",
+              "materialization": "patch",
+              "expectedPaths": [
+                "README.md"
+              ]
+            }
+          },
+          "decisions": [],
+          "evidence": [
+            {
+              "id": "evidence:3a98499c4817d2d876de1d8e",
+              "snapshotId": "sha256:c2fe34bfdb080b1090c426187e96c72872b222e6a6dc514c6815f12d63e5002c",
+              "kind": "file",
+              "locator": ".gitignore",
+              "digest": "sha256:9a10f95bf4d209cd36c93ec26834f7b45a31afe28094eb94f1c0ea5bcba68b8a",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:56db9f0d44b2a75276e852fb",
+              "snapshotId": "sha256:c2fe34bfdb080b1090c426187e96c72872b222e6a6dc514c6815f12d63e5002c",
+              "kind": "file",
+              "locator": "README.md",
+              "digest": "sha256:a22707703c45fce89c324d5b4fe10c2e447f28529e172c4880b2a90bb52df6b7",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            },
+            {
+              "id": "evidence:996eaf54f95aee8a26505531",
+              "snapshotId": "sha256:c2fe34bfdb080b1090c426187e96c72872b222e6a6dc514c6815f12d63e5002c",
+              "kind": "diagnostic",
+              "locator": "no_supported_source_files",
+              "digest": "sha256:1fd0bcf877548c79008551357e9c38c29f607a95d2eb9d7968a33b9594a54182",
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "repository:exact-git-object"
+                ]
+              }
+            }
+          ],
+          "status": "ready",
+          "digest": "sha256:87fe9b3c2c60d1298f8354a64695d0d28fbdceb2046e0cb1bb8b23a5e0caf499"
+        },
+        "trace": {
+          "budget": {
+            "modelCalls": 3,
+            "repositoryQueries": 3,
+            "queryBytes": 65536,
+            "revisions": 3,
+            "repairs": 2,
+            "expansions": 0
+          },
+          "consumed": {
+            "modelCalls": 1,
+            "repositoryQueries": 2,
+            "queryBytes": 399,
+            "revisions": 1,
+            "repairs": 0,
+            "expansions": 0
+          },
+          "revisions": [
+            {
+              "index": 1,
+              "cause": "initial",
+              "budget": {
+                "modelCalls": 3,
+                "repositoryQueries": 3,
+                "queryBytes": 65536,
+                "revisions": 3,
+                "repairs": 2,
+                "expansions": 0
+              },
+              "consumed": {
+                "modelCalls": 1,
+                "repositoryQueries": 2,
+                "queryBytes": 399,
+                "revisions": 1,
+                "repairs": 0,
+                "expansions": 0
+              },
+              "queryReceipts": [
+                "sha256:437ef2cb58c3413e6dfa82d396dc4018305fe4121a84b0ce04774a63b9b52132",
+                "sha256:f88b0c253a18dff76265382a19f9bce36093edc63a29f9208dd9e6da76713ec1"
+              ],
+              "evidenceRefs": [
+                "evidence:996eaf54f95aee8a26505531"
+              ],
+              "changedDecisionIds": [],
+              "changedFindingCodes": [
+                "repository_model_coverage_incomplete",
+                "resource_catalog_coverage_incomplete"
+              ],
+              "proposalDigest": "sha256:87fe9b3c2c60d1298f8354a64695d0d28fbdceb2046e0cb1bb8b23a5e0caf499",
+              "causalStateDigest": "sha256:1a9ff4d32396a1baeb4f4edd4c27a9bed5f0971b53f2ef430cb1161fb4f07293",
+              "digest": "sha256:57375a91e3bb36c0c98e4facb93312d83d906f7ea418e321a8511f386d5934e9"
+            }
+          ],
+          "advisoryFindings": [
+            {
+              "code": "repository_model_coverage_incomplete",
+              "severity": "warning",
+              "authority": "repository",
+              "message": "Repository model coverage is partial.",
+              "evidenceRefs": [
+                "evidence:3a98499c4817d2d876de1d8e",
+                "evidence:56db9f0d44b2a75276e852fb",
+                "evidence:996eaf54f95aee8a26505531"
+              ],
+              "resolution": "none"
+            },
+            {
+              "code": "resource_catalog_coverage_incomplete",
+              "severity": "warning",
+              "authority": "repository",
+              "message": "Resource catalog coverage is partial.",
+              "evidenceRefs": [
+                "evidence:3a98499c4817d2d876de1d8e",
+                "evidence:56db9f0d44b2a75276e852fb",
+                "evidence:996eaf54f95aee8a26505531"
+              ],
+              "resolution": "none"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "graph:graph-plan:goal:run:dfb70040fba4396164e85b170efb64c283-9aefdc667c:r1:compiled",
+      "occurredAt": "2026-08-17T04:53:59.197Z",
+      "type": "graph.compiled",
+      "payload": {
+        "graphId": "graph-plan:goal:run:dfb70040fba4396164e85b170efb64c283-9aefdc667c",
+        "revision": 1,
+        "graph": {
+          "graphId": "graph-plan:goal:run:dfb70040fba4396164e85b170efb64c283-9aefdc667c",
+          "revision": 1,
+          "semanticPlan": {
+            "id": "plan:goal:run:dfb70040fba4396164e85b170efb64c28349d61f3ad333df4774a26910ccea18",
+            "revision": 1,
+            "digest": "sha256:87fe9b3c2c60d1298f8354a64695d0d28fbdceb2046e0cb1bb8b23a5e0caf499"
+          },
+          "repositoryView": {
+            "digest": "sha256:cf41d54ed3a39e8237e52bca411e771d842d140661fc024442a3d0b02b66ee03",
+            "treeSha": "aa4b1fc231cbff6853853ab8b07c786d16c51948",
+            "resourceCatalogDigest": "sha256:ff2c20729ffc81cb34424af43dc54f5cced7541eb3ecba699c41b0e572413d1f"
+          },
+          "rootId": "unit:app",
+          "nodes": {
+            "unit:app": {
+              "id": "unit:app",
+              "parentId": null,
+              "kind": "leaf",
+              "title": "Cuentas Claras app",
+              "goal": "Build the complete modular Cuentas Claras Node.js app: domain/participants, balance/settlement algorithm, JSON storage and WhatsApp-style reports, HTTP+CLI interfaces, and an automated test suite.",
+              "contractRef": {
+                "id": "task:unit:app",
+                "revision": 1,
+                "digest": "sha256:0c069f61bde54db6d9d594f67a61cf2a9e3dabb10db140793317f204373e24a2"
+              }
+            }
+          },
+          "artifactRequirements": [],
+          "seamBindings": [],
+          "resourceClaims": [
+            {
+              "id": "resource-claim-unit:app:catalog-resource:7b603415b99b6ff97a7f37-b6f14215b3",
+              "nodeId": "unit:app",
+              "resourceId": "catalog-resource:7b603415b99b6ff97a7f3743",
+              "source": "planner",
+              "evidenceRefs": [
+                "evidence:996eaf54f95aee8a26505531"
+              ],
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "evidence:996eaf54f95aee8a26505531"
+                ]
+              },
+              "access": "modify",
+              "ownerPhase": "implementation",
+              "inputVersion": {
+                "kind": "repository_view",
+                "digest": "sha256:cf41d54ed3a39e8237e52bca411e771d842d140661fc024442a3d0b02b66ee03"
+              },
+              "outputArtifact": {
+                "id": "artifact:gitignore-update",
+                "revision": 1,
+                "digest": "sha256:bd9a3f93fc401ce36a8cd6b9a0ec95f769ad26a2d0fce335fc387d14a9322552"
+              }
+            },
+            {
+              "id": "resource-claim-unit:app:catalog-resource:da1eb632922eb70b1ac8d2-8ceea6a1f1",
+              "nodeId": "unit:app",
+              "resourceId": "catalog-resource:da1eb632922eb70b1ac8d256",
+              "source": "planner",
+              "evidenceRefs": [
+                "evidence:996eaf54f95aee8a26505531"
+              ],
+              "epistemic": {
+                "state": "known",
+                "confidence": "high",
+                "evidenceRefs": [
+                  "evidence:996eaf54f95aee8a26505531"
+                ]
+              },
+              "access": "modify",
+              "ownerPhase": "implementation",
+              "inputVersion": {
+                "kind": "repository_view",
+                "digest": "sha256:cf41d54ed3a39e8237e52bca411e771d842d140661fc024442a3d0b02b66ee03"
+              },
+              "outputArtifact": {
+                "id": "artifact:readme-update",
+                "revision": 1,
+                "digest": "sha256:13e2affdfab518bc2c579a03f0c9ca66baa97ef872f125d1b0b0c57c5bdbaf46"
+              }
+            }
+          ],
+          "runtimeLeaseClaims": [],
+          "contractRefs": [
+            {
+              "id": "artifact:gitignore-update",
+              "revision": 1,
+              "digest": "sha256:bd9a3f93fc401ce36a8cd6b9a0ec95f769ad26a2d0fce335fc387d14a9322552"
+            },
+            {
+              "id": "artifact:readme-update",
+              "revision": 1,
+              "digest": "sha256:13e2affdfab518bc2c579a03f0c9ca66baa97ef872f125d1b0b0c57c5bdbaf46"
+            },
+            {
+              "id": "proof:validation:domain-tests",
+              "revision": 1,
+              "digest": "sha256:f5e2b2c0a3adf9cc82c4008fd9f9a6fe223997a7a34f72d871e841a33ce65d34"
+            },
+            {
+              "id": "proof:validation:e2e-tests",
+              "revision": 1,
+              "digest": "sha256:2629f70155e9945717692516d472b459a896573bb80072729d0dc41b3e66c769"
+            },
+            {
+              "id": "proof:validation:server-cli-tests",
+              "revision": 1,
+              "digest": "sha256:6a97df97ea9ea988c6466b260d135e6a40524290ccd7766cac472b59fc3fe267"
+            },
+            {
+              "id": "proof:validation:settlement-tests",
+              "revision": 1,
+              "digest": "sha256:de774d4ff8cc2ca038d61b4d73ae879bf2c7de8a41d510af682445d638d0495b"
+            },
+            {
+              "id": "proof:validation:storage-reports-tests",
+              "revision": 1,
+              "digest": "sha256:0a6f401db23e6d2717bfbfb30032caa4c1a7ba178dff6b867e50aa8713d3684c"
+            },
+            {
+              "id": "scope:unit:app",
+              "revision": 1,
+              "digest": "sha256:d6f859258a065daa18c503987dee21177d09c674cd326c299eeab8dffa151624"
+            },
+            {
+              "id": "task:unit:app",
+              "revision": 1,
+              "digest": "sha256:0c069f61bde54db6d9d594f67a61cf2a9e3dabb10db140793317f204373e24a2"
+            },
+            {
+              "id": "validation-contract:unit:app",
+              "revision": 1,
+              "digest": "sha256:07d87ed117f646af133ccbdbca7c98a25b8be7ba336d832fa35e616b5b672f36"
+            },
+            {
+              "id": "validation:domain-tests",
+              "revision": 1,
+              "digest": "sha256:d2200019eb2baa9ef713cca9bdac0457247d8f6e4373a96d04e4506e031c9030"
+            },
+            {
+              "id": "validation:e2e-tests",
+              "revision": 1,
+              "digest": "sha256:ed4e7cdea784ad1bf0fec0db6e77751d83ff7da1feda03efacd447f9bf7d86ad"
+            },
+            {
+              "id": "validation:server-cli-tests",
+              "revision": 1,
+              "digest": "sha256:8434235ef86d7cd7fe83b7c6dcc9c9cd77a8a55ad84692604e5c64370ea1f332"
+            },
+            {
+              "id": "validation:settlement-tests",
+              "revision": 1,
+              "digest": "sha256:1391d6d57208e7921256c0c9f39ed95369d1afa57868ed6f89ef25aa97f5fc0c"
+            },
+            {
+              "id": "validation:storage-reports-tests",
+              "revision": 1,
+              "digest": "sha256:5c0a0bbef77756f238b931abc5120b3d9ab3c4af55461b1e31d4abb4b497d563"
+            }
+          ],
+          "digest": "sha256:f171befdce784ca20c4ca39c5b93b9ff0ee2b6c591d3c2a41e56ddc9514610cf"
+        },
+        "contracts": [
+          {
+            "schemaVersion": 2,
+            "task": {
+              "schemaVersion": 2,
+              "id": "task:unit:app",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:app",
+              "goal": "Build the complete modular Cuentas Claras Node.js app: domain/participants, balance/settlement algorithm, JSON storage and WhatsApp-style reports, HTTP+CLI interfaces, and an automated test suite.",
+              "acceptanceCriteria": [
+                {
+                  "id": "criterion:domain",
+                  "kind": "unit",
+                  "description": "People and expenses (payer, amount, category, participants) can be registered and modeled correctly.",
+                  "required": true
+                },
+                {
+                  "id": "criterion:settlement",
+                  "kind": "unit",
+                  "description": "Balances are computed per person and the minimum set of transfers to settle all debts is produced.",
+                  "required": true
+                },
+                {
+                  "id": "criterion:storage-reports",
+                  "kind": "unit",
+                  "description": "Events and expenses persist to local JSON files and a formatted, emoji-rich WhatsApp-ready report is generated with totals, per-person averages and the final settlement.",
+                  "required": true
+                },
+                {
+                  "id": "criterion:server-cli",
+                  "kind": "integration",
+                  "description": "An HTTP server exposes /api/events, /api/expenses and /api/settlement, and an interactive CLI can create events and print the console summary.",
+                  "required": true
+                },
+                {
+                  "id": "criterion:e2e",
+                  "kind": "e2e",
+                  "description": "An E2E test validates the full flow end to end using node --test.",
+                  "required": true
+                }
+              ],
+              "scope": {
+                "id": "scope:unit:app",
+                "revision": "1"
+              },
+              "consumes": [],
+              "produces": [
+                {
+                  "id": "artifact:gitignore-update",
+                  "revision": "1"
+                },
+                {
+                  "id": "artifact:readme-update",
+                  "revision": "1"
+                }
+              ],
+              "seams": [],
+              "validation": {
+                "id": "validation-contract:unit:app",
+                "revision": "1"
+              },
+              "constraints": []
+            },
+            "scope": {
+              "schemaVersion": 2,
+              "id": "scope:unit:app",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:app",
+              "allowedPaths": [
+                ".gitignore",
+                "package.json",
+                "README.md",
+                "src/cli/cli.js",
+                "src/domain/expenses.js",
+                "src/domain/index.js",
+                "src/domain/participants.js",
+                "src/index.js",
+                "src/server/http.js",
+                "src/server/routes.js",
+                "src/settlement/balance.js",
+                "src/settlement/settle.js",
+                "src/storage/eventStore.js",
+                "src/storage/report.js",
+                "test/domain.test.js",
+                "test/e2e.test.js",
+                "test/server.test.js",
+                "test/settlement.test.js",
+                "test/storage.test.js"
+              ],
+              "forbiddenPaths": [],
+              "coordinationPaths": [],
+              "outputRoots": []
+            },
+            "seams": [],
+            "artifacts": [
+              {
+                "schemaVersion": 2,
+                "id": "artifact:gitignore-update",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:app",
+                "consumerNodeIds": [],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  ".gitignore"
+                ]
+              },
+              {
+                "schemaVersion": 2,
+                "id": "artifact:readme-update",
+                "revision": "1",
+                "provenance": "compiled",
+                "producerNodeId": "unit:app",
+                "consumerNodeIds": [],
+                "artifactType": "source_change",
+                "materialization": "patch",
+                "expectedPaths": [
+                  "README.md"
+                ]
+              }
+            ],
+            "validation": {
+              "schemaVersion": 2,
+              "id": "validation-contract:unit:app",
+              "revision": "1",
+              "provenance": "compiled",
+              "nodeId": "unit:app",
+              "obligations": [
+                {
+                  "id": "validation:domain-tests",
+                  "criterionId": "criterion:domain",
+                  "layer": "unit",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "test/domain.test.js"
+                    ],
+                    "references": [
+                      "test/domain.test.js"
+                    ]
+                  }
+                },
+                {
+                  "id": "validation:e2e-tests",
+                  "criterionId": "criterion:e2e",
+                  "layer": "e2e",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "test/e2e.test.js"
+                    ],
+                    "references": [
+                      "test/e2e.test.js"
+                    ]
+                  }
+                },
+                {
+                  "id": "validation:server-cli-tests",
+                  "criterionId": "criterion:server-cli",
+                  "layer": "integration",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "test/server.test.js"
+                    ],
+                    "references": [
+                      "test/server.test.js"
+                    ]
+                  }
+                },
+                {
+                  "id": "validation:settlement-tests",
+                  "criterionId": "criterion:settlement",
+                  "layer": "unit",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "test/settlement.test.js"
+                    ],
+                    "references": [
+                      "test/settlement.test.js"
+                    ]
+                  }
+                },
+                {
+                  "id": "validation:storage-reports-tests",
+                  "criterionId": "criterion:storage-reports",
+                  "layer": "unit",
+                  "severity": "required",
+                  "acceptableEvidence": [
+                    "test_result"
+                  ],
+                  "baselinePolicy": "required",
+                  "negativeControl": "when_feasible",
+                  "flakyPolicy": "forbid",
+                  "evidence": {
+                    "kind": "focused_command",
+                    "selectors": [
+                      "test/storage.test.js"
+                    ],
+                    "references": [
+                      "test/storage.test.js"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "evidenceAuthority": {
+          "goal": {
+            "id": "goal:run:dfb70040fba4396164e85b170efb64c28349d61f3ad333df4774a26910ccea18",
+            "revision": 1,
+            "goal": "Construir una aplicación modular en Node.js llamada \"Cuentas Claras\" para organizar eventos familiares/amigos (asados, viajes, cumpleaños) y calcular la división exacta de gastos.\n\nLa aplicación debe incluir:\n1. Módulo de Dominio y Participantes:\n   - Registro de personas en el evento.\n   - Carga de gastos individuales indicando quién pagó, el monto, la categoría (Comida, Bebida, Postre, Varios) y quiénes participaron de ese gasto.\n2. Módulo de Cálculo y Balances:\n   - Algoritmo de liquidación inteligente: calcula el balance de cada persona y genera la cantidad mínima de transferencias necesarias para saldar las deudas (ej. \"Juan le transfiere $5.000 a Sofía\").\n3. Módulo de Almacenamiento y Reportes:\n   - Persistencia de eventos y gastos en archivos JSON locales.\n   - Generador de reportes en texto formateado con emojis listo para compartir por WhatsApp (resumen de gastos, total general, gasto promedio por persona y liquidación final).\n4. Servidor HTTP y CLI:\n   - Servidor HTTP simple con endpoints REST para consultar eventos, agregar gastos y obtener la liquidación (/api/events, /api/expenses, /api/settlement).\n   - Interfaz por línea de comandos (CLI) interactiva para crear eventos y ver el resumen por consola.\n5. Suite de Pruebas Automatizadas:\n   - Tests unitarios para cada módulo y test de integración E2E que valide el flujo completo con node --test.",
+            "acceptanceCriteria": [
+              {
+                "id": "criterion:run:dfb70040fba4396164e85b170efb64c28349d61f3ad333df4774a26910ccea18:1",
+                "statement": "Construir una aplicación modular en Node.js llamada \"Cuentas Claras\" para organizar eventos familiares/amigos (asados, viajes, cumpleaños) y calcular la división exacta de gastos.\n\nLa aplicación debe incluir:\n1. Módulo de Dominio y Participantes:\n   - Registro de personas en el evento.\n   - Carga de gastos individuales indicando quién pagó, el monto, la categoría (Comida, Bebida, Postre, Varios) y quiénes participaron de ese gasto.\n2. Módulo de Cálculo y Balances:\n   - Algoritmo de liquidación inteligente: calcula el balance de cada persona y genera la cantidad mínima de transferencias necesarias para saldar las deudas (ej. \"Juan le transfiere $5.000 a Sofía\").\n3. Módulo de Almacenamiento y Reportes:\n   - Persistencia de eventos y gastos en archivos JSON locales.\n   - Generador de reportes en texto formateado con emojis listo para compartir por WhatsApp (resumen de gastos, total general, gasto promedio por persona y liquidación final).\n4. Servidor HTTP y CLI:\n   - Servidor HTTP simple con endpoints REST para consultar eventos, agregar gastos y obtener la liquidación (/api/events, /api/expenses, /api/settlement).\n   - Interfaz por línea de comandos (CLI) interactiva para crear eventos y ver el resumen por consola.\n5. Suite de Pruebas Automatizadas:\n   - Tests unitarios para cada módulo y test de integración E2E que valide el flujo completo con node --test.",
+                "required": true,
+                "level": "product",
+                "protectedReferences": [],
+                "verification": {
+                  "allowedProofs": [
+                    {
+                      "mode": "executable",
+                      "authority": "orchestrator_deterministic"
+                    }
+                  ],
+                  "independence": "independent_required"
+                }
+              }
+            ],
+            "constraints": [],
+            "qualityAttributes": [],
+            "target": {
+              "repositoryId": "Cuentas-Claras",
+              "baseCommit": "680018b7a2dd7fff3660431df84e19c10af7b53b",
+              "treeSha": "aa4b1fc231cbff6853853ab8b07c786d16c51948"
+            },
+            "digest": "sha256:95a8335ee5d7d39137ec3148b228eb72ae0ecbc8f5507cf1c4dad02102b57403"
+          },
+          "validationObligations": [
+            {
+              "digest": "sha256:d2200019eb2baa9ef713cca9bdac0457247d8f6e4373a96d04e4506e031c9030",
+              "id": "validation:domain-tests",
+              "revision": 1,
+              "criterionId": "criterion:run:dfb70040fba4396164e85b170efb64c28349d61f3ad333df4774a26910ccea18:1",
+              "ownerNodeId": "unit:app",
+              "required": true,
+              "proofStrategy": {
+                "id": "proof:validation:domain-tests",
+                "revision": 1,
+                "digest": "sha256:f5e2b2c0a3adf9cc82c4008fd9f9a6fe223997a7a34f72d871e841a33ce65d34"
+              }
+            },
+            {
+              "digest": "sha256:ed4e7cdea784ad1bf0fec0db6e77751d83ff7da1feda03efacd447f9bf7d86ad",
+              "id": "validation:e2e-tests",
+              "revision": 1,
+              "criterionId": "criterion:run:dfb70040fba4396164e85b170efb64c28349d61f3ad333df4774a26910ccea18:1",
+              "ownerNodeId": "unit:app",
+              "required": true,
+              "proofStrategy": {
+                "id": "proof:validation:e2e-tests",
+                "revision": 1,
+                "digest": "sha256:2629f70155e9945717692516d472b459a896573bb80072729d0dc41b3e66c769"
+              }
+            },
+            {
+              "digest": "sha256:8434235ef86d7cd7fe83b7c6dcc9c9cd77a8a55ad84692604e5c64370ea1f332",
+              "id": "validation:server-cli-tests",
+              "revision": 1,
+              "criterionId": "criterion:run:dfb70040fba4396164e85b170efb64c28349d61f3ad333df4774a26910ccea18:1",
+              "ownerNodeId": "unit:app",
+              "required": true,
+              "proofStrategy": {
+                "id": "proof:validation:server-cli-tests",
+                "revision": 1,
+                "digest": "sha256:6a97df97ea9ea988c6466b260d135e6a40524290ccd7766cac472b59fc3fe267"
+              }
+            },
+            {
+              "digest": "sha256:1391d6d57208e7921256c0c9f39ed95369d1afa57868ed6f89ef25aa97f5fc0c",
+              "id": "validation:settlement-tests",
+              "revision": 1,
+              "criterionId": "criterion:run:dfb70040fba4396164e85b170efb64c28349d61f3ad333df4774a26910ccea18:1",
+              "ownerNodeId": "unit:app",
+              "required": true,
+              "proofStrategy": {
+                "id": "proof:validation:settlement-tests",
+                "revision": 1,
+                "digest": "sha256:de774d4ff8cc2ca038d61b4d73ae879bf2c7de8a41d510af682445d638d0495b"
+              }
+            },
+            {
+              "digest": "sha256:5c0a0bbef77756f238b931abc5120b3d9ab3c4af55461b1e31d4abb4b497d563",
+              "id": "validation:storage-reports-tests",
+              "revision": 1,
+              "criterionId": "criterion:run:dfb70040fba4396164e85b170efb64c28349d61f3ad333df4774a26910ccea18:1",
+              "ownerNodeId": "unit:app",
+              "required": true,
+              "proofStrategy": {
+                "id": "proof:validation:storage-reports-tests",
+                "revision": 1,
+                "digest": "sha256:0a6f401db23e6d2717bfbfb30032caa4c1a7ba178dff6b867e50aa8713d3684c"
+              }
+            }
+          ],
+          "proofStrategies": [
+            {
+              "id": "proof:validation:domain-tests",
+              "revision": 1,
+              "goalContractDigest": "sha256:95a8335ee5d7d39137ec3148b228eb72ae0ecbc8f5507cf1c4dad02102b57403",
+              "criterionId": "criterion:run:dfb70040fba4396164e85b170efb64c28349d61f3ad333df4774a26910ccea18:1",
+              "obligationId": "validation:domain-tests",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "repositoryViewDigest": "sha256:cf41d54ed3a39e8237e52bca411e771d842d140661fc024442a3d0b02b66ee03",
+              "procedureRef": "command:stage6-transitional-validation",
+              "selectorDigest": "sha256:a3a6f968b5397d7d0b26307e4c2a7a99680f727f412028dcf7b63e56b7043916",
+              "environmentPolicyDigest": "sha256:stage6-transitional-environment",
+              "independence": "independent_required",
+              "digest": "sha256:f5e2b2c0a3adf9cc82c4008fd9f9a6fe223997a7a34f72d871e841a33ce65d34"
+            },
+            {
+              "id": "proof:validation:e2e-tests",
+              "revision": 1,
+              "goalContractDigest": "sha256:95a8335ee5d7d39137ec3148b228eb72ae0ecbc8f5507cf1c4dad02102b57403",
+              "criterionId": "criterion:run:dfb70040fba4396164e85b170efb64c28349d61f3ad333df4774a26910ccea18:1",
+              "obligationId": "validation:e2e-tests",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "repositoryViewDigest": "sha256:cf41d54ed3a39e8237e52bca411e771d842d140661fc024442a3d0b02b66ee03",
+              "procedureRef": "command:stage6-transitional-validation",
+              "selectorDigest": "sha256:d392d94d7eea244a84ec86facf4639fc4eb2932a4e70ae0bbd159888ac9f0b3d",
+              "environmentPolicyDigest": "sha256:stage6-transitional-environment",
+              "independence": "independent_required",
+              "digest": "sha256:2629f70155e9945717692516d472b459a896573bb80072729d0dc41b3e66c769"
+            },
+            {
+              "id": "proof:validation:server-cli-tests",
+              "revision": 1,
+              "goalContractDigest": "sha256:95a8335ee5d7d39137ec3148b228eb72ae0ecbc8f5507cf1c4dad02102b57403",
+              "criterionId": "criterion:run:dfb70040fba4396164e85b170efb64c28349d61f3ad333df4774a26910ccea18:1",
+              "obligationId": "validation:server-cli-tests",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "repositoryViewDigest": "sha256:cf41d54ed3a39e8237e52bca411e771d842d140661fc024442a3d0b02b66ee03",
+              "procedureRef": "command:stage6-transitional-validation",
+              "selectorDigest": "sha256:42ac2b813740209546a48454c85927ea101a5274ae0a3bea4569d6d0c8cbe9d1",
+              "environmentPolicyDigest": "sha256:stage6-transitional-environment",
+              "independence": "independent_required",
+              "digest": "sha256:6a97df97ea9ea988c6466b260d135e6a40524290ccd7766cac472b59fc3fe267"
+            },
+            {
+              "id": "proof:validation:settlement-tests",
+              "revision": 1,
+              "goalContractDigest": "sha256:95a8335ee5d7d39137ec3148b228eb72ae0ecbc8f5507cf1c4dad02102b57403",
+              "criterionId": "criterion:run:dfb70040fba4396164e85b170efb64c28349d61f3ad333df4774a26910ccea18:1",
+              "obligationId": "validation:settlement-tests",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "repositoryViewDigest": "sha256:cf41d54ed3a39e8237e52bca411e771d842d140661fc024442a3d0b02b66ee03",
+              "procedureRef": "command:stage6-transitional-validation",
+              "selectorDigest": "sha256:b27d3b343522f15393d8013f9087b0161adda48641fa87c1550f33ff40ea9249",
+              "environmentPolicyDigest": "sha256:stage6-transitional-environment",
+              "independence": "independent_required",
+              "digest": "sha256:de774d4ff8cc2ca038d61b4d73ae879bf2c7de8a41d510af682445d638d0495b"
+            },
+            {
+              "id": "proof:validation:storage-reports-tests",
+              "revision": 1,
+              "goalContractDigest": "sha256:95a8335ee5d7d39137ec3148b228eb72ae0ecbc8f5507cf1c4dad02102b57403",
+              "criterionId": "criterion:run:dfb70040fba4396164e85b170efb64c28349d61f3ad333df4774a26910ccea18:1",
+              "obligationId": "validation:storage-reports-tests",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "repositoryViewDigest": "sha256:cf41d54ed3a39e8237e52bca411e771d842d140661fc024442a3d0b02b66ee03",
+              "procedureRef": "command:stage6-transitional-validation",
+              "selectorDigest": "sha256:867c8c51f4f1d4cb7e4d2d5263a55b5b3ff0958886642fc8c9dbe1ab12004649",
+              "environmentPolicyDigest": "sha256:stage6-transitional-environment",
+              "independence": "independent_required",
+              "digest": "sha256:0a6f401db23e6d2717bfbfb30032caa4c1a7ba178dff6b867e50aa8713d3684c"
+            }
+          ]
+        },
+        "review": {
+          "findings": [
+            {
+              "code": "repository_model_coverage_incomplete",
+              "severity": "warning",
+              "authority": "repository",
+              "message": "Repository model coverage is partial.",
+              "evidenceRefs": [
+                "evidence:3a98499c4817d2d876de1d8e",
+                "evidence:56db9f0d44b2a75276e852fb",
+                "evidence:996eaf54f95aee8a26505531"
+              ],
+              "resolution": "none"
+            },
+            {
+              "code": "resource_catalog_coverage_incomplete",
+              "severity": "warning",
+              "authority": "repository",
+              "message": "Resource catalog coverage is partial.",
+              "evidenceRefs": [
+                "evidence:3a98499c4817d2d876de1d8e",
+                "evidence:56db9f0d44b2a75276e852fb",
+                "evidence:996eaf54f95aee8a26505531"
+              ],
+              "resolution": "none"
+            }
+          ]
+        },
+        "trace": {
+          "budget": {
+            "modelCalls": 3,
+            "repositoryQueries": 3,
+            "queryBytes": 65536,
+            "revisions": 3,
+            "repairs": 2,
+            "expansions": 0
+          },
+          "consumed": {
+            "modelCalls": 1,
+            "repositoryQueries": 2,
+            "queryBytes": 399,
+            "revisions": 1,
+            "repairs": 0,
+            "expansions": 0
+          },
+          "revisions": [
+            {
+              "index": 1,
+              "cause": "initial",
+              "budget": {
+                "modelCalls": 3,
+                "repositoryQueries": 3,
+                "queryBytes": 65536,
+                "revisions": 3,
+                "repairs": 2,
+                "expansions": 0
+              },
+              "consumed": {
+                "modelCalls": 1,
+                "repositoryQueries": 2,
+                "queryBytes": 399,
+                "revisions": 1,
+                "repairs": 0,
+                "expansions": 0
+              },
+              "queryReceipts": [
+                "sha256:437ef2cb58c3413e6dfa82d396dc4018305fe4121a84b0ce04774a63b9b52132",
+                "sha256:f88b0c253a18dff76265382a19f9bce36093edc63a29f9208dd9e6da76713ec1"
+              ],
+              "evidenceRefs": [
+                "evidence:996eaf54f95aee8a26505531"
+              ],
+              "changedDecisionIds": [],
+              "changedFindingCodes": [
+                "repository_model_coverage_incomplete",
+                "resource_catalog_coverage_incomplete"
+              ],
+              "proposalDigest": "sha256:87fe9b3c2c60d1298f8354a64695d0d28fbdceb2046e0cb1bb8b23a5e0caf499",
+              "causalStateDigest": "sha256:1a9ff4d32396a1baeb4f4edd4c27a9bed5f0971b53f2ef430cb1161fb4f07293",
+              "digest": "sha256:57375a91e3bb36c0c98e4facb93312d83d906f7ea418e321a8511f386d5934e9"
+            }
+          ],
+          "advisoryFindings": [
+            {
+              "code": "repository_model_coverage_incomplete",
+              "severity": "warning",
+              "authority": "repository",
+              "message": "Repository model coverage is partial.",
+              "evidenceRefs": [
+                "evidence:3a98499c4817d2d876de1d8e",
+                "evidence:56db9f0d44b2a75276e852fb",
+                "evidence:996eaf54f95aee8a26505531"
+              ],
+              "resolution": "none"
+            },
+            {
+              "code": "resource_catalog_coverage_incomplete",
+              "severity": "warning",
+              "authority": "repository",
+              "message": "Resource catalog coverage is partial.",
+              "evidenceRefs": [
+                "evidence:3a98499c4817d2d876de1d8e",
+                "evidence:56db9f0d44b2a75276e852fb",
+                "evidence:996eaf54f95aee8a26505531"
+              ],
+              "resolution": "none"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "graph:graph-plan:goal:run:dfb70040fba4396164e85b170efb64c283-9aefdc667c:r1:proposed",
+      "occurredAt": "2026-08-17T04:53:59.197Z",
+      "type": "graph.revision.proposed",
+      "payload": {
+        "graphId": "graph-plan:goal:run:dfb70040fba4396164e85b170efb64c283-9aefdc667c",
+        "revision": 1
+      }
+    },
+    {
+      "eventId": "approve-plan:graph-plan:goal:run:dfb70040fba4396164e85b170efb64c283-9aefdc667c:r1",
+      "occurredAt": "2026-08-17T04:53:59.197Z",
+      "type": "decision.raised",
+      "payload": {
+        "decision": {
+          "id": "approve-plan:graph-plan:goal:run:dfb70040fba4396164e85b170efb64c283-9aefdc667c:r1",
+          "kind": "approve_plan",
+          "question": "Approve graph revision 1?",
+          "options": [
+            {
+              "id": "approve",
+              "label": "Approve plan"
+            },
+            {
+              "id": "request_changes",
+              "label": "Request changes"
+            }
+          ],
+          "affectedNodeIds": [
+            "unit:app"
+          ],
+          "evidenceRefs": [
+            "graph:graph-plan:goal:run:dfb70040fba4396164e85b170efb64c283-9aefdc667c:r1"
+          ],
+          "impact": "acceptance"
+        }
+      }
+    }
+  ]
+}

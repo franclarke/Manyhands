@@ -1,0 +1,2722 @@
+{
+  "events": [
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:readiness.observed:14",
+      "occurredAt": "2026-08-21T09:21:23.499Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:storage"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:storage",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:budget-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favorites-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notes-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:packing-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:search-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:search-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favorites-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notes-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:budget-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:packing-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:budget-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-logic-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-ui-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favorites-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-integration-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:memories-integration-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notes-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organization-integration-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:packing-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:search-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:stops",
+            "unit:agenda",
+            "unit:search",
+            "unit:organization",
+            "unit:budget",
+            "unit:packing",
+            "unit:memories",
+            "unit:notes",
+            "unit:favorites",
+            "unit:dashboard"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:stops",
+            "unit:agenda",
+            "unit:search",
+            "unit:organization",
+            "unit:budget",
+            "unit:packing",
+            "unit:memories",
+            "unit:notes",
+            "unit:favorites",
+            "unit:dashboard"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T09:21:23.492Z"
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:wave.selected:15",
+      "occurredAt": "2026-08-21T09:21:23.517Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:wave:1",
+        "nodeIds": [
+          "unit:storage"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:budget-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favorites-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notes-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:packing-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:search-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:search-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favorites-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notes-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:budget-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:packing-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:budget-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-logic-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-ui-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favorites-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-integration-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:memories-integration-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notes-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organization-integration-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:packing-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:search-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-21T09:21:23.508Z"
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:storage:1:started",
+      "occurredAt": "2026-08-21T09:21:23.524Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:storage:1",
+        "nodeId": "unit:storage",
+        "inputFingerprint": "sha256:7f5c80c701acc28fe5b002bc4b10d14e054d75633a065490bb0899553ba4cfb4",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:storage:1:candidate",
+      "occurredAt": "2026-08-21T09:23:51.413Z",
+      "type": "attempt.candidate_created",
+      "payload": {
+        "attemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:storage:1",
+        "nodeId": "unit:storage",
+        "candidateCommit": "dd9b01d140daeac9da856faeb687511e98672119",
+        "candidate": {
+          "manifestDigest": "sha256:68ba2a9739789df888f234fb0e34586ca817939757350e62e6609dcedbec7590",
+          "commitOid": "dd9b01d140daeac9da856faeb687511e98672119",
+          "treeOid": "959ab09d27aeabe52d290716fe416ee6b54e8cd6"
+        },
+        "outputDigest": "sha256:ed5e20e85ea132c12f2d78ffb49f2a6dd4d17728a7389814f1f7ba7048dcada6",
+        "changedFiles": [
+          "src/storage/store.mjs",
+          "src/storage/store.test.mjs"
+        ],
+        "usage": {
+          "tokensTotal": 29232,
+          "costUsd": 0.131544,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:storage:1:validated",
+      "occurredAt": "2026-08-21T09:23:51.413Z",
+      "type": "validation.completed",
+      "payload": {
+        "attemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:storage:1",
+        "nodeId": "unit:storage",
+        "matrix": {
+          "matrixId": "matrix-ccd1f8b068dea5df",
+          "candidateCommit": "dd9b01d140daeac9da856faeb687511e98672119",
+          "validationContract": {
+            "id": "validation-contract:unit:storage",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:storage",
+              "obligationId": "validation:storage-unit",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-8f56d2ed80905df0e122452604f952741242ed26bf9745074bec2c0babf40055:attempt:1",
+                "validation:storage-unit:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:00831a482dbb4beed76a46b5e551593e66b1a55d07939bd60091539c63548423",
+          "observations": [
+            {
+              "evidenceId": "command-8f56d2ed80905df0e122452604f952741242ed26bf9745074bec2c0babf40055:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "8f56d2ed80905df0e122452604f952741242ed26bf9745074bec2c0babf40055",
+              "durationMs": 843.3372999999847,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "ec6161aab6ef0b60b32fe50a2c505d4906b1baf734b016a1733bcdd48dda6be3",
+              "criterionIds": [
+                "criterion:storage"
+              ],
+              "obligationIds": [
+                "validation:storage-unit"
+              ],
+              "references": [
+                "src/storage/store.test.mjs"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-ccd1f8b068dea5df:validation:storage-unit",
+              "revision": 1,
+              "goalContractDigest": "sha256:65b33b2f8fc5ee27619b478d2a2cca6d0e1728bac26461abd187e300055e84d0",
+              "criterionId": "criterion:run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:1",
+              "obligationId": "validation:storage-unit",
+              "candidate": {
+                "manifestDigest": "sha256:68ba2a9739789df888f234fb0e34586ca817939757350e62e6609dcedbec7590",
+                "commitOid": "dd9b01d140daeac9da856faeb687511e98672119",
+                "treeOid": "959ab09d27aeabe52d290716fe416ee6b54e8cd6"
+              },
+              "baseline": {
+                "commitOid": "c9ae12ac14f44e23c1e5243fd055a1c438904af4",
+                "treeOid": "6feb4d770ce06f1afa35b6c7732c36453d14e85f"
+              },
+              "proofStrategyDigest": "sha256:0c2e1ccf4c4150289a79cf3f267cc1f8322658cddb3b35959278835e6871ce3d",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:00831a482dbb4beed76a46b5e551593e66b1a55d07939bd60091539c63548423",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:c09182fce6e1dd79c0204e059c19973dfed0cefc5175a775a6712e1654390747",
+              "outputDigest": "sha256:ec6161aab6ef0b60b32fe50a2c505d4906b1baf734b016a1733bcdd48dda6be3",
+              "outcome": "satisfied",
+              "digest": "sha256:982234d34106a87855d0950dc4dbb8444c7752ee4652c24408031da8c6ff0062"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:storage-unit:negative-control",
+              "obligationId": "validation:storage-unit",
+              "detectedFailure": true,
+              "outputDigest": "c330e4279f82a37c2d4db979debd706d5efe79119464e267d7a57fe2e23d0e50"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:storage:1:artifact:artifact:storage-change",
+      "occurredAt": "2026-08-21T09:23:51.413Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:storage-change:run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:storage:1",
+          "runId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0",
+          "nodeId": "unit:storage",
+          "digest": "sha256:601b25fbd33c9e5668cfa3222d847a72a0390568290984cca97ed4451b2b6d73",
+          "producerAttemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:storage:1",
+          "contract": {
+            "id": "artifact:storage-change",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:601b25fbd33c9e5668cfa3222d847a72a0390568290984cca97ed4451b2b6d73",
+          "manifest": {
+            "id": "artifact:storage-change",
+            "contract": {
+              "id": "artifact:storage-change",
+              "revision": 1,
+              "digest": "sha256:cb7f24f09db38faafe890840f0f55c9ee61514dd5e6d46545d088d6723a3894e"
+            },
+            "producerNodeId": "unit:storage",
+            "producerAttemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:storage:1",
+            "inputFingerprint": "sha256:7f5c80c701acc28fe5b002bc4b10d14e054d75633a065490bb0899553ba4cfb4",
+            "repositoryObjectStoreId": "object-store:629c32c0811527a6",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "dd9b01d140daeac9da856faeb687511e98672119",
+              "treeOid": "959ab09d27aeabe52d290716fe416ee6b54e8cd6"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-1572bf91950318003847e64a15e39bac-fb86300ffa39/attempts/run-1572bf91950318003847e64a15e39bac-4e52b17d380b/artifacts/artifact-storage-change-f5f8c5efd009",
+            "kind": "change_set",
+            "baseTreeSha": "6feb4d770ce06f1afa35b6c7732c36453d14e85f",
+            "resultTreeSha": "959ab09d27aeabe52d290716fe416ee6b54e8cd6",
+            "entries": [
+              {
+                "newPath": "src/storage/store.mjs",
+                "operation": "add",
+                "newOid": "bdf4ef1d319c741212cb84a41a88b62479c1fd7c",
+                "newMode": "100644"
+              },
+              {
+                "newPath": "src/storage/store.test.mjs",
+                "operation": "add",
+                "newOid": "c3d7469c8b61493147ab6ed80221ae468f797459",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:601b25fbd33c9e5668cfa3222d847a72a0390568290984cca97ed4451b2b6d73"
+          },
+          "adoptedAt": "2026-08-21T09:23:51.413Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:readiness.observed:20",
+      "occurredAt": "2026-08-21T09:23:51.445Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:budget",
+          "unit:packing",
+          "unit:stops"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:budget",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:packing",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:stops",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:budget-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favorites-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notes-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:packing-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:search-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:search-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favorites-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notes-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:budget-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:packing-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:budget-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-logic-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-ui-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favorites-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-integration-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:memories-integration-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notes-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organization-integration-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:packing-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:search-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:stops",
+            "unit:agenda",
+            "unit:search",
+            "unit:organization",
+            "unit:budget",
+            "unit:packing",
+            "unit:memories",
+            "unit:notes",
+            "unit:favorites",
+            "unit:dashboard"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:stops",
+            "unit:agenda",
+            "unit:search",
+            "unit:organization",
+            "unit:budget",
+            "unit:packing",
+            "unit:memories",
+            "unit:notes",
+            "unit:favorites",
+            "unit:dashboard"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T09:23:51.437Z"
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:wave.selected:21",
+      "occurredAt": "2026-08-21T09:23:51.465Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:wave:2",
+        "nodeIds": [
+          "unit:budget",
+          "unit:packing",
+          "unit:stops"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:budget-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favorites-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notes-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:packing-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:search-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:search-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favorites-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notes-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:budget-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:packing-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:budget-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-logic-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-ui-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favorites-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-integration-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:memories-integration-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notes-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organization-integration-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:packing-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:search-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-21T09:23:51.457Z"
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:budget:1:started",
+      "occurredAt": "2026-08-21T09:23:51.476Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:budget:1",
+        "nodeId": "unit:budget",
+        "inputFingerprint": "sha256:b7d50d1600f5220a0fc9c1a161c0bac26cdebb175b3deb00fef8fe249cfe7e0d",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:packing:1:started",
+      "occurredAt": "2026-08-21T09:23:51.476Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:packing:1",
+        "nodeId": "unit:packing",
+        "inputFingerprint": "sha256:0d207563fc553e2db665d577f36f75828a70c024a8f9242fefcf52f5acf18751",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:stops:1:started",
+      "occurredAt": "2026-08-21T09:23:51.476Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:stops:1",
+        "nodeId": "unit:stops",
+        "inputFingerprint": "sha256:dcbeb57d30fc490c5f5a37cc10f91a2b7eab9f9409ea091598bb6b164bde700a",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:stops:1:failed",
+      "occurredAt": "2026-08-21T09:27:27.991Z",
+      "type": "attempt.failed",
+      "payload": {
+        "attemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:stops:1",
+        "nodeId": "unit:stops",
+        "reason": "validation_failed: exact candidate 19d7c4c88f6910795acb93405eb878fe961a0713 failed matrix matrix-c38d1c84d159d32e. Failed criteria: validation:stops-unit: Validation fails, but the same failure exists in the baseline.",
+        "usage": {
+          "tokensTotal": 45621,
+          "costUsd": 0.20529450000000002,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:stops:1:decision",
+      "occurredAt": "2026-08-21T09:27:27.991Z",
+      "type": "decision.raised",
+      "payload": {
+        "decision": {
+          "id": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:stops:1:decision",
+          "kind": "resolve_conflict",
+          "question": "Execution for Destinos y paradas requires guidance: validation_failed: exact candidate 19d7c4c88f6910795acb93405eb878fe961a0713 failed matrix matrix-c38d1c84d159d32e. Failed criteria: validation:stops-unit: Validation fails, but the same failure exists in the baseline.",
+          "options": [
+            {
+              "id": "retry",
+              "label": "Retry with guidance"
+            },
+            {
+              "id": "stop",
+              "label": "Stop this work"
+            }
+          ],
+          "affectedNodeIds": [
+            "unit:stops"
+          ],
+          "repairTargetNodeId": "unit:stops",
+          "evidenceRefs": [
+            "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:stops:1",
+            "input-fingerprint:sha256:dcbeb57d30fc490c5f5a37cc10f91a2b7eab9f9409ea091598bb6b164bde700a"
+          ],
+          "impact": "behavior",
+          "raisedAtGraphRevision": 1
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:budget:1:candidate",
+      "occurredAt": "2026-08-21T09:27:33.812Z",
+      "type": "attempt.candidate_created",
+      "payload": {
+        "attemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:budget:1",
+        "nodeId": "unit:budget",
+        "candidateCommit": "aa01f02829060a20edf96b8aa9e21d9880715ce6",
+        "candidate": {
+          "manifestDigest": "sha256:bed31014adf32a2f97c82cdb2fc121dffacfd02211798585910612ee25576b1b",
+          "commitOid": "aa01f02829060a20edf96b8aa9e21d9880715ce6",
+          "treeOid": "2750ab9bf3c2012830e76a528976c675fb106ce1"
+        },
+        "outputDigest": "sha256:6394c1860231c5ce7664110a09440dbf69f7e1c1d321dd8a9f24b78b63f03fff",
+        "changedFiles": [
+          "src/organization/budget/budget.mjs",
+          "src/organization/budget/budget.test.mjs"
+        ],
+        "usage": {
+          "tokensTotal": 37600,
+          "costUsd": 0.16920000000000002,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:budget:1:validated",
+      "occurredAt": "2026-08-21T09:27:33.812Z",
+      "type": "validation.completed",
+      "payload": {
+        "attemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:budget:1",
+        "nodeId": "unit:budget",
+        "matrix": {
+          "matrixId": "matrix-6a855e06ba0bb4c9",
+          "candidateCommit": "aa01f02829060a20edf96b8aa9e21d9880715ce6",
+          "validationContract": {
+            "id": "validation-contract:unit:budget",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:budget",
+              "obligationId": "validation:budget-unit",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-f3581cebb41582f83a35fe13cb04c6522a0c828da291d98c436f4a5e76918687:attempt:1",
+                "validation:budget-unit:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:641ff6f5df8a5bef82d4be0bc491ac5913ab8f743670dc9303863d475f0f471f",
+          "observations": [
+            {
+              "evidenceId": "command-f3581cebb41582f83a35fe13cb04c6522a0c828da291d98c436f4a5e76918687:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "f3581cebb41582f83a35fe13cb04c6522a0c828da291d98c436f4a5e76918687",
+              "durationMs": 1122.3523999999743,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "d160897c2c1b88905177ab6ac2a292241e497c0e8561cb5ad97b5f33a99b8112",
+              "criterionIds": [
+                "criterion:budget"
+              ],
+              "obligationIds": [
+                "validation:budget-unit"
+              ],
+              "references": [
+                "src/organization/budget/budget.test.mjs"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-6a855e06ba0bb4c9:validation:budget-unit",
+              "revision": 1,
+              "goalContractDigest": "sha256:65b33b2f8fc5ee27619b478d2a2cca6d0e1728bac26461abd187e300055e84d0",
+              "criterionId": "criterion:run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:1",
+              "obligationId": "validation:budget-unit",
+              "candidate": {
+                "manifestDigest": "sha256:bed31014adf32a2f97c82cdb2fc121dffacfd02211798585910612ee25576b1b",
+                "commitOid": "aa01f02829060a20edf96b8aa9e21d9880715ce6",
+                "treeOid": "2750ab9bf3c2012830e76a528976c675fb106ce1"
+              },
+              "baseline": {
+                "commitOid": "c9ae12ac14f44e23c1e5243fd055a1c438904af4",
+                "treeOid": "6feb4d770ce06f1afa35b6c7732c36453d14e85f"
+              },
+              "proofStrategyDigest": "sha256:1d0a664f1f29c7391097910669a426cf9752775b613b25b29e603db73998150a",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:641ff6f5df8a5bef82d4be0bc491ac5913ab8f743670dc9303863d475f0f471f",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:db6fb29069e44246574f0232e861292f0e86c4e4ad56faa0d452114602ba193b",
+              "outputDigest": "sha256:d160897c2c1b88905177ab6ac2a292241e497c0e8561cb5ad97b5f33a99b8112",
+              "outcome": "satisfied",
+              "digest": "sha256:57805bc45a781d0bb1194074821943d595d7df8b04a3719a28f979ca2fafe172"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:budget-unit:negative-control",
+              "obligationId": "validation:budget-unit",
+              "detectedFailure": true,
+              "outputDigest": "1266340eac153947a25303a9c6519d39bfdb9f208157f1a55515587a9115bfb5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:budget:1:artifact:artifact:budget-change",
+      "occurredAt": "2026-08-21T09:27:33.812Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:budget-change:run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:budget:1",
+          "runId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0",
+          "nodeId": "unit:budget",
+          "digest": "sha256:7266a89441622c17f6e7bc362a9c1283427af83f1958bac406d0bea5469db7e5",
+          "producerAttemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:budget:1",
+          "contract": {
+            "id": "artifact:budget-change",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:7266a89441622c17f6e7bc362a9c1283427af83f1958bac406d0bea5469db7e5",
+          "manifest": {
+            "id": "artifact:budget-change",
+            "contract": {
+              "id": "artifact:budget-change",
+              "revision": 1,
+              "digest": "sha256:81baafdcd41cd26b2c89b5e9a0d671046140f96b3d8f4d9dc288e84ca6b4444c"
+            },
+            "producerNodeId": "unit:budget",
+            "producerAttemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:budget:1",
+            "inputFingerprint": "sha256:b7d50d1600f5220a0fc9c1a161c0bac26cdebb175b3deb00fef8fe249cfe7e0d",
+            "repositoryObjectStoreId": "object-store:629c32c0811527a6",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "aa01f02829060a20edf96b8aa9e21d9880715ce6",
+              "treeOid": "2750ab9bf3c2012830e76a528976c675fb106ce1"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-1572bf91950318003847e64a15e39bac-fb86300ffa39/attempts/run-1572bf91950318003847e64a15e39bac-a86f83fe010d/artifacts/artifact-budget-change-e6ebf7e61383",
+            "kind": "change_set",
+            "baseTreeSha": "959ab09d27aeabe52d290716fe416ee6b54e8cd6",
+            "resultTreeSha": "2750ab9bf3c2012830e76a528976c675fb106ce1",
+            "entries": [
+              {
+                "newPath": "src/organization/budget/budget.mjs",
+                "operation": "add",
+                "newOid": "cddd262c06f0c7f2c362691f330b880f7f898f02",
+                "newMode": "100644"
+              },
+              {
+                "newPath": "src/organization/budget/budget.test.mjs",
+                "operation": "add",
+                "newOid": "d751418d659c4a4e2db19078ab6a8fd19d24b458",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:7266a89441622c17f6e7bc362a9c1283427af83f1958bac406d0bea5469db7e5"
+          },
+          "adoptedAt": "2026-08-21T09:27:33.812Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:packing:1:candidate",
+      "occurredAt": "2026-08-21T09:28:01.692Z",
+      "type": "attempt.candidate_created",
+      "payload": {
+        "attemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:packing:1",
+        "nodeId": "unit:packing",
+        "candidateCommit": "c6586cd46c2e15aa0a851f0bf4f6a759e27cbc0b",
+        "candidate": {
+          "manifestDigest": "sha256:29bd539cb2804544d7adc347c6ad0a294166dd62e936b9e9b0a34a3b29f7965b",
+          "commitOid": "c6586cd46c2e15aa0a851f0bf4f6a759e27cbc0b",
+          "treeOid": "97813793a9d158ccaaebf24da1811ca160c4b949"
+        },
+        "outputDigest": "sha256:a7937e0e289387b5a05f48f1764aab73f999bb7d53a50266c7d211073a7a32de",
+        "changedFiles": [
+          "src/organization/packing/packing.mjs",
+          "src/organization/packing/packing.test.mjs"
+        ],
+        "usage": {
+          "tokensTotal": 38108,
+          "costUsd": 0.17148600000000003,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:packing:1:validated",
+      "occurredAt": "2026-08-21T09:28:01.692Z",
+      "type": "validation.completed",
+      "payload": {
+        "attemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:packing:1",
+        "nodeId": "unit:packing",
+        "matrix": {
+          "matrixId": "matrix-07ab2214340a7620",
+          "candidateCommit": "c6586cd46c2e15aa0a851f0bf4f6a759e27cbc0b",
+          "validationContract": {
+            "id": "validation-contract:unit:packing",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:packing",
+              "obligationId": "validation:packing-unit",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-45cc1e0ea4b2016a084bee1c3b6f6b0840c78267f1bde3f9886ce01ec3891c27:attempt:1",
+                "validation:packing-unit:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:eafe04139d8e53eda6d9f1479708d5304aeaa57a1b8cd84611b697eac3adf472",
+          "observations": [
+            {
+              "evidenceId": "command-45cc1e0ea4b2016a084bee1c3b6f6b0840c78267f1bde3f9886ce01ec3891c27:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "45cc1e0ea4b2016a084bee1c3b6f6b0840c78267f1bde3f9886ce01ec3891c27",
+              "durationMs": 869.9059000000125,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "05152293a787c181afb486dd8b1ec5876ae7e532f83e525d1ad8561f2c5bfb24",
+              "criterionIds": [
+                "criterion:packing"
+              ],
+              "obligationIds": [
+                "validation:packing-unit"
+              ],
+              "references": [
+                "src/organization/packing/packing.test.mjs"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-07ab2214340a7620:validation:packing-unit",
+              "revision": 1,
+              "goalContractDigest": "sha256:65b33b2f8fc5ee27619b478d2a2cca6d0e1728bac26461abd187e300055e84d0",
+              "criterionId": "criterion:run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:1",
+              "obligationId": "validation:packing-unit",
+              "candidate": {
+                "manifestDigest": "sha256:29bd539cb2804544d7adc347c6ad0a294166dd62e936b9e9b0a34a3b29f7965b",
+                "commitOid": "c6586cd46c2e15aa0a851f0bf4f6a759e27cbc0b",
+                "treeOid": "97813793a9d158ccaaebf24da1811ca160c4b949"
+              },
+              "baseline": {
+                "commitOid": "c9ae12ac14f44e23c1e5243fd055a1c438904af4",
+                "treeOid": "6feb4d770ce06f1afa35b6c7732c36453d14e85f"
+              },
+              "proofStrategyDigest": "sha256:f10241528042b2e09b92a6311324b7fdb38145f8da2a025eeeb2eb6827938c94",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:eafe04139d8e53eda6d9f1479708d5304aeaa57a1b8cd84611b697eac3adf472",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:bb6ed588e22797d51c67009be55e3bc3369bde5f45c5c0fd135e9ee0261f4d44",
+              "outputDigest": "sha256:05152293a787c181afb486dd8b1ec5876ae7e532f83e525d1ad8561f2c5bfb24",
+              "outcome": "satisfied",
+              "digest": "sha256:1752c324ff8a7fb298d1cfef7d80ac03a77aa12d4dd019fbc62f4d6bf6c444f6"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:packing-unit:negative-control",
+              "obligationId": "validation:packing-unit",
+              "detectedFailure": true,
+              "outputDigest": "196368fc14ad185abf627f888ba1ad71a1b4391d2e0fdfff6cd21f6161c66434"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:packing:1:artifact:artifact:packing-change",
+      "occurredAt": "2026-08-21T09:28:01.692Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:packing-change:run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:packing:1",
+          "runId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0",
+          "nodeId": "unit:packing",
+          "digest": "sha256:c355e888ae8ea4aaa50c1bf0e430cf08776ca360ae8b5f1adf3070c019f0cc6a",
+          "producerAttemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:packing:1",
+          "contract": {
+            "id": "artifact:packing-change",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:c355e888ae8ea4aaa50c1bf0e430cf08776ca360ae8b5f1adf3070c019f0cc6a",
+          "manifest": {
+            "id": "artifact:packing-change",
+            "contract": {
+              "id": "artifact:packing-change",
+              "revision": 1,
+              "digest": "sha256:e4781a644195618e5b87e3ec1d6f832aa0d740b5e0c831591ccdfc89a4abc395"
+            },
+            "producerNodeId": "unit:packing",
+            "producerAttemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:packing:1",
+            "inputFingerprint": "sha256:0d207563fc553e2db665d577f36f75828a70c024a8f9242fefcf52f5acf18751",
+            "repositoryObjectStoreId": "object-store:629c32c0811527a6",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "c6586cd46c2e15aa0a851f0bf4f6a759e27cbc0b",
+              "treeOid": "97813793a9d158ccaaebf24da1811ca160c4b949"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-1572bf91950318003847e64a15e39bac-fb86300ffa39/attempts/run-1572bf91950318003847e64a15e39bac-34c9ed7a7e7c/artifacts/artifact-packing-change-bb94531ef225",
+            "kind": "change_set",
+            "baseTreeSha": "959ab09d27aeabe52d290716fe416ee6b54e8cd6",
+            "resultTreeSha": "97813793a9d158ccaaebf24da1811ca160c4b949",
+            "entries": [
+              {
+                "newPath": "src/organization/packing/packing.mjs",
+                "operation": "add",
+                "newOid": "7b24e42cea6c340706d1e6734ced7422f02926c7",
+                "newMode": "100644"
+              },
+              {
+                "newPath": "src/organization/packing/packing.test.mjs",
+                "operation": "add",
+                "newOid": "790f9d11a58b37139b115c75c2ffc871122a60d9",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:c355e888ae8ea4aaa50c1bf0e430cf08776ca360ae8b5f1adf3070c019f0cc6a"
+          },
+          "adoptedAt": "2026-08-21T09:28:01.692Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:readiness.observed:33",
+      "occurredAt": "2026-08-21T09:28:01.729Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:organization"
+        ],
+        "pendingDecisionIds": [
+          "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:stops:1:decision"
+        ],
+        "explanations": [
+          {
+            "nodeId": "unit:organization",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favorites-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notes-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:search-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:search-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favorites-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notes-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-logic-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-ui-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favorites-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-integration-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:memories-integration-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notes-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organization-integration-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:search-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:stops:1:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:stops",
+            "unit:agenda",
+            "unit:search",
+            "unit:organization",
+            "unit:budget",
+            "unit:packing",
+            "unit:memories",
+            "unit:notes",
+            "unit:favorites",
+            "unit:dashboard"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:stops",
+            "unit:agenda",
+            "unit:search",
+            "unit:organization",
+            "unit:budget",
+            "unit:packing",
+            "unit:memories",
+            "unit:notes",
+            "unit:favorites",
+            "unit:dashboard"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T09:28:01.720Z"
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:wave.selected:34",
+      "occurredAt": "2026-08-21T09:28:01.763Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:wave:3",
+        "nodeIds": [
+          "unit:organization"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favorites-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notes-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:search-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:search-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favorites-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notes-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-logic-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-ui-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favorites-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-integration-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:memories-integration-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notes-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organization-integration-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:search-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:stops:1:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-21T09:28:01.750Z"
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:organization:1:started",
+      "occurredAt": "2026-08-21T09:28:01.784Z",
+      "type": "integration.started",
+      "payload": {
+        "attemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:organization:1",
+        "nodeId": "unit:organization",
+        "inputFingerprint": "sha256:2e4691853bcc5196769226d57a4e9f7e710dbe991dc94cf26f26ddea3dd25a92",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        },
+        "requiredArtifactIds": [
+          "artifact:storage-change:run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:storage:1",
+          "artifact:budget-change:run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:budget:1",
+          "artifact:packing-change:run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:packing:1"
+        ]
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:organization:1:integrated",
+      "occurredAt": "2026-08-21T09:32:34.176Z",
+      "type": "integration.completed",
+      "payload": {
+        "attemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:organization:1",
+        "nodeId": "unit:organization",
+        "manifestId": "integration-result-integration-request-0c55360c0d28890e",
+        "candidateCommit": "7ea56ef219026087ee42df8e63a561f4669028a2",
+        "candidate": {
+          "manifestDigest": "sha256:469977e99ab4bb7fa4a2965e7c81e3cb530644ce97cd21eed0e11a5c2881a94d",
+          "commitOid": "7ea56ef219026087ee42df8e63a561f4669028a2",
+          "treeOid": "4e5d9fbff919045ba0536befe4c765feab0dec08"
+        },
+        "matrix": {
+          "matrixId": "matrix-fcdbcac3d49fd144",
+          "candidateCommit": "7ea56ef219026087ee42df8e63a561f4669028a2",
+          "validationContract": {
+            "id": "validation-contract:unit:organization",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:organization",
+              "obligationId": "validation:organization-integration",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-fbe49b919880362a65ab562e3dbe0e371cb9eec2b76ca127c673d3178a2cb0ac:attempt:1",
+                "validation:organization-integration:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:ae601bc1af1948047bcf923fb5a17a7038ad3029d4f61512bb68ab15dc063df0",
+          "observations": [
+            {
+              "evidenceId": "command-fbe49b919880362a65ab562e3dbe0e371cb9eec2b76ca127c673d3178a2cb0ac:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "fbe49b919880362a65ab562e3dbe0e371cb9eec2b76ca127c673d3178a2cb0ac",
+              "durationMs": 915.7330000000075,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "0ad528c473bc6411f6a3376c5c96a97177c5dc02bcd1d772d0365c5b3361ccda",
+              "criterionIds": [
+                "criterion:organization"
+              ],
+              "obligationIds": [
+                "validation:organization-integration"
+              ],
+              "references": [
+                "test/organization/organization.integration.test.mjs"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-fcdbcac3d49fd144:validation:organization-integration",
+              "revision": 1,
+              "goalContractDigest": "sha256:65b33b2f8fc5ee27619b478d2a2cca6d0e1728bac26461abd187e300055e84d0",
+              "criterionId": "criterion:run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:1",
+              "obligationId": "validation:organization-integration",
+              "candidate": {
+                "manifestDigest": "sha256:469977e99ab4bb7fa4a2965e7c81e3cb530644ce97cd21eed0e11a5c2881a94d",
+                "commitOid": "7ea56ef219026087ee42df8e63a561f4669028a2",
+                "treeOid": "4e5d9fbff919045ba0536befe4c765feab0dec08"
+              },
+              "baseline": {
+                "commitOid": "c9ae12ac14f44e23c1e5243fd055a1c438904af4",
+                "treeOid": "6feb4d770ce06f1afa35b6c7732c36453d14e85f"
+              },
+              "proofStrategyDigest": "sha256:2fd924d2e6331db0c1dd3740ec32547e71941d0818c27ce792b6eca199329121",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:ae601bc1af1948047bcf923fb5a17a7038ad3029d4f61512bb68ab15dc063df0",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:e6893a01680b9fb8037f74cd11ad8ae24b07c0cc92d80fe0f9cabdebb9174564",
+              "outputDigest": "sha256:0ad528c473bc6411f6a3376c5c96a97177c5dc02bcd1d772d0365c5b3361ccda",
+              "outcome": "satisfied",
+              "digest": "sha256:33a65d508df5e792143f55460ab69e2b78c2a45ee1e92c49b854ad050684bda4"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:organization-integration:negative-control",
+              "obligationId": "validation:organization-integration",
+              "detectedFailure": true,
+              "outputDigest": "9757c0ee157c2bc42fcc6545fcda997644192d736e4c6985c7f3826d1ea19a42"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:organization:1:artifact:artifact:organization-integration-change",
+      "occurredAt": "2026-08-21T09:32:34.176Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:organization-integration-change:run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:organization:1",
+          "runId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0",
+          "nodeId": "unit:organization",
+          "digest": "sha256:e70f39f8b6b6cfa454dead4fbfd04506221fbbd9da8a2698b03c08ddda973478",
+          "producerAttemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:organization:1",
+          "contract": {
+            "id": "artifact:organization-integration-change",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:e70f39f8b6b6cfa454dead4fbfd04506221fbbd9da8a2698b03c08ddda973478",
+          "manifest": {
+            "id": "artifact:organization-integration-change",
+            "contract": {
+              "id": "artifact:organization-integration-change",
+              "revision": 1,
+              "digest": "sha256:b74f47e95520cf7003a9444946e7f218d3b5ca236a4b349c027149eeff39cc01"
+            },
+            "producerNodeId": "unit:organization",
+            "producerAttemptId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:organization:1",
+            "inputFingerprint": "sha256:2e4691853bcc5196769226d57a4e9f7e710dbe991dc94cf26f26ddea3dd25a92",
+            "repositoryObjectStoreId": "object-store:629c32c0811527a6",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "7ea56ef219026087ee42df8e63a561f4669028a2",
+              "treeOid": "4e5d9fbff919045ba0536befe4c765feab0dec08"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-1572bf91950318003847e64a15e39bac-fb86300ffa39/attempts/run-1572bf91950318003847e64a15e39bac-62d6d53bf03b/artifacts/artifact-organization-integration-ch-b2855e260ccb",
+            "kind": "change_set",
+            "baseTreeSha": "ed9021c8b4158136de6aeb2f8cfd3b54a8d656fb",
+            "resultTreeSha": "4e5d9fbff919045ba0536befe4c765feab0dec08",
+            "entries": [
+              {
+                "newPath": "test/organization/organization.integration.test.mjs",
+                "operation": "add",
+                "newOid": "80c90fab077f262b4e18382af3b89608ae48571d",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:e70f39f8b6b6cfa454dead4fbfd04506221fbbd9da8a2698b03c08ddda973478"
+          },
+          "adoptedAt": "2026-08-21T09:32:34.176Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:readiness.observed:38",
+      "occurredAt": "2026-08-21T09:32:34.234Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [],
+        "pendingDecisionIds": [
+          "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:stops:1:decision"
+        ],
+        "explanations": [
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favorites-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notes-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:search-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:search-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favorites-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notes-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-logic-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-ui-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favorites-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-integration-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:memories-integration-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notes-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:search-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:stops-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:1572bf91950318003847e64a15e39bac091472e5c115c06fcb9f961487eb3ae0:attempt:unit:stops:1:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:stops",
+            "unit:agenda",
+            "unit:search",
+            "unit:organization",
+            "unit:budget",
+            "unit:packing",
+            "unit:memories",
+            "unit:notes",
+            "unit:favorites",
+            "unit:dashboard"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:stops",
+            "unit:agenda",
+            "unit:search",
+            "unit:organization",
+            "unit:budget",
+            "unit:packing",
+            "unit:memories",
+            "unit:notes",
+            "unit:favorites",
+            "unit:dashboard"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T09:32:34.218Z"
+      }
+    }
+  ]
+}

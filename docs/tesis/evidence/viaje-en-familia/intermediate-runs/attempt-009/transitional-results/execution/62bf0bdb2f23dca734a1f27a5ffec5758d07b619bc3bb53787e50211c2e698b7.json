@@ -1,0 +1,508 @@
+{
+  "events": [
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:readiness.observed:108",
+      "occurredAt": "2026-08-21T04:57:30.637Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:root"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:root",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:shell",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:shell",
+            "unit:itinerary",
+            "unit:itinerary-stops",
+            "unit:itinerary-agenda",
+            "unit:itinerary-search",
+            "unit:organization",
+            "unit:organization-budget",
+            "unit:organization-packing",
+            "unit:memories",
+            "unit:memories-notes",
+            "unit:memories-favorites"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:shell",
+            "unit:itinerary",
+            "unit:itinerary-stops",
+            "unit:itinerary-agenda",
+            "unit:itinerary-search",
+            "unit:organization",
+            "unit:organization-budget",
+            "unit:organization-packing",
+            "unit:memories",
+            "unit:memories-notes",
+            "unit:memories-favorites"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T04:57:30.583Z"
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:wave.selected:109",
+      "occurredAt": "2026-08-21T04:57:30.809Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:wave:10",
+        "nodeIds": [
+          "unit:root"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:shell",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-21T04:57:30.756Z"
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:root:2:started",
+      "occurredAt": "2026-08-21T04:57:30.945Z",
+      "type": "integration.started",
+      "payload": {
+        "attemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:root:2",
+        "nodeId": "unit:root",
+        "inputFingerprint": "sha256:34a554b446c6935b44d6f9c0101a3a4f5758fa17964697bd7bbaa58f450a15d0",
+        "retryOfAttemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:root:1",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        },
+        "requiredArtifactIds": [
+          "artifact:shell-storage:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:shell:1",
+          "artifact:itinerary-stops:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-stops:3",
+          "artifact:itinerary-agenda:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-agenda:1",
+          "artifact:itinerary-search:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary-search:1",
+          "artifact:itinerary-integration:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:itinerary:1",
+          "artifact:memories-favorites:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:memories-favorites:1",
+          "artifact:memories-notes:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:memories-notes:1",
+          "artifact:memories-integration:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:memories:1",
+          "artifact:organization-budget:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization-budget:1",
+          "artifact:organization-packing:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization-packing:3",
+          "artifact:organization-integration:run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:organization:1"
+        ]
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:root:2:failed",
+      "occurredAt": "2026-08-21T05:07:37.001Z",
+      "type": "attempt.failed",
+      "payload": {
+        "attemptId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:root:2",
+        "nodeId": "unit:root",
+        "reason": "The operation was aborted due to timeout"
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:root:2:decision",
+      "occurredAt": "2026-08-21T05:07:37.001Z",
+      "type": "decision.raised",
+      "payload": {
+        "decision": {
+          "id": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:root:2:decision",
+          "kind": "resolve_conflict",
+          "question": "Execution for Dashboard integrado de Viaje en Familia requires guidance: The operation was aborted due to timeout",
+          "options": [
+            {
+              "id": "retry",
+              "label": "Retry with guidance"
+            },
+            {
+              "id": "stop",
+              "label": "Stop this work"
+            }
+          ],
+          "affectedNodeIds": [
+            "unit:root"
+          ],
+          "repairTargetNodeId": "unit:root",
+          "evidenceRefs": [
+            "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:root:2",
+            "input-fingerprint:sha256:34a554b446c6935b44d6f9c0101a3a4f5758fa17964697bd7bbaa58f450a15d0"
+          ],
+          "impact": "behavior",
+          "raisedAtGraphRevision": 1
+        }
+      }
+    },
+    {
+      "eventId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:readiness.observed:113",
+      "occurredAt": "2026-08-21T05:07:37.229Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [],
+        "pendingDecisionIds": [
+          "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:root:2:decision"
+        ],
+        "explanations": [
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-search",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary-stops",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-favorites",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:memories-notes",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-budget",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organization-packing",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:d1f12793420461dbdf17bccf631d597a2c829e6959f47d6e7a86a0792dfb8e48:attempt:unit:root:2:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:shell",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:shell",
+            "unit:itinerary",
+            "unit:itinerary-stops",
+            "unit:itinerary-agenda",
+            "unit:itinerary-search",
+            "unit:organization",
+            "unit:organization-budget",
+            "unit:organization-packing",
+            "unit:memories",
+            "unit:memories-notes",
+            "unit:memories-favorites"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:shell",
+            "unit:itinerary",
+            "unit:itinerary-stops",
+            "unit:itinerary-agenda",
+            "unit:itinerary-search",
+            "unit:organization",
+            "unit:organization-budget",
+            "unit:organization-packing",
+            "unit:memories",
+            "unit:memories-notes",
+            "unit:memories-favorites"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T05:07:37.156Z"
+      }
+    }
+  ]
+}

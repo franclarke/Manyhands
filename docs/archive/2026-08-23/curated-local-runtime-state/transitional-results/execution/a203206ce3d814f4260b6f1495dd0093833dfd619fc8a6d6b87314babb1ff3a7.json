@@ -1,0 +1,382 @@
+{
+  "events": [
+    {
+      "eventId": "run:737bda8688a07d26fdf45385ba188c4489085a4ca1f7eb41df84024fcb346645:readiness.observed:141",
+      "occurredAt": "2026-08-17T00:25:23.653Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:format-report"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:format-report",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:errors",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:reading-time",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:format-report-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:sentence-length",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:tokenizer",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:top-words",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:word-count",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:errors",
+            "unit:tokenizer",
+            "unit:word-count",
+            "unit:top-words",
+            "unit:sentence-length",
+            "unit:reading-time",
+            "unit:format-report"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:errors",
+            "unit:tokenizer",
+            "unit:word-count",
+            "unit:top-words",
+            "unit:sentence-length",
+            "unit:reading-time",
+            "unit:format-report"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-17T00:25:23.532Z"
+      }
+    },
+    {
+      "eventId": "run:737bda8688a07d26fdf45385ba188c4489085a4ca1f7eb41df84024fcb346645:wave.selected:142",
+      "occurredAt": "2026-08-17T00:25:24.027Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:737bda8688a07d26fdf45385ba188c4489085a4ca1f7eb41df84024fcb346645:wave:12",
+        "nodeIds": [
+          "unit:format-report"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:errors",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:reading-time",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:format-report-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:sentence-length",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:tokenizer",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:top-words",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:word-count",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-17T00:25:23.893Z"
+      }
+    },
+    {
+      "eventId": "run:737bda8688a07d26fdf45385ba188c4489085a4ca1f7eb41df84024fcb346645:attempt:unit:format-report:10:started",
+      "occurredAt": "2026-08-17T00:25:24.277Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:737bda8688a07d26fdf45385ba188c4489085a4ca1f7eb41df84024fcb346645:attempt:unit:format-report:10",
+        "nodeId": "unit:format-report",
+        "inputFingerprint": "sha256:a89ea8e77225a06e63d3b325d24aa72068a9af22baf739f0a4848b8a99be965b",
+        "retryOfAttemptId": "run:737bda8688a07d26fdf45385ba188c4489085a4ca1f7eb41df84024fcb346645:attempt:unit:format-report:9",
+        "executorProfile": {
+          "id": "claude-code-cli",
+          "revision": "sha256:d4d7f01afe76cf13f9f84653825ce5f81d972399f0fec54b9cc1deae9e598ed9"
+        }
+      }
+    },
+    {
+      "eventId": "run:737bda8688a07d26fdf45385ba188c4489085a4ca1f7eb41df84024fcb346645:attempt:unit:format-report:10:failed",
+      "occurredAt": "2026-08-17T00:25:31.822Z",
+      "type": "attempt.failed",
+      "payload": {
+        "attemptId": "run:737bda8688a07d26fdf45385ba188c4489085a4ca1f7eb41df84024fcb346645:attempt:unit:format-report:10",
+        "nodeId": "unit:format-report",
+        "reason": "Could not materialize artifact artifact:sentence-length-change:run:737bda8688a07d26fdf45385ba188c4489085a4ca1f7eb41df84024fcb346645:attempt:unit:sentence-length:1: artifact_error."
+      }
+    },
+    {
+      "eventId": "run:737bda8688a07d26fdf45385ba188c4489085a4ca1f7eb41df84024fcb346645:attempt:unit:format-report:10:decision",
+      "occurredAt": "2026-08-17T00:25:31.822Z",
+      "type": "decision.raised",
+      "payload": {
+        "decision": {
+          "id": "run:737bda8688a07d26fdf45385ba188c4489085a4ca1f7eb41df84024fcb346645:attempt:unit:format-report:10:decision",
+          "kind": "resolve_conflict",
+          "question": "Execution for Ensamblado del reporte completo requires guidance: Could not materialize artifact artifact:sentence-length-change:run:737bda8688a07d26fdf45385ba188c4489085a4ca1f7eb41df84024fcb346645:attempt:unit:sentence-length:1: artifact_error.",
+          "options": [
+            {
+              "id": "retry",
+              "label": "Retry with guidance"
+            },
+            {
+              "id": "stop",
+              "label": "Stop this work"
+            }
+          ],
+          "affectedNodeIds": [
+            "unit:format-report",
+            "unit:sentence-length"
+          ],
+          "repairTargetNodeId": "unit:sentence-length",
+          "evidenceRefs": [
+            "run:737bda8688a07d26fdf45385ba188c4489085a4ca1f7eb41df84024fcb346645:attempt:unit:format-report:10",
+            "input-fingerprint:sha256:a89ea8e77225a06e63d3b325d24aa72068a9af22baf739f0a4848b8a99be965b"
+          ],
+          "impact": "behavior",
+          "raisedAtGraphRevision": 1
+        }
+      }
+    },
+    {
+      "eventId": "run:737bda8688a07d26fdf45385ba188c4489085a4ca1f7eb41df84024fcb346645:readiness.observed:146",
+      "occurredAt": "2026-08-17T00:25:32.184Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [],
+        "pendingDecisionIds": [
+          "run:737bda8688a07d26fdf45385ba188c4489085a4ca1f7eb41df84024fcb346645:attempt:unit:format-report:10:decision"
+        ],
+        "explanations": [
+          {
+            "nodeId": "unit:errors",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:format-report",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:737bda8688a07d26fdf45385ba188c4489085a4ca1f7eb41df84024fcb346645:attempt:unit:format-report:10:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:reading-time",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:format-report-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:sentence-length",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:737bda8688a07d26fdf45385ba188c4489085a4ca1f7eb41df84024fcb346645:attempt:unit:format-report:10:decision"
+              },
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:tokenizer",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:top-words",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:word-count",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:errors",
+            "unit:tokenizer",
+            "unit:word-count",
+            "unit:top-words",
+            "unit:sentence-length",
+            "unit:reading-time",
+            "unit:format-report"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:errors",
+            "unit:tokenizer",
+            "unit:word-count",
+            "unit:top-words",
+            "unit:sentence-length",
+            "unit:reading-time",
+            "unit:format-report"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-17T00:25:32.065Z"
+      }
+    }
+  ]
+}

@@ -1,0 +1,2750 @@
+{
+  "events": [
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:readiness.observed:14",
+      "occurredAt": "2026-08-21T06:16:35.539Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:storage"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:storage",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:equipaje-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favoritos-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notas-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:presupuesto-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:equipaje",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:exploracion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favoritos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:exploracion-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organizacion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:equipaje-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:presupuesto-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:paradas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:presupuesto",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:recuerdos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favoritos-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notas-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-ui-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:equipaje-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favoritos-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notas-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organizacion-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:presupuesto-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:recuerdos-integration",
+                "revision": 1
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:paradas",
+            "unit:agenda",
+            "unit:exploracion",
+            "unit:organizacion",
+            "unit:presupuesto",
+            "unit:equipaje",
+            "unit:recuerdos",
+            "unit:notas",
+            "unit:favoritos",
+            "unit:dashboard"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:paradas",
+            "unit:agenda",
+            "unit:exploracion",
+            "unit:organizacion",
+            "unit:presupuesto",
+            "unit:equipaje",
+            "unit:recuerdos",
+            "unit:notas",
+            "unit:favoritos",
+            "unit:dashboard"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T06:16:35.531Z"
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:wave.selected:15",
+      "occurredAt": "2026-08-21T06:16:35.556Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:wave:1",
+        "nodeIds": [
+          "unit:storage"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:equipaje-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favoritos-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notas-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:presupuesto-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:equipaje",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:exploracion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favoritos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:exploracion-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organizacion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:equipaje-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:presupuesto-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:paradas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:presupuesto",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:storage-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:recuerdos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favoritos-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notas-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-ui-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:equipaje-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favoritos-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notas-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organizacion-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:presupuesto-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:recuerdos-integration",
+                "revision": 1
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-21T06:16:35.549Z"
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:storage:1:started",
+      "occurredAt": "2026-08-21T06:16:35.564Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:storage:1",
+        "nodeId": "unit:storage",
+        "inputFingerprint": "sha256:a33bf5835a1361fbd0ada86e19576206b34282d4bbe124535780bec3d9282dab",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:storage:1:candidate",
+      "occurredAt": "2026-08-21T06:21:10.544Z",
+      "type": "attempt.candidate_created",
+      "payload": {
+        "attemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:storage:1",
+        "nodeId": "unit:storage",
+        "candidateCommit": "27e42042b9bb4324c9d846fd1af35f4aa57cf3a0",
+        "candidate": {
+          "manifestDigest": "sha256:a0cbc9d6914f61af90d62f86410da3e3ca4a707f7dcf85dc62ed7be1ef07dca8",
+          "commitOid": "27e42042b9bb4324c9d846fd1af35f4aa57cf3a0",
+          "treeOid": "bf3371c5a5aa6dcd925e8bd4858de0716e9c70c7"
+        },
+        "outputDigest": "sha256:99ed4c5394686f661333134977594545345c1d5cea9a5b8ff3ba4488184c4c89",
+        "changedFiles": [
+          "src/storage/storage.mjs",
+          "src/storage/storage.test.mjs"
+        ],
+        "usage": {
+          "tokensTotal": 44259,
+          "costUsd": 0.1991655,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:storage:1:validated",
+      "occurredAt": "2026-08-21T06:21:10.544Z",
+      "type": "validation.completed",
+      "payload": {
+        "attemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:storage:1",
+        "nodeId": "unit:storage",
+        "matrix": {
+          "matrixId": "matrix-c3e93ca217041562",
+          "candidateCommit": "27e42042b9bb4324c9d846fd1af35f4aa57cf3a0",
+          "validationContract": {
+            "id": "validation-contract:unit:storage",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:storage",
+              "obligationId": "validation:storage",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-c408493772e363ea94a33bd9f8f36dfe31dd7b5cbe0d31732439743c2f8a7f5c:attempt:1",
+                "validation:storage:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:4bcb4ac4bd425c6032926ebf5273159a191eed0d71d5d3552550a3aea513f921",
+          "observations": [
+            {
+              "evidenceId": "command-c408493772e363ea94a33bd9f8f36dfe31dd7b5cbe0d31732439743c2f8a7f5c:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "c408493772e363ea94a33bd9f8f36dfe31dd7b5cbe0d31732439743c2f8a7f5c",
+              "durationMs": 1124.3999000000185,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "c85fee4a38836938840f1a40ca44762c9c2606464edde9dcde05c9bf0cbe99c0",
+              "criterionIds": [
+                "criterion:storage"
+              ],
+              "obligationIds": [
+                "validation:storage"
+              ],
+              "references": [
+                "src/storage/storage.test.mjs"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-c3e93ca217041562:validation:storage",
+              "revision": 1,
+              "goalContractDigest": "sha256:63d0b7ed9a1f3b371f362292e0fb42386a8931e93567dc84e35581500523ed2c",
+              "criterionId": "criterion:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:1",
+              "obligationId": "validation:storage",
+              "candidate": {
+                "manifestDigest": "sha256:a0cbc9d6914f61af90d62f86410da3e3ca4a707f7dcf85dc62ed7be1ef07dca8",
+                "commitOid": "27e42042b9bb4324c9d846fd1af35f4aa57cf3a0",
+                "treeOid": "bf3371c5a5aa6dcd925e8bd4858de0716e9c70c7"
+              },
+              "baseline": {
+                "commitOid": "64f0e44ff4bc90c2536c62ede517c8f855f1a6b4",
+                "treeOid": "1555e640f7399b75338f2ecbfcd9ad268cd814d9"
+              },
+              "proofStrategyDigest": "sha256:c4af752ed8f3e05ee2ab950fbb0fb8c00ddfbc38beb96ca0b3be6a1925e6d09e",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:4bcb4ac4bd425c6032926ebf5273159a191eed0d71d5d3552550a3aea513f921",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:64989abf58a8b6d0ea5595c6bd0b8efee3bb29081eae7dfecd25e086bbad4842",
+              "outputDigest": "sha256:c85fee4a38836938840f1a40ca44762c9c2606464edde9dcde05c9bf0cbe99c0",
+              "outcome": "satisfied",
+              "digest": "sha256:264f185fa06b688d8e754a3c57715d649e97633e156fb94f5fdc42ed235b5015"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:storage:negative-control",
+              "obligationId": "validation:storage",
+              "detectedFailure": true,
+              "outputDigest": "8a640fab7d136c5386a8450f8ab25d697775995afd4ce8e2bbb38c61795778cd"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:storage:1:artifact:artifact:storage-change",
+      "occurredAt": "2026-08-21T06:21:10.544Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:storage-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:storage:1",
+          "runId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d",
+          "nodeId": "unit:storage",
+          "digest": "sha256:2f4bf7b2f165587572b12c9453266f8b6731360f15cba63eb15acbbf4330d1a4",
+          "producerAttemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:storage:1",
+          "contract": {
+            "id": "artifact:storage-change",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:2f4bf7b2f165587572b12c9453266f8b6731360f15cba63eb15acbbf4330d1a4",
+          "manifest": {
+            "id": "artifact:storage-change",
+            "contract": {
+              "id": "artifact:storage-change",
+              "revision": 1,
+              "digest": "sha256:8238fdafbcb4bfa3f7aa1f5c7e40ec18713587d71b1b6677a798103f4fc9d942"
+            },
+            "producerNodeId": "unit:storage",
+            "producerAttemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:storage:1",
+            "inputFingerprint": "sha256:a33bf5835a1361fbd0ada86e19576206b34282d4bbe124535780bec3d9282dab",
+            "repositoryObjectStoreId": "object-store:1817cba9dbecd6da",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "27e42042b9bb4324c9d846fd1af35f4aa57cf3a0",
+              "treeOid": "bf3371c5a5aa6dcd925e8bd4858de0716e9c70c7"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-22b14e85aa46e4fa5601dc5b44304224-292f2e30d56a/attempts/run-22b14e85aa46e4fa5601dc5b44304224-99f670a7421b/artifacts/artifact-storage-change-f5f8c5efd009",
+            "kind": "change_set",
+            "baseTreeSha": "1555e640f7399b75338f2ecbfcd9ad268cd814d9",
+            "resultTreeSha": "bf3371c5a5aa6dcd925e8bd4858de0716e9c70c7",
+            "entries": [
+              {
+                "newPath": "src/storage/storage.mjs",
+                "operation": "add",
+                "newOid": "ab85c5beb89fe0b94612882c5e6b79cc74cc032e",
+                "newMode": "100644"
+              },
+              {
+                "newPath": "src/storage/storage.test.mjs",
+                "operation": "add",
+                "newOid": "81113969b8dcd3e8bc143c57845423793690b318",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:2f4bf7b2f165587572b12c9453266f8b6731360f15cba63eb15acbbf4330d1a4"
+          },
+          "adoptedAt": "2026-08-21T06:21:10.544Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:readiness.observed:20",
+      "occurredAt": "2026-08-21T06:21:10.575Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:equipaje",
+          "unit:favoritos",
+          "unit:notas",
+          "unit:paradas",
+          "unit:presupuesto"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:equipaje",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:favoritos",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:notas",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:paradas",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:presupuesto",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:equipaje-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favoritos-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notas-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:presupuesto-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:exploracion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:exploracion-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organizacion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:equipaje-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:presupuesto-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:recuerdos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favoritos-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notas-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-ui-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:equipaje-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favoritos-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notas-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organizacion-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:presupuesto-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:recuerdos-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:paradas",
+            "unit:agenda",
+            "unit:exploracion",
+            "unit:organizacion",
+            "unit:presupuesto",
+            "unit:equipaje",
+            "unit:recuerdos",
+            "unit:notas",
+            "unit:favoritos",
+            "unit:dashboard"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:paradas",
+            "unit:agenda",
+            "unit:exploracion",
+            "unit:organizacion",
+            "unit:presupuesto",
+            "unit:equipaje",
+            "unit:recuerdos",
+            "unit:notas",
+            "unit:favoritos",
+            "unit:dashboard"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T06:21:10.569Z"
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:wave.selected:21",
+      "occurredAt": "2026-08-21T06:21:10.599Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:wave:2",
+        "nodeIds": [
+          "unit:equipaje",
+          "unit:favoritos",
+          "unit:notas",
+          "unit:paradas",
+          "unit:presupuesto"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:equipaje-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favoritos-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notas-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:presupuesto-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:exploracion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:exploracion-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organizacion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:equipaje-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:presupuesto-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:recuerdos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favoritos-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notas-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-ui-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:equipaje-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:favoritos-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notas-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organizacion-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:presupuesto-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:recuerdos-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-21T06:21:10.590Z"
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:equipaje:1:started",
+      "occurredAt": "2026-08-21T06:21:10.619Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:equipaje:1",
+        "nodeId": "unit:equipaje",
+        "inputFingerprint": "sha256:63b838ce6684af33b9b0b794b1582eac8bee383b02493c8926feec21abb95cce",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:favoritos:1:started",
+      "occurredAt": "2026-08-21T06:21:10.621Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:favoritos:1",
+        "nodeId": "unit:favoritos",
+        "inputFingerprint": "sha256:c92556ea1298975f858eaecd22258230d068ba78bb5ace9f3764a5415bdd8645",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:notas:1:started",
+      "occurredAt": "2026-08-21T06:21:10.621Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:notas:1",
+        "nodeId": "unit:notas",
+        "inputFingerprint": "sha256:96f413c038beefca6c80386007838cc576c60230efec04fd05ad1f54d0c01504",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:paradas:1:started",
+      "occurredAt": "2026-08-21T06:21:10.621Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:paradas:1",
+        "nodeId": "unit:paradas",
+        "inputFingerprint": "sha256:978a2aaae40117025ef6ccdbcc7c6310dfa00f6de9deb3b60b1bbff78e90bb04",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:presupuesto:1:started",
+      "occurredAt": "2026-08-21T06:21:10.622Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:presupuesto:1",
+        "nodeId": "unit:presupuesto",
+        "inputFingerprint": "sha256:c0e903d19e39abf84f6dc9c2af5f34899a9d8a6352c3d002481e6b68778af489",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:favoritos:1:candidate",
+      "occurredAt": "2026-08-21T06:25:24.374Z",
+      "type": "attempt.candidate_created",
+      "payload": {
+        "attemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:favoritos:1",
+        "nodeId": "unit:favoritos",
+        "candidateCommit": "d05c169b4874ba793b32eb6ecab9cc62407a45d1",
+        "candidate": {
+          "manifestDigest": "sha256:d605a827b63e049a45e5dfb1f6da33c0eee9f57e72d82f5f0ccacda83fb0db1a",
+          "commitOid": "d05c169b4874ba793b32eb6ecab9cc62407a45d1",
+          "treeOid": "05a31717e0f7ccb7332897db72307cdfacc5867b"
+        },
+        "outputDigest": "sha256:22c27a1f6c8905b76af1f81ba9c6187b8dfed307907858a73b064e6870724346",
+        "changedFiles": [
+          "src/recuerdos/favoritos/favoritos.mjs",
+          "src/recuerdos/favoritos/favoritos.test.mjs"
+        ],
+        "usage": {
+          "tokensTotal": 38701,
+          "costUsd": 0.1741545,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:favoritos:1:validated",
+      "occurredAt": "2026-08-21T06:25:24.374Z",
+      "type": "validation.completed",
+      "payload": {
+        "attemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:favoritos:1",
+        "nodeId": "unit:favoritos",
+        "matrix": {
+          "matrixId": "matrix-0e7092bb1f62c98e",
+          "candidateCommit": "d05c169b4874ba793b32eb6ecab9cc62407a45d1",
+          "validationContract": {
+            "id": "validation-contract:unit:favoritos",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:favoritos",
+              "obligationId": "validation:favoritos",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-30c53ada99a564737799d2d2069f5def189983db0ed384c5085be9b934e49593:attempt:1",
+                "validation:favoritos:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:1861a0fbd169c6717a9cc1954223ab46e1c5ec40f3af76d6eaf61d1d292dd1c0",
+          "observations": [
+            {
+              "evidenceId": "command-30c53ada99a564737799d2d2069f5def189983db0ed384c5085be9b934e49593:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "30c53ada99a564737799d2d2069f5def189983db0ed384c5085be9b934e49593",
+              "durationMs": 1617.530700000003,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "5c1820ecc17b51677830bf2ba1c9c943b409f0ccb8539debdd58b4584280e0cf",
+              "criterionIds": [
+                "criterion:favoritos"
+              ],
+              "obligationIds": [
+                "validation:favoritos"
+              ],
+              "references": [
+                "src/recuerdos/favoritos/favoritos.test.mjs"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-0e7092bb1f62c98e:validation:favoritos",
+              "revision": 1,
+              "goalContractDigest": "sha256:63d0b7ed9a1f3b371f362292e0fb42386a8931e93567dc84e35581500523ed2c",
+              "criterionId": "criterion:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:1",
+              "obligationId": "validation:favoritos",
+              "candidate": {
+                "manifestDigest": "sha256:d605a827b63e049a45e5dfb1f6da33c0eee9f57e72d82f5f0ccacda83fb0db1a",
+                "commitOid": "d05c169b4874ba793b32eb6ecab9cc62407a45d1",
+                "treeOid": "05a31717e0f7ccb7332897db72307cdfacc5867b"
+              },
+              "baseline": {
+                "commitOid": "64f0e44ff4bc90c2536c62ede517c8f855f1a6b4",
+                "treeOid": "1555e640f7399b75338f2ecbfcd9ad268cd814d9"
+              },
+              "proofStrategyDigest": "sha256:7aefe8ca4ecbb3fd4c9ae15a67a9323dce0c333a7377e52f546a62a56f2a758e",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:1861a0fbd169c6717a9cc1954223ab46e1c5ec40f3af76d6eaf61d1d292dd1c0",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:44f947e96cb0b044efcd73373e4d59c586f5a40b5a0dd90d10ebcc83721fc0fd",
+              "outputDigest": "sha256:5c1820ecc17b51677830bf2ba1c9c943b409f0ccb8539debdd58b4584280e0cf",
+              "outcome": "satisfied",
+              "digest": "sha256:a113ea3f35fa98b97634283b014c450c8fde84a113cd22fffa4f358415ee17fd"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:favoritos:negative-control",
+              "obligationId": "validation:favoritos",
+              "detectedFailure": true,
+              "outputDigest": "92ad9b1e2d2b77760a232d90feab2a969ea424e955667458ae2dce082856e903"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:favoritos:1:artifact:artifact:favoritos-change",
+      "occurredAt": "2026-08-21T06:25:24.374Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:favoritos-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:favoritos:1",
+          "runId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d",
+          "nodeId": "unit:favoritos",
+          "digest": "sha256:df33813d79e1a777afddf8e8a8566ac2baa475d27a1ff879f85eca4aa0667099",
+          "producerAttemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:favoritos:1",
+          "contract": {
+            "id": "artifact:favoritos-change",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:df33813d79e1a777afddf8e8a8566ac2baa475d27a1ff879f85eca4aa0667099",
+          "manifest": {
+            "id": "artifact:favoritos-change",
+            "contract": {
+              "id": "artifact:favoritos-change",
+              "revision": 1,
+              "digest": "sha256:64c9e71764dbdecc8f6379158405f94b17771f6530b6b2751fd8c7ba0c0cdb6f"
+            },
+            "producerNodeId": "unit:favoritos",
+            "producerAttemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:favoritos:1",
+            "inputFingerprint": "sha256:c92556ea1298975f858eaecd22258230d068ba78bb5ace9f3764a5415bdd8645",
+            "repositoryObjectStoreId": "object-store:1817cba9dbecd6da",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "d05c169b4874ba793b32eb6ecab9cc62407a45d1",
+              "treeOid": "05a31717e0f7ccb7332897db72307cdfacc5867b"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-22b14e85aa46e4fa5601dc5b44304224-292f2e30d56a/attempts/run-22b14e85aa46e4fa5601dc5b44304224-60520baeb462/artifacts/artifact-favoritos-change-c060599d55f4",
+            "kind": "change_set",
+            "baseTreeSha": "bf3371c5a5aa6dcd925e8bd4858de0716e9c70c7",
+            "resultTreeSha": "05a31717e0f7ccb7332897db72307cdfacc5867b",
+            "entries": [
+              {
+                "newPath": "src/recuerdos/favoritos/favoritos.mjs",
+                "operation": "add",
+                "newOid": "7158b620570e24746c57964baea1a43b11ae839e",
+                "newMode": "100644"
+              },
+              {
+                "newPath": "src/recuerdos/favoritos/favoritos.test.mjs",
+                "operation": "add",
+                "newOid": "a5c60481406e59a70279c0ffc2047bf4d5c43b99",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:df33813d79e1a777afddf8e8a8566ac2baa475d27a1ff879f85eca4aa0667099"
+          },
+          "adoptedAt": "2026-08-21T06:25:24.374Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:paradas:1:failed",
+      "occurredAt": "2026-08-21T06:26:01.640Z",
+      "type": "attempt.failed",
+      "payload": {
+        "attemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:paradas:1",
+        "nodeId": "unit:paradas",
+        "reason": "validation_failed: exact candidate 670dacd12101ee9c8c37b2d9373da4cc210153a1 failed matrix matrix-7b7660df93d84695. Failed criteria: validation:paradas: Validation fails, but the same failure exists in the baseline.",
+        "usage": {
+          "tokensTotal": 45111,
+          "costUsd": 0.2029995,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:paradas:1:decision",
+      "occurredAt": "2026-08-21T06:26:01.640Z",
+      "type": "decision.raised",
+      "payload": {
+        "decision": {
+          "id": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:paradas:1:decision",
+          "kind": "resolve_conflict",
+          "question": "Execution for Destinos y paradas requires guidance: validation_failed: exact candidate 670dacd12101ee9c8c37b2d9373da4cc210153a1 failed matrix matrix-7b7660df93d84695. Failed criteria: validation:paradas: Validation fails, but the same failure exists in the baseline.",
+          "options": [
+            {
+              "id": "retry",
+              "label": "Retry with guidance"
+            },
+            {
+              "id": "stop",
+              "label": "Stop this work"
+            }
+          ],
+          "affectedNodeIds": [
+            "unit:paradas"
+          ],
+          "repairTargetNodeId": "unit:paradas",
+          "evidenceRefs": [
+            "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:paradas:1",
+            "input-fingerprint:sha256:978a2aaae40117025ef6ccdbcc7c6310dfa00f6de9deb3b60b1bbff78e90bb04"
+          ],
+          "impact": "behavior",
+          "raisedAtGraphRevision": 1
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:equipaje:1:candidate",
+      "occurredAt": "2026-08-21T06:26:37.205Z",
+      "type": "attempt.candidate_created",
+      "payload": {
+        "attemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:equipaje:1",
+        "nodeId": "unit:equipaje",
+        "candidateCommit": "7b2ae47260d9c93af9e127494ac9fc483a111f84",
+        "candidate": {
+          "manifestDigest": "sha256:82ead4f61bba6d1c73aa28c7f7dc5cf225257450cb633338a5ceeb4795203704",
+          "commitOid": "7b2ae47260d9c93af9e127494ac9fc483a111f84",
+          "treeOid": "a7d164024ef799b7ace6684b2c850f1f1378c67c"
+        },
+        "outputDigest": "sha256:e8fa8706f82b17407790c88163e9fd1d5adb519e8e9ed50b3dd146f4c71b0d30",
+        "changedFiles": [
+          "src/organizacion/equipaje/equipaje.mjs",
+          "src/organizacion/equipaje/equipaje.test.mjs"
+        ],
+        "usage": {
+          "tokensTotal": 48392,
+          "costUsd": 0.21776399999999999,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:equipaje:1:validated",
+      "occurredAt": "2026-08-21T06:26:37.205Z",
+      "type": "validation.completed",
+      "payload": {
+        "attemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:equipaje:1",
+        "nodeId": "unit:equipaje",
+        "matrix": {
+          "matrixId": "matrix-d590898ee92a1709",
+          "candidateCommit": "7b2ae47260d9c93af9e127494ac9fc483a111f84",
+          "validationContract": {
+            "id": "validation-contract:unit:equipaje",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:equipaje",
+              "obligationId": "validation:equipaje",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-c423c3525ea3866f1a20054f3d8d515aa3f59e2e60a9870881a8320bb1da2ad7:attempt:1",
+                "validation:equipaje:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:d7383c339b466455949b0d3c8c20d13e7415bb6c266f42d320052f6df0bf8f87",
+          "observations": [
+            {
+              "evidenceId": "command-c423c3525ea3866f1a20054f3d8d515aa3f59e2e60a9870881a8320bb1da2ad7:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "c423c3525ea3866f1a20054f3d8d515aa3f59e2e60a9870881a8320bb1da2ad7",
+              "durationMs": 1045.7744999999413,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "5baf34630eb8057600ff4875259a48d4b8c1f498554b72218d907babaac655d1",
+              "criterionIds": [
+                "criterion:equipaje"
+              ],
+              "obligationIds": [
+                "validation:equipaje"
+              ],
+              "references": [
+                "src/organizacion/equipaje/equipaje.test.mjs"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-d590898ee92a1709:validation:equipaje",
+              "revision": 1,
+              "goalContractDigest": "sha256:63d0b7ed9a1f3b371f362292e0fb42386a8931e93567dc84e35581500523ed2c",
+              "criterionId": "criterion:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:1",
+              "obligationId": "validation:equipaje",
+              "candidate": {
+                "manifestDigest": "sha256:82ead4f61bba6d1c73aa28c7f7dc5cf225257450cb633338a5ceeb4795203704",
+                "commitOid": "7b2ae47260d9c93af9e127494ac9fc483a111f84",
+                "treeOid": "a7d164024ef799b7ace6684b2c850f1f1378c67c"
+              },
+              "baseline": {
+                "commitOid": "64f0e44ff4bc90c2536c62ede517c8f855f1a6b4",
+                "treeOid": "1555e640f7399b75338f2ecbfcd9ad268cd814d9"
+              },
+              "proofStrategyDigest": "sha256:8ade4bae628b6bf629c08a33700d514646668bd8a234bdc9c8f5dab0138e8020",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:d7383c339b466455949b0d3c8c20d13e7415bb6c266f42d320052f6df0bf8f87",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:c1e36b7245d13080b2a46a2506d2797d5bb851c4a597446825978ce53cf46b88",
+              "outputDigest": "sha256:5baf34630eb8057600ff4875259a48d4b8c1f498554b72218d907babaac655d1",
+              "outcome": "satisfied",
+              "digest": "sha256:3756805ec2583172dc089cb0541c9e5e14585bf23263d4fc479c3f92161b4c55"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:equipaje:negative-control",
+              "obligationId": "validation:equipaje",
+              "detectedFailure": true,
+              "outputDigest": "60c378cc54849ce7cb090da76537d08d8368a8791837cc622bd08aefdd2e1097"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:equipaje:1:artifact:artifact:equipaje-change",
+      "occurredAt": "2026-08-21T06:26:37.205Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:equipaje-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:equipaje:1",
+          "runId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d",
+          "nodeId": "unit:equipaje",
+          "digest": "sha256:ad2c734ea091306f0a16a6776e479c22595fc44f375fb8ebf0a85759242985ff",
+          "producerAttemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:equipaje:1",
+          "contract": {
+            "id": "artifact:equipaje-change",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:ad2c734ea091306f0a16a6776e479c22595fc44f375fb8ebf0a85759242985ff",
+          "manifest": {
+            "id": "artifact:equipaje-change",
+            "contract": {
+              "id": "artifact:equipaje-change",
+              "revision": 1,
+              "digest": "sha256:c6d18d153e9bc42137184bcf9439fb9f5ef07df34f30aa7c4c080a263fbdcda6"
+            },
+            "producerNodeId": "unit:equipaje",
+            "producerAttemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:equipaje:1",
+            "inputFingerprint": "sha256:63b838ce6684af33b9b0b794b1582eac8bee383b02493c8926feec21abb95cce",
+            "repositoryObjectStoreId": "object-store:1817cba9dbecd6da",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "7b2ae47260d9c93af9e127494ac9fc483a111f84",
+              "treeOid": "a7d164024ef799b7ace6684b2c850f1f1378c67c"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-22b14e85aa46e4fa5601dc5b44304224-292f2e30d56a/attempts/run-22b14e85aa46e4fa5601dc5b44304224-1847892d2968/artifacts/artifact-equipaje-change-edc2071728b9",
+            "kind": "change_set",
+            "baseTreeSha": "bf3371c5a5aa6dcd925e8bd4858de0716e9c70c7",
+            "resultTreeSha": "a7d164024ef799b7ace6684b2c850f1f1378c67c",
+            "entries": [
+              {
+                "newPath": "src/organizacion/equipaje/equipaje.mjs",
+                "operation": "add",
+                "newOid": "ab771647a24fcbb4fdb06e851c1dcb04fbd4d1b9",
+                "newMode": "100644"
+              },
+              {
+                "newPath": "src/organizacion/equipaje/equipaje.test.mjs",
+                "operation": "add",
+                "newOid": "6d24afd7d768e532efa954e5e3aa05065285d460",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:ad2c734ea091306f0a16a6776e479c22595fc44f375fb8ebf0a85759242985ff"
+          },
+          "adoptedAt": "2026-08-21T06:26:37.205Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:notas:1:failed",
+      "occurredAt": "2026-08-21T06:26:59.563Z",
+      "type": "attempt.failed",
+      "payload": {
+        "attemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:notas:1",
+        "nodeId": "unit:notas",
+        "reason": "validation_failed: exact candidate 66b8b09475b3ae6bf90e2ee65a428f3502406f1e failed matrix matrix-c3f21b745422c181. Failed criteria: validation:notas: Validation fails, but the same failure exists in the baseline.",
+        "usage": {
+          "tokensTotal": 50677,
+          "costUsd": 0.22804649999999999,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:notas:1:decision",
+      "occurredAt": "2026-08-21T06:26:59.563Z",
+      "type": "decision.raised",
+      "payload": {
+        "decision": {
+          "id": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:notas:1:decision",
+          "kind": "resolve_conflict",
+          "question": "Execution for Notas requires guidance: validation_failed: exact candidate 66b8b09475b3ae6bf90e2ee65a428f3502406f1e failed matrix matrix-c3f21b745422c181. Failed criteria: validation:notas: Validation fails, but the same failure exists in the baseline.",
+          "options": [
+            {
+              "id": "retry",
+              "label": "Retry with guidance"
+            },
+            {
+              "id": "stop",
+              "label": "Stop this work"
+            }
+          ],
+          "affectedNodeIds": [
+            "unit:notas"
+          ],
+          "repairTargetNodeId": "unit:notas",
+          "evidenceRefs": [
+            "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:notas:1",
+            "input-fingerprint:sha256:96f413c038beefca6c80386007838cc576c60230efec04fd05ad1f54d0c01504"
+          ],
+          "impact": "behavior",
+          "raisedAtGraphRevision": 1
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:presupuesto:1:candidate",
+      "occurredAt": "2026-08-21T06:27:40.468Z",
+      "type": "attempt.candidate_created",
+      "payload": {
+        "attemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:presupuesto:1",
+        "nodeId": "unit:presupuesto",
+        "candidateCommit": "ee0fdbe7cabe1b0322c2227377cda3e954624123",
+        "candidate": {
+          "manifestDigest": "sha256:f816a0c4dab6d9aec7337c96e2e9727ae6a23765bd630f39f8653fb33cfa664b",
+          "commitOid": "ee0fdbe7cabe1b0322c2227377cda3e954624123",
+          "treeOid": "53aef18ec15d839e2cd5857b0b9b840a01175b9b"
+        },
+        "outputDigest": "sha256:cb2b3df6908cc399e0f30da090356971cb181dee2c9b3027e6f17a2370308b52",
+        "changedFiles": [
+          "src/organizacion/presupuesto/presupuesto.mjs",
+          "src/organizacion/presupuesto/presupuesto.test.mjs"
+        ],
+        "usage": {
+          "tokensTotal": 53308,
+          "costUsd": 0.23988600000000002,
+          "source": "reported"
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:presupuesto:1:validated",
+      "occurredAt": "2026-08-21T06:27:40.468Z",
+      "type": "validation.completed",
+      "payload": {
+        "attemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:presupuesto:1",
+        "nodeId": "unit:presupuesto",
+        "matrix": {
+          "matrixId": "matrix-19fe2e0c47242bda",
+          "candidateCommit": "ee0fdbe7cabe1b0322c2227377cda3e954624123",
+          "validationContract": {
+            "id": "validation-contract:unit:presupuesto",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:presupuesto",
+              "obligationId": "validation:presupuesto",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-1295e47a27d1cf12f19551e994a38b8457cd8843194caf5d3fb266db70cf898c:attempt:1",
+                "validation:presupuesto:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:3d16df05fb199aa8a57c24c2870693062d477f5fd2c3554348cac315d3544a99",
+          "observations": [
+            {
+              "evidenceId": "command-1295e47a27d1cf12f19551e994a38b8457cd8843194caf5d3fb266db70cf898c:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "1295e47a27d1cf12f19551e994a38b8457cd8843194caf5d3fb266db70cf898c",
+              "durationMs": 1248.40419999999,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "691c5741674ccb55545b144304207d2389e31dc4165d889e3a49ab4855516ea4",
+              "criterionIds": [
+                "criterion:presupuesto"
+              ],
+              "obligationIds": [
+                "validation:presupuesto"
+              ],
+              "references": [
+                "src/organizacion/presupuesto/presupuesto.test.mjs"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-19fe2e0c47242bda:validation:presupuesto",
+              "revision": 1,
+              "goalContractDigest": "sha256:63d0b7ed9a1f3b371f362292e0fb42386a8931e93567dc84e35581500523ed2c",
+              "criterionId": "criterion:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:1",
+              "obligationId": "validation:presupuesto",
+              "candidate": {
+                "manifestDigest": "sha256:f816a0c4dab6d9aec7337c96e2e9727ae6a23765bd630f39f8653fb33cfa664b",
+                "commitOid": "ee0fdbe7cabe1b0322c2227377cda3e954624123",
+                "treeOid": "53aef18ec15d839e2cd5857b0b9b840a01175b9b"
+              },
+              "baseline": {
+                "commitOid": "64f0e44ff4bc90c2536c62ede517c8f855f1a6b4",
+                "treeOid": "1555e640f7399b75338f2ecbfcd9ad268cd814d9"
+              },
+              "proofStrategyDigest": "sha256:9b2226c2df64e771ebe9e422e34bfa85c70fd30b521c04dbb4f8231a2ba8f41e",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:3d16df05fb199aa8a57c24c2870693062d477f5fd2c3554348cac315d3544a99",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:a5d32f0d175e822df83e449d39b08c3517d33b1617ac339ba3fae527a1a5e687",
+              "outputDigest": "sha256:691c5741674ccb55545b144304207d2389e31dc4165d889e3a49ab4855516ea4",
+              "outcome": "satisfied",
+              "digest": "sha256:5ea838b03b49af20a4618b916128d67fd531b3dc3acefb3cfcda3304eece0e23"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:presupuesto:negative-control",
+              "obligationId": "validation:presupuesto",
+              "detectedFailure": true,
+              "outputDigest": "dd31f155e621f449163c17d2643b1e76823a45c9a5c18b8ab8d4d026ec9d8d4e"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:presupuesto:1:artifact:artifact:presupuesto-change",
+      "occurredAt": "2026-08-21T06:27:40.468Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:presupuesto-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:presupuesto:1",
+          "runId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d",
+          "nodeId": "unit:presupuesto",
+          "digest": "sha256:0614ce35adc2a73e59bcbc22c8786a587ffaea7a21700c81bafcac7a124165a0",
+          "producerAttemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:presupuesto:1",
+          "contract": {
+            "id": "artifact:presupuesto-change",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:0614ce35adc2a73e59bcbc22c8786a587ffaea7a21700c81bafcac7a124165a0",
+          "manifest": {
+            "id": "artifact:presupuesto-change",
+            "contract": {
+              "id": "artifact:presupuesto-change",
+              "revision": 1,
+              "digest": "sha256:753674c09c281b4083e88f839b928646eacd2fc4e20ba5ac4dc6f9b1213fc4d6"
+            },
+            "producerNodeId": "unit:presupuesto",
+            "producerAttemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:presupuesto:1",
+            "inputFingerprint": "sha256:c0e903d19e39abf84f6dc9c2af5f34899a9d8a6352c3d002481e6b68778af489",
+            "repositoryObjectStoreId": "object-store:1817cba9dbecd6da",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "ee0fdbe7cabe1b0322c2227377cda3e954624123",
+              "treeOid": "53aef18ec15d839e2cd5857b0b9b840a01175b9b"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-22b14e85aa46e4fa5601dc5b44304224-292f2e30d56a/attempts/run-22b14e85aa46e4fa5601dc5b44304224-12ccdcc06993/artifacts/artifact-presupuesto-change-8d0292cffb4c",
+            "kind": "change_set",
+            "baseTreeSha": "bf3371c5a5aa6dcd925e8bd4858de0716e9c70c7",
+            "resultTreeSha": "53aef18ec15d839e2cd5857b0b9b840a01175b9b",
+            "entries": [
+              {
+                "newPath": "src/organizacion/presupuesto/presupuesto.mjs",
+                "operation": "add",
+                "newOid": "6c309a2356650fa97a9662e4f2e0dddcee0a96e8",
+                "newMode": "100644"
+              },
+              {
+                "newPath": "src/organizacion/presupuesto/presupuesto.test.mjs",
+                "operation": "add",
+                "newOid": "508eb753219664a2bec7eb318ab4506ac2210fdb",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:0614ce35adc2a73e59bcbc22c8786a587ffaea7a21700c81bafcac7a124165a0"
+          },
+          "adoptedAt": "2026-08-21T06:27:40.468Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:readiness.observed:40",
+      "occurredAt": "2026-08-21T06:27:40.534Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:organizacion"
+        ],
+        "pendingDecisionIds": [
+          "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:notas:1:decision",
+          "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:paradas:1:decision"
+        ],
+        "explanations": [
+          {
+            "nodeId": "unit:organizacion",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notas-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:equipaje",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:exploracion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favoritos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:exploracion-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:notas:1:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:paradas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:paradas:1:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:presupuesto",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:recuerdos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notas-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-ui-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notas-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organizacion-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:recuerdos-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:paradas",
+            "unit:agenda",
+            "unit:exploracion",
+            "unit:organizacion",
+            "unit:presupuesto",
+            "unit:equipaje",
+            "unit:recuerdos",
+            "unit:notas",
+            "unit:favoritos",
+            "unit:dashboard"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:paradas",
+            "unit:agenda",
+            "unit:exploracion",
+            "unit:organizacion",
+            "unit:presupuesto",
+            "unit:equipaje",
+            "unit:recuerdos",
+            "unit:notas",
+            "unit:favoritos",
+            "unit:dashboard"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T06:27:40.514Z"
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:wave.selected:41",
+      "occurredAt": "2026-08-21T06:27:40.575Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:wave:3",
+        "nodeIds": [
+          "unit:organizacion"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notas-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:equipaje",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:exploracion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favoritos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:exploracion-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:notas:1:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:paradas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:paradas:1:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:presupuesto",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:recuerdos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notas-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-ui-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notas-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:organizacion-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:recuerdos-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-21T06:27:40.557Z"
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:organizacion:1:started",
+      "occurredAt": "2026-08-21T06:27:40.602Z",
+      "type": "integration.started",
+      "payload": {
+        "attemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:organizacion:1",
+        "nodeId": "unit:organizacion",
+        "inputFingerprint": "sha256:49a60db51a7b169440291b63b6fd388c0fd6a2e1e4bb33e8cce3f6b7922df1a7",
+        "executorProfile": {
+          "id": "codex-cli",
+          "revision": "sha256:aa86a285fdeabdaf45c433f5fb13fc0972a811a28f3d6038a555b9023c75022b"
+        },
+        "requiredArtifactIds": [
+          "artifact:storage-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:storage:1",
+          "artifact:equipaje-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:equipaje:1",
+          "artifact:presupuesto-change:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:presupuesto:1"
+        ]
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:organizacion:1:integrated",
+      "occurredAt": "2026-08-21T06:32:45.551Z",
+      "type": "integration.completed",
+      "payload": {
+        "attemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:organizacion:1",
+        "nodeId": "unit:organizacion",
+        "manifestId": "integration-result-integration-request-5257f02acf458b7a",
+        "candidateCommit": "b1368de7108edf206f494841d745f9a4505d9d0b",
+        "candidate": {
+          "manifestDigest": "sha256:81b6c9ef22cae3b27331d0fb9b55ab7311ae80edc2f6f7c83ec2d00d915d7769",
+          "commitOid": "b1368de7108edf206f494841d745f9a4505d9d0b",
+          "treeOid": "cf5e02042d558ee7d2cd26d1e9f8355f39b33e5d"
+        },
+        "matrix": {
+          "matrixId": "matrix-6a9f467f4ed9d300",
+          "candidateCommit": "b1368de7108edf206f494841d745f9a4505d9d0b",
+          "validationContract": {
+            "id": "validation-contract:unit:organizacion",
+            "revision": "1"
+          },
+          "criteria": [
+            {
+              "criterionId": "criterion:organizacion",
+              "obligationId": "validation:organizacion-integration",
+              "status": "satisfied",
+              "justification": "Acceptable linked evidence passed on the exact candidate.",
+              "evidenceRefs": [
+                "command-1d2298c1f1843db9da7fbf54d42b8853e3827ebd20832cc8bb3a6c7428039372:attempt:1",
+                "validation:organizacion-integration:negative-control"
+              ]
+            }
+          ],
+          "outcome": "verified",
+          "validationRecipeDigest": "sha256:e687b798a4ee3e684f6faa623a745c6a26d280015d97ee93d848e07fbc9882af",
+          "observations": [
+            {
+              "evidenceId": "command-1d2298c1f1843db9da7fbf54d42b8853e3827ebd20832cc8bb3a6c7428039372:attempt:1",
+              "kind": "test_result",
+              "commandDigest": "1d2298c1f1843db9da7fbf54d42b8853e3827ebd20832cc8bb3a6c7428039372",
+              "durationMs": 963.5446000000229,
+              "passed": true,
+              "attempt": 1,
+              "outputDigest": "75f368e8b5a082d29a72ac58c5f1fe90fed1047b7981a792ba7c23fbc910ec92",
+              "criterionIds": [
+                "criterion:organizacion"
+              ],
+              "obligationIds": [
+                "validation:organizacion-integration"
+              ],
+              "references": [
+                "test/organizacion/integration.test.mjs"
+              ]
+            }
+          ],
+          "evidenceBindings": [
+            {
+              "id": "evidence:matrix-6a9f467f4ed9d300:validation:organizacion-integration",
+              "revision": 1,
+              "goalContractDigest": "sha256:63d0b7ed9a1f3b371f362292e0fb42386a8931e93567dc84e35581500523ed2c",
+              "criterionId": "criterion:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:1",
+              "obligationId": "validation:organizacion-integration",
+              "candidate": {
+                "manifestDigest": "sha256:81b6c9ef22cae3b27331d0fb9b55ab7311ae80edc2f6f7c83ec2d00d915d7769",
+                "commitOid": "b1368de7108edf206f494841d745f9a4505d9d0b",
+                "treeOid": "cf5e02042d558ee7d2cd26d1e9f8355f39b33e5d"
+              },
+              "baseline": {
+                "commitOid": "64f0e44ff4bc90c2536c62ede517c8f855f1a6b4",
+                "treeOid": "1555e640f7399b75338f2ecbfcd9ad268cd814d9"
+              },
+              "proofStrategyDigest": "sha256:19250b7eced8939f03acc0e751322e80fdd12d968a90adbd3e462c83e5999d9a",
+              "mode": "executable",
+              "authority": "orchestrator_deterministic",
+              "recipeDigest": "sha256:e687b798a4ee3e684f6faa623a745c6a26d280015d97ee93d848e07fbc9882af",
+              "environmentDigest": "sha256:stage6-transitional-environment",
+              "selectorDigest": "sha256:f50b70d93d8ac3b75e51ec99bd74a6729ae3c10ab496d91e3cb8eb966d67f04c",
+              "outputDigest": "sha256:75f368e8b5a082d29a72ac58c5f1fe90fed1047b7981a792ba7c23fbc910ec92",
+              "outcome": "satisfied",
+              "digest": "sha256:dcf1662ea30ba2c091f641053ea4d8faff08457dfe83f88059918b7212609a3a"
+            }
+          ],
+          "integrityFindings": [],
+          "negativeControls": [
+            {
+              "evidenceId": "validation:organizacion-integration:negative-control",
+              "obligationId": "validation:organizacion-integration",
+              "detectedFailure": true,
+              "outputDigest": "02fd258c327715908b2060afa3a7516a63dffabf00d9096acf4b8d81e319baff"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:organizacion:1:artifact:artifact:organizacion-integration",
+      "occurredAt": "2026-08-21T06:32:45.551Z",
+      "type": "artifact.adopted",
+      "payload": {
+        "artifact": {
+          "schemaVersion": 1,
+          "artifactId": "artifact:organizacion-integration:run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:organizacion:1",
+          "runId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d",
+          "nodeId": "unit:organizacion",
+          "digest": "sha256:c773e54daef45c7a6c98c9238605a2d86dfc8996cc37a6d0bc4e766515e605cf",
+          "producerAttemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:organizacion:1",
+          "contract": {
+            "id": "artifact:organizacion-integration",
+            "revision": "1"
+          },
+          "kind": "manifest",
+          "location": "sha256:c773e54daef45c7a6c98c9238605a2d86dfc8996cc37a6d0bc4e766515e605cf",
+          "manifest": {
+            "id": "artifact:organizacion-integration",
+            "contract": {
+              "id": "artifact:organizacion-integration",
+              "revision": 1,
+              "digest": "sha256:fd54a933a88fa5bb8d2e8113527ec1b162060b108ff54bf186119947e3462cc5"
+            },
+            "producerNodeId": "unit:organizacion",
+            "producerAttemptId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:organizacion:1",
+            "inputFingerprint": "sha256:49a60db51a7b169440291b63b6fd388c0fd6a2e1e4bb33e8cce3f6b7922df1a7",
+            "repositoryObjectStoreId": "object-store:1817cba9dbecd6da",
+            "objectFormat": "sha1",
+            "sourceCandidate": {
+              "commitOid": "b1368de7108edf206f494841d745f9a4505d9d0b",
+              "treeOid": "cf5e02042d558ee7d2cd26d1e9f8355f39b33e5d"
+            },
+            "retainedByRef": "refs/manyhands/runs/run-22b14e85aa46e4fa5601dc5b44304224-292f2e30d56a/attempts/run-22b14e85aa46e4fa5601dc5b44304224-0c9d2fc10680/artifacts/artifact-organizacion-integration-62f6697d38fc",
+            "kind": "change_set",
+            "baseTreeSha": "2c2ffdafc6c9d09c87ef521e28f16a7353584769",
+            "resultTreeSha": "cf5e02042d558ee7d2cd26d1e9f8355f39b33e5d",
+            "entries": [
+              {
+                "newPath": "test/organizacion/integration.test.mjs",
+                "operation": "add",
+                "newOid": "cf8cf0adb120d10d045d6d61810f05cd03db6836",
+                "newMode": "100644"
+              }
+            ],
+            "manifestDigest": "sha256:c773e54daef45c7a6c98c9238605a2d86dfc8996cc37a6d0bc4e766515e605cf"
+          },
+          "adoptedAt": "2026-08-21T06:32:45.551Z"
+        }
+      }
+    },
+    {
+      "eventId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:readiness.observed:45",
+      "occurredAt": "2026-08-21T06:32:45.642Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [],
+        "pendingDecisionIds": [
+          "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:notas:1:decision",
+          "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:paradas:1:decision"
+        ],
+        "explanations": [
+          {
+            "nodeId": "unit:agenda",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:dashboard",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notas-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:equipaje",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:exploracion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:favoritos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:itinerary",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:exploracion-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:notas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:notas:1:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:organizacion",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:paradas",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d:attempt:unit:paradas:1:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:presupuesto",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:recuerdos",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notas-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:agenda-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:dashboard-ui-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:itinerary-integration",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:notas-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:paradas-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:recuerdos-integration",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:storage",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:paradas",
+            "unit:agenda",
+            "unit:exploracion",
+            "unit:organizacion",
+            "unit:presupuesto",
+            "unit:equipaje",
+            "unit:recuerdos",
+            "unit:notas",
+            "unit:favoritos",
+            "unit:dashboard"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:storage",
+            "unit:itinerary",
+            "unit:paradas",
+            "unit:agenda",
+            "unit:exploracion",
+            "unit:organizacion",
+            "unit:presupuesto",
+            "unit:equipaje",
+            "unit:recuerdos",
+            "unit:notas",
+            "unit:favoritos",
+            "unit:dashboard"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-21T06:32:45.611Z"
+      }
+    }
+  ]
+}

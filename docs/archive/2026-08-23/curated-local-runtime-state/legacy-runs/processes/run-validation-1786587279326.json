@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "processes": [
+    {
+      "pid": 28764,
+      "label": "validation",
+      "command": "C:\\Users\\franc\\AppData\\Local\\pnpm\\node.exe",
+      "operationId": "op-validate",
+      "registeredAt": "2026-08-13T02:14:40.233Z",
+      "exitedAt": "2026-08-13T02:14:41.280Z"
+    }
+  ],
+  "updatedAt": "2026-08-13T02:14:41.313Z"
+}

@@ -1,0 +1,242 @@
+{
+  "events": [
+    {
+      "eventId": "run:a4dd844a40379265bd585efbc7d9b473d5b87cd54aa1ede3ae2dc437d38a1912:readiness.observed:15",
+      "occurredAt": "2026-08-15T13:45:08.569Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [
+          "unit:tokenizer"
+        ],
+        "pendingDecisionIds": [],
+        "explanations": [
+          {
+            "nodeId": "unit:tokenizer",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:tokenizer-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:word-count-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:word-count",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:tokenizer-change",
+                "revision": 1
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:tokenizer",
+            "unit:word-count"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:tokenizer",
+            "unit:word-count"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-15T13:45:08.565Z"
+      }
+    },
+    {
+      "eventId": "run:a4dd844a40379265bd585efbc7d9b473d5b87cd54aa1ede3ae2dc437d38a1912:wave.selected:16",
+      "occurredAt": "2026-08-15T13:45:08.580Z",
+      "type": "wave.selected",
+      "payload": {
+        "waveId": "run:a4dd844a40379265bd585efbc7d9b473d5b87cd54aa1ede3ae2dc437d38a1912:wave:1",
+        "nodeIds": [
+          "unit:tokenizer"
+        ],
+        "maxParallel": 6,
+        "blocked": [
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:tokenizer-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:word-count-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:word-count",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:tokenizer-change",
+                "revision": 1
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "evaluatedAt": "2026-08-15T13:45:08.576Z"
+      }
+    },
+    {
+      "eventId": "run:a4dd844a40379265bd585efbc7d9b473d5b87cd54aa1ede3ae2dc437d38a1912:attempt:unit:tokenizer:1:started",
+      "occurredAt": "2026-08-15T13:45:08.586Z",
+      "type": "attempt.started",
+      "payload": {
+        "attemptId": "run:a4dd844a40379265bd585efbc7d9b473d5b87cd54aa1ede3ae2dc437d38a1912:attempt:unit:tokenizer:1",
+        "nodeId": "unit:tokenizer",
+        "inputFingerprint": "sha256:d772dd3d4b1377e058a02b2928fc114aa99da533c3b3682a74aa51cd3781305a",
+        "executorProfile": {
+          "id": "claude-code-cli",
+          "revision": "sha256:d4d7f01afe76cf13f9f84653825ce5f81d972399f0fec54b9cc1deae9e598ed9"
+        }
+      }
+    },
+    {
+      "eventId": "run:a4dd844a40379265bd585efbc7d9b473d5b87cd54aa1ede3ae2dc437d38a1912:attempt:unit:tokenizer:1:failed",
+      "occurredAt": "2026-08-15T13:45:08.593Z",
+      "type": "attempt.failed",
+      "payload": {
+        "attemptId": "run:a4dd844a40379265bd585efbc7d9b473d5b87cd54aa1ede3ae2dc437d38a1912:attempt:unit:tokenizer:1",
+        "nodeId": "unit:tokenizer",
+        "reason": "Required validation obligations cannot be materialized: validation:tokenizer."
+      }
+    },
+    {
+      "eventId": "run:a4dd844a40379265bd585efbc7d9b473d5b87cd54aa1ede3ae2dc437d38a1912:attempt:unit:tokenizer:1:decision",
+      "occurredAt": "2026-08-15T13:45:08.593Z",
+      "type": "decision.raised",
+      "payload": {
+        "decision": {
+          "id": "run:a4dd844a40379265bd585efbc7d9b473d5b87cd54aa1ede3ae2dc437d38a1912:attempt:unit:tokenizer:1:decision",
+          "kind": "resolve_conflict",
+          "question": "Execution for Tokenizer module requires guidance: Required validation obligations cannot be materialized: validation:tokenizer.",
+          "options": [
+            {
+              "id": "retry",
+              "label": "Retry with guidance"
+            },
+            {
+              "id": "stop",
+              "label": "Stop this work"
+            }
+          ],
+          "affectedNodeIds": [
+            "unit:tokenizer"
+          ],
+          "repairTargetNodeId": "unit:tokenizer",
+          "evidenceRefs": [
+            "run:a4dd844a40379265bd585efbc7d9b473d5b87cd54aa1ede3ae2dc437d38a1912:attempt:unit:tokenizer:1",
+            "input-fingerprint:sha256:d772dd3d4b1377e058a02b2928fc114aa99da533c3b3682a74aa51cd3781305a"
+          ],
+          "impact": "behavior",
+          "raisedAtGraphRevision": 1
+        }
+      }
+    },
+    {
+      "eventId": "run:a4dd844a40379265bd585efbc7d9b473d5b87cd54aa1ede3ae2dc437d38a1912:readiness.observed:20",
+      "occurredAt": "2026-08-15T13:45:08.608Z",
+      "type": "readiness.observed",
+      "payload": {
+        "readyNodeIds": [],
+        "pendingDecisionIds": [
+          "run:a4dd844a40379265bd585efbc7d9b473d5b87cd54aa1ede3ae2dc437d38a1912:attempt:unit:tokenizer:1:decision"
+        ],
+        "explanations": [
+          {
+            "nodeId": "unit:root",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:tokenizer-change",
+                "revision": 1
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:word-count-change",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:tokenizer",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "unresolved_decision",
+                "decisionId": "run:a4dd844a40379265bd585efbc7d9b473d5b87cd54aa1ede3ae2dc437d38a1912:attempt:unit:tokenizer:1:decision"
+              }
+            ]
+          },
+          {
+            "nodeId": "unit:word-count",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact:tokenizer-change",
+                "revision": 1
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 6
+        },
+        "schedulerState": {
+          "materializableNodeIds": [
+            "unit:root",
+            "unit:tokenizer",
+            "unit:word-count"
+          ],
+          "activeResourceNodeIds": [],
+          "openCircuitBreakerNodeIds": [],
+          "availableExecutorNodeIds": [
+            "unit:root",
+            "unit:tokenizer",
+            "unit:word-count"
+          ],
+          "stoppedNodeIds": [],
+          "budgetAvailable": true
+        },
+        "budgetAvailable": true,
+        "evaluatedAt": "2026-08-15T13:45:08.603Z"
+      }
+    }
+  ]
+}

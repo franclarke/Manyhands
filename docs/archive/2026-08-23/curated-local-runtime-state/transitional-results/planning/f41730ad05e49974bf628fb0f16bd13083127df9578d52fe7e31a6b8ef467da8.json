@@ -1,0 +1,372 @@
+{
+  "events": [
+    {
+      "eventId": "repository:sha256:de3c4f8ab175a751fca11774b4a11438bae0daeab4c4740fc3bde7c2effd70e8:inspection",
+      "occurredAt": "2026-08-17T00:09:30.338Z",
+      "type": "repository.inspected",
+      "payload": {
+        "snapshotId": "sha256:de3c4f8ab175a751fca11774b4a11438bae0daeab4c4740fc3bde7c2effd70e8",
+        "disposition": "complete",
+        "snapshot": {
+          "schemaVersion": 1,
+          "snapshotId": "sha256:de3c4f8ab175a751fca11774b4a11438bae0daeab4c4740fc3bde7c2effd70e8",
+          "repositoryId": "mh8-r0-sandbox",
+          "rootPath": "C:\\Users\\franc\\Documents\\mh8-r0-sandbox",
+          "targetFingerprint": "bed2b10afc782a1a",
+          "baseCommit": "603e5b9a9c3398135fc3a16123884a829e35da21",
+          "indexSchemaVersion": 1,
+          "capturedAt": "2026-08-17T00:02:07.582Z",
+          "inspectionDisposition": "complete",
+          "capabilities": {
+            "scripts": {
+              "test": "node --test"
+            },
+            "baselineCommands": [
+              {
+                "kind": "test",
+                "command": "npm",
+                "args": [
+                  "test"
+                ],
+                "sourceScript": "test"
+              }
+            ],
+            "languages": [
+              {
+                "language": "javascript",
+                "coverage": "structural",
+                "confidence": 0.95,
+                "evidence": [
+                  "src/format-report.js",
+                  "src/format-report.test.js",
+                  "src/reading-time.js",
+                  "src/reading-time.test.js",
+                  "src/sentence-length.js",
+                  "src/sentence-length.test.js",
+                  "src/stage8-probe.js",
+                  "src/stage8-probe.test.js",
+                  "src/tokenizer.js",
+                  "src/tokenizer.test.js",
+                  "src/top-words.js",
+                  "src/top-words.test.js",
+                  "src/word-count.js",
+                  "src/word-count.test.js"
+                ]
+              }
+            ],
+            "stack": []
+          },
+          "diagnostics": [],
+          "indexHash": "0e6d573ee9c96672d5285157d0f72677da65158af88a8f5559386851a3d63cc4",
+          "index": {
+            "repositoryId": "mh8-r0-sandbox",
+            "rootPath": "C:\\Users\\franc\\Documents\\mh8-r0-sandbox",
+            "indexedAt": "2026-08-16T17:27:35.581Z",
+            "files": [
+              {
+                "path": "src/format-report.js",
+                "kind": "source",
+                "contentHash": "b595212ba23d81bc7fcd58800bd97f50cbb59de0ff19b07b62ba55aa68778e92",
+                "byteSize": 258,
+                "lineCount": 9,
+                "exportedSymbols": [
+                  "formatReport"
+                ],
+                "importedSymbols": [],
+                "declaredSymbols": [
+                  "formatReport"
+                ]
+              },
+              {
+                "path": "src/format-report.test.js",
+                "kind": "test",
+                "contentHash": "be400246cc26949530b3315883421f46f69f51b5b6867ccec531c50084bf4e5a",
+                "byteSize": 324,
+                "lineCount": 10,
+                "exportedSymbols": [],
+                "importedSymbols": [],
+                "declaredSymbols": []
+              },
+              {
+                "path": "src/reading-time.js",
+                "kind": "source",
+                "contentHash": "54e6b0c17cf1fb3703c9ba734e59792e23b46f76bd4ef317bdfb737f0fca3683",
+                "byteSize": 79,
+                "lineCount": 4,
+                "exportedSymbols": [
+                  "readingTimeMinutes"
+                ],
+                "importedSymbols": [],
+                "declaredSymbols": [
+                  "readingTimeMinutes"
+                ]
+              },
+              {
+                "path": "src/reading-time.test.js",
+                "kind": "test",
+                "contentHash": "af5a6050b54f172a6a2f0e86bda0c97a0ea31a0508c1256264d059367579a7f1",
+                "byteSize": 248,
+                "lineCount": 9,
+                "exportedSymbols": [],
+                "importedSymbols": [],
+                "declaredSymbols": []
+              },
+              {
+                "path": "src/sentence-length.js",
+                "kind": "source",
+                "contentHash": "0493d1bd3ca4420af73330fdd80e2d00b53d4017f929ab0c940e1dcb7e44945c",
+                "byteSize": 232,
+                "lineCount": 7,
+                "exportedSymbols": [
+                  "averageSentenceLength"
+                ],
+                "importedSymbols": [],
+                "declaredSymbols": [
+                  "averageSentenceLength"
+                ]
+              },
+              {
+                "path": "src/sentence-length.test.js",
+                "kind": "test",
+                "contentHash": "ab2c1f2659aa7430c515c5144fb67a3dd8180d90478202afa8c987b5b06effc8",
+                "byteSize": 257,
+                "lineCount": 9,
+                "exportedSymbols": [],
+                "importedSymbols": [],
+                "declaredSymbols": []
+              },
+              {
+                "path": "src/stage8-probe.js",
+                "kind": "source",
+                "contentHash": "c9b1c56919970057d1d1f7aaf2ab4923e6a5f72b9600ebba836a1f1d57fee40b",
+                "byteSize": 58,
+                "lineCount": 4,
+                "exportedSymbols": [
+                  "stage8Probe"
+                ],
+                "importedSymbols": [],
+                "declaredSymbols": [
+                  "stage8Probe"
+                ]
+              },
+              {
+                "path": "src/stage8-probe.test.js",
+                "kind": "test",
+                "contentHash": "113ce62f8d3e3668f7154d2cc0b616ddeab027ef260660eaf8444c20e9c59a88",
+                "byteSize": 228,
+                "lineCount": 9,
+                "exportedSymbols": [],
+                "importedSymbols": [],
+                "declaredSymbols": []
+              },
+              {
+                "path": "src/tokenizer.js",
+                "kind": "source",
+                "contentHash": "b666a7ea08b1c6f73b6f03b9a30223a70510eb4a6a835d5ebe5bed3da9f48322",
+                "byteSize": 209,
+                "lineCount": 9,
+                "exportedSymbols": [
+                  "tokenize"
+                ],
+                "importedSymbols": [],
+                "declaredSymbols": [
+                  "tokenize"
+                ]
+              },
+              {
+                "path": "src/tokenizer.test.js",
+                "kind": "test",
+                "contentHash": "0d770e23c26a95613c4dd362690608102e2f27155632ce33cba6c18a6181266a",
+                "byteSize": 1246,
+                "lineCount": 53,
+                "exportedSymbols": [],
+                "importedSymbols": [],
+                "declaredSymbols": []
+              },
+              {
+                "path": "src/top-words.js",
+                "kind": "source",
+                "contentHash": "c40b956a6544c29861fa2f2296e973f394c7749fe095edbbf01cfc8edc6717e1",
+                "byteSize": 281,
+                "lineCount": 10,
+                "exportedSymbols": [
+                  "topWords"
+                ],
+                "importedSymbols": [],
+                "declaredSymbols": [
+                  "topWords"
+                ]
+              },
+              {
+                "path": "src/top-words.test.js",
+                "kind": "test",
+                "contentHash": "20f2cd72180e8e8d09b3847c95ead1b1ba2bd810ecdb7d608917252201d27956",
+                "byteSize": 282,
+                "lineCount": 9,
+                "exportedSymbols": [],
+                "importedSymbols": [],
+                "declaredSymbols": []
+              },
+              {
+                "path": "src/word-count.js",
+                "kind": "source",
+                "contentHash": "25efd522d30050f1a1f5ee8b4d5ae59dd0da52c589892705ae9e0be814b344e5",
+                "byteSize": 243,
+                "lineCount": 13,
+                "exportedSymbols": [
+                  "countWords"
+                ],
+                "importedSymbols": [],
+                "declaredSymbols": [
+                  "countWords"
+                ]
+              },
+              {
+                "path": "src/word-count.test.js",
+                "kind": "test",
+                "contentHash": "e3f08ce46865d12c11340c35f5843afad4c724972a25419f3b71af81fc86358a",
+                "byteSize": 1095,
+                "lineCount": 47,
+                "exportedSymbols": [],
+                "importedSymbols": [],
+                "declaredSymbols": []
+              }
+            ],
+            "symbols": [
+              {
+                "name": "formatReport",
+                "kind": "function",
+                "filePath": "src/format-report.js",
+                "exported": true,
+                "line": 1
+              },
+              {
+                "name": "readingTimeMinutes",
+                "kind": "function",
+                "filePath": "src/reading-time.js",
+                "exported": true,
+                "line": 1
+              },
+              {
+                "name": "averageSentenceLength",
+                "kind": "function",
+                "filePath": "src/sentence-length.js",
+                "exported": true,
+                "line": 3
+              },
+              {
+                "name": "stage8Probe",
+                "kind": "function",
+                "filePath": "src/stage8-probe.js",
+                "exported": true,
+                "line": 1
+              },
+              {
+                "name": "tokenize",
+                "kind": "function",
+                "filePath": "src/tokenizer.js",
+                "exported": true,
+                "line": 1
+              },
+              {
+                "name": "topWords",
+                "kind": "function",
+                "filePath": "src/top-words.js",
+                "exported": true,
+                "line": 3
+              },
+              {
+                "name": "countWords",
+                "kind": "function",
+                "filePath": "src/word-count.js",
+                "exported": true,
+                "line": 3
+              }
+            ],
+            "imports": [],
+            "exports": [
+              {
+                "filePath": "src/format-report.js",
+                "exportedSymbols": [
+                  "formatReport"
+                ]
+              },
+              {
+                "filePath": "src/reading-time.js",
+                "exportedSymbols": [
+                  "readingTimeMinutes"
+                ]
+              },
+              {
+                "filePath": "src/sentence-length.js",
+                "exportedSymbols": [
+                  "averageSentenceLength"
+                ]
+              },
+              {
+                "filePath": "src/stage8-probe.js",
+                "exportedSymbols": [
+                  "stage8Probe"
+                ]
+              },
+              {
+                "filePath": "src/tokenizer.js",
+                "exportedSymbols": [
+                  "tokenize"
+                ]
+              },
+              {
+                "filePath": "src/top-words.js",
+                "exportedSymbols": [
+                  "topWords"
+                ]
+              },
+              {
+                "filePath": "src/word-count.js",
+                "exportedSymbols": [
+                  "countWords"
+                ]
+              }
+            ],
+            "diagnostics": [],
+            "metadata": {
+              "indexer": "ripgrep-native-v2",
+              "deterministic": true,
+              "fileCount": 14,
+              "symbolCount": 7,
+              "importCount": 0,
+              "exportCount": 7
+            }
+          }
+        },
+        "repositoryModelDigest": "sha256:e6f7ef579e414719b4d18ca83f9a031bec7dfa03036802d442070d0d07ecda01",
+        "repositoryView": {
+          "digest": "sha256:7061e2d63ea8a3aa90860fd091d83852390dc984f01b18a1fff5918312344910",
+          "treeSha": "4d86e71ee4c88f1c5d0f6b4a8304739c7648790c",
+          "resourceCatalogDigest": "sha256:9c7fa492d50cf2c25f1f1a9e0891c1e3135b65f3e864bd86db1cb5f5cb5decbc"
+        },
+        "queryDigests": [
+          "sha256:52141e8325d6588272a49a0a1d76617cd75cf11a12057179d60692dd2babe5c5",
+          "sha256:aaa7d80e24eb1ed4dc70831a8d507b3726aa3dae387a3f62fb0e2ae56ce7a1a3",
+          "sha256:a3bea1ba2d01390c07fae2b0475bc99816d042eeb8a7f462104f2c780dec5d70"
+        ]
+      }
+    },
+    {
+      "eventId": "planning:run:09f251f5b40a50fd99b26cc2fb02d45c97cb576eec37e4efdf5422628ee7ebcd:failed",
+      "occurredAt": "2026-08-17T00:09:30.357Z",
+      "type": "planning.failed",
+      "payload": {
+        "reason": "compiler_invalid_material: [\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      0,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c2\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      0,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c3\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      0,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c4\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      0,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c5\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      1,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c1\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      1,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c3\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      1,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c4\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      1,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c5\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      2,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c1\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      2,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c2\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      2,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c4\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      2,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c5\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      3,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c1\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      3,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c2\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      3,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c3\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      3,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c5\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      4,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c1\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      4,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c2\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      4,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c3\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      4,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c4\"\n  }\n]",
+        "findings": [
+          {
+            "code": "compiler_invalid_material",
+            "message": "[\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      0,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c2\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      0,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c3\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      0,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c4\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      0,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c5\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      1,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c1\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      1,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c3\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      1,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c4\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      1,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c5\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      2,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c1\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      2,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c2\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      2,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c4\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      2,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c5\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      3,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c1\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      3,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c2\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      3,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c3\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      3,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c5\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      4,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c1\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      4,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c2\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      4,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c3\"\n  },\n  {\n    \"code\": \"custom\",\n    \"path\": [\n      \"validation\",\n      \"obligations\",\n      4,\n      \"evidence\"\n    ],\n    \"message\": \"shared evidence is not declared identically by criterion criterion:root-c4\"\n  }\n]",
+            "severity": "error",
+            "evidenceRefs": []
+          }
+        ]
+      }
+    }
+  ]
+}

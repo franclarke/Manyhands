@@ -1,4 +1,4 @@
-\documentclass[12pt,a4paper,oneside]{report}
+\documentclass[11pt,a4paper,oneside]{report}
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -10,6 +10,7 @@
 \usepackage{enumitem}
 \usepackage{booktabs}
 \usepackage{tabularx}
+\usepackage{float}
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{xcolor}
 \usepackage{tikz}
@@ -19,8 +20,8 @@
 
 \usetikzlibrary{arrows.meta,positioning,shapes.geometric,calc}
 
-\geometry{top=3.0cm,bottom=2.5cm,left=3.0cm,right=2.5cm}
-\onehalfspacing
+\geometry{top=2.2cm,bottom=2.2cm,left=2.8cm,right=2.5cm}
+\setstretch{1.10}
 
 \lstset{
   basicstyle=\ttfamily\small,
@@ -70,6 +71,8 @@
     {\large\textbf{\universidad}}\\[0.4em]
     {\large\textbf{\departamento}}\\[2.5em]
 
+    \includegraphics[width=4.2cm]{assets/uns-emblema.png}\\[1.8em]
+
     {\Large\textbf{TRABAJO FINAL DE \carrera}}\\[3em]
 
     {\Large\textbf{\titulo}}\\[4em]
@@ -90,13 +93,11 @@
 \pagenumbering{roman}
 
 % ==============================================================================
-% RESUMEN / ABSTRACT
+% RESUMEN
 % ==============================================================================
 \input{chapters/00-resumen}
 
 \tableofcontents
-\listoffigures
-\listoftables
 
 \clearpage
 \pagenumbering{arabic}
