@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { access, mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
@@ -118,6 +119,67 @@ describe.skipIf(process.platform !== "win32")("ProcessSupervisor physical Window
       .toMatchObject({ phase: "final", outcome: "terminated" });
   }, 30_000);
 
+  it("verifies an executor timeout from inside the supervised worker Job Object", async () => {
+    const receiptRoot = path.join(suiteDirectory, "nested-timeout-receipts");
+    const outcomeFile = path.join(suiteDirectory, "nested-timeout-outcome.json");
+    const descendantStarted = path.join(suiteDirectory, "nested-descendant-started.txt");
+    const lateWrite = path.join(suiteDirectory, "nested-late-write.txt");
+    const executionCoreUrl = pathToFileURL(
+      path.resolve("packages/execution-core/dist/index.js")
+    ).href;
+    const descendant = [
+      `require("node:fs").writeFileSync(${JSON.stringify(descendantStarted)}, "started");`,
+      "setInterval(() => {",
+      `  if (require("node:fs").existsSync(${JSON.stringify(outcomeFile)})) {`,
+      `    require("node:fs").writeFileSync(${JSON.stringify(lateWrite)}, "stale");`,
+      "  }",
+      "}, 25);"
+    ].join("");
+    const executor = [
+      'const { spawn } = require("node:child_process");',
+      `spawn(process.execPath, ["-e", ${JSON.stringify(descendant)}], { stdio: "ignore" });`,
+      "setInterval(() => {}, 1000);"
+    ].join("");
+    const supervisedWorker = [
+      `import(${JSON.stringify(executionCoreUrl)}).then(async ({ spawnExecutorProcess }) => {`,
+      "  const { spawn } = require(\"node:child_process\");",
+      "  const { writeFileSync } = require(\"node:fs\");",
+      "  const outcome = await spawnExecutorProcess({",
+      "    binaryPath: process.execPath,",
+      `    args: ["-e", ${JSON.stringify(executor)}],`,
+      `    cwd: ${JSON.stringify(suiteDirectory)},`,
+      "    useShell: false,",
+      "    timeoutMs: 300,",
+      "    spawnFn: spawn,",
+      "    readInstructions: async () => \"noop\",",
+      "    instructionFilePath: \"unused\"",
+      "  });",
+      `  writeFileSync(${JSON.stringify(outcomeFile)}, JSON.stringify(outcome));`,
+      "  await new Promise((resolve) => setTimeout(resolve, 1200));",
+      "}).catch((error) => { console.error(error); process.exit(1); });"
+    ].join("\n");
+    const supervisor = windowsSupervisor(receiptRoot);
+    const handle = await supervisor.spawn(request("effect:nested-timeout", [
+      "-e",
+      supervisedWorker
+    ]));
+
+    const final = await handle.completion;
+    expect({
+      final,
+      stdout: await readFile(final.stdoutPath, "utf8"),
+      stderr: await readFile(final.stderrPath, "utf8")
+    }).toMatchObject({
+      final: { phase: "final", outcome: "succeeded", exitCode: 0 },
+      stderr: ""
+    });
+    const outcome = await waitForJson<{ timedOut: boolean; terminationVerified?: boolean }>(outcomeFile);
+
+    expect(outcome).toMatchObject({ timedOut: true, terminationVerified: true });
+    await expect(access(descendantStarted)).resolves.toBeUndefined();
+    await expect(access(lateWrite)).rejects.toMatchObject({ code: "ENOENT" });
+  }, 30_000);
+
   it("fails closed when Job Objects are absent but the durable identities are still live", async () => {
     const receiptRoot = path.join(suiteDirectory, "missing-job-live-identities-receipts");
     const supervisor = windowsSupervisor(receiptRoot);
@@ -221,7 +283,8 @@ function request(effectId: string, argv: readonly string[]): ProcessSpawnRequest
     cwd: suiteDirectory,
     env: {
       SystemRoot: process.env.SystemRoot ?? "C:\\Windows",
-      ...(process.env.WINDIR === undefined ? {} : { WINDIR: process.env.WINDIR })
+      ...(process.env.WINDIR === undefined ? {} : { WINDIR: process.env.WINDIR }),
+      ...(process.env.Path === undefined ? {} : { Path: process.env.Path })
     }
   };
 }

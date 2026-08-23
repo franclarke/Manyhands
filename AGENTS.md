@@ -164,17 +164,27 @@ specifications. See `CONTEXT-MAP.md` and `docs/agents/domain.md`.
   selective depth to its main contributions. Name every subsystem in one
   functional map and follow one run from intake through delivery so a general
   systems reader never has to infer a missing architectural stage.
-- For sandboxed live workers, scope brokered credentials to the supervised
-  process identity and remove that scope from the supervisor on every verified
-  terminal outcome. A worker `finally` is not sufficient after timeout,
-  cancellation or daemon crash; qualify the invariant with a live no-auth-file
-  check after each path.
+- For every live execution profile, scope brokered credentials collision-
+  resistently to the run and attempt identity. Reclaim credentials and
+  worktrees from the daemon only after a verified physical final receipt, and
+  make recovery retry that cleanup from the durable receipt without a global
+  pre-final purge. A worker `finally` is not sufficient after timeout,
+  cancellation or daemon crash; qualify every path with live auth, process and
+  worktree checks.
 - In Windows PowerShell automation, never use the reserved `$PID` variable as a
   loop or task identifier; use a descriptive name such as `$processId` so cleanup
   commands execute rather than fail before acting.
 - Before a live daemon/worker qualification, rebuild every changed workspace
   package imported by that worker. Vitest source tests do not prove the
   compiled `dist` dependency path used by the spawned process.
+- When integrating sibling change-set manifests produced from one base tree,
+  compose them only when every touched path still has its declared preimage.
+  Preserve already-applied disjoint paths, and fail closed on an overlapping
+  preimage instead of requiring whole-tree equality or retrying an agent.
+- When a Windows Stage 8 worker resolves to `read-only`, reproduce the exact
+  `codex exec` invocation before changing credential or ACL infrastructure.
+  Keep global approval options before `exec` and sandbox/config options after
+  it, then require one real writable leaf as the gate.
 - During the frozen Viaje en Familia experiment loop, cleanup of a failed
   attempt is pre-authorized once its processes are quiescent and compact
   evidence exists. Delete its workspace through the UI and only its resolved

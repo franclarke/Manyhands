@@ -29,6 +29,93 @@ afterEach(async () => {
 });
 
 describe("Stage 7 integration manifest materialization", () => {
+  it("composes disjoint sibling manifests produced from the same base tree", async () => {
+    await writeFile(path.join(repo, "first.txt"), "before first\n", "utf8");
+    await writeFile(path.join(repo, "second.txt"), "before second\n", "utf8");
+    await git(repo, "add", "first.txt", "second.txt");
+    await git(repo, "commit", "-m", "sibling base");
+    const baseCommit = await git(repo, "rev-parse", "HEAD");
+    const baseTree = await git(repo, "rev-parse", "HEAD^{tree}");
+    const firstOldOid = await git(repo, "rev-parse", "HEAD:first.txt");
+    const secondOldOid = await git(repo, "rev-parse", "HEAD:second.txt");
+
+    await git(repo, "switch", "--create", "candidate-first");
+    await writeFile(path.join(repo, "first.txt"), "after first\n", "utf8");
+    await git(repo, "add", "first.txt");
+    await git(repo, "commit", "-m", "first sibling");
+    const firstCommit = await git(repo, "rev-parse", "HEAD");
+    const firstTree = await git(repo, "rev-parse", "HEAD^{tree}");
+    const firstNewOid = await git(repo, "rev-parse", "HEAD:first.txt");
+
+    await git(repo, "switch", "main");
+    await git(repo, "switch", "--create", "candidate-second");
+    await writeFile(path.join(repo, "second.txt"), "after second\n", "utf8");
+    await git(repo, "add", "second.txt");
+    await git(repo, "commit", "-m", "second sibling");
+    const secondCommit = await git(repo, "rev-parse", "HEAD");
+    const secondTree = await git(repo, "rev-parse", "HEAD^{tree}");
+    const secondNewOid = await git(repo, "rev-parse", "HEAD:second.txt");
+    await git(repo, "switch", "main");
+
+    const firstManifest = buildChangeSetManifest({
+      id: "artifact:first",
+      contract: { id: "artifact:first", revision: 1, digest: "sha256:first-contract" },
+      producerNodeId: "node:first",
+      producerAttemptId: "attempt:first",
+      inputFingerprint: `sha256:${"a".repeat(64)}`,
+      repositoryObjectStoreId: "object-store:repo",
+      objectFormat: "sha1",
+      sourceCandidate: { commitOid: firstCommit, treeOid: firstTree },
+      retainedByRef: "refs/manyhands/runs/run-1/attempts/attempt-first/artifacts/first",
+      kind: "change_set",
+      baseTreeSha: baseTree,
+      resultTreeSha: firstTree,
+      entries: [{ oldPath: "first.txt", newPath: "first.txt", operation: "modify", oldOid: firstOldOid, newOid: firstNewOid, oldMode: "100644", newMode: "100644" }]
+    }, sha256);
+    const secondManifest = buildChangeSetManifest({
+      id: "artifact:second",
+      contract: { id: "artifact:second", revision: 1, digest: "sha256:second-contract" },
+      producerNodeId: "node:second",
+      producerAttemptId: "attempt:second",
+      inputFingerprint: `sha256:${"b".repeat(64)}`,
+      repositoryObjectStoreId: "object-store:repo",
+      objectFormat: "sha1",
+      sourceCandidate: { commitOid: secondCommit, treeOid: secondTree },
+      retainedByRef: "refs/manyhands/runs/run-1/attempts/attempt-second/artifacts/second",
+      kind: "change_set",
+      baseTreeSha: baseTree,
+      resultTreeSha: secondTree,
+      entries: [{ oldPath: "second.txt", newPath: "second.txt", operation: "modify", oldOid: secondOldOid, newOid: secondNewOid, oldMode: "100644", newMode: "100644" }]
+    }, sha256);
+    const request = createIntegrationRequestManifest({
+      runId: "run-1",
+      integrationAttemptId: "attempt:parent",
+      compositeNode: { id: "node:parent", graphRevision: 1 },
+      base: { manifestId: "base", resultingCommit: baseCommit, inputFingerprint: `sha256:${"c".repeat(64)}` },
+      availableArtifacts: [
+        adoptedArtifact("artifact:first:attempt:first", "node:first", "attempt:first", firstManifest),
+        adoptedArtifact("artifact:second:attempt:second", "node:second", "attempt:second", secondManifest)
+      ],
+      requiredArtifactIds: ["artifact:first:attempt:first", "artifact:second:attempt:second"],
+      seamRevisions: [],
+      parentGoal: "Integrate sibling outputs",
+      validationContract: { id: "validation:parent", revision: "1" },
+      outputArtifactContract: { id: "artifact:parent", revision: "1" },
+      createdAt: "2026-08-20T00:00:00.000Z"
+    });
+
+    const result = await new IntegrationManifestExecutor({
+      git: new SimpleGitRunner(),
+      validate: async () => ({ matrixId: "matrix:parent", outcome: "verified" as const }),
+      digestCandidate: async () => "sha256:integrated"
+    }).integrate({ request, worktreePath: repo });
+
+    expect(result.disposition).toBe("success");
+    expect(result.operations).toHaveLength(2);
+    expect(await git(repo, "show", "HEAD:first.txt")).toBe("after first");
+    expect(await git(repo, "show", "HEAD:second.txt")).toBe("after second");
+  });
+
   it("integrates an adopted manifest by exact tree construction, not source commit ancestry", async () => {
     const baseCommit = await git(repo, "rev-parse", "HEAD");
     const baseTree = await git(repo, "rev-parse", "HEAD^{tree}");
@@ -95,6 +182,27 @@ describe("Stage 7 integration manifest materialization", () => {
     expect(await git(repo, "merge-base", "--is-ancestor", sourceCandidate, "HEAD").then(() => true, () => false)).toBe(false);
   });
 });
+
+function adoptedArtifact(
+  artifactId: string,
+  nodeId: string,
+  attemptId: string,
+  manifest: ReturnType<typeof buildChangeSetManifest>
+) {
+  return {
+    schemaVersion: 1 as const,
+    artifactId,
+    runId: "run-1",
+    nodeId,
+    digest: manifest.manifestDigest,
+    producerAttemptId: attemptId,
+    contract: { id: manifest.contract.id, revision: String(manifest.contract.revision) },
+    kind: "manifest" as const,
+    location: manifest.manifestDigest,
+    manifest,
+    adoptedAt: "2026-08-20T00:00:00.000Z"
+  };
+}
 
 async function git(cwd: string, ...args: string[]): Promise<string> {
   const { stdout } = await execFileAsync("git", args, { cwd, windowsHide: true });

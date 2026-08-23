@@ -183,6 +183,7 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
             `${stderr.text()}${stderr.text() ? "\n" : ""}aborted by orchestrator` +
             (terminationVerified ? "" : "\nprocess-tree termination could not be verified"),
           timedOut: false,
+          terminationVerified,
           durationMs: Date.now() - start,
           commandLine
         }));
@@ -206,6 +207,7 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
               ? ""
               : `${stderr.text() ? "\n" : ""}process-tree termination could not be verified`),
           timedOut: true,
+          terminationVerified,
           durationMs: Date.now() - start,
           commandLine
         }));
@@ -297,6 +299,7 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
               `${stderr.text()}${stderr.text() ? "\n" : ""}failed to read instructions: ${error.message}` +
               (terminationVerified ? "" : "\nprocess-tree termination could not be verified"),
             timedOut: false,
+            terminationVerified,
             durationMs: Date.now() - start,
             commandLine
           }));

@@ -27,7 +27,10 @@ export const LEGAL_LIFECYCLE_TRANSITIONS: Readonly<Record<RunLifecycle, readonly
   result_ready: ["delivering", "cancelling", "failed"],
   delivering: ["result_ready", "cancelling", "completed", "failed"],
   completed: [],
-  failed: []
+  // A failed execution can be resumed only through the explicit restart
+  // command. This preserves its journalled failure while allowing the actor to
+  // close any unfinished attempt and continue the still-valid graph.
+  failed: ["running"]
 };
 
 export function assertLifecycleTransition(from: RunLifecycle, to: RunLifecycle): void {

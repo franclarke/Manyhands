@@ -8,7 +8,7 @@ import type { TraceStore } from "@manyhands/trace-store";
 
 import type { GitRunner } from "../git/runner";
 import { GitCandidateSandboxFactory, validateExactCandidate, type EvidenceValidationCache } from "../validation/candidate-validator";
-import type { EvidenceMatrix } from "../validation/evidence-matrix";
+import type { EvidenceMatrix, ValidationEvidenceObservation } from "../validation/evidence-matrix";
 import { bindValidationRecipe, compileValidationRecipe, prepareValidationRecipe, type PreparedValidationRecipe } from "../validation/recipe-compiler";
 import { ChildProcessValidationRunner, type ValidationRunner } from "../validation/runner";
 import { detectRequiredPublicSurfaceFindings, detectTestIntegrityFindings, isTestDiscoveryConfigurationPath, isTestFilePath } from "../validation/test-integrity";
@@ -181,6 +181,7 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
         })
       })
     });
+    const repairDiagnostics = repairDiagnosticsOf(validated.evidence);
     return {
       matrixId: computeEvidenceMatrixId({
         candidateCommit: validated.candidateCommit,
@@ -200,6 +201,7 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
       })),
       integrityFindings: validated.matrix.integrityFindings.map((finding) => ({ ...finding })),
       negativeControls: validated.matrix.negativeControls.map((control) => ({ ...control })),
+      ...(repairDiagnostics.length === 0 ? {} : { repairDiagnostics }),
       evidenceBindings: []
     };
   }
@@ -658,6 +660,28 @@ function removeTrailingJsoncCommas(contents: string): string {
     output += current;
   }
   return output;
+}
+
+function repairDiagnosticsOf(evidence: readonly ValidationEvidenceObservation[]): Array<{ obligationId: string; output: string }> {
+  const finalObservationByObligation = new Map<string, ValidationEvidenceObservation>();
+  for (const observation of evidence) finalObservationByObligation.set(observation.obligationId, observation);
+  return [...finalObservationByObligation.values()]
+    .flatMap((observation) => {
+      const output = observation.output?.trim();
+      return !observation.passed && output !== undefined && output.length > 0
+        ? [{ obligationId: observation.obligationId, output: boundedValidationOutput(output) }]
+        : [];
+    });
+}
+
+function boundedValidationOutput(output: string): string {
+  const normalized = output
+    // eslint-disable-next-line no-control-regex
+    .replace(/\u001B\[[0-?]*[ -/]*[@-~]/gu, "")
+    .replace(/\r\n?/gu, "\n")
+    .trim();
+  const maximumLength = 1_200;
+  return normalized.length <= maximumLength ? normalized : normalized.slice(-maximumLength);
 }
 
 function isGitReadLimitError(error: unknown): boolean {

@@ -137,7 +137,9 @@ async function decide(
     }
     case "restart_run": {
       const projection = requireProjection(context);
-      if (projection.lifecycle !== "interrupted") throw new Error(`Cannot restart while ${projection.lifecycle}.`);
+      if (projection.lifecycle !== "interrupted" && projection.lifecycle !== "failed") {
+        throw new Error(`Cannot restart while ${projection.lifecycle}.`);
+      }
       return {
         eventsAfterAcceptance: [event(options, context.runId, "run.restart_requested", {
           reason: command.reason
@@ -483,7 +485,7 @@ function resolveDecision(
     }
     effects.push(executionEffect(
       context,
-      requireDefinition(projection),
+      definitionForRetry(requireDefinition(projection), projection, decision),
       options,
       nextExecutionAttempt(projection)
     ));
@@ -625,13 +627,40 @@ function delegatedDecisions(
     if (decision.kind === "resolve_conflict" && optionId === "retry" && effects.length === 0) {
       effects.push(executionEffect(
         context,
-        requireDefinition(context.projection),
+        definitionForRetry(requireDefinition(context.projection), context.projection, decision),
         options,
         nextExecutionAttempt(context.projection)
       ));
     }
   }
   return { events, effects };
+}
+
+/**
+ * A hard timeout is capacity evidence, not a reason to replay the same
+ * deadline. Keep the escalation local to the recovery effect: the original
+ * run definition remains immutable while the effect input records the exact
+ * deadline that the retry received.
+ */
+function definitionForRetry(
+  definition: ProductRunDefinition,
+  projection: RunProjection,
+  decision: DecisionInput
+): ProductRunDefinition {
+  const affectedNodes = new Set(decision.affectedNodeIds);
+  const hasTimedOutBefore = Object.values(projection.attempts).some((attempt) =>
+    affectedNodes.has(attempt.nodeId) && /\b(?:hard\s+)?timeout\b/iu.test(attempt.failureReason ?? "")
+  );
+  if (!hasTimedOutBefore && !/\b(?:hard\s+)?timeout\b/iu.test(decision.question)) return definition;
+  const current = definition.executionConfig.leafTimeoutMs;
+  if (typeof current === "number" && current >= 1_800_000) return definition;
+  return {
+    ...definition,
+    executionConfig: {
+      ...definition.executionConfig,
+      leafTimeoutMs: 1_800_000
+    }
+  };
 }
 
 /**

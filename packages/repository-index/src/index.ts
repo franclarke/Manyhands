@@ -377,7 +377,9 @@ export async function buildFastRepositorySnapshot(
   input: RepositorySnapshotBuilderInput
 ): Promise<RepositorySnapshot> {
   const capturedAt = input.capturedAt ?? new Date().toISOString();
-  const receipt = new FastRepositoryIndexer().indexWithReceipt({
+  const receipt = new FastRepositoryIndexer(
+    input.cacheRoot === undefined ? {} : { cacheRoot: input.cacheRoot }
+  ).indexWithReceipt({
     rootPath: input.rootPath,
     ...(input.repositoryId !== undefined ? { repositoryId: input.repositoryId } : {}),
     indexedAt: capturedAt,

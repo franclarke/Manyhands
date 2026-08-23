@@ -1,4 +1,7 @@
 import { createHash } from "node:crypto";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   buildCandidateTreeManifest,
   buildChangeSetManifest,
@@ -33,6 +36,8 @@ export class GitArtifactBuilder {
     repositoryObjectStoreId: string;
     baseCommit: string;
     candidateCommit: string;
+    /** All paths the node may change; defaults to this artifact's paths. */
+    candidateAllowedPaths?: readonly string[];
     allowedPaths: readonly string[];
   }): Promise<ChangeSetManifest> {
     const [baseTreeSha, candidateCommit, candidateTreeSha, raw] = await Promise.all([
@@ -41,13 +46,16 @@ export class GitArtifactBuilder {
       this.git.revParse(input.cwd, `${input.candidateCommit}^{tree}`),
       this.git.diffTreeRaw({ cwd: input.cwd, from: input.baseCommit, to: input.candidateCommit })
     ]);
-    const entries = parseDiffTree(raw);
-    if (entries.length === 0) throw new Error("Cannot build an artifact manifest for a no-op candidate.");
-    for (const entry of entries) {
-      assertOwned(entry, input.allowedPaths);
+    const candidateAllowedPaths = input.candidateAllowedPaths ?? input.allowedPaths;
+    const candidateEntries = parseDiffTree(raw);
+    for (const entry of candidateEntries) {
+      assertOwned(entry, candidateAllowedPaths);
       assertSupportedArtifactEntry(entry);
     }
+    const entries = candidateEntries.filter((entry) => isOwned(entry, input.allowedPaths));
+    if (entries.length === 0) throw new Error("Cannot build an artifact manifest for a no-op candidate.");
 
+    const resultTreeSha = await scopedResultTree(this.git, input.cwd, baseTreeSha, entries);
     const manifest = buildChangeSetManifest({
       id: input.artifactId,
       contract: input.contract,
@@ -60,7 +68,7 @@ export class GitArtifactBuilder {
       retainedByRef: retainedArtifactRef(input.runId, input.attemptId, input.artifactId),
       kind: "change_set",
       baseTreeSha,
-      resultTreeSha: candidateTreeSha,
+      resultTreeSha,
       entries
     }, this.hasher);
     await this.retainer.retain({
@@ -124,6 +132,33 @@ export class GitArtifactBuilder {
   }
 }
 
+async function scopedResultTree(
+  git: GitRunner,
+  cwd: string,
+  baseTreeSha: string,
+  entries: readonly ChangeSetEntry[]
+): Promise<string> {
+  const indexDirectory = await mkdtemp(join(tmpdir(), "mh-artifact-index-"));
+  const indexFile = join(indexDirectory, "artifact-index");
+  try {
+    await git.readTree({ cwd, tree: baseTreeSha, indexFile });
+    for (const entry of entries) {
+      if (entry.operation === "delete") {
+        if (entry.oldPath === undefined) throw new Error("Invalid delete artifact entry.");
+        await git.removeIndexEntry({ cwd, path: entry.oldPath, indexFile });
+        continue;
+      }
+      if (entry.newPath === undefined || entry.newOid === undefined || entry.newMode === undefined) {
+        throw new Error("Invalid artifact postimage.");
+      }
+      await git.updateIndexEntry({ cwd, mode: entry.newMode, oid: entry.newOid, path: entry.newPath, indexFile });
+    }
+    return await git.writeTree({ cwd, indexFile });
+  } finally {
+    await rm(indexDirectory, { recursive: true, force: true }).catch(() => undefined);
+  }
+}
+
 function parseDiffTree(raw: Buffer): ChangeSetEntry[] {
   const fields = raw.toString("utf8").split("\0");
   const entries: ChangeSetEntry[] = [];
@@ -149,9 +184,17 @@ function parseDiffTree(raw: Buffer): ChangeSetEntry[] {
 }
 
 function assertOwned(entry: ChangeSetEntry, allowedPaths: readonly string[]): void {
-  for (const path of [entry.oldPath, entry.newPath]) {
-    if (path !== undefined && !allowedPaths.includes(path)) throw new Error(`Artifact path is outside its contract: ${path}.`);
+  if (!isOwned(entry, allowedPaths)) {
+    const path = entry.oldPath ?? entry.newPath;
+    throw new Error(`Artifact path is outside its contract: ${path}.`);
   }
+}
+
+function isOwned(entry: ChangeSetEntry, allowedPaths: readonly string[]): boolean {
+  for (const path of [entry.oldPath, entry.newPath]) {
+    if (path !== undefined && !allowedPaths.includes(path)) return false;
+  }
+  return true;
 }
 
 function assertSupportedArtifactEntry(entry: ChangeSetEntry): void {

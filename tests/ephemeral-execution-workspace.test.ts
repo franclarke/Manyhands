@@ -121,6 +121,29 @@ describe("ephemeral execution workspace", () => {
     }
   });
 
+  it("bounds physical workspace paths for production-length attempt ids on Windows", async () => {
+    const git = fakeGit();
+    const repoRoot = "C:/mh-exp/viaje-familia/attempt-006/repo";
+    const provider = new EphemeralExecutionWorkspaceProvider({
+      repoRoot,
+      worktreesRoot: `${repoRoot}/.manyhands/worktrees`,
+      platform: "win32",
+      git,
+      now: () => "2026-08-20T00:00:00.000Z"
+    });
+    const runId = `run:${"6".repeat(64)}`;
+    const taskId = `${runId}:attempt:unit:organization:5-candidate`;
+
+    const first = await provider.acquire({ taskId, runId, kind: "integration", baseCommit: BASE });
+    const second = await provider.acquire({ taskId, runId, kind: "integration", baseCommit: BASE });
+
+    const representativeTrackedPath = "public/organization-integration/organization.integration.test.mjs";
+    expect(win32.join(first.worktree.path, representativeTrackedPath).length).toBeLessThanOrEqual(240);
+    expect(first.worktree.path).not.toBe(second.worktree.path);
+
+    await Promise.all([first.release(), second.release()]);
+  });
+
   it("is idempotent, so a double release cannot remove a workspace twice", async () => {
     const git = fakeGit();
     const handle = await providerWith(git).acquire(params("task-a"));

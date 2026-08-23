@@ -106,6 +106,52 @@ describe("Stage 7 exact evidence binding", () => {
       }
     }, sha256)).toThrow(/selector digest/i);
   });
+
+  it("binds an advisory criterion without an exact observation as inconclusive", () => {
+    const goal = buildGoalContract({
+      id: "goal:advisory", revision: 1, goal: "Keep advisory evidence optional.", constraints: [], qualityAttributes: [],
+      acceptanceCriteria: [
+        { id: "criterion:required", statement: "The focused test passes.", required: true, level: "product", protectedReferences: [], verification: { allowedProofs: [{ mode: "executable", authority: "orchestrator_deterministic" }], independence: "independent_required" } },
+        { id: "criterion:advisory", statement: "Accessibility review is advisory.", required: false, level: "product", protectedReferences: [], verification: { allowedProofs: [{ mode: "executable", authority: "orchestrator_deterministic" }], independence: "independent_required" } }
+      ],
+      target: { repositoryId: "repo:stage7", baseCommit: "a".repeat(40), treeSha: "b".repeat(40) }
+    }, sha256);
+    const requiredStrategy = buildProofStrategy({
+      id: "proof:required", revision: 1, goalContractDigest: goal.digest, criterionId: "criterion:required", obligationId: "obligation:required",
+      mode: "executable", authority: "orchestrator_deterministic", repositoryViewDigest: "sha256:view", procedureRef: "command:test", selectorDigest: selectorDigest(["tests/required.test.ts"]), environmentPolicyDigest: "sha256:environment", independence: "independent_required"
+    }, sha256);
+    const advisoryStrategy = buildProofStrategy({
+      id: "proof:advisory", revision: 1, goalContractDigest: goal.digest, criterionId: "criterion:advisory", obligationId: "obligation:advisory",
+      mode: "executable", authority: "orchestrator_deterministic", repositoryViewDigest: "sha256:view", procedureRef: "manual:a11y", environmentPolicyDigest: "sha256:environment", independence: "independent_required"
+    }, sha256);
+    const candidate = candidateManifest("candidate:advisory", "c", "d");
+
+    const bindings = bindExactEvidence({
+      goal,
+      candidate,
+      baseline: { commitOid: "a".repeat(40), treeOid: "b".repeat(40) },
+      validationObligations: {
+        "obligation:required": { id: "obligation:required", revision: 1, digest: "sha256:required", criterionId: "criterion:required", ownerNodeId: "node:required", required: true, proofStrategy: { id: requiredStrategy.id, revision: requiredStrategy.revision, digest: requiredStrategy.digest } },
+        "obligation:advisory": { id: "obligation:advisory", revision: 1, digest: "sha256:advisory", criterionId: "criterion:advisory", ownerNodeId: "node:advisory", required: false, proofStrategy: { id: advisoryStrategy.id, revision: advisoryStrategy.revision, digest: advisoryStrategy.digest } }
+      },
+      proofStrategies: { [requiredStrategy.id]: requiredStrategy, [advisoryStrategy.id]: advisoryStrategy },
+      matrix: {
+        matrixId: "matrix:advisory", candidateCommit: candidate.commitOid, validationRecipeDigest: "sha256:recipe",
+        criteria: [
+          { criterionId: "criterion:required", obligationId: "obligation:required", status: "satisfied" },
+          { criterionId: "criterion:advisory", obligationId: "obligation:advisory", status: "uncovered" }
+        ],
+        observations: [{ evidenceId: "evidence:required", kind: "test_result", commandDigest: "command", durationMs: 1, passed: true, attempt: 1, outputDigest: "e".repeat(64), criterionIds: ["criterion:required"], obligationIds: ["obligation:required"], references: ["tests/required.test.ts"] }]
+      }
+    }, sha256);
+
+    expect(bindings).toHaveLength(2);
+    expect(bindings.find((binding) => binding.obligationId === "obligation:required")?.outcome).toBe("satisfied");
+    expect(bindings.find((binding) => binding.obligationId === "obligation:advisory")).toEqual(expect.objectContaining({
+      outcome: "inconclusive",
+      selectorDigest: selectorDigest([])
+    }));
+  });
 });
 
 function candidateManifest(id: string, commit: string, tree: string) {

@@ -142,6 +142,7 @@ export interface RepositoryModel {
 export interface InspectRepositoryModelInput {
   rootPath: string;
   repositoryId?: string;
+  cacheRoot?: string;
   targetFingerprint: string;
   baseCommit: string;
   capturedAt?: string;
@@ -171,6 +172,7 @@ export async function inspectRepositoryModelWithSnapshot(
     buildFastRepositorySnapshot({
       rootPath,
       ...(input.repositoryId === undefined ? {} : { repositoryId: input.repositoryId }),
+      ...(input.cacheRoot === undefined ? {} : { cacheRoot: input.cacheRoot }),
       targetFingerprint: input.targetFingerprint,
       baseCommit: input.baseCommit,
       ...(input.capturedAt === undefined ? {} : { capturedAt: input.capturedAt }),

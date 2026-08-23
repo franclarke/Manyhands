@@ -41,6 +41,10 @@ export function bindExactEvidence(input: {
     throw new Error(`Evidence matrix ${input.matrix.matrixId} has no exact validation recipe digest.`);
   }
   return input.matrix.criteria.map((criterion) => {
+    const observation = input.matrix.observations.find((candidate) =>
+      candidate.criterionIds.includes(criterion.criterionId)
+      && candidate.obligationIds.includes(criterion.obligationId)
+    );
     const obligation = input.validationObligations[criterion.obligationId];
     if (obligation === undefined) throw new Error(`Evidence criterion ${criterion.obligationId} has no canonical validation obligation.`);
     const strategy = input.proofStrategies[obligation.proofStrategy.id];
@@ -54,18 +58,11 @@ export function bindExactEvidence(input: {
     ) {
       throw new Error(`Evidence criterion ${criterion.obligationId} has no matching immutable ProofStrategy.`);
     }
-    if (strategy.selectorDigest === undefined) {
+    if (strategy.selectorDigest === undefined && (observation !== undefined || obligation.required)) {
       throw new Error(`ProofStrategy ${strategy.id} has no selector digest for exact evidence.`);
     }
-    const observation = input.matrix.observations.find((candidate) =>
-      candidate.criterionIds.includes(criterion.criterionId)
-      && candidate.obligationIds.includes(criterion.obligationId)
-    );
-    if (observation === undefined) {
-      throw new Error(`Evidence criterion ${criterion.obligationId} has no exact command observation.`);
-    }
-    const selectorDigest = digestSelectors(observation.references);
-    if (strategy.selectorDigest !== selectorDigest) {
+    const selectorDigest = observation === undefined ? digestSelectors([]) : digestSelectors(observation.references);
+    if (strategy.selectorDigest !== undefined && strategy.selectorDigest !== selectorDigest) {
       throw new Error(`ProofStrategy ${strategy.id} selector digest does not match the executed evidence references.`);
     }
     return buildEvidenceBinding({
@@ -86,7 +83,7 @@ export function bindExactEvidence(input: {
       recipeDigest,
       environmentDigest: strategy.environmentPolicyDigest,
       selectorDigest,
-      outputDigest: canonicalOutputDigest(observation.outputDigest),
+      outputDigest: observation === undefined ? sha256("no exact command observation") : canonicalOutputDigest(observation.outputDigest),
       outcome: evidenceOutcome(criterion.status)
     }, hasher);
   });

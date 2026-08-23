@@ -163,6 +163,6 @@ describe("Stage 8 live executor scope", () => {
         MANYHANDS_STAGE8_SANDBOX_SCOPE: "attempt:stage8",
         MANYHANDS_CODEX_AUTH_PATH: "C:/declared/codex-auth.json"
       }
-    })).toMatchObject({ profile: "workspace", windowsSandbox: "elevated" });
+    })).toMatchObject({ profile: "workspace", windowsSandbox: "unelevated" });
   });
 });

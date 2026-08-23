@@ -133,6 +133,40 @@ describe("activity presentation", () => {
       diagnostic: false
     });
   });
+
+  it("communicates automatic recovery as continuing work instead of a terminal failure", () => {
+    expect(eventPresentation("failure.classified", {
+      allowedActions: ["repair_code"],
+      automaticRetryBudget: 1
+    })).toEqual({
+      label: "Fallo recuperable · reparación programada",
+      diagnostic: false
+    });
+    expect(eventPresentation("attempt.started", {
+      retryOfAttemptId: "attempt-1"
+    })).toEqual({
+      label: "Reparación iniciada",
+      diagnostic: false
+    });
+    expect(eventPresentation("attempt.repair_attempted", { pass: 1 })).toEqual({
+      label: "Reparación del intento en curso",
+      diagnostic: false
+    });
+    expect(eventPresentation("decision.resolved", { optionId: "retry" })).toEqual({
+      label: "Reparación autorizada",
+      diagnostic: false
+    });
+  });
+
+  it("keeps exhausted recovery classifications in technical detail", () => {
+    expect(eventPresentation("failure.classified", {
+      allowedActions: ["repair_code"],
+      automaticRetryBudget: 0
+    })).toEqual({
+      label: "Fallo clasificado",
+      diagnostic: true
+    });
+  });
 });
 
 function node(id: string, kind: RunNodeView["kind"], status: RunNodeView["status"]): RunNodeView {

@@ -79,7 +79,15 @@ describe("V2ExecutionDriver", () => {
         attempts += 1;
         retryContexts.push(input.priorFailure);
         fingerprints.push(input.inputFingerprint);
-        if (attempts === 1) return { kind: "failure", reason: "transient: provider disconnected" };
+        if (attempts === 1) return {
+          kind: "failure",
+          reason: "transient: provider disconnected",
+          checkpoint: {
+            candidateCommit: "checkpoint-commit",
+            outputDigest: "sha256:checkpoint",
+            changedFiles: ["src/domain.ts"]
+          }
+        };
         return { ...(success(input) as Extract<V2NodeExecutionOutcome, { kind: "success" }>), finalManifestId: "retry-final" };
       }
     });
@@ -104,8 +112,20 @@ describe("V2ExecutionDriver", () => {
     expect(retried?.retryOfAttemptId).toBeDefined();
     expect(retryContexts).toEqual([
       undefined,
-      { attemptId: retried!.retryOfAttemptId, reason: "transient: provider disconnected" }
+      {
+        attemptId: retried!.retryOfAttemptId,
+        reason: "transient: provider disconnected",
+        checkpointCommit: "checkpoint-commit"
+      }
     ]);
+    const failed = Object.values(state.attempts).find((attempt) => attempt.attemptId === retried?.retryOfAttemptId);
+    expect(failed?.candidateCommit).toBe("checkpoint-commit");
+    expect(harness.events()).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: "attempt.candidate_created",
+        payload: expect.objectContaining({ candidateCommit: "checkpoint-commit" })
+      })
+    ]));
     expect(new Set(fingerprints).size).toBe(2);
     expect(retried?.inputFingerprint).not.toBe(
       Object.values(state.attempts).find((attempt) => attempt.attemptId === retried?.retryOfAttemptId)?.inputFingerprint
@@ -339,14 +359,17 @@ describe("V2ExecutionDriver", () => {
 
     const decisionId = Object.keys((await harness.coordinator.load("run-v2")).decisions)[0];
     if (decisionId === undefined) throw new Error("Auth failure must raise a decision.");
-    await harness.coordinator.execute("run-v2", { type: "resolve_decision", decisionId, optionId: "retry" });
+    const guidance = "Refresh the token before retrying the authenticated request.";
+    await harness.coordinator.execute("run-v2", { type: "resolve_decision", decisionId, optionId: "retry", answer: guidance });
     let recoveredExecutions = 0;
+    const recoveredInputs: V2NodeExecutionInput[] = [];
     const recoveredDriver = new V2ExecutionDriver({
       coordinator: harness.coordinator,
       now: () => at,
       loadCurrentInputs: staticInputs(compiled),
       execute: async (input) => {
         recoveredExecutions += 1;
+        recoveredInputs.push(input);
         return { ...(success(input) as Extract<V2NodeExecutionOutcome, { kind: "success" }>), finalManifestId: "auth-recovered-final" };
       }
     });
@@ -362,7 +385,11 @@ describe("V2ExecutionDriver", () => {
       conflictConstraints: [],
       target: { sourceTargetFingerprint: "sha256:target", targetBranch: "main", targetHead: "base-head" }
     });
-    expect(recoveredExecutions).toBe(1);
+    expect(recoveredExecutions).toBeGreaterThan(0);
+    expect(recoveredInputs).toContainEqual(expect.objectContaining({ priorFailure: expect.objectContaining({
+      reason: "auth: expired credentials",
+      guidance
+    }) }));
     expect(recovered.lifecycle).toBe("result_ready");
   });
 

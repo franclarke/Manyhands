@@ -82,6 +82,11 @@ export interface V2ExecutionEvidenceMatrix {
     detectedFailure: boolean;
     outputDigest: string;
   }>;
+  /** Bounded candidate-only output for the next repair attempt; not evidence. */
+  repairDiagnostics?: Array<{
+    obligationId: string;
+    output: string;
+  }>;
 }
 
 export interface V2NodeValidationPort {
@@ -125,7 +130,7 @@ export interface V2PhysicalNodeExecutionInput {
   runId: string;
   attemptId: string;
   inputFingerprint: string;
-  priorFailure?: { attemptId: string; reason: string };
+  priorFailure?: { attemptId: string; reason: string; checkpointCommit?: string; guidance?: string };
   graph: ExecutionGraphContext;
   node: ExecutionGraphNode;
   contract: TaskContractBundle;
@@ -196,6 +201,11 @@ export type V2PhysicalNodeExecutionOutcome =
       candidateCommit?: string;
       evidenceMatrix?: V2ExecutionEvidenceMatrix;
       failureCause?: V2FailureCause;
+      checkpoint?: {
+        candidateCommit: string;
+        outputDigest: string;
+        changedFiles: string[];
+      };
       repairObservations?: Array<{ kind: "code" | "integration"; pass: number; evidenceRefs: string[] }>;
     };
 
@@ -300,14 +310,34 @@ export class V2NodeExecutor {
     const instructionPath = instructionFilePath(input, "execute");
     let candidateToAnchor: string | undefined;
     let sandboxSession: SandboxSession | undefined;
+    let executionWorktree = base.worktree;
+    let restoredCheckpointCommit: string | undefined;
     try {
+      if (input.priorFailure?.checkpointCommit !== undefined) {
+        const checkpoint = await this.options.git.cherryPick({
+          cwd: executionWorktree.path,
+          commitSha: input.priorFailure.checkpointCommit,
+          mainline: 1
+        });
+        if (!checkpoint.ok) {
+          if (await this.options.git.cherryPickHead(executionWorktree.path) !== undefined) {
+            await this.options.git.cherryPickAbort(executionWorktree.path);
+          }
+          throw new Error(`Retry checkpoint ${input.priorFailure.checkpointCommit} could not be materialized: ${checkpoint.output}`);
+        }
+        restoredCheckpointCommit = await this.options.git.head(executionWorktree.path);
+        executionWorktree = {
+          ...executionWorktree,
+          baseCommit: restoredCheckpointCommit
+        };
+      }
       if (this.options.sandbox !== undefined) {
         sandboxSession = await this.options.sandbox.provider.create({
           attemptId: input.attemptId,
           ...(this.options.sandbox.credentialScopeId === undefined
             ? {}
             : { credentialScopeId: this.options.sandbox.credentialScopeId }),
-          workspacePath: base.worktree.path,
+          workspacePath: executionWorktree.path,
           profile: this.options.sandbox.profile,
           credentials: this.options.sandbox.credentials
         });
@@ -315,7 +345,7 @@ export class V2NodeExecutor {
       await this.writeInstructions(instructionPath, buildV2NodeInstructions(input, prepared));
       const executor = this.options.executorFactory.create(input.selection);
       const executorOutcome = await executor.execute({
-        cwd: base.worktree.path,
+        cwd: executionWorktree.path,
         instructionFilePath: instructionPath,
         model: input.selection.model,
         timeoutMs: input.config.leafTimeoutMs,
@@ -335,15 +365,44 @@ export class V2NodeExecutor {
         onAgentStatus: (status) => this.options.traceStore.append({ type: "agent_status", actor: "agent", taskId: input.node.id, payload: { ...status } })
       });
       const result = await this.recorder.record({
-        worktree: base.worktree,
+        worktree: executionWorktree,
         executorOutcome,
         scopeContract: input.contract.scope,
         scopePolicy: input.config.scopePolicy,
         unexpectedCommitPolicy: input.config.unexpectedCommitPolicy,
-        commitMessage: `mh-v2: ${input.node.id}`,
+        commitMessage: executorOutcome.timedOut
+          ? `mh-v2-checkpoint: ${input.node.id}`
+          : `mh-v2: ${input.node.id}`,
         usageSource: usageSourceForSelection(input.selection)
       });
       if (result.status !== "success") {
+        if (result.status === "timeout" && result.commitSha !== undefined) {
+          const checkpointCommit = await this.options.git.createIntegrationHandoff({
+            cwd: executionWorktree.path,
+            baseCommit: base.manifest.resultingCommit,
+            message: `mh-v2-checkpoint-handoff: ${input.node.id}`,
+            appliedCommitShas: [
+              ...(restoredCheckpointCommit === undefined ? [] : [restoredCheckpointCommit]),
+              result.commitSha
+            ]
+          });
+          const changedFiles = await this.options.git.diffRangeNameOnly({
+            cwd: executionWorktree.path,
+            from: base.manifest.resultingCommit,
+            to: checkpointCommit
+          });
+          candidateToAnchor = checkpointCommit;
+          return {
+            kind: "failure",
+            reason: executionFailureReason(result),
+            usage: usageOf(result),
+            checkpoint: {
+              candidateCommit: checkpointCommit,
+              outputDigest: digest(checkpointCommit),
+              changedFiles
+            }
+          };
+        }
         // An empty diff is not automatically a failed leaf. A sibling whose
         // declared scope overlaps this one can legitimately have implemented
         // the work already, leaving this agent nothing to do. Rather than guess
@@ -409,13 +468,18 @@ export class V2NodeExecutor {
         if (this.options.deferValidationRepair === true) {
           return {
             kind: "failure",
-            reason: `validation_failed: exact candidate ${candidateCommit} failed matrix ${evidenceMatrix.matrixId}.`,
-            usage: usageOf(result)
+            reason: validationFailureReason(candidateCommit, evidenceMatrix),
+            usage: usageOf(result),
+            checkpoint: {
+              candidateCommit,
+              outputDigest: digest(candidateCommit),
+              changedFiles: result.changedFiles
+            }
           };
         }
         const repaired = await this.repairLeaf(
           input,
-          base.worktree,
+          executionWorktree,
           candidateCommit,
           evidenceMatrix,
           prepared,
@@ -471,6 +535,7 @@ export class V2NodeExecutor {
     }
 
     let candidateToAnchor: string | undefined;
+    let repairCheckpoint: Extract<V2PhysicalNodeExecutionOutcome, { kind: "failure" }>["checkpoint"];
     try {
       const integrationTimeout = AbortSignal.timeout(input.config.integrationTimeoutMs);
       const integrationSignal = input.signal === undefined
@@ -528,7 +593,14 @@ export class V2NodeExecutor {
             })
           };
         },
-        repair: async (repair) => this.repairIntegration(input, base.worktree, repair, integrationSignal, prepared),
+        repair: async (repair) => {
+          const result = await this.repairIntegration(input, base.worktree, repair, integrationSignal, prepared);
+          if (result.checkpoint !== undefined) {
+            repairCheckpoint = result.checkpoint;
+            candidateToAnchor = result.checkpoint.candidateCommit;
+          }
+          return result;
+        },
         digestCandidate: async ({ candidateSha }) => digest(candidateSha)
       });
       let manifest: IntegrationManifest;
@@ -545,6 +617,7 @@ export class V2NodeExecutor {
           kind: "failure",
           integrationManifestId: `integration-result-${request.manifestId}`,
           ...(evidenceMatrix === undefined ? {} : { evidenceMatrix }),
+          ...(repairCheckpoint === undefined ? {} : { checkpoint: repairCheckpoint }),
           reason: describe(error)
         };
       }
@@ -565,15 +638,20 @@ export class V2NodeExecutor {
           integrationManifestId: manifest.manifestId,
           ...(manifest.candidateSha === undefined ? {} : { candidateCommit: manifest.candidateSha }),
           ...(evidenceMatrix === undefined ? {} : { evidenceMatrix }),
+          ...(repairCheckpoint === undefined ? {} : { checkpoint: repairCheckpoint }),
           ...(repairObservations !== undefined ? { repairObservations } : {}),
           reason:
             manifest.errors.map((error) => error.message).join("; ") ||
             `Integration ended as ${manifest.disposition}.`
         };
       }
+      const artifactBaseCommit = [...manifest.operations]
+        .reverse()
+        .find((operation) => operation.outcome === "applied")?.resultSha
+        ?? base.manifest.resultingCommit;
       const changedFiles = await this.options.git.diffRangeNameOnly({
         cwd: base.worktree.path,
-        from: base.manifest.resultingCommit,
+        from: artifactBaseCommit,
         to: manifest.candidateSha
       });
       let finalManifestId: string | undefined;
@@ -602,7 +680,7 @@ export class V2NodeExecutor {
       }
       return {
         ...successOutcome(manifest.candidateSha, changedFiles, evidenceMatrix),
-        artifactBaseCommit: base.manifest.resultingCommit,
+        artifactBaseCommit,
         integrationManifestId: manifest.manifestId,
         ...(repairObservations !== undefined ? { repairObservations } : {}),
         ...(finalManifestId !== undefined ? { finalManifestId } : {}),
@@ -661,19 +739,51 @@ export class V2NodeExecutor {
     },
     signal: AbortSignal,
     prepared?: PreparedValidationRecipe
-  ): Promise<{ success: boolean; candidateSha?: string; evidenceRefs: string[] }> {
+  ): Promise<{
+    success: boolean;
+    candidateSha?: string;
+    evidenceRefs: string[];
+    failureReason?: string;
+    checkpoint?: Extract<V2PhysicalNodeExecutionOutcome, { kind: "failure" }>["checkpoint"];
+  }> {
     const instructionPath = instructionFilePath(input, "repair");
+    let sandboxSession: SandboxSession | undefined;
     if (await this.options.git.cherryPickHead(worktree.path) !== undefined) {
       await this.options.git.cherryPickAbort(worktree.path);
     }
-    const expectedHead = await this.options.git.head(worktree.path);
     try {
-      // Verify that each incoming commit is inspectable before spending the
-      // single integration-repair budget. The commit itself is transport;
-      // exact parent validation, not a line-by-line diff comparison, decides
-      // whether the composed behavior is retained.
+      if (input.priorFailure?.checkpointCommit !== undefined) {
+        const checkpoint = await this.options.git.cherryPick({
+          cwd: worktree.path,
+          commitSha: input.priorFailure.checkpointCommit,
+          mainline: 1
+        });
+        if (!checkpoint.ok) {
+          if (await this.options.git.cherryPickHead(worktree.path) !== undefined) {
+            await this.options.git.cherryPickAbort(worktree.path);
+          }
+          throw new Error(`Integration checkpoint ${input.priorFailure.checkpointCommit} could not be materialized: ${checkpoint.output}`);
+        }
+      }
+      const expectedHead = await this.options.git.head(worktree.path);
+      // Historical commit transport still needs an inspectable source parent.
+      // Exact manifests were already validated and materialized from declared
+      // Git objects, so their sha256 identity is not a Git revision.
       for (const artifact of repair.childArtifacts) {
-        await this.options.git.revParse(worktree.path, `${artifact.location}^1`);
+        if (artifact.kind === "commit") {
+          await this.options.git.revParse(worktree.path, `${artifact.location}^1`);
+        }
+      }
+      if (this.options.sandbox !== undefined) {
+        sandboxSession = await this.options.sandbox.provider.create({
+          attemptId: `${input.attemptId}:repair:${repair.pass}`,
+          ...(this.options.sandbox.credentialScopeId === undefined
+            ? {}
+            : { credentialScopeId: this.options.sandbox.credentialScopeId }),
+          workspacePath: worktree.path,
+          profile: this.options.sandbox.profile,
+          credentials: this.options.sandbox.credentials
+        });
       }
       await this.writeInstructions(instructionPath, buildV2RepairInstructions(input, repair, prepared));
       const executor = this.options.executorFactory.create(input.repairSelection);
@@ -682,11 +792,20 @@ export class V2NodeExecutor {
         instructionFilePath: instructionPath,
         model: input.repairSelection.model,
         timeoutMs: input.config.integrationTimeoutMs,
-        bypassApprovals: true,
+        bypassApprovals: sandboxSession === undefined,
+        ...(sandboxSession === undefined ? {} : {
+          env: { ...sandboxSession.environment },
+          isolatedEnvironment: true,
+          ...(this.options.sandbox?.windowsSandbox === undefined
+            ? {}
+            : { windowsSandbox: this.options.sandbox.windowsSandbox })
+        }),
         processOwnerId: input.runId,
         attemptId: stableUuid(`${input.attemptId}:repair:${repair.pass}`),
         ...(input.repairSelection.effort !== undefined ? { reasoningEffort: input.repairSelection.effort } : {}),
-        signal
+        signal,
+        onOutput: (chunk) => this.options.traceStore.append({ type: "executor_output", actor: "agent", taskId: input.node.id, payload: chunk }),
+        onAgentStatus: (status) => this.options.traceStore.append({ type: "agent_status", actor: "agent", taskId: input.node.id, payload: { ...status } })
       });
       const result = await this.recorder.record({
         worktree,
@@ -695,15 +814,44 @@ export class V2NodeExecutor {
         scopeContract: input.contract.scope,
         scopePolicy: input.config.scopePolicy,
         unexpectedCommitPolicy: input.config.unexpectedCommitPolicy,
-        commitMessage: `mh-v2-repair: ${input.node.id}`,
+        commitMessage: outcome.timedOut
+          ? `mh-v2-checkpoint: ${input.node.id}`
+          : `mh-v2-repair: ${input.node.id}`,
         usageSource: usageSourceForSelection(input.repairSelection)
       });
       const evidenceRefs = [`repair:${input.attemptId}:${repair.pass}`, ...repair.conflictFiles.map((file) => `file:${file}`)];
-      if (result.status !== "success" || result.commitSha === undefined) return { success: false, evidenceRefs };
+      if (result.status !== "success" || result.commitSha === undefined) {
+        if (result.status === "timeout" && result.commitSha !== undefined) {
+          return {
+            success: false,
+            checkpoint: {
+              candidateCommit: result.commitSha,
+              outputDigest: digest(result.commitSha),
+              changedFiles: [...result.changedFiles]
+            },
+            evidenceRefs,
+            failureReason: executionFailureReason(result)
+          };
+        }
+        const changedFiles = result.changedFiles.slice(0, 8);
+        const violations = result.scopeCheck.violations.slice(0, 8);
+        const outOfScope = result.scopeCheck.outOfScope.slice(0, 8);
+        return {
+          success: false,
+          evidenceRefs,
+          failureReason: [
+            `Integration repair rejected: ${result.status}.`,
+            ...(changedFiles.length === 0 ? [] : [`Changed files: ${changedFiles.join(", ")}.`]),
+            ...(violations.length === 0 ? [] : [`Scope violations: ${violations.join(" | ")}.`]),
+            ...(outOfScope.length === 0 ? [] : [`Out-of-scope files: ${outOfScope.join(" | ")}.`])
+          ].join(" ")
+        };
+      }
       return { success: true, candidateSha: result.commitSha, evidenceRefs };
     } catch {
       return {
         success: false,
+        failureReason: "Integration repair failed before a candidate could be recorded.",
         evidenceRefs: [
           `repair:${input.attemptId}:${repair.pass}`,
           "physical-intent:source-diff-unavailable"
@@ -711,6 +859,7 @@ export class V2NodeExecutor {
       };
     } finally {
       await rm(instructionPath, { force: true }).catch(() => undefined);
+      await sandboxSession?.dispose();
     }
   }
 
@@ -925,6 +1074,7 @@ export class CanonicalNodeExecutor {
           repositoryObjectStoreId: `object-store:${input.target.sourceTargetFingerprint}`,
           baseCommit: baseCommit!,
           candidateCommit: outcome.candidateCommit,
+          candidateAllowedPaths: outputArtifacts.flatMap((output) => output.expectedPaths),
           allowedPaths: artifact.expectedPaths
         });
         return [artifact.id, manifest] as const;
@@ -976,6 +1126,12 @@ export function buildV2NodeInstructions(
       "Previous attempt failed; repair that observed failure before finishing:",
       `- Attempt: ${input.priorFailure.attemptId}`,
       `- Failure: ${input.priorFailure.reason}`,
+      ...(input.priorFailure.guidance === undefined ? [] : [`- Operator guidance: ${input.priorFailure.guidance}`]),
+      ...(input.priorFailure.checkpointCommit === undefined
+        ? []
+        : [`- Restored checkpoint: ${input.priorFailure.checkpointCommit}`, "Continue from the restored worktree; do not recreate completed work."]),
+      "Treat the recorded failure as the first and smallest repair target.",
+      "Do not expand the feature, redesign the UI, or add unrelated behavior unless the recorded failure requires it.",
       "Do not repeat the same implementation without addressing it."
     );
   }
@@ -987,6 +1143,17 @@ export function buildV2NodeInstructions(
       "You may also CREATE new files, but only directly under these directories:",
       ...scope.outputRoots.map((root) => `- ${root}/`),
       "Creating a file anywhere else, or editing an existing file not listed above, fails this task."
+    );
+  }
+  const producedArtifacts = input.contract.artifacts.filter(
+    (artifact) => artifact.producerNodeId === input.node.id && artifact.expectedPaths.length > 0
+  );
+  if (producedArtifacts.length > 0) {
+    lines.push(
+      "",
+      "You must produce only the following declared artifact paths:",
+      ...producedArtifacts.map((artifact) => `- ${artifact.id}@${artifact.revision}: ${artifact.expectedPaths.join(", ")}`),
+      "Do not create additional files under an allowed directory unless they are listed above."
     );
   }
   if (scope.forbiddenPaths.length > 0) lines.push("", "Never modify these paths:", ...scope.forbiddenPaths.map((path) => `- ${path}`));
@@ -1013,6 +1180,7 @@ export function buildV2NodeInstructions(
     "Before implementing a consumer leaf, inspect the current canonical producer implementation and its tests; do not reimplement behavior already supplied by that producer.",
     "Use the canonical producer's returned state and exported operations as the only source for shared state; never add a consumer-side exception fallback or duplicate map or store.",
     "Verify the repository using the validation command selected by the orchestrator from the frozen repository snapshot. Do not substitute a package manager, add scripts, or modify configuration to invent a command.",
+    ...SANDBOX_VALIDATION_GUIDANCE,
     "",
     AGENT_STATUS_PROTOCOL_INSTRUCTIONS,
     "",
@@ -1022,7 +1190,7 @@ export function buildV2NodeInstructions(
 }
 
 function buildV2RepairInstructions(
-  input: Pick<V2PhysicalNodeExecutionInput, "node" | "contract">,
+  input: Pick<V2PhysicalNodeExecutionInput, "node" | "contract" | "priorFailure">,
   repair: {
     artifactId: string;
     conflictFiles: string[];
@@ -1043,6 +1211,24 @@ function buildV2RepairInstructions(
     "Repair the composed behavior, not the validation command or its configuration.",
     ...repair.parentValidation.failedCriteria.map((criterion) => `- ${criterion.criterionId}/${criterion.obligationId}: ${criterion.justification}`)
   ];
+  const previousFailure = input.priorFailure === undefined ? [] : [
+    "Previous integration attempt failed; address this observed cause before finishing:",
+    `- Attempt: ${input.priorFailure.attemptId}`,
+    `- Failure: ${input.priorFailure.reason}`,
+    ...(input.priorFailure.guidance === undefined ? [] : [`- Operator guidance: ${input.priorFailure.guidance}`]),
+    ""
+  ];
+  const creationScope = input.contract.scope.outputRoots.length === 0
+    ? [
+      "No additional files may be created outside those exact patterns.",
+      "A listed directory path does not authorize files beneath it.",
+      "This contract declares no output roots, so create only exact file paths listed above.",
+      "If the only creatable path is a test file, prove the integration in that test without inventing a production module."
+    ]
+    : [
+      "New files may be created only under these declared output roots:",
+      ...input.contract.scope.outputRoots.map((outputRoot) => `- ${outputRoot}`)
+    ];
   return [
     repair.cause === "parent_validation_failed"
       ? `Repair the semantically invalid integrated candidate for ${input.node.title}.`
@@ -1050,9 +1236,15 @@ function buildV2RepairInstructions(
     "",
     `Parent objective: ${input.contract.task.goal}`,
     `Repair cause: ${repair.cause}`,
+    ...previousFailure,
     `Conflicting artifact: ${repair.artifactId}`,
     "Conflict files:",
     ...repair.conflictFiles.map((file) => `- ${file}`),
+    "",
+    "Change only these declared parent-scope paths:",
+    ...input.contract.scope.allowedPaths.map((allowedPath) => `- ${allowedPath}`),
+    ...creationScope,
+    "Do not modify an upstream child artifact to make the parent integration pass; repair only the parent-owned integration surface.",
     "",
     ...semanticFailure,
     "Preserve every child intent and the shared contracts below:",
@@ -1081,6 +1273,7 @@ function buildV2RepairInstructions(
     "Before staging, verify the structural result: the incoming commits were inspected, the worktree contains the intended files, and no sibling contract was discarded. The parent validator will decide semantic retention on the exact candidate.",
     "Before finishing, run git diff --check and verify that no <<<<<<<, =======, or >>>>>>> conflict markers remain.",
     "The orchestrator will run the frozen validation program on the exact candidate; do not invent a build or test command in this repair.",
+    ...SANDBOX_VALIDATION_GUIDANCE,
     ...validationProgramInstructions(prepared),
     "Do not create or modify AGENTS.md, CLAUDE.md, CODEX.md, or other agent-instruction files; report a durable lesson in your final summary instead.",
     "",
@@ -1090,6 +1283,11 @@ function buildV2RepairInstructions(
     "Resolve the files and leave the worktree ready to commit. Do not commit; the orchestrator commits."
   ].join("\n");
 }
+
+const SANDBOX_VALIDATION_GUIDANCE = [
+  "If the frozen validation command cannot start its test process because the executor sandbox reports `spawn EPERM`, report that exact infrastructure failure and stop rerunning the command.",
+  "Do not change product code in response to that infrastructure failure. The orchestrator will still run the frozen validation program outside the agent sandbox on the exact candidate."
+] as const;
 
 export function buildV2CodeRepairInstructions(
   input: Pick<V2PhysicalNodeExecutionInput, "node" | "contract">,
@@ -1198,6 +1396,33 @@ function instructionFilePath(input: Pick<V2PhysicalNodeExecutionInput, "runId" |
 
 export const executionFailureReasonForTest = executionFailureReason;
 
+function validationFailureReason(candidateCommit: string, matrix: V2ExecutionEvidenceMatrix): string {
+  const failedCriteria = matrix.criteria
+    .filter((criterion) => criterion.status !== "satisfied")
+    .map((criterion) => `${criterion.obligationId}: ${criterion.justification}`);
+  const detail = failedCriteria.length === 0
+    ? ""
+    : ` Failed criteria: ${failedCriteria.join(" | ")}`;
+  const diagnostics = matrix.repairDiagnostics
+    ?.slice(0, 3)
+    .map((diagnostic) => `${diagnostic.obligationId}: ${boundedValidationOutput(diagnostic.output)}`)
+    .filter((diagnostic) => diagnostic.length > 0) ?? [];
+  const diagnosticDetail = diagnostics.length === 0
+    ? ""
+    : ` Candidate validation output: ${diagnostics.join(" | ")}`;
+  return `validation_failed: exact candidate ${candidateCommit} failed matrix ${matrix.matrixId}.${detail}${diagnosticDetail}`;
+}
+
+function boundedValidationOutput(output: string): string {
+  const normalized = output
+    // eslint-disable-next-line no-control-regex
+    .replace(/\u001B\[[0-?]*[ -/]*[@-~]/gu, "")
+    .replace(/\r\n?/gu, "\n")
+    .trim();
+  const maximumLength = 1_200;
+  return normalized.length <= maximumLength ? normalized : normalized.slice(-maximumLength);
+}
+
 function executionFailureReason(result: {
   status: string;
   failureKind?: string | undefined;
@@ -1223,6 +1448,11 @@ function executionFailureReason(result: {
       ? `changed files outside the declared scope: ${[...new Set(rejected)].join(", ")}`
       : "the agent changed files outside the declared scope";
     return `${result.status}: ${detail}`;
+  }
+  if (result.status === "timeout" || result.failureKind === "timeout") {
+    return [result.failureKind, result.status, result.failureHint]
+      .filter((value) => value !== undefined && value.length > 0)
+      .join(": ");
   }
   return [result.failureKind, result.status, result.failureHint, result.stderrTail, result.stdoutTail]
     .filter((value) => value !== undefined && value.length > 0)

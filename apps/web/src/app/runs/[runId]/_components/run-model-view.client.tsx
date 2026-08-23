@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { StatusPill } from "@/components/ui/status-pill";
 import { autonomyDisclosure, eventDetail, eventPresentation, granularityStrategyExplanation, objectiveHeadline, planningFailureFindings, recoveryDiagnosticView, showsExecutionCounters, summarizeRunNodes, type GranularityExplanationView } from "@/lib/run-model/presentation";
+import { runEventStreamConnectionLabel } from "@/lib/run-model/live-event-stream";
 import type { RunEvent, RunSeed } from "@/lib/run-model/types";
 import { runUiStatus, statusMeta } from "@/lib/status";
 import { CockpitRunGraph } from "./cockpit-run-graph";
@@ -131,7 +132,7 @@ export function RunModelView({
             {model.run.goal.trim() !== model.run.title.trim() && !model.run.title.startsWith(model.run.goal.slice(0, 40))
               ? <><p className="truncate">{model.run.goal}</p><span aria-hidden className="shrink-0 text-[var(--color-text-subtle)]">·</span></>
               : null}
-            <span className="shrink-0 text-[var(--color-text-subtle)]">{fixture ? "historial de muestra" : live.connected ? "sincronizado" : live.connection}</span>
+            <span className="shrink-0 text-[var(--color-text-subtle)]">{fixture ? "Historial de muestra" : runEventStreamConnectionLabel(live.connected ? "connected" : live.connection)}</span>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -222,7 +223,7 @@ function RunActions({ lifecycle, busy, canDeliver, onCommand, onDeliver }: { lif
     <div className="flex items-center gap-1">
       {lifecycle === "running" || lifecycle === "waiting_for_input" ? <Button size="sm" busy={busy === "pause"} onClick={() => void onCommand("pause", { reason: "Pausado por el operador" })}><Pause className="h-3.5 w-3.5" />Pausar</Button> : null}
       {lifecycle === "paused" ? <Button size="sm" busy={busy === "resume"} onClick={() => void onCommand("resume", { reason: "Reanudado por el operador" })}><Play className="h-3.5 w-3.5" />Continuar</Button> : null}
-      {lifecycle === "interrupted" ? <Button size="sm" busy={busy === "restart"} onClick={() => void onCommand("restart")}><RotateCcw className="h-3.5 w-3.5" />Reintentar</Button> : null}
+      {lifecycle === "interrupted" || lifecycle === "failed" ? <Button size="sm" busy={busy === "restart"} onClick={() => void onCommand("restart")}><RotateCcw className="h-3.5 w-3.5" />Reintentar</Button> : null}
       {lifecycle === "result_ready" ? <Button variant="primary" size="sm" busy={busy === "deliver"} disabled={!canDeliver} title={canDeliver ? undefined : "La matriz final exacta todavía no está verificada."} onClick={onDeliver}><Send className="h-3.5 w-3.5" />Publicar resultado</Button> : null}
       {["planning", "needs_approval", "running", "waiting_for_input", "paused", "result_ready"].includes(lifecycle) ? <Button variant="danger" size="icon" busy={busy === "cancel"} onClick={() => void onCommand("cancel")} aria-label="Cancelar run"><CircleStop className="h-4 w-4" /></Button> : null}
     </div>
@@ -473,7 +474,7 @@ function GranularityDetails({ granularity }: { granularity: GranularityExplanati
 function Detail({ label, value }: { label: string; value: string }): React.ReactElement { return <div><span className="block text-eyebrow uppercase tracking-wide text-[var(--color-text-subtle)]">{label}</span><span className="mt-1 block">{value}</span></div>; }
 
 function Activity({ events }: { events: readonly RunEvent[] }): React.ReactElement {
-  const presented = events.map((event) => ({ event, presentation: eventPresentation(event.type) }));
+  const presented = events.map((event) => ({ event, presentation: eventPresentation(event.type, event.payload) }));
   const operational = presented.filter((entry) => !entry.presentation.diagnostic).slice(-12).reverse();
   const diagnostic = presented.filter((entry) => entry.presentation.diagnostic).reverse();
   return (

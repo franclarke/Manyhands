@@ -134,6 +134,7 @@ describe("live process registry", () => {
       });
 
       expect(outcome.timedOut).toBe(true);
+      expect(outcome.terminationVerified).toBe(true);
       expect(existsSync(started)).toBe(true);
       await new Promise((resolve) => setTimeout(resolve, 900));
       expect(existsSync(lateWrite)).toBe(false);

@@ -153,6 +153,36 @@ describe("FastRepositoryIndexer", () => {
     });
   });
 
+  it("uses a configured cache root and reuses the validated external cache", async () => {
+    const root = await createRepository();
+    const cacheRoot = await mkdtemp(path.join(os.tmpdir(), "manyhands-fast-index-cache-"));
+    tempRoots.push(cacheRoot);
+    await mkdir(path.join(root, "src"), { recursive: true });
+    await writeFile(path.join(root, "src", "api.ts"), "export const api = true;\n", "utf8");
+    const headSha = await commitAll(root, "external cache");
+    const first = await new FastRepositoryIndexer({ cacheRoot }).indexWithReceipt({
+      rootPath: root,
+      baseCommit: headSha
+    });
+    let rgInvocations = 0;
+
+    const second = await new FastRepositoryIndexer({
+      cacheRoot,
+      runRg: async () => {
+        rgInvocations += 1;
+        throw new Error("validated external cache lookup must not invoke rg");
+      }
+    }).indexWithReceipt({ rootPath: root, baseCommit: headSha });
+
+    expect(rgInvocations).toBe(0);
+    expect(first.cacheHit).toBe(false);
+    expect(second.cacheHit).toBe(true);
+    expect(second.index).toEqual(first.index);
+    expect(await readFile(path.join(cacheRoot, `index-${headSha}.json`), "utf8"))
+      .toContain(`"baseCommit":"${headSha}"`);
+    expect(await git(root, ["status", "--porcelain=v1", "--untracked-files=all"])).toBe("");
+  });
+
   performanceIt("keeps warm-cache p95 below 25ms on the supported Windows workstation", async () => {
     const root = await createRepository();
     await mkdir(path.join(root, "src"), { recursive: true });

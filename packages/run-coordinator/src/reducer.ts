@@ -638,7 +638,15 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       delete next.lifecycleBeforePause;
       break;
     case "run.restart_requested":
-      if (next.lifecycle !== "interrupted") throw new Error(`Cannot restart while ${next.lifecycle}.`);
+      if (next.lifecycle !== "interrupted" && next.lifecycle !== "failed") throw new Error(`Cannot restart while ${next.lifecycle}.`);
+      if (next.lifecycle === "failed") {
+        for (const attempt of Object.values(next.attempts)) {
+          if (attempt.status === "running") {
+            attempt.status = "failed";
+            attempt.failureReason = "Interrupted by failed run; restarted by operator.";
+          }
+        }
+      }
       next.outcomes.execution = "pending";
       delete next.failureReason;
       transition(next, "running");

@@ -91,6 +91,8 @@ export type OpenExactRepositoryView = (input: {
 export interface FastRepositoryIndexerOptions {
   rgPath?: string;
   gitPath?: string;
+  /** Directory for reconstructible index payloads. Defaults to the repository-local cache. */
+  cacheRoot?: string;
   now?: () => string;
   runRg?: RunRipgrep;
   openExactView?: OpenExactRepositoryView;
@@ -134,6 +136,7 @@ interface RepositoryIndexCacheEnvelope {
 export class FastRepositoryIndexer implements RepositoryIndexer {
   private readonly rgPath: string;
   private readonly gitPath: string;
+  private readonly cacheRoot: string | undefined;
   private readonly now: () => string;
   private readonly runRg: RunRipgrep;
   private readonly openExactView: OpenExactRepositoryView;
@@ -141,6 +144,7 @@ export class FastRepositoryIndexer implements RepositoryIndexer {
   constructor(options: FastRepositoryIndexerOptions = {}) {
     this.rgPath = options.rgPath ?? DEFAULT_RG_PATH;
     this.gitPath = options.gitPath ?? "git";
+    this.cacheRoot = options.cacheRoot === undefined ? undefined : path.resolve(options.cacheRoot);
     this.now = options.now ?? (() => new Date().toISOString());
     this.runRg = options.runRg ?? (
       (args, cwd, signal) => runFile(this.rgPath, args, cwd, signal, true)
@@ -165,7 +169,7 @@ export class FastRepositoryIndexer implements RepositoryIndexer {
       input.signal
     );
     assertCommitSha(baseCommit, rootPath);
-    const cachePath = fastIndexCachePath(rootPath, baseCommit);
+    const cachePath = fastIndexCachePath(rootPath, baseCommit, this.cacheRoot);
 
     const cacheStartedAt = performance.now();
     const cached = await readCachedIndex(cachePath, {
@@ -306,12 +310,16 @@ export async function buildFastRepositoryIndex(
   return new FastRepositoryIndexer(options).index(input);
 }
 
-export function fastIndexCachePath(rootPath: string, baseCommit: string): string {
+export function fastIndexCachePath(
+  rootPath: string,
+  baseCommit: string,
+  cacheRoot?: string
+): string {
   assertCommitSha(baseCommit, rootPath);
   return path.join(
-    path.resolve(rootPath),
-    ".manyhands",
-    "cache",
+    cacheRoot === undefined
+      ? path.join(path.resolve(rootPath), ".manyhands", "cache")
+      : path.resolve(cacheRoot),
     `index-${baseCommit}.json`
   );
 }

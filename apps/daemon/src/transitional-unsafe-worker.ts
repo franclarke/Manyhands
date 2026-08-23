@@ -108,7 +108,12 @@ async function main(): Promise<void> {
     }, async (repositorySignal) => {
       let worktrees: WorktreeManager | undefined;
       try {
-    const config = ExecutionConfigSchema.parse(prepared.definition.executionConfig);
+    const config = ExecutionConfigSchema.parse({
+      ...prepared.definition.executionConfig,
+      ...(process.env.MANYHANDS_EXECUTION_LEAF_TIMEOUT_MS === undefined
+        ? {}
+        : { leafTimeoutMs: Number(process.env.MANYHANDS_EXECUTION_LEAF_TIMEOUT_MS) })
+    });
     const execution = stageSelection(prepared.definition.executionSelection, "execution");
     const repair = stageSelection(prepared.definition.repairSelection, "repair");
     const sandbox = stage8SandboxFor({

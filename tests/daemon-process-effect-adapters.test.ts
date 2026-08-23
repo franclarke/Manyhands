@@ -18,10 +18,16 @@ import type {
 import {
   createProcessSpawnPhysicalEffectAdapter,
   createProcessTerminatePhysicalEffectAdapter,
+  executionCredentialScopeId,
   type ProcessSupervisorPort
 } from "../apps/daemon/src/process-effect-adapters.js";
 
 describe("daemon process physical effect adapters", () => {
+  it("encodes run and attempt identity without delimiter collisions", () => {
+    expect(executionCredentialScopeId("run:a:b", "c"))
+      .not.toBe(executionCredentialScopeId("run:a", "b:c"));
+  });
+
   it("records durable started and final process_spawn receipts with the supervised identity", async () => {
     const started = startedReceipt();
     const final = finalReceipt(started, "succeeded");
@@ -225,6 +231,42 @@ describe("daemon process physical effect adapters", () => {
     })]);
   });
 
+  it("retries spawn cleanup from the durable final receipt without spawning again", async () => {
+    const started = startedReceipt();
+    const final = finalReceipt(started, "succeeded");
+    const handle: SupervisedProcess = {
+      started,
+      custodianPid: started.custodianIdentity.pid,
+      completion: Promise.resolve(final),
+      terminate: vi.fn()
+    };
+    const supervisor = fakeSupervisor({
+      spawn: vi.fn<ProcessSupervisorPort["spawn"]>().mockResolvedValue(handle),
+      readReceipts: vi.fn<ProcessSupervisorPort["readReceipts"]>()
+        .mockResolvedValue([started, final])
+    });
+    const afterTerminal = vi.fn()
+      .mockRejectedValueOnce(new Error("worktree still busy"))
+      .mockResolvedValue(undefined);
+    const adapter = createProcessSpawnPhysicalEffectAdapter({ supervisor, afterTerminal });
+    const first = recordingContext("process_spawn", spawnPayload());
+
+    await expect(adapter.execute(intent("process_spawn"), first.context))
+      .rejects.toThrow(/worktree still busy/u);
+    expect(first.records.map((record) => record.observation)).toEqual(["started"]);
+
+    const recovered = recordingContext(
+      "process_spawn",
+      spawnPayload(),
+      [physicalStartedReceipt()]
+    );
+    await adapter.reconcile(intent("process_spawn"), recovered.context);
+
+    expect(supervisor.spawn).toHaveBeenCalledOnce();
+    expect(afterTerminal).toHaveBeenCalledTimes(2);
+    expect(recovered.records).toEqual([expect.objectContaining({ observation: "succeeded" })]);
+  });
+
   it("rejects unknown fields and secret-bearing environment variables before spawning", async () => {
     const supervisor = fakeSupervisor();
     const adapter = createProcessSpawnPhysicalEffectAdapter({ supervisor });
@@ -262,6 +304,7 @@ describe("daemon process physical effect adapters", () => {
       "operator_cancelled"
     );
     expect(afterTermination).toHaveBeenCalledWith(
+      "run:process-adapters",
       "stage3:execution",
       expect.objectContaining({ outcome: "terminated" })
     );
@@ -271,6 +314,36 @@ describe("daemon process physical effect adapters", () => {
       processIdentity: PROCESS_IDENTITY,
       resultDigest: `sha256:${"b".repeat(64)}`
     }]);
+  });
+
+  it("retries cleanup from durable final death without killing the process twice", async () => {
+    const started = startedReceipt();
+    const terminated = finalReceipt(started, "terminated", { reason: "operator_cancelled" });
+    const supervisor = fakeSupervisor({
+      readReceipts: vi.fn<ProcessSupervisorPort["readReceipts"]>()
+        .mockResolvedValueOnce([started])
+        .mockResolvedValue([started, terminated]),
+      terminate: vi.fn<ProcessSupervisorPort["terminate"]>().mockResolvedValue(terminated)
+    });
+    const afterTermination = vi.fn()
+      .mockRejectedValueOnce(new Error("worktree still busy"))
+      .mockResolvedValue(undefined);
+    const adapter = createProcessTerminatePhysicalEffectAdapter({ supervisor, afterTermination });
+    const first = recordingContext("process_terminate", terminatePayload());
+
+    await expect(adapter.execute(intent("process_terminate"), first.context))
+      .rejects.toThrow(/worktree still busy/u);
+    expect(first.records).toEqual([]);
+
+    const recovered = recordingContext("process_terminate", terminatePayload());
+    await adapter.reconcile(intent("process_terminate"), recovered.context);
+
+    expect(supervisor.terminate).toHaveBeenCalledOnce();
+    expect(afterTermination).toHaveBeenCalledTimes(2);
+    expect(recovered.records).toEqual([expect.objectContaining({
+      observation: "succeeded",
+      processIdentity: PROCESS_IDENTITY
+    })]);
   });
 
   it.each([

@@ -383,8 +383,11 @@ describe("ResultRecorder", () => {
     expect(result.disposition).toBe("failed");
   });
 
-  it("reports timeout without inspecting git", async () => {
-    const git = new FakeGitRunner();
+  it("keeps a timeout without a checkpoint when the worktree has no changes", async () => {
+    const git = new FakeGitRunner({
+      heads: { [WORKTREE.path]: "BASE_SHA" },
+      diffCachedNameOnly: []
+    });
     const recorder = new ResultRecorder({ git, traceStore: new InMemoryTraceStore() });
 
     const result = await recorder.record({
@@ -393,6 +396,72 @@ describe("ResultRecorder", () => {
     });
 
     expect(result.status).toBe("timeout");
+    expect(result.commitSha).toBeUndefined();
+    expect(git.opsInvoked()).not.toContain("commit");
+  });
+
+  it("commits an in-scope timeout diff as a failed checkpoint", async () => {
+    const git = new FakeGitRunner({
+      heads: { [WORKTREE.path]: "BASE_SHA" },
+      diffCachedNameOnly: ["src/dashboard.js"],
+      diffCached: "diff --git a/src/dashboard.js b/src/dashboard.js",
+      commitSha: "CHECKPOINT_SHA"
+    });
+    const recorder = new ResultRecorder({ git, traceStore: new InMemoryTraceStore() });
+
+    const result = await recorder.record({
+      worktree: WORKTREE,
+      executorOutcome: { ...okOutcome(), timedOut: true, exitCode: 124, terminationVerified: true },
+      scopePolicy: "strict",
+      executionScope: { implementationPaths: ["src/**"], testPaths: [], configPaths: [] },
+      commitMessage: "mh-v2-checkpoint: dashboard"
+    });
+
+    expect(result).toMatchObject({
+      status: "timeout",
+      commitSha: "CHECKPOINT_SHA",
+      currentHead: "CHECKPOINT_SHA",
+      changedFiles: ["src/dashboard.js"]
+    });
+    expect(git.opsInvoked()).toContain("commit");
+  });
+
+  it("rejects a timeout diff outside scope instead of checkpointing it", async () => {
+    const git = new FakeGitRunner({
+      heads: { [WORKTREE.path]: "BASE_SHA" },
+      diffCachedNameOnly: ["outside.js"],
+      diffCached: "diff --git a/outside.js b/outside.js"
+    });
+    const recorder = new ResultRecorder({ git, traceStore: new InMemoryTraceStore() });
+
+    const result = await recorder.record({
+      worktree: WORKTREE,
+      executorOutcome: { ...okOutcome(), timedOut: true, exitCode: 124, terminationVerified: true },
+      scopePolicy: "strict",
+      executionScope: { implementationPaths: ["src/**"], testPaths: [], configPaths: [] }
+    });
+
+    expect(result.status).toBe("scope_violation");
+    expect(result.commitSha).toBeUndefined();
+    expect(result.scopeCheck.outOfScope).toEqual(["outside.js"]);
+    expect(git.opsInvoked()).not.toContain("commit");
+  });
+
+  it("does not inspect or checkpoint a timeout while termination is unverified", async () => {
+    const git = new FakeGitRunner({
+      heads: { [WORKTREE.path]: "BASE_SHA" },
+      diffCachedNameOnly: ["src/dashboard.js"],
+      commitSha: "UNSAFE_SHA"
+    });
+
+    const result = await new ResultRecorder({ git, traceStore: new InMemoryTraceStore() }).record({
+      worktree: WORKTREE,
+      executorOutcome: { ...okOutcome(), timedOut: true, exitCode: 124, terminationVerified: false },
+      executionScope: { implementationPaths: ["src/**"], testPaths: [], configPaths: [] }
+    });
+
+    expect(result.status).toBe("timeout");
+    expect(result.commitSha).toBeUndefined();
     expect(git.calls).toHaveLength(0);
   });
 

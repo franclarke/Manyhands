@@ -25,6 +25,7 @@ describe("Stage 5 direct compiler", () => {
     })).toEqual([]);
     expect(compiled.contracts.taskBundles["unit:a"]?.task.goal).toBe("Implement module A.");
     expect(compiled.contracts.artifacts["artifact:a"]?.expectedPaths).toEqual(["src/a.ts"]);
+    expect(compiled.contracts.taskBundles["unit:a"]?.scope.outputRoots).toEqual(["src"]);
     expect(compiled.contracts.seams["seam:a-b"]?.semanticFacts).toEqual({ return: "Feature" });
     expect(compiled.contracts.validationObligations["validation:a"]?.proofStrategy)
       .toEqual(expect.objectContaining({ id: "proof:a", digest: fixture.proofStrategies[1]!.digest }));
@@ -56,6 +57,27 @@ describe("Stage 5 direct compiler", () => {
       selectors: ["tests/module-a.test.ts"],
       references: ["tests/module-a.test.ts"]
     });
+  });
+
+  it("derives the narrow artifact directory when a planned path contains its focused test", () => {
+    const fixture = groundedFixture();
+    const material = structuredClone(fixture.plan);
+    Reflect.deleteProperty(material, "digest");
+    material.units["unit:a"]!.repositorySurface = {
+      resourceRefs: ["path:src/module-a"],
+      pathHints: ["src/module-a"]
+    };
+    material.units["unit:a"]!.resourceIntents[0]!.resourceId = "path:src/module-a";
+    material.artifacts["artifact:a"]!.expectedPaths = [
+      "src/module-a",
+      "src/module-a/module-a.test.ts"
+    ];
+    const plan = buildSemanticPlan(material, stage5Sha256);
+
+    const compiled = compilePlan({ ...fixture, plan, hasher: stage5Sha256, idFactory: ids });
+
+    if (!compiled.ok) throw new Error(JSON.stringify(compiled.findings));
+    expect(compiled.contracts.taskBundles["unit:a"]?.scope.outputRoots).toEqual(["src/module-a"]);
   });
 
   it("is deterministic across semantically equivalent set order", () => {

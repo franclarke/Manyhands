@@ -82,6 +82,20 @@ describe("leafFailureObservation", () => {
     expect(classifyFailure(observation)).toBe("environment_auth_executor");
   });
 
+  it("fails closed when the executor reports a runtime sandbox mismatch", async () => {
+    const { executionFailureReasonForTest } = await import("@manyhands/execution-core");
+    const reason = executionFailureReasonForTest({
+      status: "executor_error",
+      failureKind: "sandbox_unavailable",
+      failureHint: "Codex started read-only, but ManyHands required workspace-write."
+    });
+
+    const observation = leafFailureObservation({ reason });
+
+    expect(observation).toMatchObject({ source: "executor", code: "sandbox_unavailable" });
+    expect(classifyFailure(observation)).toBe("environment_auth_executor");
+  });
+
   it("keeps the full reason as the message so evidence is not lost", () => {
     const reason = "scope_violation: touched tests/expense.test.ts";
 
@@ -103,5 +117,20 @@ describe("scope violation reasons name the offending paths", () => {
     expect(reason).toContain("config/global.json");
     expect(reason).not.toContain("diff hunk");
     expect(leafFailureObservation({ reason }).code).toBe("scope_violation");
+  });
+});
+
+describe("timeout reasons stay actionable", () => {
+  it("keeps executor output in traces instead of embedding a diff in the decision", async () => {
+    const { executionFailureReasonForTest } = await import("@manyhands/execution-core");
+    const reason = executionFailureReasonForTest({
+      status: "timeout",
+      failureKind: "timeout",
+      failureHint: "The agent hit the hard timeout.",
+      stdoutTail: "+ an enormous partial diff that belongs in diagnostics"
+    });
+
+    expect(reason).toBe("timeout: timeout: The agent hit the hard timeout.");
+    expect(reason).not.toContain("partial diff");
   });
 });

@@ -151,9 +151,10 @@ export function validateManifestIdentity(input: unknown, hasher: DigestHasher): 
   if (computeCanonicalDigest(material, hasher) !== manifestDigest) {
     issues.push({ code: "manifest_digest_mismatch", message: "manifestDigest does not identify the canonical immutable manifest material" });
   }
-  const expectedCommit = manifest.kind === "candidate_tree" ? manifest.commitOid : manifest.sourceCandidate.commitOid;
-  const expectedTree = manifest.kind === "candidate_tree" ? manifest.treeOid : manifest.resultTreeSha;
-  if (manifest.sourceCandidate.commitOid !== expectedCommit || manifest.sourceCandidate.treeOid !== expectedTree) {
+  if (
+    manifest.kind === "candidate_tree" &&
+    (manifest.sourceCandidate.commitOid !== manifest.commitOid || manifest.sourceCandidate.treeOid !== manifest.treeOid)
+  ) {
     issues.push({ code: "source_candidate_mismatch", message: "sourceCandidate does not identify the manifest candidate commit/tree" });
   }
   return { ok: issues.length === 0, issues };

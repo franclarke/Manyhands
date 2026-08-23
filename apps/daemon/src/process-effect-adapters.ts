@@ -26,10 +26,17 @@ export type ProcessSupervisorPort = Pick<
   "spawn" | "terminate" | "readReceipts"
 >;
 
+/** One broker scope per run attempt; attempt ids alone repeat across concurrent runs. */
+export function executionCredentialScopeId(runId: string, attemptId: string): string {
+  const run = nonEmptyStringWithoutNul(runId, "execution credential runId");
+  const attempt = nonEmptyStringWithoutNul(attemptId, "execution credential attemptId");
+  return JSON.stringify([run, attempt]);
+}
+
 export interface ProcessEffectAdapterOptions {
   supervisor: ProcessSupervisorPort;
   afterTerminal?(intent: Readonly<EffectIntent>, final: ProcessSupervisorFinalReceipt): Promise<void>;
-  afterTermination?(attemptId: string, final: ProcessSupervisorFinalReceipt): Promise<void>;
+  afterTermination?(runId: string, attemptId: string, final: ProcessSupervisorFinalReceipt): Promise<void>;
 }
 
 interface ProcessSpawnPayload {
@@ -137,7 +144,7 @@ async function convergeProcessTermination(
   intent: Readonly<EffectIntent>,
   context: PhysicalEffectAdapterContext,
   supervisor: ProcessSupervisorPort,
-  afterTermination?: (attemptId: string, final: ProcessSupervisorFinalReceipt) => Promise<void>
+  afterTermination?: (runId: string, attemptId: string, final: ProcessSupervisorFinalReceipt) => Promise<void>
 ): Promise<void> {
   assertAdapterBinding("process_terminate", intent, context);
   const payload = parseProcessTerminatePayload(context.inputSpec.payload);
@@ -150,7 +157,7 @@ async function convergeProcessTermination(
   const existingFinal = receipts.find(isFinalReceipt);
   if (existingFinal !== undefined) {
     assertFinalReceiptBinding(existingFinal, started);
-    await recordTerminationAfterCleanup(context, payload, existingFinal, afterTermination);
+    await recordTerminationAfterCleanup(context, intent.runId, payload, existingFinal, afterTermination);
     return;
   }
 
@@ -159,7 +166,7 @@ async function convergeProcessTermination(
   );
   assertFinalReceiptBinding(terminated, started);
   assertExpectedProcessIdentity(terminated.processIdentity, payload.expectedProcessIdentity);
-  await recordTerminationAfterCleanup(context, payload, terminated, afterTermination);
+  await recordTerminationAfterCleanup(context, intent.runId, payload, terminated, afterTermination);
 }
 
 async function recordStartedIfMissing(
@@ -197,22 +204,8 @@ async function recordSpawnTerminalAfterCleanup(
   forcedObservation: "failed" | undefined,
   afterTerminal?: (intent: Readonly<EffectIntent>, final: ProcessSupervisorFinalReceipt) => Promise<void>
 ): Promise<void> {
-  try {
-    await afterTerminal?.(intent, final);
-  } catch (error) {
-    await recordSpawnTerminal(
-      context,
-      final,
-      "failed",
-      `${final.reason ?? "process_terminal"}_credential_cleanup_failed: ${describe(error)}`
-    );
-    return;
-  }
+  await afterTerminal?.(intent, final);
   await recordSpawnTerminal(context, final, forcedObservation);
-}
-
-function describe(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 async function recordTerminationSuccess(
@@ -229,21 +222,13 @@ async function recordTerminationSuccess(
 
 async function recordTerminationAfterCleanup(
   context: PhysicalEffectAdapterContext,
+  runId: string,
   payload: ProcessTerminatePayload,
   final: ProcessSupervisorFinalReceipt,
-  afterTermination?: (attemptId: string, final: ProcessSupervisorFinalReceipt) => Promise<void>
+  afterTermination?: (runId: string, attemptId: string, final: ProcessSupervisorFinalReceipt) => Promise<void>
 ): Promise<void> {
-  try {
-    if (payload.targetAttemptId !== undefined) await afterTermination?.(payload.targetAttemptId, final);
-  } catch (error) {
-    await context.record({
-      observation: "failed",
-      observedAt: epochMsToIso(final.completedAtEpochMs, "process completedAtEpochMs"),
-      processIdentity: final.processIdentity,
-      resultDigest: final.receiptChecksum,
-      reason: `${final.reason ?? "process_termination"}_credential_cleanup_failed: ${describe(error)}`
-    });
-    return;
+  if (payload.targetAttemptId !== undefined) {
+    await afterTermination?.(runId, payload.targetAttemptId, final);
   }
   await recordTerminationSuccess(context, final);
 }

@@ -14,6 +14,7 @@ import { compileGraphRevision } from "@manyhands/decomposer";
 import type { RunEventInput } from "@manyhands/run-coordinator";
 import { GET as GET_RUN_EVENTS } from "@/app/api/runs/[id]/run-events/route";
 import { buildRunModel } from "@/lib/run-model/reducer";
+import { serializeHeartbeat } from "@/lib/run-model/sse-frames";
 import type { RunEvent, RunSeed } from "@/lib/run-model/types";
 import { bookingBreakdown, bookingSnapshot, compilerDependencies } from "./helpers/target-planning-fixtures";
 
@@ -164,7 +165,14 @@ describe("run-events SSE replay (INV-7)", () => {
     const firstChunk = await readFirstChunk("run-sse-caught-up", { after: 3 });
 
     expect(firstChunk).toContain(": connected ");
+    expect(firstChunk).toContain("retry: 1000");
     expect(firstChunk).not.toContain("data: ");
+  });
+
+  it("emits an observable heartbeat so the client can recover a silently stale stream", () => {
+    expect(serializeHeartbeat(7, "2026-08-21T00:00:00.000Z")).toBe(
+      'event: heartbeat\ndata: {"at":"2026-08-21T00:00:00.000Z","lastSeq":7}\n\n'
+    );
   });
 
   it("INV-7: prefix + reconnect-replayed suffix folds to the same model as one uninterrupted stream", async () => {

@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
-import { access, appendFile, mkdtemp, rm } from "node:fs/promises";
+import { access, appendFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -12,21 +12,33 @@ import {
   type EffectInputSpec
 } from "@manyhands/contracts";
 import {
+  CredentialBroker,
+  discardBrokeredCredentialScope,
+  type ProcessSupervisorFinalReceipt,
+  type ProcessSupervisorStartedReceipt
+} from "@manyhands/execution-core";
+import {
   CommandReceiptSchema,
   buildCommandReceipt,
   buildRunCommandEnvelope,
   type IpcCapabilityOsProtection,
+  type ProductRunDefinition,
   type RunCommandEnvelope
 } from "@manyhands/run-coordinator";
 import { FileEffectInputStore, JsonlRunEventStore } from "@manyhands/run-store";
-import type { PhysicalEffectAdapter } from "@manyhands/run-engine";
+import type { PhysicalEffectAdapter, RunActorOptions } from "@manyhands/run-engine";
 import { startDaemonKernel } from "../apps/daemon/src/daemon-kernel.js";
+import {
+  createProcessSpawnPhysicalEffectAdapter,
+  type ProcessSupervisorPort
+} from "../apps/daemon/src/process-effect-adapters.js";
 import {
   createWindowsIpcAclProtector,
   createWindowsIpcAclVerifier,
   verifyWindowsRestrictedNamedPipe
 } from "../apps/daemon/src/windows-ipc-acl.js";
 import { createLocalIpcClient } from "../apps/web/src/lib/server/daemon/local-ipc-client.js";
+import { submitProductRunCommand } from "../apps/web/src/lib/server/daemon/productive-client.js";
 
 const temporaryRoots: string[] = [];
 const execFileAsync = promisify(execFile);
@@ -124,6 +136,139 @@ describe("durable daemon composition root", () => {
       expect((await restarted.eventStore.load(runId))).toHaveLength(5);
     } finally {
       await restarted.close();
+    }
+  });
+
+  it("keeps legacy brokered credentials until process recovery is physically final", async () => {
+    const root = await temporaryRoot();
+    const runId = "run:startup-process-recovery";
+    const attemptId = "stage3:execution";
+    const recoveredScopeId = "scope:startup-recovery";
+    const newRunScopeId = "scope:new-run-during-recovery";
+    const credentialSource = path.join(root, "auth.json");
+    await writeFile(credentialSource, "{}", "utf8");
+    const brokerRoot = path.join(root, "credential-broker");
+    const legacyAuthPath = path.join(
+      brokerRoot,
+      legacyCredentialSegment(attemptId),
+      legacyCredentialSegment("leaf:one"),
+      "home",
+      ".codex",
+      "auth.json"
+    );
+    await mkdir(path.dirname(legacyAuthPath), { recursive: true });
+    await writeFile(legacyAuthPath, "{}", "utf8");
+    const broker = new CredentialBroker({ rootDirectory: brokerRoot });
+    const intent = await seedPendingEffect(root, runId, {
+      schemaVersion: 1,
+      kind: "process_spawn",
+      payload: {
+        executable: process.execPath,
+        argv: ["-e", "process.exit(0)"],
+        cwd: process.cwd(),
+        env: {}
+      }
+    }, attemptId);
+    const processIdentity = {
+      pid: 5104,
+      creationIdentity: "windows:134156472000000000",
+      supervisorNonce: "nonce:startup-recovery"
+    };
+    const custodianIdentity = {
+      pid: 4104,
+      creationIdentity: "windows:134156471999000000",
+      supervisorNonce: "nonce:startup-recovery"
+    };
+    const started: ProcessSupervisorStartedReceipt = {
+      schemaVersion: 1,
+      effectId: intent.effectId,
+      inputDigest: intent.inputDigest,
+      daemonEpoch: intent.daemonEpoch,
+      attemptId,
+      processIdentity,
+      custodianIdentity,
+      platformOwnership: "Local\\ManyHands-startup-recovery",
+      phase: "started",
+      startedAtEpochMs: Date.parse("2026-08-12T22:00:00.000Z"),
+      stdoutPath: path.join(root, "processes", "stdout.log"),
+      stderrPath: path.join(root, "processes", "stderr.log"),
+      receiptChecksum: `sha256:${"a".repeat(64)}`
+    };
+    const final: ProcessSupervisorFinalReceipt = {
+      schemaVersion: 1,
+      effectId: started.effectId,
+      inputDigest: started.inputDigest,
+      daemonEpoch: started.daemonEpoch,
+      attemptId,
+      processIdentity,
+      custodianIdentity,
+      platformOwnership: started.platformOwnership,
+      phase: "final",
+      outcome: "terminated",
+      exitCode: null,
+      reason: "reconcile_interrupted_process_spawn",
+      completedAtEpochMs: Date.parse("2026-08-12T22:00:02.000Z"),
+      stdoutPath: started.stdoutPath,
+      stderrPath: started.stderrPath,
+      startedReceiptChecksum: started.receiptChecksum,
+      receiptChecksum: `sha256:${"b".repeat(64)}`
+    };
+    let reportReceiptsRead: () => void = () => undefined;
+    const receiptsRead = new Promise<void>((resolve) => { reportReceiptsRead = resolve; });
+    let releaseReceipts: () => void = () => undefined;
+    const receiptsReleased = new Promise<void>((resolve) => { releaseReceipts = resolve; });
+    let physicallyFinal = false;
+    let cleanupObservedPhysicalFinal = false;
+    let terminationCalls = 0;
+    const supervisor: ProcessSupervisorPort = {
+      async spawn() {
+        throw new Error("Startup recovery must not spawn duplicate work.");
+      },
+      async readReceipts() {
+        reportReceiptsRead();
+        await receiptsReleased;
+        return [started];
+      },
+      async terminate() {
+        terminationCalls += 1;
+        physicallyFinal = true;
+        return final;
+      }
+    };
+    const processAdapter = createProcessSpawnPhysicalEffectAdapter({
+      supervisor,
+      afterTerminal: async () => {
+        await access(legacyAuthPath);
+        cleanupObservedPhysicalFinal = physicallyFinal;
+        await discardBrokeredCredentialScope(brokerRoot, recoveredScopeId);
+      }
+    });
+    const adapters = noEffectAdapters().map((adapter) =>
+      adapter.kind === "process_spawn" ? processAdapter : adapter);
+
+    const kernel = await startKernel(root, "daemon:process-recovery", { adapters });
+    try {
+      await receiptsRead;
+      const newRunCredential = await broker.create(
+        attemptId,
+        [{ provider: "codex", sourcePath: credentialSource }],
+        newRunScopeId
+      );
+      releaseReceipts();
+      await kernel.startupRecovery;
+
+      expect(terminationCalls).toBe(1);
+      expect(cleanupObservedPhysicalFinal).toBe(true);
+      await expect(access(legacyAuthPath))
+        .rejects.toMatchObject({ code: "ENOENT" });
+      await expect(access(path.join(newRunCredential.homeDirectory, ".codex", "auth.json")))
+        .resolves.toBeUndefined();
+      expect((await kernel.engine.query(runId)).effectTerminals[intent.effectId])
+        .toMatchObject({ status: "failed" });
+    } finally {
+      releaseReceipts();
+      await kernel.startupRecovery;
+      await kernel.close().catch(() => undefined);
     }
   });
 
@@ -253,6 +398,77 @@ describe("durable daemon composition root", () => {
     }
   });
 
+  it("returns null without reporting an IPC error when an optional projection is absent", async () => {
+    const root = await temporaryRoot();
+    const ipcErrors: Error[] = [];
+    const kernel = await startKernel(root, "daemon:optional-projection", {
+      onIpcError: (error) => ipcErrors.push(error)
+    });
+    try {
+      const client = createLocalIpcClient({
+        endpoint: kernel.endpoint,
+        capabilityFilePath: kernel.capabilityFilePath,
+        production: false
+      });
+
+      await expect(client.query({
+        runId: "run:not-created",
+        query: "projection_if_present"
+      })).resolves.toBeNull();
+      expect(ipcErrors).toEqual([]);
+    } finally {
+      await kernel.close();
+    }
+  });
+
+  it("creates a missing run without an IPC error and replays the existing command", async () => {
+    const root = await temporaryRoot();
+    const ipcErrors: Error[] = [];
+    const definition = productDefinition();
+    const kernel = await startKernel(root, "daemon:productive-create", {
+      onIpcError: (error) => ipcErrors.push(error),
+      decide: (command) => ({
+        eventsBeforeAcceptance: [{
+          eventId: "event:productive-create",
+          occurredAt: command.submittedAt,
+          type: "run.created",
+          payload: { goal: definition.userPrompt, definition }
+        }],
+        eventsAfterAcceptance: [],
+        effects: []
+      })
+    });
+    const previousStateRoot = process.env.MANYHANDS_DAEMON_STATE_ROOT;
+    const previousEndpoint = process.env.MANYHANDS_DAEMON_ENDPOINT;
+    process.env.MANYHANDS_DAEMON_STATE_ROOT = root;
+    process.env.MANYHANDS_DAEMON_ENDPOINT = kernel.endpoint;
+    try {
+      const runId = "run:productive-create";
+      const input = {
+        request: new Request("http://127.0.0.1/api/runs", { method: "POST" }),
+        runId,
+        commandId: "command:productive-create",
+        command: { type: "create_run" as const, definition },
+        allowMissingRun: true
+      };
+
+      const first = await submitProductRunCommand(input);
+      const firstEvents = await kernel.eventStore.load(runId);
+      const replay = await submitProductRunCommand(input);
+
+      expect(first.projection).toMatchObject({ runId, sequence: 2 });
+      expect(replay).toEqual(first);
+      expect(await kernel.eventStore.load(runId)).toEqual(firstEvents);
+      expect(ipcErrors).toEqual([]);
+    } finally {
+      if (previousStateRoot === undefined) delete process.env.MANYHANDS_DAEMON_STATE_ROOT;
+      else process.env.MANYHANDS_DAEMON_STATE_ROOT = previousStateRoot;
+      if (previousEndpoint === undefined) delete process.env.MANYHANDS_DAEMON_ENDPOINT;
+      else process.env.MANYHANDS_DAEMON_ENDPOINT = previousEndpoint;
+      await kernel.close();
+    }
+  });
+
   it("composes Windows production IPC with physical capability and named-pipe ACLs", async () => {
     if (process.platform !== "win32") return;
     const root = await temporaryRoot();
@@ -313,6 +529,8 @@ interface StartKernelOverrides {
   protectCapabilityPath?: IpcCapabilityOsProtection;
   assertOsRestrictedCapabilityPath?: IpcCapabilityOsProtection;
   windowsPipeAclHelperPath?: string;
+  onIpcError?: (error: Error) => void;
+  decide?: RunActorOptions["decide"];
 }
 
 async function startKernel(
@@ -366,12 +584,16 @@ async function seedRun(root: string, runId: string): Promise<JsonlRunEventStore>
   return store;
 }
 
-async function seedPendingEffect(root: string, runId: string) {
-  const inputSpec: EffectInputSpec = {
+async function seedPendingEffect(
+  root: string,
+  runId: string,
+  inputSpec: EffectInputSpec = {
     schemaVersion: 1,
     kind: "cleanup",
     payload: { operation: "recover-on-daemon-startup" }
-  };
+  },
+  attemptId = "attempt:startup-recovery"
+) {
   const inputStore = new FileEffectInputStore({
     directory: path.join(root, "effects", "inputs"),
     hasher: sha256
@@ -395,7 +617,7 @@ async function seedPendingEffect(root: string, runId: string) {
   }, sha256);
   const intent = buildEffectIntent({
     runId,
-    attemptId: "attempt:startup-recovery",
+    attemptId,
     kind: inputSpec.kind,
     inputDigest: effectInput.inputDigest,
     daemonEpoch: "daemon:crashed",
@@ -425,6 +647,16 @@ async function seedPendingEffect(root: string, runId: string) {
     }
   ]);
   return intent;
+}
+
+/** Physical layout written by the pre-SHA credential broker. */
+function legacyCredentialSegment(value: string): string {
+  let hash = 2166136261;
+  for (const character of value) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
 function recoveryAdapters(
@@ -457,6 +689,21 @@ function commandEnvelope(): RunCommandEnvelope {
     submittedAt: "2026-08-12T22:30:00.000Z",
     command: { type: "continue" }
   }, sha256);
+}
+
+function productDefinition(): ProductRunDefinition {
+  return {
+    schemaVersion: 1,
+    workspaceId: "workspace:productive-create",
+    userPrompt: "Create a run through the productive helper",
+    acceptanceCriteria: [],
+    title: "Productive create",
+    planningSelection: { executorId: "test-planner", model: "test" },
+    executionSelection: { executorId: "test-executor", model: "test" },
+    repairSelection: { executorId: "test-repair", model: "test" },
+    executionConfig: {},
+    targetContext: {}
+  };
 }
 
 async function temporaryRoot(): Promise<string> {

@@ -102,6 +102,69 @@ describe("Stage 7 exact artifact materialization", () => {
     await expect(access(marker, constants.F_OK)).rejects.toMatchObject({ code: "ENOENT" });
   });
 
+  it("rejects a sibling overlay when a declared preimage was already changed", async () => {
+    const baseCommit = await git(repo, "rev-parse", "HEAD");
+    const baseTree = await git(repo, "rev-parse", "HEAD^{tree}");
+    const oldOid = await git(repo, "rev-parse", "HEAD:owned.txt");
+
+    await git(repo, "switch", "--create", "candidate-first");
+    await writeFile(path.join(repo, "owned.txt"), "after first\n", "utf8");
+    await git(repo, "add", "owned.txt");
+    await git(repo, "commit", "-m", "first sibling");
+    const firstCommit = await git(repo, "rev-parse", "HEAD");
+    const firstTree = await git(repo, "rev-parse", "HEAD^{tree}");
+    const firstNewOid = await git(repo, "rev-parse", "HEAD:owned.txt");
+
+    await git(repo, "switch", "main");
+    await git(repo, "switch", "--create", "candidate-second");
+    await writeFile(path.join(repo, "owned.txt"), "after second\n", "utf8");
+    await git(repo, "add", "owned.txt");
+    await git(repo, "commit", "-m", "second sibling");
+    const secondCommit = await git(repo, "rev-parse", "HEAD");
+    const secondTree = await git(repo, "rev-parse", "HEAD^{tree}");
+    const secondNewOid = await git(repo, "rev-parse", "HEAD:owned.txt");
+    await git(repo, "switch", "main");
+
+    const firstManifest = buildChangeSetManifest({
+      id: "manifest:first",
+      contract: { id: "artifact:first", revision: 1, digest: "sha256:first-contract" },
+      producerNodeId: "node:first",
+      producerAttemptId: "attempt:first",
+      inputFingerprint: `sha256:${"d".repeat(64)}`,
+      repositoryObjectStoreId: "object-store:repo",
+      objectFormat: "sha1",
+      sourceCandidate: { commitOid: firstCommit, treeOid: firstTree },
+      retainedByRef: "refs/manyhands/runs/run/attempts/first/artifacts/first",
+      kind: "change_set",
+      baseTreeSha: baseTree,
+      resultTreeSha: firstTree,
+      entries: [{ oldPath: "owned.txt", newPath: "owned.txt", operation: "modify", oldOid, newOid: firstNewOid, oldMode: "100644", newMode: "100644" }]
+    }, sha256);
+    const secondManifest = buildChangeSetManifest({
+      id: "manifest:second",
+      contract: { id: "artifact:second", revision: 1, digest: "sha256:second-contract" },
+      producerNodeId: "node:second",
+      producerAttemptId: "attempt:second",
+      inputFingerprint: `sha256:${"e".repeat(64)}`,
+      repositoryObjectStoreId: "object-store:repo",
+      objectFormat: "sha1",
+      sourceCandidate: { commitOid: secondCommit, treeOid: secondTree },
+      retainedByRef: "refs/manyhands/runs/run/attempts/second/artifacts/second",
+      kind: "change_set",
+      baseTreeSha: baseTree,
+      resultTreeSha: secondTree,
+      entries: [{ oldPath: "owned.txt", newPath: "owned.txt", operation: "modify", oldOid, newOid: secondNewOid, oldMode: "100644", newMode: "100644" }]
+    }, sha256);
+    const materializer = new ExactGitManifestMaterializer(new SimpleGitRunner(), sha256);
+
+    const first = await materializer.materialize({ cwd: repo, baseCommit, manifest: firstManifest, allowedPaths: ["owned.txt"] });
+    await expect(materializer.materialize({ cwd: repo, baseCommit: first.executionBaseCommit, manifest: secondManifest, allowedPaths: ["owned.txt"] }))
+      .rejects.toThrow("Artifact preimage mismatch");
+
+    expect(await git(repo, "rev-parse", "HEAD")).toBe(first.executionBaseCommit);
+    expect(await git(repo, "show", "HEAD:owned.txt")).toBe("after first");
+  });
+
   it("cleans the managed worktree when a later manifest preimage is invalid", async () => {
     await writeFile(path.join(repo, "second.txt"), "before\n", "utf8");
     await git(repo, "add", "second.txt");

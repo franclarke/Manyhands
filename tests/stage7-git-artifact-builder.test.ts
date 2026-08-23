@@ -1,10 +1,12 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { GitArtifactBuilder, SimpleGitRunner } from "@manyhands/execution-core";
+import { buildChangeSetManifest, type DigestHasher } from "@manyhands/contracts";
+import { ExactGitManifestMaterializer, GitArtifactBuilder, SimpleGitRunner } from "@manyhands/execution-core";
 
 const execFileAsync = promisify(execFile);
 let directory: string;
@@ -59,6 +61,70 @@ describe("Stage 7 Git artifact builder", () => {
       /^refs\/manyhands\/runs\/run-1-[0-9a-f]{12}\/attempts\/attempt-1-[0-9a-f]{12}\/artifacts\/artifact-owned-[0-9a-f]{12}$/u
     );
     expect(await git(repo, "rev-parse", manifest.retainedByRef)).toBe(candidateCommit);
+  });
+
+  it("partitions one candidate across its declared artifact contracts", async () => {
+    const baseCommit = await git(repo, "rev-parse", "HEAD");
+    await mkdir(path.join(repo, "public"));
+    await mkdir(path.join(repo, "src"));
+    await writeFile(path.join(repo, "public", "index.html"), "<main>Dashboard</main>\n", "utf8");
+    await writeFile(path.join(repo, "src", "dashboard.mjs"), "export const dashboard = true;\n", "utf8");
+    await git(repo, "add", "public/index.html", "src/dashboard.mjs");
+    await git(repo, "commit", "-m", "candidate with two artifacts");
+    const candidateCommit = await git(repo, "rev-parse", "HEAD");
+    const builder = new GitArtifactBuilder(new SimpleGitRunner());
+    const candidateAllowedPaths = ["public/index.html", "src/dashboard.mjs"];
+
+    const ui = await builder.build({
+      cwd: repo, runId: "run-1", nodeId: "node-1", attemptId: "attempt-1", artifactId: "artifact:ui",
+      contract: { id: "artifact:ui", revision: 1, digest: "sha256:ui" }, inputFingerprint: `sha256:${"a".repeat(64)}`,
+      repositoryObjectStoreId: "object-store:repo", baseCommit, candidateCommit,
+      allowedPaths: ["public/index.html"], candidateAllowedPaths
+    });
+    const model = await builder.build({
+      cwd: repo, runId: "run-1", nodeId: "node-1", attemptId: "attempt-1", artifactId: "artifact:model",
+      contract: { id: "artifact:model", revision: 1, digest: "sha256:model" }, inputFingerprint: `sha256:${"b".repeat(64)}`,
+      repositoryObjectStoreId: "object-store:repo", baseCommit, candidateCommit,
+      allowedPaths: ["src/dashboard.mjs"], candidateAllowedPaths
+    });
+
+    expect(ui.entries.map((entry) => entry.newPath)).toEqual(["public/index.html"]);
+    expect(model.entries.map((entry) => entry.newPath)).toEqual(["src/dashboard.mjs"]);
+  });
+
+  it("materializes each partitioned artifact to its own declared result tree", async () => {
+    const baseCommit = await git(repo, "rev-parse", "HEAD");
+    await mkdir(path.join(repo, "public"));
+    await mkdir(path.join(repo, "src"));
+    await writeFile(path.join(repo, "public", "index.html"), "<main>Dashboard</main>\n", "utf8");
+    await writeFile(path.join(repo, "src", "dashboard.mjs"), "export const dashboard = true;\n", "utf8");
+    await git(repo, "add", "public/index.html", "src/dashboard.mjs");
+    await git(repo, "commit", "-m", "candidate with two materialized artifacts");
+    const candidateCommit = await git(repo, "rev-parse", "HEAD");
+    const candidateAllowedPaths = ["public/index.html", "src/dashboard.mjs"];
+    const builder = new GitArtifactBuilder(new SimpleGitRunner());
+    const ui = await builder.build({
+      cwd: repo, runId: "run-1", nodeId: "node-1", attemptId: "attempt-1", artifactId: "artifact:ui",
+      contract: { id: "artifact:ui", revision: 1, digest: "sha256:ui" }, inputFingerprint: `sha256:${"a".repeat(64)}`,
+      repositoryObjectStoreId: "object-store:repo", baseCommit, candidateCommit,
+      allowedPaths: ["public/index.html"], candidateAllowedPaths
+    });
+    const model = await builder.build({
+      cwd: repo, runId: "run-1", nodeId: "node-1", attemptId: "attempt-1", artifactId: "artifact:model",
+      contract: { id: "artifact:model", revision: 1, digest: "sha256:model" }, inputFingerprint: `sha256:${"b".repeat(64)}`,
+      repositoryObjectStoreId: "object-store:repo", baseCommit, candidateCommit,
+      allowedPaths: ["src/dashboard.mjs"], candidateAllowedPaths
+    });
+    const { manifestDigest: _digest, ...uiMaterial } = ui;
+    const legacyUi = buildChangeSetManifest({ ...uiMaterial, resultTreeSha: await git(repo, "rev-parse", `${candidateCommit}^{tree}`) }, sha256);
+    const target = path.join(directory, "target");
+    await git(directory, "clone", repo, target);
+    await git(target, "checkout", "--detach", baseCommit);
+    const materializer = new ExactGitManifestMaterializer(new SimpleGitRunner());
+    const first = await materializer.materialize({ cwd: target, baseCommit, manifest: legacyUi, allowedPaths: ["public/index.html"] });
+    const second = await materializer.materialize({ cwd: target, baseCommit: first.executionBaseCommit, manifest: model, allowedPaths: ["src/dashboard.mjs"] });
+
+    expect(await git(target, "rev-parse", `${second.executionBaseCommit}^{tree}`)).toBe(await git(repo, "rev-parse", `${candidateCommit}^{tree}`));
   });
 
   it("retains an immutable candidate tree before evidence can cite it", async () => {
@@ -179,3 +245,5 @@ async function git(cwd: string, ...args: string[]): Promise<string> {
   const { stdout } = await execFileAsync("git", args, { cwd, windowsHide: true });
   return stdout.trim();
 }
+
+const sha256: DigestHasher = (value) => `sha256:${createHash("sha256").update(value).digest("hex")}`;

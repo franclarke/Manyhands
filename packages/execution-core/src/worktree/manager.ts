@@ -1,4 +1,4 @@
-import { readdir, rm } from "node:fs/promises";
+import { access, mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import { withRepositoryTopology } from "./topology.js";
 import { join } from "node:path";
 
@@ -15,6 +15,8 @@ import {
   worktreePathFor,
   type WorktreeRootParams
 } from "./layout";
+
+const BRANCH_CLEANUP_DIRECTORY = ".manyhands-branch-cleanup";
 
 export * from "./layout";
 export * from "./execution-workspace";
@@ -250,9 +252,9 @@ export class WorktreeManager {
   /**
    * Garbage-collect every worktree of a run by directory convention
    * (`<worktreesRoot>/<runId>/*` ↔ branch `mh/<runId>/<taskId>`), used on
-   * cancel/cleanup where no in-memory records survive. Best-effort per entry —
-   * one stuck worktree must not block the rest — and finishes with
-   * `git worktree prune` plus removal of the (now empty) run directory.
+   * cancel/cleanup where no in-memory records survive. Worktree failures are
+   * reported per entry so one stuck path does not block the rest; topology I/O
+   * failures throw so a later cleanup can retry them.
    *
    * Branches in `options.preserveBranchesFor` are kept: they anchor recorded
    * evidence commits (a deleted branch leaves the commit dangling and a later
@@ -274,50 +276,116 @@ export class WorktreeManager {
     const preservedSegments = new Set(
       Array.from(options.preserveBranchesFor ?? []).map((taskId) => safeWorktreeSegment(taskId))
     );
-    let entries: string[];
+    let worktreeEntries: string[];
     try {
-      entries = await readdir(runRoot);
-    } catch {
-      return { removed: [], failed: [] }; // no worktrees for this run
+      worktreeEntries = await readdir(runRoot);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+        return { removed: [], failed: [] }; // no worktrees for this run
+      }
+      throw error;
     }
+    const cleanupRoot = join(runRoot, BRANCH_CLEANUP_DIRECTORY);
+    const cleanupEntries = await this.readBranchCleanupEntries(cleanupRoot);
+    const entries = Array.from(new Set([
+      ...worktreeEntries.filter((entry) => entry !== BRANCH_CLEANUP_DIRECTORY),
+      ...cleanupEntries
+    ]));
 
     const removed: string[] = [];
     const failed: string[] = [];
     for (const taskSegment of entries) {
       const path = join(runRoot, taskSegment);
       const branch = `mh/${runSegment}/${taskSegment}`;
-      try {
-        await this.git.worktreeRemove({ repoRoot: this.repoRoot, worktreePath: path, force: true });
-        removed.push(taskSegment);
-      } catch (error) {
-        execWarn("worktree", "gc: worktree remove failed", {
-          task: taskSegment,
-          path,
-          cause: error instanceof Error ? error.message : String(error)
-        });
-        failed.push(taskSegment);
+      const cleanupMarker = join(cleanupRoot, taskSegment);
+      let branchCleanupPending = await this.pathExists(cleanupMarker);
+      const branchOnlyRetry = branchCleanupPending && !await this.pathExists(join(path, ".git"));
+      if (!branchOnlyRetry) {
+        if (!preservedSegments.has(taskSegment) && !branchCleanupPending) {
+          await this.writeBranchCleanupMarker(cleanupRoot, taskSegment, branch);
+          branchCleanupPending = true;
+        }
+        try {
+          await this.git.worktreeRemove({ repoRoot: this.repoRoot, worktreePath: path, force: true });
+        } catch (error) {
+          execWarn("worktree", "gc: worktree remove failed", {
+            task: taskSegment,
+            path,
+            cause: error instanceof Error ? error.message : String(error)
+          });
+          failed.push(taskSegment);
+          continue;
+        }
       }
       if (preservedSegments.has(taskSegment)) {
+        if (branchCleanupPending) await this.removePath(cleanupMarker);
+        removed.push(taskSegment);
         continue; // The branch anchors a recorded evidence commit.
       }
       try {
         await this.git.branchDelete({ repoRoot: this.repoRoot, branch, force: true });
-      } catch {
-        // Branch may not exist (worktree died before the first commit) — fine.
+      } catch (error) {
+        if (await this.branchExists(branch)) {
+          execWarn("worktree", "gc: branch delete failed", {
+            task: taskSegment,
+            branch,
+            cause: error instanceof Error ? error.message : String(error)
+          });
+          failed.push(taskSegment);
+          continue;
+        }
+        // The delete result was ambiguous, but the ref is confirmed absent.
       }
+      await this.removePath(cleanupMarker);
+      removed.push(taskSegment);
     }
 
-    try {
-      await this.git.worktreePrune(this.repoRoot);
-    } catch (error) {
-      execWarn("worktree", "gc: worktree prune failed", {
-        cause: error instanceof Error ? error.message : String(error)
-      });
+    await this.git.worktreePrune(this.repoRoot);
+    if (failed.length === 0) {
+      await this.removePath(runRoot);
     }
-    await rm(runRoot, { recursive: true, force: true }).catch(() => undefined);
 
     execLog("worktree", "gc completed", { runId, removed: removed.length, failed: failed.length });
     return { removed, failed };
+  }
+
+  private async readBranchCleanupEntries(cleanupRoot: string): Promise<string[]> {
+    try {
+      return await readdir(cleanupRoot);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+      throw error;
+    }
+  }
+
+  private async writeBranchCleanupMarker(
+    cleanupRoot: string,
+    taskSegment: string,
+    branch: string
+  ): Promise<void> {
+    await mkdir(cleanupRoot, { recursive: true });
+    await writeFile(join(cleanupRoot, taskSegment), `${branch}\n`, "utf8");
+  }
+
+  private async branchExists(branch: string): Promise<boolean> {
+    const ref = `refs/heads/${branch}`;
+    try {
+      await this.git.revParse(this.repoRoot, ref);
+      return true;
+    } catch (error) {
+      if (isMissingGitRef(error, ref)) return false;
+      throw error;
+    }
+  }
+
+  private async pathExists(target: string): Promise<boolean> {
+    try {
+      await access(target);
+      return true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+      throw error;
+    }
   }
 
   /** See `withRepositoryTopology` for why this is keyed by repository. */
@@ -353,4 +421,11 @@ export class WorktreeManager {
     }
     return { committed: true, sha: head };
   }
+}
+
+function isMissingGitRef(error: unknown, ref: string): boolean {
+  if (!(error instanceof Error)) return false;
+  return error.message.includes(
+    `fatal: ambiguous argument '${ref}': unknown revision or path not in the working tree.`
+  ) || error.message.includes(`fatal: bad revision '${ref}'`);
 }

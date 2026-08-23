@@ -1,4 +1,5 @@
-import { copyFile, mkdir, rm } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { copyFile, mkdir, readdir, rm } from "node:fs/promises";
 import path from "node:path";
 
 import type { DeclaredCredential } from "./types.js";
@@ -38,6 +39,22 @@ export async function purgeAllBrokeredCredentials(rootDirectory: string): Promis
   } catch {
     // Ignore if directory doesn't exist
   }
+}
+
+/** Removes only credential homes written by the pre-SHA broker after process recovery settles. */
+export async function purgeLegacyBrokeredCredentials(rootDirectory: string): Promise<void> {
+  if (!path.isAbsolute(rootDirectory)) throw new Error("Credential broker rootDirectory must be absolute.");
+  const root = path.resolve(rootDirectory);
+  let entries;
+  try {
+    entries = await readdir(root, { withFileTypes: true });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+    throw error;
+  }
+  await Promise.all(entries
+    .filter((entry) => entry.isDirectory() && /^[0-9a-f]{8}$/u.test(entry.name))
+    .map((entry) => rm(path.join(root, entry.name), { recursive: true, force: true })));
 }
 
 /**
@@ -99,10 +116,5 @@ function validIdentifier(value: string): boolean {
 }
 
 function digestSegment(value: string): string {
-  let hash = 2166136261;
-  for (const character of value) {
-    hash ^= character.charCodeAt(0);
-    hash = Math.imul(hash, 16777619);
-  }
-  return (hash >>> 0).toString(16).padStart(8, "0");
+  return createHash("sha256").update(value, "utf8").digest("hex");
 }

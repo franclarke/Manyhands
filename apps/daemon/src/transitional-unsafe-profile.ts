@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { RecoveryDiagnosticSchema, type RecoveryDiagnostic } from "@manyhands/contracts";
-import { DeliveryRecoveryError } from "@manyhands/execution-core";
+import { DeliveryRecoveryError, ExecutionConfigSchema } from "@manyhands/execution-core";
 
 import {
   DeliveryReceiptSchema,
@@ -22,6 +22,7 @@ import type {
 import { JsonlRunEventStore, atomicWriteJson } from "@manyhands/run-store";
 
 import type { TransitionalUnsafeExecutionProfile } from "./productive-daemon.js";
+import { executionCredentialScopeId } from "./process-effect-adapters.js";
 
 export interface TransitionalLifecycleResult {
   readonly events: readonly RunEventInput[];
@@ -108,11 +109,12 @@ export function createTransitionalUnsafeProfile(
   return Object.freeze({
     kind: "transitional_unsafe",
     adapters,
-    executionProcess: options.executionProcess ?? ((_definition: ProductRunDefinition, context: {
+    executionProcess: options.executionProcess ?? ((definition: ProductRunDefinition, context: {
       runId: string;
       attemptId: string;
     } | undefined) => {
       if (context === undefined) throw new Error("Transitional execution requires run and attempt identity.");
+      const config = ExecutionConfigSchema.parse(definition.executionConfig);
       return {
         executable: nodeExecutable,
         argv: [
@@ -122,7 +124,11 @@ export function createTransitionalUnsafeProfile(
           "--attempt-id", context.attemptId
         ],
         cwd,
-        env: inheritedWorkerEnvironment()
+        env: {
+          ...inheritedWorkerEnvironment(),
+          MANYHANDS_EXECUTION_LEAF_TIMEOUT_MS: String(config.leafTimeoutMs),
+          MANYHANDS_STAGE8_SANDBOX_SCOPE: executionCredentialScopeId(context.runId, context.attemptId)
+        }
       };
     }),
     loadPlanningResult: async (effectId: string) => {

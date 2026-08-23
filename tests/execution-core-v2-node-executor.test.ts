@@ -1,7 +1,9 @@
+import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { buildChangeSetManifest, type DigestHasher } from "@manyhands/contracts";
 import { compileGraphRevision } from "@manyhands/decomposer";
 import {
   detectRequiredPublicSurfaceFindings,
@@ -83,18 +85,70 @@ describe("V2NodeExecutor", () => {
       contract: {
         task: { goal: "Implement a recipe HTTP server.", acceptanceCriteria: [], constraints: [] },
         scope: { allowedPaths: ["src/index.js"], outputRoots: [], forbiddenPaths: [] },
-        seams: []
+        seams: [],
+        artifacts: []
       },
       consumedArtifacts: [],
       priorFailure: {
         attemptId: "run-1:attempt:node-server:1",
-        reason: "npm test failed: expected HTTP 200"
+        reason: "npm test failed: expected HTTP 200",
+        guidance: "Repair the status assertion without changing the endpoint contract."
       }
     } as never);
 
     expect(instructions).toContain("Previous attempt failed; repair that observed failure before finishing:");
     expect(instructions).toContain("npm test failed: expected HTTP 200");
+    expect(instructions).toContain("Repair the status assertion without changing the endpoint contract.");
     expect(instructions).toContain("Do not repeat the same implementation without addressing it.");
+    expect(instructions).toContain("Treat the recorded failure as the first and smallest repair target.");
+    expect(instructions).toContain("Do not expand the feature, redesign the UI, or add unrelated behavior unless the recorded failure requires it.");
+    expect(instructions).toContain("spawn EPERM");
+    expect(instructions).toContain("Do not change product code in response to that infrastructure failure.");
+  });
+
+  it("lists each produced artifact's exact paths so a leaf does not create an unadoptable sibling file", () => {
+    const instructions = buildV2NodeInstructions({
+      node: { id: "node-dashboard", title: "Dashboard" },
+      contract: {
+        task: {
+          goal: "Build the dashboard.",
+          acceptanceCriteria: [],
+          constraints: [],
+          produces: [
+            { id: "artifact:dashboard-change", revision: "1" },
+            { id: "artifact:dashboard-ui-change", revision: "1" }
+          ]
+        },
+        scope: { allowedPaths: ["src/dashboard", "public"], outputRoots: ["src/dashboard", "public"], forbiddenPaths: [] },
+        seams: [],
+        artifacts: [
+          {
+            id: "artifact:dashboard-change",
+            revision: "1",
+            producerNodeId: "node-dashboard",
+            consumerNodeIds: [],
+            artifactType: "files",
+            materialization: "files",
+            expectedPaths: ["src/dashboard/dashboard.mjs", "src/dashboard/dashboard.test.mjs"]
+          },
+          {
+            id: "artifact:dashboard-ui-change",
+            revision: "1",
+            producerNodeId: "node-dashboard",
+            consumerNodeIds: [],
+            artifactType: "files",
+            materialization: "files",
+            expectedPaths: ["public/index.html", "public/main.mjs", "public/styles.css"]
+          }
+        ]
+      },
+      consumedArtifacts: []
+    } as never);
+
+    expect(instructions).toContain("You must produce only the following declared artifact paths:");
+    expect(instructions).toContain("- artifact:dashboard-change@1: src/dashboard/dashboard.mjs, src/dashboard/dashboard.test.mjs");
+    expect(instructions).toContain("- artifact:dashboard-ui-change@1: public/index.html, public/main.mjs, public/styles.css");
+    expect(instructions).toContain("Do not create additional files under an allowed directory unless they are listed above.");
   });
 
   it("executes a leaf directly from its V2 bundle and validates the exact orchestrator commit", async () => {
@@ -145,6 +199,101 @@ describe("V2NodeExecutor", () => {
     expect(prompts[0]).toContain("do not invent a semantically similar name");
     expect(prompts[0]).not.toContain("pnpm build");
     expect(prompts[0]).toContain("Do not commit");
+  });
+
+  it("continues a retry from an in-scope timeout checkpoint", async () => {
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
+    const node = compiled.graph.nodes["node-api"]!;
+    const contract = compiled.contracts.find((bundle) => bundle.task.nodeId === node.id)!;
+    const changedFile = contract.scope.allowedPaths[0]!;
+    const partialCommit = "2".repeat(40);
+    const checkpointCommit = "3".repeat(40);
+    const resumedCheckpoint = "4".repeat(40);
+    const finalCommit = "5".repeat(40);
+    const git = new FakeGitRunner({
+      diffCached: "diff",
+      diffCachedNameOnly: [changedFile],
+      diffRangeNameOnly: [changedFile],
+      commitShas: [partialCommit, finalCommit],
+      integrationHandoffSha: checkpointCommit,
+      cherryPickResultShas: [resumedCheckpoint]
+    });
+    const releases: WorktreeReleaseOutcome[] = [];
+    let workspaceOrdinal = 0;
+    const baseBuilder = new ExecutionBaseBuilder({
+      git,
+      workspaceProvider: {
+        acquire: async (params) => {
+          workspaceOrdinal += 1;
+          const worktreePath = `C:/repo/booking/.manyhands/worktrees/checkpoint-${workspaceOrdinal}`;
+          git.heads[worktreePath] = params.baseCommit;
+          return {
+            worktree: {
+              ...params,
+              path: worktreePath,
+              branch: `manyhands/checkpoint-${workspaceOrdinal}`,
+              status: "active" as const,
+              createdAt: at
+            },
+            release: async (outcome = { kind: "discard" as const }) => { releases.push(outcome); }
+          };
+        }
+      }
+    });
+    let invocation = 0;
+    const agent: AgentExecutor = {
+      execute: async () => {
+        invocation += 1;
+        return invocation === 1
+          ? { exitCode: 124, stdout: "partial", stderr: "", timedOut: true, terminationVerified: true, durationMs: 600_000 }
+          : { exitCode: 0, stdout: "done", stderr: "", timedOut: false, durationMs: 1 };
+      }
+    };
+    const executor = new V2NodeExecutor({
+      git,
+      repoRoot: "C:/repo/booking",
+      traceStore: new InMemoryTraceStore(),
+      executorFactory: new FixedAgentExecutorFactory(agent),
+      validator: { validate: async (input) => matrix(input.contract, input.candidateCommit) },
+      baseBuilder,
+      writeInstructions: async () => undefined,
+      now: () => at
+    });
+
+    const first = await executor.execute(request(compiled, node.id));
+    expect(first).toMatchObject({
+      kind: "failure",
+      checkpoint: {
+        candidateCommit: checkpointCommit,
+        changedFiles: [changedFile]
+      }
+    });
+
+    const retry = request(compiled, node.id);
+    retry.attemptId = `run-v2-physical:attempt:${node.id}:2`;
+    retry.priorFailure = {
+      attemptId: `run-v2-physical:attempt:${node.id}:1`,
+      reason: "timeout: hard deadline",
+      checkpointCommit
+    };
+    const second = await executor.execute(retry);
+
+    expect(second).toMatchObject({ kind: "success", candidateCommit: finalCommit });
+    expect(git.calls).toContainEqual({
+      op: "cherryPick",
+      args: expect.objectContaining({ commitSha: checkpointCommit, mainline: 1 })
+    });
+    expect(git.calls).toContainEqual({
+      op: "createIntegrationHandoff",
+      args: expect.objectContaining({
+        baseCommit: compiled.graph.baseCommit,
+        appliedCommitShas: [partialCommit]
+      })
+    });
+    expect(releases).toEqual([
+      expect.objectContaining({ kind: "candidate", candidateCommit: checkpointCommit }),
+      expect.objectContaining({ kind: "candidate", candidateCommit: finalCommit })
+    ]);
   });
 
   it("fails closed when a leaf candidate omits an explicitly declared artifact path", async () => {
@@ -399,7 +548,11 @@ describe("V2NodeExecutor", () => {
             ...criterion,
             status: "failed" as const,
             justification: "Focused oracle failed."
-          }))
+          })),
+          repairDiagnostics: [{
+            obligationId: "validation:booking-api",
+            output: "AssertionError: expected reorderStops() to preserve the selected stop."
+          }]
         })
       },
       deferValidationRepair: true,
@@ -407,9 +560,20 @@ describe("V2NodeExecutor", () => {
       now: () => at
     });
 
-    await expect(executor.execute(request(compiled, node.id))).resolves.toMatchObject({
+    const outcome = await executor.execute(request(compiled, node.id));
+
+    expect(outcome).toMatchObject({
       kind: "failure",
       reason: expect.stringContaining(`validation_failed: exact candidate ${candidate}`)
+    });
+    expect(outcome).toMatchObject({ reason: expect.stringContaining("Focused oracle failed.") });
+    expect(outcome).toMatchObject({ reason: expect.stringContaining("AssertionError: expected reorderStops() to preserve the selected stop.") });
+    expect(outcome).toMatchObject({
+      checkpoint: {
+        candidateCommit: candidate,
+        outputDigest: expect.stringMatching(/^sha256:/u),
+        changedFiles: [contract.scope.allowedPaths[0]!]
+      }
     });
     expect(git.opsInvoked()).not.toContain("createIntegrationHandoff");
   });
@@ -609,6 +773,290 @@ describe("V2NodeExecutor", () => {
     expect(git.opsInvoked().filter((operation) => operation === "restoreManagedWorktree")).toHaveLength(0);
   });
 
+  it("continues a composite retry from an in-scope integration timeout checkpoint", async () => {
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
+    const root = compiled.graph.nodes[compiled.graph.rootId]!;
+    const childCommit = "b".repeat(40);
+    const firstMaterialized = "6".repeat(40);
+    const secondMaterialized = "7".repeat(40);
+    const restoredCheckpoint = "8".repeat(40);
+    const checkpointCommit = "9".repeat(40);
+    const repairedCommit = "a".repeat(40);
+    const changedFile = root.id === compiled.graph.rootId ? "src/ui/BookingForm.tsx" : "src/domain/booking.ts";
+    const git = new FakeGitRunner({
+      cherryPickResultShas: [firstMaterialized, secondMaterialized, restoredCheckpoint],
+      commitShas: [checkpointCommit, repairedCommit],
+      diffCached: "partial integration diff",
+      diffCachedNameOnly: [changedFile],
+      diffRangeNameOnly: [changedFile]
+    });
+    let invocation = 0;
+    const agent: AgentExecutor = {
+      execute: async () => {
+        invocation += 1;
+        return invocation === 1
+          ? { exitCode: 124, stdout: "partial", stderr: "", timedOut: true, terminationVerified: true, durationMs: 600_000 }
+          : { exitCode: 0, stdout: "done", stderr: "", timedOut: false, durationMs: 1 };
+      }
+    };
+    let validationPass = 0;
+    const executor = new V2NodeExecutor({
+      git,
+      repoRoot: "C:/repo/booking",
+      traceStore: new InMemoryTraceStore(),
+      executorFactory: new FixedAgentExecutorFactory(agent),
+      validator: {
+        validate: async (input) => {
+          validationPass += 1;
+          const evidence = matrix(input.contract, input.candidateCommit);
+          if (validationPass === 3) return evidence;
+          return {
+            ...evidence,
+            criteria: evidence.criteria.map((criterion) => ({
+              ...criterion,
+              status: "failed" as const,
+              justification: "The composed parent behavior requires one semantic repair."
+            })),
+            outcome: "failed" as const
+          };
+        }
+      },
+      finalCandidate: {
+        prepare: async (input) => ({
+          manifestId: "final-timeout-checkpoint",
+          finalManifest: {
+            commitSha: input.candidateCommit,
+            treeSha: "tree-timeout-checkpoint",
+            graphRevision: input.graphRevision,
+            artifactIds: [...input.artifactIds],
+            evidenceMatrixId: input.evidenceMatrix.matrixId,
+            validationRecipeDigest: input.validationRecipeDigest,
+            deliveryTarget: input.targetBranch
+          }
+        })
+      },
+      worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }),
+      writeInstructions: async () => undefined,
+      now: () => at
+    });
+    const first = request(compiled, root.id);
+    first.consumedArtifacts = [{
+      artifactId: "adopted-child",
+      runId: first.runId,
+      nodeId: "node-api",
+      digest: "sha256:child",
+      producerAttemptId: "attempt-child",
+      contract: { id: "contract-child", revision: "r1" },
+      kind: "commit",
+      location: childCommit,
+      adoptedAt: at
+    }];
+
+    const firstOutcome = await executor.execute(first);
+
+    expect(firstOutcome).toMatchObject({
+      kind: "failure",
+      checkpoint: {
+        candidateCommit: checkpointCommit,
+        changedFiles: [changedFile]
+      }
+    });
+
+    const retry = request(compiled, root.id);
+    retry.attemptId = `run-v2-physical:attempt:${root.id}:2`;
+    retry.consumedArtifacts = first.consumedArtifacts;
+    retry.priorFailure = {
+      attemptId: first.attemptId,
+      reason: "timeout: hard deadline",
+      checkpointCommit
+    };
+
+    const retryOutcome = await executor.execute(retry);
+
+    expect(retryOutcome).toMatchObject({
+      kind: "success",
+      candidateCommit: repairedCommit,
+      finalManifestId: "final-timeout-checkpoint"
+    });
+    expect(git.calls.filter((call) => call.op === "cherryPick").map((call) => call.args.commitSha)).toEqual([
+      childCommit,
+      childCommit,
+      checkpointCommit
+    ]);
+  });
+
+  it("repairs parent validation over an exact child manifest without treating its digest as a commit", async () => {
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
+    const root = compiled.graph.nodes[compiled.graph.rootId]!;
+    const baseTree = "1".repeat(40);
+    const repairCommit = "a".repeat(40);
+    const sha256: DigestHasher = (value) => `sha256:${createHash("sha256").update(value).digest("hex")}`;
+    const manifest = buildChangeSetManifest({
+      id: "artifact:child",
+      contract: { id: "contract-child", revision: 1, digest: sha256("contract-child") },
+      producerNodeId: "node-api",
+      producerAttemptId: "attempt-child",
+      inputFingerprint: `sha256:${"f".repeat(64)}`,
+      repositoryObjectStoreId: "object-store:booking",
+      objectFormat: "sha1",
+      sourceCandidate: { commitOid: "b".repeat(40), treeOid: baseTree },
+      retainedByRef: "refs/manyhands/test/artifact-child",
+      kind: "change_set",
+      baseTreeSha: baseTree,
+      resultTreeSha: baseTree,
+      entries: []
+    }, sha256);
+    const git = new ManifestRepairGit(baseTree, manifest.manifestDigest, {
+      commitSha: repairCommit,
+      diffCached: "semantic integration repair",
+      diffCachedNameOnly: ["src/domain/booking.ts"]
+    });
+    const agent = successfulAgent();
+    const sandboxRequests: unknown[] = [];
+    const prompts: string[] = [];
+    let sandboxDisposed = false;
+    let validationPass = 0;
+    const executor = new V2NodeExecutor({
+      git,
+      repoRoot: "C:/repo/booking",
+      traceStore: new InMemoryTraceStore(),
+      executorFactory: new FixedAgentExecutorFactory(agent),
+      validator: {
+        validate: async (input) => {
+          validationPass += 1;
+          const evidence = matrix(input.contract, input.candidateCommit);
+          if (validationPass > 1) return evidence;
+          return {
+            ...evidence,
+            criteria: evidence.criteria.map((criterion) => ({
+              ...criterion,
+              status: "failed" as const,
+              justification: "The composed parent behavior requires one semantic repair."
+            })),
+            outcome: "failed" as const
+          };
+        }
+      },
+      finalCandidate: {
+        prepare: async (input) => ({
+          manifestId: "final-manifest-repair",
+          finalManifest: {
+            commitSha: input.candidateCommit,
+            treeSha: baseTree,
+            graphRevision: input.graphRevision,
+            artifactIds: [...input.artifactIds],
+            evidenceMatrixId: input.evidenceMatrix.matrixId,
+            validationRecipeDigest: input.validationRecipeDigest,
+            deliveryTarget: input.targetBranch
+          }
+        })
+      },
+      sandbox: {
+        provider: {
+          capabilities: () => ({
+            filesystem: "workspace_write",
+            network: "none",
+            hostIdentity: "brokered",
+            tooling: "declared_only",
+            enforcement: "executor_native"
+          }),
+          create: async (request) => {
+            sandboxRequests.push(request);
+            return {
+              capabilities: {
+                filesystem: "workspace_write",
+                network: "none",
+                hostIdentity: "brokered",
+                tooling: "declared_only",
+                enforcement: "executor_native"
+              },
+              environment: { CODEX_HOME: "C:/brokered/codex-home" },
+              receipt: {
+                attemptId: request.attemptId,
+                profile: request.profile,
+                capabilities: {
+                  filesystem: "workspace_write",
+                  network: "none",
+                  hostIdentity: "brokered",
+                  tooling: "declared_only",
+                  enforcement: "executor_native"
+                },
+                environmentDigest: "sha256:sandbox-environment",
+                createdAt: at
+              },
+              dispose: async () => { sandboxDisposed = true; }
+            };
+          }
+        },
+        profile: "workspace",
+        credentials: [],
+        credentialScopeId: "run-v2-repair-scope",
+        windowsSandbox: "unelevated"
+      },
+      worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }),
+      writeInstructions: async (_path, content) => { prompts.push(content); },
+      now: () => at
+    });
+    const input = request(compiled, root.id);
+    input.contract.scope.outputRoots = [];
+    input.priorFailure = {
+      attemptId: "attempt-parent-previous",
+      reason: "Integration repair rejected: scope_violation; public/storage/storage.mjs is outside allowed paths.",
+      guidance: "Preserve the declared storage artifact and repair only the parent integration test."
+    };
+    input.consumedArtifacts = [{
+      artifactId: "artifact:child",
+      runId: input.runId,
+      nodeId: "node-api",
+      digest: manifest.manifestDigest,
+      producerAttemptId: "attempt-child",
+      contract: { id: "contract-child", revision: "1" },
+      kind: "manifest",
+      location: manifest.manifestDigest,
+      manifest,
+      adoptedAt: at
+    }];
+
+    const outcome = await executor.execute(input);
+
+    expect(outcome).toMatchObject({
+      kind: "success",
+      candidateCommit: repairCommit,
+      artifactBaseCommit: "MATERIALIZED"
+    });
+    expect(git.calls).toContainEqual({
+      op: "diffRangeNameOnly",
+      args: expect.objectContaining({ from: "MATERIALIZED", to: repairCommit })
+    });
+    expect(agent.calls).toHaveLength(1);
+    expect(prompts[0]).toContain("Previous integration attempt failed");
+    expect(prompts[0]).toContain(input.priorFailure.reason);
+    expect(prompts[0]).toContain(input.priorFailure.guidance);
+    for (const allowedPath of input.contract.scope.allowedPaths) {
+      expect(prompts[0]).toContain(`- ${allowedPath}`);
+    }
+    expect(prompts[0]).toContain("No additional files may be created outside those exact patterns.");
+    expect(prompts[0]).toContain("A listed directory path does not authorize files beneath it.");
+    expect(prompts[0]).toContain("This contract declares no output roots, so create only exact file paths listed above.");
+    expect(prompts[0]).toContain("If the only creatable path is a test file, prove the integration in that test without inventing a production module.");
+    expect(sandboxRequests).toEqual([expect.objectContaining({
+      attemptId: `${input.attemptId}:repair:1`,
+      credentialScopeId: "run-v2-repair-scope",
+      profile: "workspace"
+    })]);
+    expect(agent.calls[0]).toMatchObject({
+      bypassApprovals: false,
+      env: { CODEX_HOME: "C:/brokered/codex-home" },
+      isolatedEnvironment: true,
+      windowsSandbox: "unelevated"
+    });
+    expect(sandboxDisposed).toBe(true);
+    expect(git.calls).not.toContainEqual(expect.objectContaining({
+      op: "revParse",
+      args: expect.objectContaining({ ref: `${manifest.manifestDigest}^1` })
+    }));
+  });
+
   it("fails closed when a consumed child patch cannot be materialized", async () => {
     const incomingCommit = "b".repeat(40);
     const git = new FakeGitRunner({
@@ -756,6 +1204,26 @@ class RepairIntentGit extends FakeGitRunner {
   }
 }
 
+class ManifestRepairGit extends FakeGitRunner {
+  constructor(
+    private readonly baseTree: string,
+    manifestDigest: string,
+    config: ConstructorParameters<typeof FakeGitRunner>[0]
+  ) {
+    super({ ...config, missingRefs: [`${manifestDigest}^1`] });
+  }
+
+  override async revParse(cwd: string, ref: string): Promise<string> {
+    if (ref.endsWith("^{tree}")) return this.baseTree;
+    return super.revParse(cwd, ref);
+  }
+
+  override async writeTree(params: Parameters<FakeGitRunner["writeTree"]>[0]): Promise<string> {
+    await super.writeTree(params);
+    return this.baseTree;
+  }
+}
+
 describe("ScopeChecker V2", () => {
   it("uses the canonical allowed and forbidden paths without a legacy ExecutionScope", () => {
     const checked = new ScopeChecker().check({
@@ -893,6 +1361,35 @@ describe("ExactCandidateValidatorV2", () => {
     expect(evidence.criteria.every((criterion) => criterion.status === "satisfied")).toBe(true);
     expect(git.opsInvoked().filter((operation) => operation === "worktreeAdd")).toHaveLength(2);
     expect(git.opsInvoked().filter((operation) => operation === "worktreeRemove")).toHaveLength(2);
+  });
+
+  it("carries the final exact-candidate failure output into bounded repair diagnostics", async () => {
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
+    const contract = compiled.contracts.find((bundle) => bundle.task.nodeId === "node-api")!;
+    const candidate = "d".repeat(40);
+    const git = new FakeGitRunner();
+    const failureOutput = `${"unrelated runner noise\n".repeat(100)}AssertionError: expected an existing stop id after reorder.`;
+    const validator = new ExactCandidateValidatorV2({
+      git,
+      workspaces: fakeWorkspaceProvider(git),
+      repoRoot: "C:/repo/booking",
+      repositorySnapshot: bookingSnapshot(),
+      runner: { run: async () => ({ passed: false, exitCode: 1, output: failureOutput }) }
+    });
+
+    const evidence = await validator.validate({
+      runId: "run-v2-validation",
+      attemptId: "attempt-api-repair-diagnostics",
+      contract,
+      candidateCommit: candidate,
+      baselineCommit: compiled.graph.baseCommit
+    });
+
+    expect(evidence.repairDiagnostics).toEqual([expect.objectContaining({
+      obligationId: contract.validation.obligations[0]!.id,
+      output: expect.stringContaining("AssertionError: expected an existing stop id after reorder.")
+    })]);
+    expect(evidence.repairDiagnostics![0]!.output).toHaveLength(1_200);
   });
 
   it("rejects a prepared recipe whose contract identity no longer matches the candidate contract", async () => {
