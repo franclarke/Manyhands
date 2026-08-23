@@ -174,6 +174,9 @@ specifications. See `CONTEXT-MAP.md` and `docs/agents/domain.md`.
 - In Windows PowerShell automation, never use the reserved `$PID` variable as a
   loop or task identifier; use a descriptive name such as `$processId` so cleanup
   commands execute rather than fail before acting.
+- In PowerShell, delimit variables inside Git refspecs with `$()` (or format the
+  full string explicitly); an expression such as `$tag:refs/...` is parsed as a
+  scoped variable and corrupts the refspec before Git can push it.
 - Before a live daemon/worker qualification, rebuild every changed workspace
   package imported by that worker. Vitest source tests do not prove the
   compiled `dist` dependency path used by the spawned process.
