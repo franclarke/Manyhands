@@ -45,7 +45,7 @@ export interface CanonicalNodeExecutionInput {
   attemptId: string;
   inputFingerprint: string;
   /** Immutable failure evidence that causally distinguishes a repair attempt. */
-  priorFailure?: { attemptId: string; reason: string };
+  priorFailure?: { attemptId: string; reason: string; checkpointCommit?: string };
   graph: GraphRevision;
   node: CanonicalTaskNode;
   contract: TaskContractBundle;
@@ -73,7 +73,16 @@ export type CanonicalNodeExecutionOutcome =
     unmaterializedObligationIds: string[];
     unmaterialized?: ExecutionBlocker[];
   }
-  | { kind: "failure"; reason: string; usage?: AttemptUsage };
+  | {
+      kind: "failure";
+      reason: string;
+      usage?: AttemptUsage;
+      checkpoint?: {
+        candidateCommit: string;
+        outputDigest: string;
+        changedFiles: string[];
+      };
+    };
 
 /**
  * Why a node could not even start. A blocker is deterministic in the node's
@@ -290,7 +299,18 @@ export class CanonicalExecutionDriver {
     const at = this.options.now();
     if (outcome.kind === "failure" || outcome.kind === "needs_input") {
       const blockers = outcome.kind === "needs_input" ? outcome.unmaterialized ?? [] : [];
-      return this.options.coordinator.record(run.runId, [
+      const facts: RunEventInput[] = [];
+      if (outcome.kind === "failure" && outcome.checkpoint !== undefined) {
+        facts.push(fact(`${attempt.input.attemptId}:checkpoint`, at, "attempt.candidate_created", {
+          attemptId: attempt.input.attemptId,
+          nodeId: attempt.input.node.id,
+          candidateCommit: outcome.checkpoint.candidateCommit,
+          outputDigest: outcome.checkpoint.outputDigest,
+          changedFiles: outcome.checkpoint.changedFiles,
+          ...(outcome.usage === undefined ? {} : { usage: outcome.usage })
+        }));
+      }
+      facts.push(
         fact(`${attempt.input.attemptId}:failed`, at, "attempt.failed", {
           attemptId: attempt.input.attemptId,
           nodeId: attempt.input.node.id,
@@ -299,7 +319,8 @@ export class CanonicalExecutionDriver {
           ...(outcome.kind === "failure" && outcome.usage !== undefined ? { usage: outcome.usage } : {})
         }),
         decisionFact(attempt, at, outcome.reason, blockers)
-      ]);
+      );
+      return this.options.coordinator.record(run.runId, facts);
     }
     // Authority is checked before adoption, not inside the executor: adoption is
     // the act that grants a candidate standing, and a replaceable executor must
@@ -539,7 +560,11 @@ function createAttempt(run: PreparedRun, state: RunProjection, nodeId: string, w
     .filter((attempt) => attempt.nodeId === nodeId && ["failed", "discarded", "stale"].includes(attempt.status))
     .at(-1);
   const priorFailure = previousAttempt?.status === "failed" && previousAttempt.failureReason !== undefined
-    ? { attemptId: previousAttempt.attemptId, reason: previousAttempt.failureReason }
+    ? {
+        attemptId: previousAttempt.attemptId,
+        reason: previousAttempt.failureReason,
+        ...(previousAttempt.candidateCommit === undefined ? {} : { checkpointCommit: previousAttempt.candidateCommit })
+      }
     : undefined;
   const inputFingerprint = computeInputFingerprint({
     graphId: run.graph.graphId,
@@ -555,7 +580,8 @@ function createAttempt(run: PreparedRun, state: RunProjection, nodeId: string, w
       recoveryContextDigest: sha256(JSON.stringify({
         attemptId: priorFailure.attemptId,
         inputFingerprint: previousAttempt!.inputFingerprint,
-        reason: priorFailure.reason
+        reason: priorFailure.reason,
+        ...(priorFailure.checkpointCommit === undefined ? {} : { checkpointCommit: priorFailure.checkpointCommit })
       }))
     })
   });

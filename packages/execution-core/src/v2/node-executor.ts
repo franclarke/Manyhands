@@ -469,7 +469,12 @@ export class V2NodeExecutor {
           return {
             kind: "failure",
             reason: validationFailureReason(candidateCommit, evidenceMatrix),
-            usage: usageOf(result)
+            usage: usageOf(result),
+            checkpoint: {
+              candidateCommit,
+              outputDigest: digest(candidateCommit),
+              changedFiles: result.changedFiles
+            }
           };
         }
         const repaired = await this.repairLeaf(

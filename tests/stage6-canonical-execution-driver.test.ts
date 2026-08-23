@@ -140,7 +140,17 @@ describe("Stage 6 canonical execution driver", () => {
       estimateIntegrationRisk: () => ({ score: 0, evidenceRefs: [] }),
       execute: async (input) => {
         inputs.push({ attemptId: input.attemptId, inputFingerprint: input.inputFingerprint, priorFailure: input.priorFailure });
-        if (inputs.length === 1) return { kind: "failure", reason: "validation: focused check failed" };
+        if (inputs.length === 1) {
+          return {
+            kind: "failure",
+            reason: "validation: focused check failed",
+            checkpoint: {
+              candidateCommit: "a".repeat(40),
+              outputDigest: "sha256:checkpoint-unit-a",
+              changedFiles: ["src/unit-a.ts"]
+            }
+          };
+        }
         const obligation = input.contract.validation.obligations[0]!;
         return {
           kind: "success", candidateCommit: oid(input.node.id), outputDigest: `sha256:${input.node.id}`,
@@ -159,7 +169,14 @@ describe("Stage 6 canonical execution driver", () => {
 
     expect(inputs.slice(0, 2)).toEqual([
       expect.objectContaining({ attemptId: "run-stage6-canonical:attempt:unit:a:1", priorFailure: undefined }),
-      expect.objectContaining({ attemptId: "run-stage6-canonical:attempt:unit:a:2", priorFailure: { attemptId: "run-stage6-canonical:attempt:unit:a:1", reason: "validation: focused check failed" } })
+      expect.objectContaining({
+        attemptId: "run-stage6-canonical:attempt:unit:a:2",
+        priorFailure: {
+          attemptId: "run-stage6-canonical:attempt:unit:a:1",
+          reason: "validation: focused check failed",
+          checkpointCommit: "a".repeat(40)
+        }
+      })
     ]);
     expect(inputs[0]!.inputFingerprint).not.toBe(inputs[1]!.inputFingerprint);
   });

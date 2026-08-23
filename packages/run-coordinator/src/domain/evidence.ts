@@ -35,7 +35,14 @@ export const EvidenceMatrixRecordSchema = z.object({
     outputDigest: NonEmptyStringSchema.regex(/^[a-f0-9]{64}$/u)
   }).strict()).optional()
 }).strict().superRefine((matrix, context) => {
-  if (matrix.outcome === "verified" && matrix.criteria.some((criterion) => criterion.status === "failed" || criterion.status === "uncovered")) {
+  const hasBlockingCriterion = matrix.criteria.some((criterion) =>
+    criterion.status === "failed" ||
+    (criterion.status === "uncovered" && !matrix.evidenceBindings.some((binding) =>
+      binding.obligationId === criterion.obligationId &&
+      binding.outcome === "inconclusive"
+    ))
+  );
+  if (matrix.outcome === "verified" && hasBlockingCriterion) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ["outcome"], message: "verified matrix cannot contain failed or uncovered criteria" });
   }
   if (matrix.outcome === "verified" && matrix.integrityFindings?.some((finding) => finding.disposition !== "rebutted") === true) {

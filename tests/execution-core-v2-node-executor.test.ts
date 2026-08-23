@@ -568,6 +568,13 @@ describe("V2NodeExecutor", () => {
     });
     expect(outcome).toMatchObject({ reason: expect.stringContaining("Focused oracle failed.") });
     expect(outcome).toMatchObject({ reason: expect.stringContaining("AssertionError: expected reorderStops() to preserve the selected stop.") });
+    expect(outcome).toMatchObject({
+      checkpoint: {
+        candidateCommit: candidate,
+        outputDigest: expect.stringMatching(/^sha256:/u),
+        changedFiles: [contract.scope.allowedPaths[0]!]
+      }
+    });
     expect(git.opsInvoked()).not.toContain("createIntegrationHandoff");
   });
 

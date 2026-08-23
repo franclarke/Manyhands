@@ -1,5 +1,7 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { buildEvidenceMatrix } from "@manyhands/execution-core";
+import { buildEvidenceBinding } from "@manyhands/contracts";
 import { EvidenceMatrixRecordSchema } from "@manyhands/run-coordinator";
 
 const obligations = [
@@ -44,6 +46,42 @@ describe("buildEvidenceMatrix", () => {
       outcome: "verified"
     });
     expect(parsed.success).toBe(false);
+  });
+
+  it("accepts a verified outcome when an uncovered criterion is explicitly bound as inconclusive", () => {
+    const binding = buildEvidenceBinding({
+      id: "evidence:advisory",
+      revision: 1,
+      goalContractDigest: "sha256:goal",
+      criterionId: "criterion-advisory",
+      obligationId: "obligation-advisory",
+      candidate: { manifestDigest: "sha256:manifest", commitOid: "c".repeat(40), treeOid: "d".repeat(40) },
+      baseline: { commitOid: "a".repeat(40), treeOid: "b".repeat(40) },
+      proofStrategyDigest: "sha256:strategy",
+      mode: "executable",
+      authority: "orchestrator_deterministic",
+      recipeDigest: "sha256:recipe",
+      environmentDigest: "sha256:environment",
+      selectorDigest: "sha256:selector",
+      outputDigest: "sha256:output",
+      outcome: "inconclusive"
+    }, (value) => `sha256:${createHash("sha256").update(value).digest("hex")}`);
+    const parsed = EvidenceMatrixRecordSchema.safeParse({
+      matrixId: "matrix-advisory",
+      candidateCommit: binding.candidate.commitOid,
+      validationContract: { id: "validation-advisory", revision: "rev-1" },
+      criteria: [{
+        criterionId: "criterion-local-advisory",
+        obligationId: binding.obligationId,
+        status: "uncovered",
+        justification: "The optional oracle was not materialized.",
+        evidenceRefs: []
+      }],
+      outcome: "verified",
+      evidenceBindings: [binding]
+    });
+
+    expect(parsed.success).toBe(true);
   });
 
   it("upgrades historical matrices to the canonical empty observation list", () => {
