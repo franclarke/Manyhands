@@ -43,8 +43,12 @@
     "verified": true,
     "cloneResolvedToCandidate": true
   },
-  "plannedRemoteRef": "archive/viaje-familia-final",
-  "publicationStatus": "planned",
+  "remoteRef": "archive/viaje-familia-final",
+  "publicationStatus": "published",
+  "remoteVerification": {
+    "verifiedAt": "2026-08-23T12:03:13Z",
+    "commitSha": "62a0d3571f9a03e670eaca7560f11915a6d4c9d7"
+  },
   "experimentVerdict": {
     "fullPass": false,
     "classification": "not_full_pass",

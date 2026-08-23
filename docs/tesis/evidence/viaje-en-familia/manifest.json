@@ -355,8 +355,8 @@
     {
       "archivedPath": "docs/tesis/evidence/viaje-en-familia/clean-clone-manifest.json",
       "originalSource": "archive-generated",
-      "bytes": 1748,
-      "sha256": "efd1a4437086365dd5d80524394c86541935dbfbfb25e0c371f2dc20a4a14683",
+      "bytes": 1876,
+      "sha256": "143b68f75dddad0fd762e943fc775a93ed47fb1fa9a79cb46fffa9826cf8ee28",
       "classification": "archive-documentation",
       "redactions": []
     },
@@ -4523,8 +4523,8 @@
     {
       "archivedPath": "docs/tesis/evidence/viaje-en-familia/README.md",
       "originalSource": "archive-generated",
-      "bytes": 5300,
-      "sha256": "c566f66b2e921f153d9b1d7dbcb2440ae58594ded714a8d64992b68486fa1a37",
+      "bytes": 5289,
+      "sha256": "76817099fd0c118ec2a56880b07c85f0957779b85867952735b8fb32115e3398",
       "classification": "archive-documentation",
       "redactions": []
     },

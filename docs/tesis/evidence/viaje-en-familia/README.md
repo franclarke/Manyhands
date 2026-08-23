@@ -106,6 +106,6 @@ git -C restored-candidate rev-parse HEAD^{tree}
 git -C restored-candidate fsck --full
 ```
 
-La rama remota prevista para exponer el candidato es
-`archive/viaje-familia-final`. Al momento de redactar este índice esa rama está
-**planificada**; este documento no afirma que el push ya haya ocurrido.
+La rama remota `archive/viaje-familia-final` fue publicada y verificada contra
+GitHub el 23 de agosto de 2026. Resuelve exactamente al candidate commit
+`62a0d3571f9a03e670eaca7560f11915a6d4c9d7`.
