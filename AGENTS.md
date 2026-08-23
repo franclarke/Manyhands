@@ -190,7 +190,8 @@ specifications. See `CONTEXT-MAP.md` and `docs/agents/domain.md`.
   evidence exists. Delete its workspace through the UI and only its resolved
   `C:\mh-exp\viaje-familia\attempt-NNN` directory without requesting another
   confirmation; never delete the separate evidence root or a broader path.
-- Before publishing a content-hash evidence archive, mark its complete hashed
-  surface `-text` in `.gitattributes` and run the manifest verifier from a fresh
-  Windows clone. A verifier that passes only in the producing worktree does not
-  prove that checkout line-ending conversion preserves the archived bytes.
+- Before publishing a content-hash evidence archive, require every manifest
+  entry to appear in `git ls-files`, mark its complete hashed surface `-text` in
+  `.gitattributes`, and run the verifier from a fresh Windows clone. A verifier
+  that passes only in the producing worktree can miss ignored files or checkout
+  line-ending conversion.

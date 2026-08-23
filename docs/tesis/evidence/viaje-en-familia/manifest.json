@@ -4531,8 +4531,8 @@
     {
       "archivedPath": "docs/tesis/evidence/viaje-en-familia/verify-manifest.mjs",
       "originalSource": "archive-generated",
-      "bytes": 1154,
-      "sha256": "9a58220ae41e409d48aadc6b71c40da6799b6fba0461856add474b64c9aa6f2c",
+      "bytes": 1643,
+      "sha256": "29525dd6a0fe46b5cf171a272fafbf45c053be53d50b56f33c7b6c38007d212b",
       "classification": "archive-documentation",
       "redactions": []
     }

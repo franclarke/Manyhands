@@ -1,0 +1,11 @@
+$ pnpm -r --filter "./packages/*" build
+$ tsup src/index.ts --format esm,cjs --dts --clean && tsup src/cli.ts --format cjs --out-dir dist && tsup src/deterministic-fake-worker.ts --format esm --out-dir dist && tsup src/transitional-unsafe-worker.ts --format esm --out-dir dist
+$ next dev -H 127.0.0.1
+ ⨯ ../../packages/execution-core/dist/index.js
+Error: 
+Caused by:
+    0: Failed to read source code from C:\Users\franc\orca\workspaces\Manyhands\Experimento\packages\execution-core\dist\index.js
+    1: El sistema no puede encontrar el archivo especificado. (os error 2)
+Import trace for requested module:
+../../packages/execution-core/dist/index.js
+./src/app/api/runs/route.ts

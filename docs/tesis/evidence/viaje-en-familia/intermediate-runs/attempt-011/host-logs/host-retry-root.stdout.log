@@ -1,0 +1,418 @@
+[manyhands] dev console running in plain mode
+[manyhands] building workspace packages
+Scope: 13 of 16 workspace projects
+packages/shared build$ tsup src/index.ts src/node-cli-process.ts --format esm,cjs --dts --clean
+packages/shared build: CLI Building entry: src/index.ts, src/node-cli-process.ts
+packages/shared build: CLI Using tsconfig: tsconfig.json
+packages/shared build: CLI tsup v8.5.1
+packages/shared build: CLI Target: es2022
+packages/shared build: CLI Cleaning output folder
+packages/shared build: ESM Build start
+packages/shared build: CJS Build start
+packages/shared build: ESM dist\node-cli-process.js 6.92 KB
+packages/shared build: ESM dist\index.js            10.27 KB
+packages/shared build: ESM ⚡️ Build success in 138ms
+packages/shared build: CJS dist\node-cli-process.cjs 8.31 KB
+packages/shared build: CJS dist\index.cjs            13.30 KB
+packages/shared build: CJS ⚡️ Build success in 138ms
+packages/shared build: DTS Build start
+packages/shared build: DTS ⚡️ Build success in 2519ms
+packages/shared build: DTS dist\index.d.ts             11.26 KB
+packages/shared build: DTS dist\node-cli-process.d.ts  2.68 KB
+packages/shared build: DTS dist\index.d.cts            11.26 KB
+packages/shared build: DTS dist\node-cli-process.d.cts 2.68 KB
+packages/shared build: Done
+packages/contracts build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/repository-index build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/trace-store build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/contracts build: CLI Building entry: src/index.ts
+packages/contracts build: CLI Using tsconfig: tsconfig.json
+packages/contracts build: CLI tsup v8.5.1
+packages/contracts build: CLI Target: es2022
+packages/contracts build: CLI Cleaning output folder
+packages/contracts build: ESM Build start
+packages/contracts build: CJS Build start
+packages/repository-index build: CLI Building entry: src/index.ts
+packages/repository-index build: CLI Using tsconfig: tsconfig.json
+packages/trace-store build: CLI Building entry: src/index.ts
+packages/repository-index build: CLI tsup v8.5.1
+packages/trace-store build: CLI Using tsconfig: tsconfig.json
+packages/trace-store build: CLI tsup v8.5.1
+packages/repository-index build: CLI Target: es2022
+packages/trace-store build: CLI Target: es2022
+packages/repository-index build: CLI Cleaning output folder
+packages/repository-index build: ESM Build start
+packages/trace-store build: CLI Cleaning output folder
+packages/repository-index build: CJS Build start
+packages/trace-store build: ESM Build start
+packages/trace-store build: CJS Build start
+packages/trace-store build: CJS dist\index.cjs 11.28 KB
+packages/trace-store build: CJS ⚡️ Build success in 236ms
+packages/trace-store build: ESM dist\index.js 8.42 KB
+packages/trace-store build: ESM ⚡️ Build success in 236ms
+packages/contracts build: CJS dist\index.cjs 113.23 KB
+packages/contracts build: CJS ⚡️ Build success in 276ms
+packages/contracts build: ESM dist\index.js 96.82 KB
+packages/contracts build: ESM ⚡️ Build success in 277ms
+packages/repository-index build: CJS dist\index.cjs 126.67 KB
+packages/repository-index build: CJS ⚡️ Build success in 299ms
+packages/repository-index build: ESM dist\index.js 113.41 KB
+packages/repository-index build: ESM ⚡️ Build success in 301ms
+packages/contracts build: DTS Build start
+packages/repository-index build: DTS Build start
+packages/trace-store build: DTS Build start
+packages/trace-store build: DTS ⚡️ Build success in 2806ms
+packages/trace-store build: DTS dist\index.d.ts  9.39 KB
+packages/trace-store build: DTS dist\index.d.cts 9.39 KB
+packages/trace-store build: Done
+packages/repository-index build: DTS ⚡️ Build success in 3801ms
+packages/repository-index build: DTS dist\index.d.ts  84.65 KB
+packages/repository-index build: DTS dist\index.d.cts 84.65 KB
+packages/repository-index build: Done
+packages/contracts build: DTS ⚡️ Build success in 4846ms
+packages/contracts build: DTS dist\index.d.ts  589.65 KB
+packages/contracts build: DTS dist\index.d.cts 589.65 KB
+packages/contracts build: Done
+packages/conflict-risk build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/task-graph build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/conflict-risk build: CLI Building entry: src/index.ts
+packages/task-graph build: CLI Building entry: src/index.ts
+packages/conflict-risk build: CLI Using tsconfig: tsconfig.json
+packages/conflict-risk build: CLI tsup v8.5.1
+packages/task-graph build: CLI Using tsconfig: tsconfig.json
+packages/task-graph build: CLI tsup v8.5.1
+packages/conflict-risk build: CLI Target: es2022
+packages/task-graph build: CLI Target: es2022
+packages/conflict-risk build: CLI Cleaning output folder
+packages/task-graph build: CLI Cleaning output folder
+packages/conflict-risk build: ESM Build start
+packages/task-graph build: ESM Build start
+packages/conflict-risk build: CJS Build start
+packages/task-graph build: CJS Build start
+packages/conflict-risk build: ESM dist\index.js 24.88 KB
+packages/conflict-risk build: ESM ⚡️ Build success in 176ms
+packages/conflict-risk build: CJS dist\index.cjs 28.18 KB
+packages/conflict-risk build: CJS ⚡️ Build success in 177ms
+packages/task-graph build: ESM dist\index.js 62.75 KB
+packages/task-graph build: ESM ⚡️ Build success in 195ms
+packages/task-graph build: CJS dist\index.cjs 68.06 KB
+packages/task-graph build: CJS ⚡️ Build success in 196ms
+packages/conflict-risk build: DTS Build start
+packages/task-graph build: DTS Build start
+packages/task-graph build: DTS ⚡️ Build success in 4925ms
+packages/task-graph build: DTS dist\index.d.ts  165.55 KB
+packages/task-graph build: DTS dist\index.d.cts 165.55 KB
+packages/task-graph build: Done
+packages/conflict-risk build: DTS ⚡️ Build success in 5111ms
+packages/conflict-risk build: DTS dist\index.d.ts  25.75 KB
+packages/conflict-risk build: DTS dist\index.d.cts 25.75 KB
+packages/conflict-risk build: Done
+packages/decomposer build$ tsup src/index.ts src/mocks/mock-decomposer.ts --format esm,cjs --dts --clean
+packages/scheduler build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/run-coordinator build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/decomposer build: CLI Building entry: src/index.ts, src/mocks/mock-decomposer.ts
+packages/decomposer build: CLI Using tsconfig: tsconfig.json
+packages/decomposer build: CLI tsup v8.5.1
+packages/scheduler build: CLI Building entry: src/index.ts
+packages/scheduler build: CLI Using tsconfig: tsconfig.json
+packages/scheduler build: CLI tsup v8.5.1
+packages/decomposer build: CLI Target: es2022
+packages/scheduler build: CLI Target: es2022
+packages/decomposer build: CLI Cleaning output folder
+packages/run-coordinator build: CLI Building entry: src/index.ts
+packages/decomposer build: ESM Build start
+packages/decomposer build: CJS Build start
+packages/scheduler build: CLI Cleaning output folder
+packages/run-coordinator build: CLI Using tsconfig: tsconfig.json
+packages/run-coordinator build: CLI tsup v8.5.1
+packages/scheduler build: ESM Build start
+packages/scheduler build: CJS Build start
+packages/run-coordinator build: CLI Target: es2022
+packages/run-coordinator build: CLI Cleaning output folder
+packages/run-coordinator build: ESM Build start
+packages/run-coordinator build: CJS Build start
+packages/scheduler build: CJS dist\index.cjs 38.56 KB
+packages/scheduler build: CJS ⚡️ Build success in 237ms
+packages/scheduler build: ESM dist\index.js 36.04 KB
+packages/scheduler build: ESM ⚡️ Build success in 237ms
+packages/run-coordinator build: ESM dist\index.js 111.29 KB
+packages/run-coordinator build: ESM ⚡️ Build success in 294ms
+packages/run-coordinator build: CJS dist\index.cjs 124.96 KB
+packages/run-coordinator build: CJS ⚡️ Build success in 305ms
+packages/decomposer build: CJS dist\mocks\mock-decomposer.cjs 794.00 B
+packages/decomposer build: CJS dist\index.cjs                 393.55 KB
+packages/decomposer build: CJS ⚡️ Build success in 349ms
+packages/decomposer build: ESM dist\mocks\mock-decomposer.js 31.00 B
+packages/decomposer build: ESM dist\chunk-6SJVMHOW.js        0 B
+packages/decomposer build: ESM dist\index.js                 381.27 KB
+packages/decomposer build: ESM ⚡️ Build success in 355ms
+packages/scheduler build: DTS Build start
+packages/run-coordinator build: DTS Build start
+packages/decomposer build: DTS Build start
+packages/scheduler build: DTS ⚡️ Build success in 6599ms
+packages/scheduler build: DTS dist\index.d.ts  21.46 KB
+packages/scheduler build: DTS dist\index.d.cts 21.46 KB
+packages/scheduler build: Done
+packages/run-coordinator build: DTS ⚡️ Build success in 8633ms
+packages/run-coordinator build: DTS dist\index.d.ts  458.57 KB
+packages/run-coordinator build: DTS dist\index.d.cts 458.57 KB
+packages/run-coordinator build: Done
+packages/decomposer build: DTS ⚡️ Build success in 9040ms
+packages/decomposer build: DTS dist\mocks\mock-decomposer.d.ts  13.00 B
+packages/decomposer build: DTS dist\index.d.ts                  157.64 KB
+packages/decomposer build: DTS dist\mocks\mock-decomposer.d.cts 13.00 B
+packages/decomposer build: DTS dist\index.d.cts                 157.64 KB
+packages/decomposer build: Done
+packages/orchestrator-graph build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/execution-core build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/run-store build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/orchestrator-graph build: CLI Building entry: src/index.ts
+packages/orchestrator-graph build: CLI Using tsconfig: tsconfig.json
+packages/orchestrator-graph build: CLI tsup v8.5.1
+packages/orchestrator-graph build: CLI Target: es2022
+packages/orchestrator-graph build: CLI Cleaning output folder
+packages/orchestrator-graph build: ESM Build start
+packages/orchestrator-graph build: CJS Build start
+packages/run-store build: CLI Building entry: src/index.ts
+packages/execution-core build: CLI Building entry: src/index.ts
+packages/run-store build: CLI Using tsconfig: tsconfig.json
+packages/execution-core build: CLI Using tsconfig: tsconfig.json
+packages/execution-core build: CLI tsup v8.5.1
+packages/run-store build: CLI tsup v8.5.1
+packages/run-store build: CLI Target: es2022
+packages/execution-core build: CLI Target: es2022
+packages/run-store build: CLI Cleaning output folder
+packages/execution-core build: CLI Cleaning output folder
+packages/execution-core build: ESM Build start
+packages/execution-core build: CJS Build start
+packages/run-store build: ESM Build start
+packages/run-store build: CJS Build start
+packages/orchestrator-graph build: ESM dist\index.js 60.68 KB
+packages/orchestrator-graph build: ESM ⚡️ Build success in 230ms
+packages/orchestrator-graph build: CJS dist\index.cjs 62.39 KB
+packages/orchestrator-graph build: CJS ⚡️ Build success in 231ms
+packages/run-store build: ESM dist\index.js 66.44 KB
+packages/run-store build: ESM ⚡️ Build success in 263ms
+packages/run-store build: CJS dist\index.cjs 72.08 KB
+packages/run-store build: CJS ⚡️ Build success in 265ms
+packages/execution-core build: CJS dist\index.cjs 504.00 KB
+packages/execution-core build: CJS ⚡️ Build success in 410ms
+packages/execution-core build: ESM dist\index.js 480.36 KB
+packages/execution-core build: ESM ⚡️ Build success in 411ms
+packages/orchestrator-graph build: DTS Build start
+packages/run-store build: DTS Build start
+packages/execution-core build: DTS Build start
+packages/run-store build: DTS ⚡️ Build success in 8689ms
+packages/run-store build: DTS dist\index.d.ts  13.65 KB
+packages/run-store build: DTS dist\index.d.cts 13.65 KB
+packages/run-store build: Done
+packages/execution-core build: DTS ⚡️ Build success in 10035ms
+packages/execution-core build: DTS dist\index.d.ts  322.18 KB
+packages/execution-core build: DTS dist\index.d.cts 322.18 KB
+packages/execution-core build: Done
+packages/orchestrator-graph build: DTS ⚡️ Build success in 14745ms
+packages/orchestrator-graph build: DTS dist\index.d.ts  15.02 KB
+packages/orchestrator-graph build: DTS dist\index.d.cts 15.02 KB
+packages/orchestrator-graph build: Done
+packages/run-engine build$ tsup src/index.ts --format esm,cjs --dts --clean
+packages/run-engine build: CLI Building entry: src/index.ts
+packages/run-engine build: CLI Using tsconfig: tsconfig.json
+packages/run-engine build: CLI tsup v8.5.1
+packages/run-engine build: CLI Target: es2022
+packages/run-engine build: CLI Cleaning output folder
+packages/run-engine build: ESM Build start
+packages/run-engine build: CJS Build start
+packages/run-engine build: ESM dist\index.js 55.02 KB
+packages/run-engine build: ESM ⚡️ Build success in 160ms
+packages/run-engine build: CJS dist\index.cjs 56.94 KB
+packages/run-engine build: CJS ⚡️ Build success in 161ms
+packages/run-engine build: DTS Build start
+packages/run-engine build: DTS ⚡️ Build success in 6011ms
+packages/run-engine build: DTS dist\index.d.ts  16.24 KB
+packages/run-engine build: DTS dist\index.d.cts 16.24 KB
+packages/run-engine build: Done
+[manyhands] building daemon
+CLI Building entry: src/index.ts
+CLI Using tsconfig: tsconfig.json
+CLI tsup v8.5.1
+CLI Target: es2022
+CLI Cleaning output folder
+ESM Build start
+CJS Build start
+CJS dist\index.cjs 192.44 KB
+CJS ⚡️ Build success in 161ms
+ESM dist\index.js 184.68 KB
+ESM ⚡️ Build success in 163ms
+DTS Build start
+DTS ⚡️ Build success in 15729ms
+DTS dist\index.d.ts  25.99 KB
+DTS dist\index.d.cts 25.99 KB
+CLI Building entry: src/cli.ts
+CLI Using tsconfig: tsconfig.json
+CLI tsup v8.5.1
+CLI Target: es2022
+CJS Build start
+CJS dist\cli.cjs 191.45 KB
+CJS ⚡️ Build success in 152ms
+CLI Building entry: src/deterministic-fake-worker.ts
+CLI Using tsconfig: tsconfig.json
+CLI tsup v8.5.1
+CLI Target: es2022
+ESM Build start
+ESM dist\deterministic-fake-worker.js 617.00 B
+ESM ⚡️ Build success in 120ms
+CLI Building entry: src/transitional-unsafe-worker.ts
+CLI Using tsconfig: tsconfig.json
+CLI tsup v8.5.1
+CLI Target: es2022
+ESM Build start
+ESM dist\transitional-unsafe-worker.js 31.86 KB
+ESM ⚡️ Build success in 137ms
+{"event":"manyhands.daemon.ready","endpoint":"\\\\.\\pipe\\manyhands-daemon-e17ca9a75ea7ede5","daemonEpoch":"36b76129-de5f-40c6-afb1-3c230c755b53","profile":"transitional_unsafe"}
+   ▲ Next.js 15.5.7
+   - Local:        http://127.0.0.1:3000
+   - Network:      http://127.0.0.1:3000
+ ✓ Starting...
+ ✓ Ready in 2.8s
+ ✓ Compiled /middleware in 261ms (115 modules)
+ ○ Compiling /api/runs ...
+ ✓ Compiled /api/runs in 1644ms (375 modules)
+ GET /api/runs?limit=5 200 in 1752ms
+ ○ Compiling /api/runs/[id]/run-events ...
+ ✓ Compiled /api/runs/[id]/run-events in 542ms (379 modules)
+ ○ Compiling /runs/[runId] ...
+ ✓ Compiled /runs/[runId] in 4.3s (1307 modules)
+ GET /api/runs?limit=5 200 in 2481ms
+ GET /runs/run%3A22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d 200 in 14802ms
+ ○ Compiling /api/runs/[id] ...
+ ✓ Compiled /api/runs/[id] in 1376ms (1323 modules)
+ GET /api/runs?limit=5 200 in 2608ms
+ GET /api/runs/run%3A22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d 200 in 6319ms
+ GET /runs/run%3A22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d 200 in 5550ms
+ GET /api/runs/run%3A22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d 200 in 2078ms
+ GET /api/runs?limit=5 200 in 2289ms
+ GET /api/runs?limit=5 200 in 2367ms
+ GET /api/runs?limit=5 200 in 2198ms
+ GET /api/runs?limit=5 200 in 2490ms
+ GET /runs/run%3A22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d 200 in 5312ms
+ ○ Compiling /api/runs/[id]/decisions/[decisionId] ...
+ ✓ Compiled /api/runs/[id]/decisions/[decisionId] in 1244ms (1325 modules)
+ ✓ Compiled in 536ms (502 modules)
+ GET /api/runs?limit=5 200 in 2197ms
+ POST /api/runs/run%3A22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d/decisions/run%3A22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d%3Aattempt%3Aunit%3Aroot%3A6%3Adecision 200 in 6652ms
+ GET /api/runs?limit=5 200 in 2502ms
+ GET /api/runs?limit=5 200 in 2496ms
+ GET /api/runs?limit=5 200 in 2293ms
+ GET /api/runs?limit=5 200 in 2474ms
+ GET /api/runs?limit=5 200 in 2321ms
+ GET /api/runs?limit=5 200 in 2054ms
+ GET /api/runs?limit=5 200 in 2503ms
+ GET /api/runs?limit=5 200 in 2352ms
+ GET /api/runs?limit=5 200 in 2498ms
+ GET /api/runs?limit=5 200 in 2036ms
+ GET /api/runs?limit=5 200 in 2500ms
+ GET /api/runs?limit=5 200 in 2176ms
+ GET /api/runs?limit=5 200 in 2503ms
+ GET /api/runs?limit=5 200 in 2495ms
+ GET /api/runs?limit=5 200 in 2156ms
+ GET /api/runs?limit=5 200 in 2235ms
+ GET /api/runs?limit=5 200 in 2457ms
+ GET /api/runs?limit=5 200 in 2097ms
+ GET /api/runs?limit=5 200 in 2271ms
+ GET /api/runs?limit=5 200 in 2495ms
+ GET /api/runs?limit=5 200 in 2492ms
+ GET /api/runs?limit=5 200 in 2210ms
+ GET /api/runs?limit=5 200 in 2129ms
+ GET /api/runs?limit=5 200 in 2572ms
+ GET /api/runs?limit=5 200 in 2405ms
+ GET /api/runs?limit=5 200 in 2501ms
+ GET /api/runs?limit=5 200 in 2304ms
+ GET /api/runs?limit=5 200 in 2055ms
+ GET /api/runs?limit=5 200 in 2509ms
+ GET /api/runs?limit=5 200 in 2185ms
+ GET /api/runs?limit=5 200 in 2493ms
+ GET /api/runs?limit=5 200 in 2013ms
+ GET /api/runs?limit=5 200 in 2359ms
+ GET /api/runs?limit=5 200 in 2044ms
+ GET /api/runs?limit=5 200 in 2309ms
+ GET /api/runs?limit=5 200 in 1914ms
+ GET /api/runs?limit=5 200 in 2448ms
+ GET /api/runs?limit=5 200 in 2485ms
+ GET /api/runs?limit=5 200 in 2486ms
+ GET /api/runs?limit=5 200 in 2279ms
+ GET /api/runs?limit=5 200 in 2493ms
+ GET /api/runs?limit=5 200 in 2396ms
+ GET /api/runs?limit=5 200 in 2378ms
+ GET /api/runs?limit=5 200 in 2498ms
+ GET /api/runs?limit=5 200 in 2489ms
+ GET /api/runs?limit=5 200 in 2500ms
+ GET /api/runs?limit=5 200 in 2244ms
+ GET /api/runs?limit=5 200 in 2492ms
+ GET /api/runs?limit=5 200 in 2465ms
+ GET /api/runs?limit=5 200 in 2499ms
+ GET /api/runs?limit=5 200 in 2269ms
+ GET /api/runs?limit=5 200 in 2289ms
+ GET /api/runs?limit=5 200 in 2505ms
+ GET /api/runs?limit=5 200 in 2260ms
+ GET /api/runs?limit=5 200 in 2230ms
+ GET /api/runs?limit=5 200 in 2503ms
+ GET /api/runs?limit=5 200 in 2206ms
+ GET /api/runs?limit=5 200 in 2496ms
+ GET /api/runs?limit=5 200 in 2418ms
+ GET /api/runs?limit=5 200 in 2317ms
+ GET /api/runs?limit=5 200 in 2308ms
+ GET /api/runs?limit=5 200 in 2491ms
+ GET /api/runs?limit=5 200 in 2490ms
+ GET /api/runs?limit=5 200 in 2503ms
+ GET /api/runs?limit=5 200 in 2497ms
+ GET /api/runs?limit=5 200 in 2492ms
+ GET /api/runs?limit=5 200 in 2203ms
+ GET /api/runs?limit=5 200 in 2347ms
+ GET /api/runs?limit=5 200 in 2497ms
+ GET /api/runs?limit=5 200 in 2387ms
+ GET /api/runs?limit=5 200 in 2497ms
+ GET /api/runs?limit=5 200 in 2443ms
+ GET /api/runs?limit=5 200 in 2506ms
+ GET /api/runs?limit=5 200 in 2431ms
+ GET /api/runs?limit=5 200 in 2502ms
+ GET /api/runs?limit=5 200 in 2305ms
+ GET /api/runs?limit=5 200 in 2489ms
+ GET /api/runs?limit=5 200 in 2440ms
+ GET /api/runs?limit=5 200 in 2316ms
+ GET /api/runs?limit=5 200 in 2278ms
+ GET /api/runs?limit=5 200 in 2501ms
+ GET /api/runs?limit=5 200 in 2384ms
+ GET /api/runs?limit=5 200 in 2362ms
+ GET /api/runs?limit=5 200 in 2496ms
+ GET /api/runs?limit=5 200 in 2495ms
+ GET /api/runs?limit=5 200 in 2501ms
+ GET /api/runs?limit=5 200 in 2467ms
+ GET /api/runs/run%3A22b14e85aa46e4fa5601dc5b44304224b4726dc2ac5191e59f7584485a56e13d 200 in 2196ms
+ GET /api/runs?limit=5 200 in 2495ms
+ GET /api/runs?limit=5 200 in 2501ms
+ GET /api/runs?limit=5 200 in 2488ms
+ GET /api/runs?limit=5 200 in 2498ms
+ GET /api/runs?limit=5 200 in 2490ms
+ GET /api/runs?limit=5 200 in 2180ms
+ GET /api/runs?limit=5 200 in 2279ms
+ GET /api/runs?limit=5 200 in 2498ms
+ GET /api/runs?limit=5 200 in 2321ms
+ GET /api/runs?limit=5 200 in 2270ms
+ GET /api/runs?limit=5 200 in 2495ms
+ GET /api/runs?limit=5 200 in 2378ms
+ GET /api/runs?limit=5 200 in 2495ms
+ GET /api/runs?limit=5 200 in 2491ms
+ GET /api/runs?limit=5 200 in 2501ms
+ GET /api/runs?limit=5 200 in 2490ms
+ GET /api/runs?limit=5 200 in 2488ms
+ GET /api/runs?limit=5 200 in 2062ms
+ GET /api/runs?limit=5 200 in 2456ms
+ GET /api/runs?limit=5 200 in 2494ms
+ GET /api/runs?limit=5 200 in 2481ms
+ GET /api/runs?limit=5 200 in 2505ms
+ GET /api/runs?limit=5 200 in 2491ms
+ ✓ Compiled in 1221ms (180 modules)
+ ✓ Compiled in 541ms (180 modules)
+ GET /api/runs?limit=5 200 in 2494ms
+ GET /api/runs?limit=5 200 in 2497ms
+ GET /api/runs?limit=5 200 in 2497ms
